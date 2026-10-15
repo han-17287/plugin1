@@ -3,7 +3,7 @@
 첨부한 대화의 최종 기획을 C#으로 다시 구성한 PC용 프로토타입입니다. 기존 Godot 원본, 타이틀 이미지, hero.glb는 제공되지 않아 원본 파일 변환이 아닌 새 구현입니다.
 
 ## 실행
-1. Unity Hub에서 Unity 6.0 LTS를 설치하세요. 기준 버전은 6000.0.62f1입니다.
+1. Unity Hub에서 설치된 Unity 6000.6.6f1을 선택하세요. 이 프로젝트의 기준 버전은 6000.6.6f1입니다.
 2. Hub → Add → Add project from disk에서 이 폴더(Assets, Packages, ProjectSettings가 있는 UnityProject)를 선택하세요.
 3. Assets/Scenes/Main.unity를 열고 Play를 누르세요. 빈 씬에서도 런타임 부트스트랩이 동작합니다.
 4. NEW GAME / SELECT SLOT → 슬롯 선택 → START NEW GAME. 저장된 슬롯은 CONTINUE로 이어합니다.
