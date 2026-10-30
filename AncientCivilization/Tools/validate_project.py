@@ -61,7 +61,7 @@ def main():
     scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text())[1]
     check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(), 'Main scene build GUID')
     dimensions = {}
-    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap'):
+    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions'):
         path = ROOT / ('Assets/Resources/Art/' + name + '.png')
         header = png_info(path)
         dimensions[name] = header[:2]
@@ -106,6 +106,19 @@ def main():
             region = image.getchannel('A').crop((x, y, x + w, y + h))
             check(region.point(lambda a: 255 if a >= 110 else 0).getbbox() is not None,
                   'world slice contains visible art ' + str(i))
+        image = Image.open(ROOT / 'Assets/Resources/Art/Actions.png')
+        for i in range(8):
+            x, y, w, h = i % 4 * 384, i // 4 * 512, 384, 512
+            if i == 1:
+                x, w = 384, 392
+            if i == 2:
+                x, w = 776, 376
+            region = image.getchannel('A').crop((x, y, x + w, y + h))
+            bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
+            check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
+                  'action pose has clear transparent gutters ' + str(i))
+            root = 207 if i == 2 else 215
+            check(bbox and bbox[0] <= root < bbox[2], 'action root lies inside silhouette width ' + str(i))
         image = Image.open(ROOT / 'Assets/Resources/Art/Enemies.png')
         for i, (x, y, w, h) in enumerate(enemy_rects):
             region = image.getchannel('A').crop((x, y, x + w, y + h))

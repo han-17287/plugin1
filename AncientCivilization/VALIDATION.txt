@@ -1,4 +1,4 @@
-Chapter 0 v0.4 static validation
+Chapter 0 v0.5 static validation
 
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
@@ -23,8 +23,11 @@ PASS: metadata target Assets/Scripts/AncientArt.cs.meta
 PASS: 32-character GUID AncientArt.cs.meta
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
 PASS: 32-character GUID AncientGame.cs.meta
+PASS: metadata target Assets/Scripts/AncientHUD.cs.meta
+PASS: 32-character GUID AncientHUD.cs.meta
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
+PASS: metadata coverage AncientHUD.cs
 PASS: metadata coverage AncientGame.cs
 PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
 PASS: 32-character GUID AncientCameraFX.cs.meta
@@ -48,6 +51,7 @@ PASS: metadata coverage Enemies.png
 PASS: metadata target Assets/Resources/Art/Enemies.png.meta
 PASS: 32-character GUID Enemies.png.meta
 PASS: metadata coverage World.png
+PASS: metadata coverage Actions.png
 PASS: metadata target Assets/Resources/Art/Hero.png.meta
 PASS: 32-character GUID Hero.png.meta
 PASS: metadata coverage Hero.png
@@ -58,6 +62,8 @@ PASS: 32-character GUID Scrap.png.meta
 PASS: metadata target Assets/Resources/Art/Rooftop.png.meta
 PASS: 32-character GUID Rooftop.png.meta
 PASS: metadata coverage City.png
+PASS: metadata target Assets/Resources/Art/Actions.png.meta
+PASS: 32-character GUID Actions.png.meta
 PASS: metadata target Assets/Resources/Art/World.png.meta
 PASS: 32-character GUID World.png.meta
 PASS: metadata coverage Scrap.png
@@ -92,6 +98,11 @@ PASS: Scrap.png PNG chunk integrity
 PASS: Scrap expected image dimensions
 PASS: Scrap has RGBA channel
 PASS: Scrap readable point-filtered uncompressed import
+PASS: Actions.png PNG signature
+PASS: Actions.png PNG chunk integrity
+PASS: Actions expected image dimensions
+PASS: Actions has RGBA channel
+PASS: Actions readable point-filtered uncompressed import
 PASS: eight explicit world asset slices
 PASS: world slice in texture bounds 0
 PASS: world slice in texture bounds 1
@@ -127,6 +138,22 @@ PASS: world slice contains visible art 4
 PASS: world slice contains visible art 5
 PASS: world slice contains visible art 6
 PASS: world slice contains visible art 7
+PASS: action pose has clear transparent gutters 0
+PASS: action root lies inside silhouette width 0
+PASS: action pose has clear transparent gutters 1
+PASS: action root lies inside silhouette width 1
+PASS: action pose has clear transparent gutters 2
+PASS: action root lies inside silhouette width 2
+PASS: action pose has clear transparent gutters 3
+PASS: action root lies inside silhouette width 3
+PASS: action pose has clear transparent gutters 4
+PASS: action root lies inside silhouette width 4
+PASS: action pose has clear transparent gutters 5
+PASS: action root lies inside silhouette width 5
+PASS: action pose has clear transparent gutters 6
+PASS: action root lies inside silhouette width 6
+PASS: action pose has clear transparent gutters 7
+PASS: action root lies inside silhouette width 7
 PASS: enemy silhouette and transparent gutters 0
 PASS: enemy silhouette and transparent gutters 1
 PASS: enemy silhouette and transparent gutters 2
@@ -136,10 +163,12 @@ PASS: enemy silhouette and transparent gutters 5
 PASS: scrap projectile silhouette and transparent gutters
 PASS: C# syntax AncientArt.cs
 PASS: C# syntax AncientAudio.cs
+PASS: C# syntax AncientHUD.cs
 PASS: C# syntax AncientGame.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientVisuals.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-Static validation does not prove Unity compilation, rendered appearance, enemy behavior or gameplay.
-Shader compilation, combat fairness, camera framing and platform collision alignment require Unity validation.
+Static checks do not prove rendered quality or correct gameplay.
+Attack contact/buffering, pause/hit-emphasis interaction, pooled effects, sound levels and UI alignment require Unity Play Mode checks.
+No Unity compilation, shader compilation, gameplay or performance benchmark was executed.

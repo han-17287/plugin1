@@ -18,7 +18,7 @@ namespace Plugin.AncientCivilization
             texture.filterMode = FilterMode.Point; texture.wrapMode = TextureWrapMode.Clamp;
             textures[name] = texture; return texture;
         }
-        public static Sprite Slice(string sheet, string key, Rect topRect, float pixelsPerUnit, Vector2 pivot, bool trim = true)
+        public static Sprite Slice(string sheet, string key, Rect topRect, float pixelsPerUnit, Vector2 pivot, bool trim = true, bool stableX = false)
         {
             Sprite result;
             if (sprites.TryGetValue(key, out result) && result) return result;
@@ -39,7 +39,9 @@ namespace Plugin.AncientCivilization
                 {
                     left = Mathf.Max(0, left - 3); bottom = Mathf.Max(0, bottom - 3);
                     right = Mathf.Min(width - 1, right + 3); top = Mathf.Min(height - 1, top + 3);
+                    float rootX=pivot.x*width;
                     x += left; y += bottom; width = right - left + 1; height = top - bottom + 1;
+                    if(stableX)pivot.x=(rootX-left)/width;
                 }
             }
             result = Sprite.Create(texture, new Rect(x, y, width, height), pivot, pixelsPerUnit, 0, SpriteMeshType.FullRect);
@@ -52,7 +54,8 @@ namespace Plugin.AncientCivilization
             // Split at the actual transparent gutter so neither pose contains a neighbour.
             if (frame == 5) cell = new Rect(384, 512, 376, 512);
             if (frame == 6) cell = new Rect(760, 512, 392, 512);
-            return Slice("Hero", "hero-" + frame, cell, 195, new Vector2(.5f, 0));
+            float root=frame==6?223:215;
+            return Slice("Hero", "hero-" + frame, cell, 195, new Vector2(root/cell.width,0),true,true);
         }
         public static Sprite World(int index)
         {
@@ -65,6 +68,14 @@ namespace Plugin.AncientCivilization
             float[] ppu = {100,100,170,85,180,180,140,135};
             Vector2 pivot = index == 0 ? new Vector2(.5f,1) : index == 2 ? Vector2.one*.5f : new Vector2(.5f,0);
             return Slice("World", "world-"+index, cells[index], ppu[index], pivot, index != 0);
+        }
+        public static Sprite Action(int frame)
+        {
+            Rect cell=new Rect(frame%4*384,frame/4*512,384,512);
+            if(frame==1)cell=new Rect(384,0,392,512);
+            if(frame==2)cell=new Rect(776,0,376,512);
+            float root=frame==2?207:215;
+            return Slice("Actions","action-"+frame,cell,225,new Vector2(root/cell.width,0),true,true);
         }
         public static Sprite Rooftop(float width,bool tall)
         {

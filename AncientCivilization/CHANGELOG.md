@@ -1,3 +1,15 @@
+# v0.5 — Impact and Motion
+
+- Add dedicated anticipation/contact, heavy-strike, jump and hurt sprites with stable actor pivots.
+- Apply melee damage on contact timing and add a short next-attack input buffer.
+- Add short global hit emphasis, impact rings, landing feedback and pooled afterimages/impact pixels.
+- Add readable evade/absorb windup indicators, cooldown meters and the nearest-core locator.
+- Add a consistent HUD/button theme and trailing health feedback.
+- Separate camera shake from its follow position and align to actual display pixels.
+- Refine synthesized cues and add quiet original ambience with an F7 mute preference.
+
+Unity C#/shader compilation, rendering, input responsiveness and combat remain unverified here.
+
 # v0.4 — Neon Sentinels
 
 - Add a dedicated high-resolution collision-aligned rooftop texture, closer adaptive camera and 1080p defaults.
