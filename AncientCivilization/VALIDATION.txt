@@ -1,4 +1,4 @@
-Chapter 0 v0.2 validation
+Chapter 0 v0.3 validation
 
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
@@ -82,3 +82,4 @@ PASS: C# syntax AncientGame.cs
 NOT RUN: Unity C# type/API compilation, import, Play Mode, gameplay, player build
 
 Static file and syntax checks do not prove Unity compilation or gameplay.
+DistanceJoint2D swing, collision, auto-release, chain timing and visual alignment require Unity Play Mode validation.
