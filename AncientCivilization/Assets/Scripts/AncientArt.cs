@@ -66,6 +66,21 @@ namespace Plugin.AncientCivilization
             Vector2 pivot = index == 0 ? new Vector2(.5f,1) : index == 2 ? Vector2.one*.5f : new Vector2(.5f,0);
             return Slice("World", "world-"+index, cells[index], ppu[index], pivot, index != 0);
         }
+        public static Sprite Rooftop(float width,bool tall)
+        {
+            int pixels=Mathf.Clamp(Mathf.RoundToInt(width*256),1,1536);
+            return Slice("Rooftop","roof-"+pixels+"-"+tall,new Rect(0,16,pixels,tall?1008:256),256,new Vector2(.5f,1),false);
+        }
+        public static Sprite Scrap()
+        {var t=Texture("Scrap");return Slice("Scrap","thrown-scrap",new Rect(0,0,t.width,t.height),1100,Vector2.one*.5f);}
+        public static Sprite Enemy(int kind)
+        {
+            // Hand-measured gutters keep weapons and the boss's gauntlet intact.
+            Rect[] enemyCells={new Rect(0,0,512,500),new Rect(512,0,488,500),new Rect(1040,0,496,495),
+                new Rect(0,600,512,380),new Rect(512,530,466,494),new Rect(990,495,546,529)};
+            int index=kind==3?5:kind==4?3:kind==5?4:kind;
+            return Slice("Enemies","enemy-"+kind,enemyCells[index],kind==3?135:kind==4?150:185,new Vector2(.5f,0));
+        }
         public static Sprite City()
         {return Slice("City", "city", new Rect(0,0,1536,1024), 32, Vector2.one*.5f,false);}
         public static SpriteRenderer Display(string name, Sprite sprite, Vector2 position, int order, Transform parent = null)

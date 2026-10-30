@@ -45,10 +45,11 @@ namespace Plugin.AncientCivilization
             square=Sprite.Create(Texture2D.whiteTexture,new Rect(0,0,1,1),Vector2.one*.5f,1);
             lineMaterial=new Material(Shader.Find("Sprites/Default"));
             view=new GameObject("Pixel Camera").AddComponent<Camera>();view.tag="MainCamera";view.gameObject.AddComponent<AudioListener>();
-            view.orthographic=true;view.orthographicSize=7;view.backgroundColor=new Color(.025f,.04f,.07f);
+            view.orthographic=true;view.orthographicSize=5.8f;view.gameObject.AddComponent<AncientCameraFX>();view.backgroundColor=new Color(.025f,.04f,.07f);
             view.transform.position=new Vector3(checkpoint.x+4,4,-10);
             BuildWorld();
             hero=new GameObject("Mechanical Arm Hero").AddComponent<AncientHero>();hero.transform.position=checkpoint;
+            gameObject.AddComponent<AncientVisuals>();
             Notice(checkpointStage==0?"SECTOR 01 / THE BURIED CITY\nRecover three cores. Reach the eastern sanctum.":"Checkpoint restored. The city remembers.",7);
         }
         void BuildWorld()
@@ -72,8 +73,8 @@ namespace Plugin.AncientCivilization
             }
             AncientArt.Display("Eastern gate",AncientArt.World(3),new Vector2(115,0),-1);
             SpawnEnemy(14,3,0);SpawnEnemy(27,0,1);SpawnEnemy(35,0,2);
-            SpawnEnemy(51,5,1);SpawnEnemy(66,0,0);SpawnEnemy(74,4,2);
-            SpawnEnemy(90,5,1);SpawnEnemy(97,0,0);
+            SpawnEnemy(49,1,5);SpawnEnemy(51,5,1);SpawnEnemy(60,6,4);SpawnEnemy(66,0,0);SpawnEnemy(74,4,2);
+            SpawnEnemy(90,5,1);SpawnEnemy(93,0,5);SpawnEnemy(100,7,4);
             SpawnPickup(new Vector2(31,5),0);SpawnPickup(new Vector2(72,5),1);SpawnPickup(new Vector2(90,6),2);
             for(int i=0;i<8;i++)SpawnPickup(new Vector2(7+i*12,1.6f),-1);
             Beacon(new Vector2(46,1));Beacon(new Vector2(86,0));
@@ -85,21 +86,20 @@ namespace Plugin.AncientCivilization
         }
         void Platform(float left,float right,float top)
         {
-            var floor=new GameObject("Solid rooftop");floor.layer=8;floor.transform.position=new Vector2((left+right)/2,top-.55f);
-            var collider=floor.AddComponent<BoxCollider2D>();collider.size=new Vector2(right-left,1.1f);
-            // Art repeats independently of collision; no huge stretched solid-colour rectangles.
-            for(float x=left;x<right;x+=4)
+            bool tall=top<=1;float depth=tall?3.9375f:1;
+            var floor=new GameObject("Solid detailed rooftop");floor.layer=8;
+            floor.transform.position=new Vector2((left+right)/2,top-depth*.5f);
+            var collider=floor.AddComponent<BoxCollider2D>();collider.size=new Vector2(right-left,depth);
+            for(float x=left;x<right;x+=6)
             {
-                float width=Mathf.Min(4,right-x);Sprite sprite=AncientArt.World(0);
-                var tile=AncientArt.Display("Detailed rooftop facade",sprite,new Vector2(x+width/2,top),0);
-                tile.transform.localScale=new Vector3(width/sprite.bounds.size.x,1.2f,1);
-                if(top<=1)
+                float width=Mathf.Min(6,right-x);
+                AncientArt.Display("High detail industrial facade",AncientArt.Rooftop(width,tall),new Vector2(x+width/2,top),0);
+                if(width>2)
                 {
-                    var lower=AncientArt.Display("Lower building facade",sprite,new Vector2(x+width/2,top-2.7f),-1);
-                    lower.color=new Color(.65f,.7f,.8f);lower.transform.localScale=new Vector3(width/sprite.bounds.size.x,1.6f,1);
+                    Box("Wet cyan glint",new Vector2(x+1.3f,top-.015f),new Vector2(.6f,.025f),new Color(.3f,.75f,.85f,.5f),3);
+                    Box("Wet amber glint",new Vector2(x+width-.6f,top-.02f),new Vector2(.35f,.02f),new Color(1,.5f,.2f,.35f),3);
                 }
             }
-            Box("Walkable edge",new Vector2((left+right)/2,top-.025f),new Vector2(right-left,.05f),new Color(.48f,.56f,.57f),2);
         }
         public GameObject Box(string name,Vector2 pos,Vector2 size,Color color,int order)
         {
@@ -182,7 +182,11 @@ namespace Plugin.AncientCivilization
         void LateUpdate()
         {
             if(!hero)return;
-            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+3,5,113),Mathf.Max(4,hero.transform.position.y+1),-10);
+            float speed=Mathf.Abs(hero.HorizontalSpeed);
+            float zoom=hero.Wired?7.5f:hero.bike?6.8f:5.8f;
+            view.orthographicSize=Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
+            float lead=hero.Facing*Mathf.Lerp(2.5f,4,Mathf.Clamp01(speed/25));
+            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,5,113),Mathf.Max(4,hero.transform.position.y+1),-10);
             view.transform.position=Vector3.Lerp(view.transform.position,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
             var p=view.transform.position;if(shake>0&&!skills){p+=(Vector3)(Random.insideUnitCircle*shake);shake=Mathf.MoveTowards(shake,0,Time.deltaTime);}
             p.x=Mathf.Round(p.x*48)/48;p.y=Mathf.Round(p.y*48)/48;view.transform.position=p;
@@ -222,6 +226,7 @@ namespace Plugin.AncientCivilization
             Panel(new Rect(w-300,16,284,74),new Color(.025f,.045f,.065f,.88f));
             GUI.Label(new Rect(w-286,24,260,55),"ANCIENT CORES  "+Cores+" / 3\n"+(bossDefeated?"Warden defeated / Reach the gate":Cores==3?"Reach the eastern sanctum":"Explore the upper rooftops"),small);
             GUI.Label(new Rect(28,128,300,30),(hero.bike?"BIKE "+Mathf.CeilToInt(hero.bikeHP)+" / 80":hero.running?"RUN":"WALK")+"   "+(hero.Wired?"WIRE CHAIN "+hero.WireChain:hero.WireChain>1?"CHAIN "+hero.WireChain:"")+"   K / UPGRADES",small);
+            GUI.Label(new Rect(w-300,92,284,23),AncientVisuals.HighQuality?"F6 / VISUALS: ENHANCED":"F6 / VISUALS: LIGHT",small);
             foreach(var enemy in enemies)
             {
                 if(!enemy || enemy==boss || enemy.HealthRatio>=1)continue;
@@ -277,6 +282,8 @@ namespace Plugin.AncientCivilization
         public float MaxParticles {get{return reservoir?150:100;}}
         public bool Wired {get{return wired;}}
         public int WireChain {get{return wireChain;}}
+        public float Facing {get{return direction;}}
+        public float HorizontalSpeed {get{return body?body.linearVelocity.x:0;}}
         Rigidbody2D body;SpriteRenderer art,bikeArt;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
         DistanceJoint2D wireJoint;SpriteRenderer hook;SpriteRenderer[] wirePulses;
         float direction=1,controlAt,attackAt,invulnerableUntil,wireReady,lastGrounded=-100;
@@ -297,6 +304,7 @@ namespace Plugin.AncientCivilization
             var frictionless=new PhysicsMaterial2D("Free movement"){friction=0,bounciness=0};collider.sharedMaterial=frictionless;
             frames=new Sprite[8];for(int i=0;i<frames.Length;i++)frames[i]=AncientArt.Hero(i);
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-.825f),10,transform);
+            if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
             bikeArt=AncientArt.Display("Particle motorcycle",AncientArt.World(7),new Vector2(0,-.825f),9,transform);bikeArt.gameObject.SetActive(false);
             wire=g.Line("Particle cable core",new Color(.8f,1,1),.018f,17);
             wireGlow=g.Line("Particle cable sheath",new Color(.12f,.9f,1,.28f),.11f,16);
@@ -355,7 +363,7 @@ namespace Plugin.AncientCivilization
                 if(Time.time>comboUntil)combo=0;combo=combo%3+1;comboUntil=Time.time+.7f;
                 attackAt=Time.time+(combo==3?.4f:.22f);g.Sound(0);g.Slash(transform.position,direction,combo==3);
                 foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<(combo==3?3.2f:2.6f)&&(e.transform.position.x-transform.position.x)*direction>-.3f&&!Physics2D.Linecast(transform.position,e.AimPoint,1<<8))
-                    e.Hit(combo==3?38:combo==2?23:18);
+                    e.Hit(combo==3?38:combo==2?23:18,combo==3);
             }
             if(Input.GetKeyDown(KeyCode.Q)&&Time.time>=burstReady)
             {
@@ -363,7 +371,7 @@ namespace Plugin.AncientCivilization
                 else
                 {
                     particles-=25;burstReady=Time.time+.65f;g.Sound(4);g.Shake(.12f);g.Slash(transform.position,direction,true);
-                    foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<6&&(e.transform.position.x-transform.position.x)*direction>-.5f&&!Physics2D.Linecast(transform.position,e.AimPoint,1<<8))e.Hit(62);
+                    foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<6&&(e.transform.position.x-transform.position.x)*direction>-.5f&&!Physics2D.Linecast(transform.position,e.AimPoint,1<<8))e.Hit(62,true);
                     g.Burst((Vector2)transform.position+Vector2.right*direction*2,AncientGame.Cyan,26);
                 }
             }
@@ -554,7 +562,7 @@ namespace Plugin.AncientCivilization
         {
             if(!bike)return;bike=false;StopWire(false);momentumUntil=Time.time+.8f;
             var g=AncientGame.Instance;g.Sound(4);g.Burst(transform.position,AncientGame.Orange,45);g.Shake(.3f);
-            foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<5)e.Hit(85);
+            foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<5)e.Hit(85,true);
             body.linearVelocity=new Vector2(direction*17,19);invulnerableUntil=Time.time+.7f;
             g.Notice("EXPLOSION LAUNCH / connect the next anchor.",2);
         }
@@ -575,97 +583,153 @@ namespace Plugin.AncientCivilization
     public sealed class AncientEnemy : MonoBehaviour
     {
         public int kind;
-        float hp=60,maxHP=60,nextAttack,resolveAt=-1,flashUntil,walkPhase;
-        int pattern,attackIndex;bool dead;
+        float hp=60,maxHP=60,nextAttack,resolveAt=-1,flashUntil,walkPhase,faceLockUntil,guardBrokenUntil,staggerUntil;
+        int pattern,attackIndex,volleyRemaining;bool dead;
+        float volleyAt;
         SpriteRenderer art;LineRenderer warning;
         Vector2 home,lockedAim;float facing=1;
-        public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(kind==3?1.5f:.9f);}}
+        public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(kind==3?1.65f:kind==4?.65f:.95f);}}
         public float HealthRatio {get{return maxHP>0?hp/maxHP:1;}}
         public bool Enraged {get{return kind==3&&hp<maxHP*.5f;}}
-        public void Initialize(int type){kind=type;maxHP=hp=kind==3?560:kind==0?70:55;}
+        public string Role {get{return kind==0?"LANCER":kind==1?"GUNNER":kind==2?"BOMBER":kind==3?"SANCTUM WARDEN":kind==4?"DRONE":"SHIELD WARDEN";}}
+        public void Initialize(int type)
+        {kind=type;maxHP=hp=kind==3?560:kind==5?115:kind==4?42:kind==0?70:55;}
         void Start()
         {
             var g=AncientGame.Instance;home=transform.position;
-            art=AncientArt.Display("Sentinel art",AncientArt.World(kind==3?6:kind==0?4:5),Vector2.zero,8,transform);
-            if(kind==2)art.color=new Color(.7f,.87f,1);
+            art=AncientArt.Display(Role,AncientArt.Enemy(kind),Vector2.zero,8,transform);
+            if(AncientVisuals.Instance)
+            {
+                AncientVisuals.Instance.Rim(art);
+                AncientVisuals.Instance.Glow(new Vector2(0,kind==4?.6f:1.1f),kind==3||kind==5?AncientGame.Cyan:AncientGame.Orange,kind==3?2.5f:1.1f,9,transform);
+            }
             warning=g.Line("Attack telegraph",AncientGame.Orange,.045f,6);warning.enabled=false;
-            nextAttack=Time.time+(kind==3?1.3f:1+kind*.4f);
+            nextAttack=Time.time+(kind==3?1.3f:1+kind*.2f);
+        }
+        bool Step(float distance)
+        {
+            float x=Mathf.Clamp(transform.position.x+distance,kind==3?100:home.x-2,kind==3?114:home.x+2);
+            if(kind!=3&&!Physics2D.Raycast(new Vector2(x,home.y+.2f),Vector2.down,.5f,1<<8))return false;
+            transform.position=new Vector2(x,home.y);return true;
         }
         void Update()
         {
             var g=AncientGame.Instance;if(dead||!g.hero||g.won||g.Paused)return;
+            if(kind==4)transform.position=home+new Vector2(Mathf.Sin(Time.time*.75f+home.x)*2.2f,Mathf.Sin(Time.time*1.8f)*.55f);
+            if(volleyRemaining>0&&Time.time>=volleyAt)
+            {FireProjectile(lockedAim,12,false,0);volleyRemaining--;volleyAt=Time.time+.14f;}
             Vector2 delta=(Vector2)g.hero.transform.position-AimPoint;
-            if(resolveAt<0){facing=delta.x<0?-1:1;art.flipX=facing<0;}
+            if(resolveAt<0&&Time.time>faceLockUntil){facing=delta.x<0?-1:1;art.flipX=facing<0;}
+            if(Time.time<staggerUntil)
+            {warning.enabled=false;art.color=AncientGame.Cyan;return;}
             if(resolveAt>=0)
             {
                 float pulse=.5f+Mathf.Sin(Time.time*25)*.5f;
                 art.color=Time.time<flashUntil?Color.white:Color.Lerp(Color.white,pattern==0?AncientGame.Orange:AncientGame.Cyan,pulse*.7f);
-                warning.enabled=true;warning.startColor=warning.endColor=pattern==0?AncientGame.Orange:AncientGame.Cyan;
-                Vector2 begin=AimPoint;
-                warning.SetPosition(0,begin);
-                warning.SetPosition(1,pattern==0?begin+new Vector2(facing*(kind==3?4.8f:2.7f),-.5f):lockedAim);
+                DrawTelegraph();
                 if(Time.time>=resolveAt)
                 {
                     resolveAt=-1;warning.enabled=false;ResolveAttack();
-                    nextAttack=Time.time+(kind==3?(Enraged?.65f:1.15f):kind==0?.95f:1.35f);
+                    nextAttack=Time.time+(kind==3?(Enraged?.65f:1.15f):kind==5?1.45f:kind==0?1.05f:kind==2?1.8f:kind==4?1.9f:1.6f);
                 }
                 return;
             }
-            art.color=Time.time<flashUntil?AncientGame.Cyan:kind==2?new Color(.7f,.87f,1):Color.white;
-            if(kind==0 || kind==3)
+            art.color=Time.time<flashUntil?AncientGame.Cyan:kind==5&&Time.time<guardBrokenUntil?new Color(.65f,.8f,1):Color.white;
+            if(kind==0||kind==3||kind==5)
             {
-                float stop=kind==3?3.2f:1.8f;
+                float stop=kind==3?3.2f:kind==5?2.1f:1.8f;
                 if(Mathf.Abs(delta.x)>stop&&Mathf.Abs(delta.x)<18)
                 {
-                    float x=Mathf.MoveTowards(transform.position.x,g.hero.transform.position.x,(kind==3?(Enraged?3.6f:2.7f):2.4f)*Time.deltaTime);
-                    x=Mathf.Clamp(x,kind==3?100:home.x-2,kind==3?114:home.x+2);
-                    transform.position=new Vector2(x,home.y);walkPhase+=Time.deltaTime;
+                    float speed=kind==3?(Enraged?3.6f:2.7f):kind==5?1.7f:2.4f;
+                    Step(Mathf.Sign(delta.x)*speed*Time.deltaTime);walkPhase+=Time.deltaTime;
                     art.transform.localPosition=new Vector2(0,Mathf.Sin(walkPhase*14)*.025f);
                 }
             }
             if(Time.time<nextAttack)return;
-            if(kind==0 && delta.magnitude<3.3f)Windup(0,.5f);
+            if((kind==0||kind==5)&&delta.magnitude<3.5f)Windup(0,kind==5?.65f:.55f);
             else if(kind==3)
             {
-                // Alternate unavoidable-to-absorb melee with absorbable projectile fans.
                 pattern=attackIndex++%3==0&&Mathf.Abs(delta.x)<6?0:1;
                 Windup(pattern,pattern==0?(Enraged?.48f:.7f):.65f);
             }
-            else if(kind!=0&&delta.magnitude<20&&!Physics2D.Linecast(AimPoint,g.hero.transform.position,1<<8))Windup(1,.5f);
+            else if(kind!=0&&kind!=5&&delta.magnitude<20&&!Physics2D.Linecast(AimPoint,g.hero.transform.position,1<<8))
+                Windup(1,kind==2?.85f:kind==4?.7f:.65f);
         }
         void Windup(int type,float delay)
-        {pattern=type;resolveAt=Time.time+delay;lockedAim=AncientGame.Instance.hero.transform.position;}
+        {
+            pattern=type;resolveAt=Time.time+delay;lockedAim=AncientGame.Instance.hero.transform.position;
+            faceLockUntil=resolveAt+(kind==5?1.15f:.25f);
+        }
+        void DrawTelegraph()
+        {
+            warning.enabled=true;warning.startColor=warning.endColor=pattern==0?AncientGame.Orange:AncientGame.Cyan;
+            Vector2 begin=AimPoint;
+            if(kind==2)
+            {
+                warning.positionCount=14;float flight=.95f;Vector2 velocity=(lockedAim-begin)/flight+Vector2.up*(14*flight*.5f);
+                for(int i=0;i<14;i++){float t=i/13f*flight;warning.SetPosition(i,begin+velocity*t+Vector2.down*7*t*t);}
+            }
+            else
+            {
+                warning.positionCount=2;warning.SetPosition(0,begin);
+                warning.SetPosition(1,pattern==0?begin+new Vector2(facing*(kind==3?4.8f:3.1f),-.5f):lockedAim);
+            }
+        }
+        void FireProjectile(Vector2 target,float speed,bool scrap,float gravity)
+        {
+            var g=AncientGame.Instance;Vector2 aim=(target-AimPoint).normalized;if(aim.sqrMagnitude<.1f)aim=Vector2.right*facing;
+            var shot=new GameObject(scrap?"Thrown scrap":"Energy bolt").AddComponent<AncientProjectile>();
+            shot.scrap=scrap;shot.gravity=gravity;shot.damage=kind==3?20:scrap?25:kind==4?12:15;
+            Vector2 origin=AimPoint+aim*.65f;shot.transform.position=origin;
+            shot.velocity=gravity>0?(target-origin)/.95f+Vector2.up*(gravity*.95f*.5f):aim*speed;
+            g.shots.Add(shot);
+        }
         void ResolveAttack()
         {
             var g=AncientGame.Instance;
             if(pattern==0)
             {
+                if(kind==0)Step(facing*.9f);
                 Vector2 delta=(Vector2)g.hero.transform.position-AimPoint;
-                if(Mathf.Abs(delta.x)<(kind==3?4.8f:2.8f)&&Mathf.Abs(delta.y)<1.7f&&delta.x*facing>-.6f)g.hero.Hurt(kind==3?32:22);
+                if(Mathf.Abs(delta.x)<(kind==3?4.8f:2.8f)&&Mathf.Abs(delta.y)<1.7f&&delta.x*facing>-.6f)g.hero.Hurt(kind==3?32:kind==5?26:22);
                 g.Slash(AimPoint,facing,kind==3);g.Burst(AimPoint+Vector2.right*facing*2,AncientGame.Orange,kind==3?25:8);
                 if(kind==3)g.Shake(.2f);
             }
+            else if(kind==2)FireProjectile(lockedAim,9,true,14);
+            else if(kind==1)
+            {FireProjectile(lockedAim,12,false,0);volleyRemaining=2;volleyAt=Time.time+.14f;}
             else
             {
-                Vector2 aim=(lockedAim-AimPoint).normalized;if(aim.sqrMagnitude<.1f)aim=Vector2.left;
-                int count=kind==3?(Enraged?7:5):1;
+                int count=kind==3?(Enraged?7:5):3;
+                Vector2 baseAim=(lockedAim-AimPoint).normalized;
                 for(int i=0;i<count;i++)
                 {
                     float angle=(i-(count-1)/2f)*(Enraged?10:12)*Mathf.Deg2Rad;
-                    Vector2 direction=new Vector2(aim.x*Mathf.Cos(angle)-aim.y*Mathf.Sin(angle),aim.x*Mathf.Sin(angle)+aim.y*Mathf.Cos(angle));
-                    var shot=new GameObject(kind==2?"Thrown scrap":"Energy bolt").AddComponent<AncientProjectile>();
-                    shot.scrap=kind==2;shot.damage=kind==3?20:kind==2?25:15;
-                    shot.transform.position=AimPoint+direction*.75f;shot.velocity=direction*(kind==2?9:kind==3?11:12);g.shots.Add(shot);
+                    Vector2 direction=new Vector2(baseAim.x*Mathf.Cos(angle)-baseAim.y*Mathf.Sin(angle),baseAim.x*Mathf.Sin(angle)+baseAim.y*Mathf.Cos(angle));
+                    FireProjectile(AimPoint+direction*10,kind==3?11:9,false,0);
                 }
             }
         }
-        public void Hit(float damage)
+        public void Hit(float damage,bool breakGuard=false)
         {
-            if(dead)return;hp-=damage;flashUntil=Time.time+.1f;
-            var g=AncientGame.Instance;g.Burst(AimPoint,AncientGame.Cyan,7);g.Shake(.045f);g.score+=Mathf.RoundToInt(damage);
+            if(dead)return;var g=AncientGame.Instance;
+            if(kind==5&&Time.time>=guardBrokenUntil&&((Vector2)g.hero.transform.position-AimPoint).x*facing>0)
+            {
+                if(!breakGuard){damage*=.15f;g.Burst(AimPoint+Vector2.right*facing*.6f,AncientGame.Cyan,8);g.Notice("SHIELD / Flank, finish a combo, or use Q to break guard.",1.2f);}
+                else{guardBrokenUntil=Time.time+2;staggerUntil=Time.time+.8f;resolveAt=-1;g.Notice("GUARD BROKEN",.8f);}
+            }
+            if(breakGuard&&kind!=3){resolveAt=-1;staggerUntil=Mathf.Max(staggerUntil,Time.time+.4f);nextAttack=Mathf.Max(nextAttack,Time.time+.65f);volleyRemaining=0;}
+            hp-=damage;flashUntil=Time.time+.1f;
+            g.Burst(AimPoint,AncientGame.Cyan,7);g.Shake(.045f);g.score+=Mathf.RoundToInt(damage);
             if(hp>0)return;
-            dead=true;g.kills++;g.credits+=kind==3?20:4;g.score+=kind==3?1000:100;
-            g.SpawnPickup(AimPoint);g.Burst(AimPoint,AncientGame.Orange,kind==3?55:18);g.enemies.Remove(this);
+            dead=true;g.kills++;g.credits+=kind==3?20:kind==5?6:kind==4?5:4;g.score+=kind==3?1000:100;
+            Vector2 drop=AimPoint;
+            if(kind==4)
+            {
+                var ground=Physics2D.Raycast(drop,Vector2.down,20,1<<8);
+                if(ground)drop=ground.point+Vector2.up*.7f;
+            }
+            g.SpawnPickup(drop);g.Burst(AimPoint,AncientGame.Orange,kind==3?55:18);g.enemies.Remove(this);
             if(kind==3){g.bossDefeated=true;g.boss=null;g.Save();g.Notice("WARDEN DEFEATED\nThe eastern gate is open.",7);}
             Destroy(gameObject);
         }
@@ -673,16 +737,14 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientProjectile : MonoBehaviour
     {
-        public bool scrap;public Vector2 velocity;public float damage=15;
+        public bool scrap;public Vector2 velocity;public float damage=15,gravity;
         float age;bool removed;LineRenderer glow;
         void Start()
         {
             var g=AncientGame.Instance;
             if(scrap)
             {
-                var o=g.Box("Scrap fragment",Vector2.zero,new Vector2(.38f,.28f),new Color(.65f,.72f,.75f),12);
-                o.transform.SetParent(transform,false);
-                var inner=g.Box("Scrap core",Vector2.zero,Vector2.one*.13f,AncientGame.Orange,13);inner.transform.SetParent(transform,false);
+                AncientArt.Display("Thrown metal chunk",AncientArt.Scrap(),Vector2.zero,12,transform);
             }
             else
             {
@@ -692,7 +754,7 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             if(removed)return;var g=AncientGame.Instance;if(g.won){Remove();return;}if(g.Paused)return;
-            age+=Time.deltaTime;Vector2 previous=transform.position;Vector2 next=previous+velocity*Time.deltaTime;
+            age+=Time.deltaTime;velocity+=Vector2.down*gravity*Time.deltaTime;Vector2 previous=transform.position;Vector2 next=previous+velocity*Time.deltaTime;
             if(Physics2D.Linecast(previous,next,1<<8)){g.Burst(previous,AncientGame.Cyan,4);Remove();return;}
             if(g.hero&&age>.05f)
             {

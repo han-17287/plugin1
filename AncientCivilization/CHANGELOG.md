@@ -1,3 +1,14 @@
+# v0.4 — Neon Sentinels
+
+- Add a dedicated high-resolution collision-aligned rooftop texture, closer adaptive camera and 1080p defaults.
+- Add additive local lights, character rim shading, subtle screen glow/grade, distant rain, haze and foreground cables.
+- Add an F6 Enhanced/Light presentation option with supported-shader fallbacks.
+- Replace shared enemy art with six distinct silhouettes and a dedicated thrown scrap sprite.
+- Add telegraphed lancer lunges, gunner three-round bursts, ballistic scrap throws, flying drone fans and directional shield guards.
+- Add guard breaks with combo finishers, particle bursts and motorcycle explosions; add vulnerable recovery windows.
+
+Unity C#/shader compilation, rendered appearance and combat remain unverified here.
+
 # v0.3 — Particle Wire
 
 - Add an actual maximum-length DistanceJoint2D tether with automatic reeling and immediate forward/upward launch.

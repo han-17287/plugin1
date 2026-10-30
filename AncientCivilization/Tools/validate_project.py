@@ -61,12 +61,12 @@ def main():
     scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text())[1]
     check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(), 'Main scene build GUID')
     dimensions = {}
-    for name in ('City', 'Hero', 'World'):
+    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap'):
         path = ROOT / ('Assets/Resources/Art/' + name + '.png')
         header = png_info(path)
         dimensions[name] = header[:2]
-        check(header[:2] == (1536, 1024), name + ' expected atlas dimensions')
-        if name != 'City':
+        check(header[:2] == ((1254, 1254) if name == 'Scrap' else (1536, 1024)), name + ' expected image dimensions')
+        if name not in ('City', 'Rooftop'):
             check(header[3] == 6, name + ' has RGBA channel')
         meta = path.with_suffix('.png.meta').read_text()
         check('isReadable: 1' in meta and 'filterMode: 0' in meta and 'textureCompression: 0' in meta,
@@ -78,6 +78,16 @@ def main():
     for i, (x, y, w, h) in enumerate(rects):
         check(x >= 0 and y >= 0 and x + w <= dimensions['World'][0] and y + h <= dimensions['World'][1],
               'world slice in texture bounds ' + str(i))
+    enemy_block = art.split('Rect[] enemyCells={', 1)[1].split('};', 1)[0]
+    enemy_rects = [tuple(map(int, m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', enemy_block)]
+    check(len(enemy_rects) == 6, 'six distinct enemy sprite slices')
+    for i, (x, y, w, h) in enumerate(enemy_rects):
+        check(x >= 0 and y >= 0 and x + w <= 1536 and y + h <= 1024, 'enemy slice in texture bounds ' + str(i))
+    for name in ('ParticleGlow', 'CharacterRim', 'Presentation'):
+        shader = ROOT / ('Assets/Resources/Shaders/' + name + '.shader')
+        source = shader.read_text()
+        check('Shader "' in source and source.count('CGPROGRAM') == source.count('ENDCG') == 1,
+              'shader resource and program delimiters ' + name)
     try:
         from PIL import Image
         image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
@@ -96,6 +106,16 @@ def main():
             region = image.getchannel('A').crop((x, y, x + w, y + h))
             check(region.point(lambda a: 255 if a >= 110 else 0).getbbox() is not None,
                   'world slice contains visible art ' + str(i))
+        image = Image.open(ROOT / 'Assets/Resources/Art/Enemies.png')
+        for i, (x, y, w, h) in enumerate(enemy_rects):
+            region = image.getchannel('A').crop((x, y, x + w, y + h))
+            bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
+            check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
+                  'enemy silhouette and transparent gutters ' + str(i))
+        image = Image.open(ROOT / 'Assets/Resources/Art/Scrap.png')
+        bbox = image.getchannel('A').point(lambda a: 255 if a >= 110 else 0).getbbox()
+        check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < image.width and bbox[3] < image.height,
+              'scrap projectile silhouette and transparent gutters')
     except ImportError:
         results.append('SKIP: per-pixel alpha checks (Pillow unavailable)')
     try:
@@ -107,7 +127,7 @@ def main():
             check(not tree.root_node.has_error, 'C# syntax ' + script.name)
     except ImportError:
         results.append('SKIP: C# syntax parser (tree-sitter packages unavailable)')
-    results.append('NOT RUN: Unity C# type/API compilation, import, Play Mode, gameplay, player build')
+    results.append('NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build')
     print('\n'.join(results))
 
 
