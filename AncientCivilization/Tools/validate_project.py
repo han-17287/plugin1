@@ -1,0 +1,115 @@
+"""Validate portable Unity project structure and shipped art, without Unity.
+Optional packages: Pillow, tree-sitter, tree-sitter-c-sharp.
+This does NOT compile C# or validate gameplay.
+"""
+from pathlib import Path
+import json
+import re
+import struct
+import zlib
+
+ROOT = Path(__file__).resolve().parents[1]
+results = []
+
+
+def check(condition, description):
+    if not condition:
+        raise AssertionError(description)
+    results.append('PASS: ' + description)
+
+
+def png_info(path):
+    data = path.read_bytes()
+    check(data[:8] == b'\x89PNG\r\n\x1a\n', path.name + ' PNG signature')
+    offset = 8
+    header = None
+    ended = False
+    while offset < len(data):
+        size = struct.unpack('>I', data[offset:offset + 4])[0]
+        kind = data[offset + 4:offset + 8]
+        payload = data[offset + 8:offset + 8 + size]
+        stored_crc = struct.unpack('>I', data[offset + 8 + size:offset + 12 + size])[0]
+        if zlib.crc32(kind + payload) & 0xffffffff != stored_crc:
+            raise AssertionError(path.name + ' corrupt PNG chunk')
+        if kind == b'IHDR':
+            header = struct.unpack('>IIBBBBB', payload)
+        offset += size + 12
+        if kind == b'IEND':
+            ended = True
+            break
+    check(ended and header is not None, path.name + ' PNG chunk integrity')
+    return header
+
+
+def main():
+    manifest = json.loads((ROOT / 'Packages/manifest.json').read_text())
+    check(set(manifest['dependencies']) == {
+        'com.unity.modules.physics2d', 'com.unity.modules.imgui', 'com.unity.modules.audio'
+    }, 'required builtin Unity modules declared')
+    check('6000.6.7f1' in (ROOT / 'ProjectSettings/ProjectVersion.txt').read_text(), 'Unity version 6000.6.7f1')
+    guids = []
+    for asset in (ROOT / 'Assets').rglob('*'):
+        if asset.suffix == '.meta':
+            check(asset.with_suffix('').exists(), 'metadata target ' + str(asset.relative_to(ROOT)))
+            match = re.search(r'^guid: ([a-f0-9]{32})$', asset.read_text(), re.M)
+            check(match is not None, '32-character GUID ' + asset.name)
+            guids.append(match[1])
+        else:
+            check(asset.with_name(asset.name + '.meta').exists(), 'metadata coverage ' + asset.name)
+    check(len(guids) == len(set(guids)), 'unique asset GUIDs')
+    scene = ROOT / 'Assets/Scenes/Main.unity'
+    scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text())[1]
+    check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(), 'Main scene build GUID')
+    dimensions = {}
+    for name in ('City', 'Hero', 'World'):
+        path = ROOT / ('Assets/Resources/Art/' + name + '.png')
+        header = png_info(path)
+        dimensions[name] = header[:2]
+        check(header[:2] == (1536, 1024), name + ' expected atlas dimensions')
+        if name != 'City':
+            check(header[3] == 6, name + ' has RGBA channel')
+        meta = path.with_suffix('.png.meta').read_text()
+        check('isReadable: 1' in meta and 'filterMode: 0' in meta and 'textureCompression: 0' in meta,
+              name + ' readable point-filtered uncompressed import')
+    art = (ROOT / 'Assets/Scripts/AncientArt.cs').read_text()
+    rect_block = art.split('Rect[] cells = {', 1)[1].split('};', 1)[0]
+    rects = [tuple(map(int, m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', rect_block)]
+    check(len(rects) == 8, 'eight explicit world asset slices')
+    for i, (x, y, w, h) in enumerate(rects):
+        check(x >= 0 and y >= 0 and x + w <= dimensions['World'][0] and y + h <= dimensions['World'][1],
+              'world slice in texture bounds ' + str(i))
+    try:
+        from PIL import Image
+        image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
+        for i in range(8):
+            x, y, w, h = i % 4 * 384, i // 4 * 512, 384, 512
+            if i == 5:
+                x, w = 384, 376
+            if i == 6:
+                x, w = 760, 392
+            region = image.getchannel('A').crop((x, y, x + w, y + h))
+            bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
+            check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
+                  'hero pose has opaque silhouette and clear gutters ' + str(i))
+        image = Image.open(ROOT / 'Assets/Resources/Art/World.png')
+        for i, (x, y, w, h) in enumerate(rects):
+            region = image.getchannel('A').crop((x, y, x + w, y + h))
+            check(region.point(lambda a: 255 if a >= 110 else 0).getbbox() is not None,
+                  'world slice contains visible art ' + str(i))
+    except ImportError:
+        results.append('SKIP: per-pixel alpha checks (Pillow unavailable)')
+    try:
+        import tree_sitter
+        import tree_sitter_c_sharp
+        parser = tree_sitter.Parser(tree_sitter.Language(tree_sitter_c_sharp.language()))
+        for script in (ROOT / 'Assets/Scripts').glob('*.cs'):
+            tree = parser.parse(script.read_bytes())
+            check(not tree.root_node.has_error, 'C# syntax ' + script.name)
+    except ImportError:
+        results.append('SKIP: C# syntax parser (tree-sitter packages unavailable)')
+    results.append('NOT RUN: Unity C# type/API compilation, import, Play Mode, gameplay, player build')
+    print('\n'.join(results))
+
+
+if __name__ == '__main__':
+    main()

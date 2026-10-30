@@ -1,9 +1,84 @@
-Validation performed on 2026-10-30:
-PASS: C# tree-sitter syntax parse, zero syntax errors (6 classes).
-PASS: Packages manifest JSON.
-PASS: Unity version set to 6000.6.7f1.
-PASS: Asset and folder .meta coverage; unique 32-character GUIDs.
-PASS: Enabled Main scene GUID matches scene metadata.
-PASS: Eight procedural pixel grids have consistent row dimensions.
-NOT RUN: Unity compilation/type checking, editor import, Play Mode, player build, gameplay checks.
-C# syntax validation is not a substitute for Unity compilation or runtime testing.
+Chapter 0 v0.2 validation
+
+PASS: required builtin Unity modules declared
+PASS: Unity version 6000.6.7f1
+PASS: metadata target Assets/Scripts.meta
+PASS: 32-character GUID Scripts.meta
+PASS: metadata coverage Resources
+PASS: metadata target Assets/Scenes.meta
+PASS: 32-character GUID Scenes.meta
+PASS: metadata target Assets/Resources.meta
+PASS: 32-character GUID Resources.meta
+PASS: metadata coverage Scripts
+PASS: metadata coverage Scenes
+PASS: metadata coverage Art
+PASS: metadata target Assets/Resources/Art.meta
+PASS: 32-character GUID Art.meta
+PASS: metadata coverage AncientArt.cs
+PASS: metadata coverage AncientAudio.cs
+PASS: metadata target Assets/Scripts/AncientArt.cs.meta
+PASS: 32-character GUID AncientArt.cs.meta
+PASS: metadata target Assets/Scripts/AncientGame.cs.meta
+PASS: 32-character GUID AncientGame.cs.meta
+PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
+PASS: 32-character GUID AncientAudio.cs.meta
+PASS: metadata coverage AncientGame.cs
+PASS: metadata coverage Main.unity
+PASS: metadata target Assets/Scenes/Main.unity.meta
+PASS: 32-character GUID Main.unity.meta
+PASS: metadata coverage World.png
+PASS: metadata target Assets/Resources/Art/Hero.png.meta
+PASS: 32-character GUID Hero.png.meta
+PASS: metadata coverage Hero.png
+PASS: metadata target Assets/Resources/Art/City.png.meta
+PASS: 32-character GUID City.png.meta
+PASS: metadata coverage City.png
+PASS: metadata target Assets/Resources/Art/World.png.meta
+PASS: 32-character GUID World.png.meta
+PASS: unique asset GUIDs
+PASS: Main scene build GUID
+PASS: City.png PNG signature
+PASS: City.png PNG chunk integrity
+PASS: City expected atlas dimensions
+PASS: City readable point-filtered uncompressed import
+PASS: Hero.png PNG signature
+PASS: Hero.png PNG chunk integrity
+PASS: Hero expected atlas dimensions
+PASS: Hero has RGBA channel
+PASS: Hero readable point-filtered uncompressed import
+PASS: World.png PNG signature
+PASS: World.png PNG chunk integrity
+PASS: World expected atlas dimensions
+PASS: World has RGBA channel
+PASS: World readable point-filtered uncompressed import
+PASS: eight explicit world asset slices
+PASS: world slice in texture bounds 0
+PASS: world slice in texture bounds 1
+PASS: world slice in texture bounds 2
+PASS: world slice in texture bounds 3
+PASS: world slice in texture bounds 4
+PASS: world slice in texture bounds 5
+PASS: world slice in texture bounds 6
+PASS: world slice in texture bounds 7
+PASS: hero pose has opaque silhouette and clear gutters 0
+PASS: hero pose has opaque silhouette and clear gutters 1
+PASS: hero pose has opaque silhouette and clear gutters 2
+PASS: hero pose has opaque silhouette and clear gutters 3
+PASS: hero pose has opaque silhouette and clear gutters 4
+PASS: hero pose has opaque silhouette and clear gutters 5
+PASS: hero pose has opaque silhouette and clear gutters 6
+PASS: hero pose has opaque silhouette and clear gutters 7
+PASS: world slice contains visible art 0
+PASS: world slice contains visible art 1
+PASS: world slice contains visible art 2
+PASS: world slice contains visible art 3
+PASS: world slice contains visible art 4
+PASS: world slice contains visible art 5
+PASS: world slice contains visible art 6
+PASS: world slice contains visible art 7
+PASS: C# syntax AncientArt.cs
+PASS: C# syntax AncientAudio.cs
+PASS: C# syntax AncientGame.cs
+NOT RUN: Unity C# type/API compilation, import, Play Mode, gameplay, player build
+
+Static file and syntax checks do not prove Unity compilation or gameplay.
