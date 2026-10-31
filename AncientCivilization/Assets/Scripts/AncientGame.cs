@@ -78,9 +78,8 @@ namespace Plugin.AncientCivilization
             Platform(-5,20,0);Platform(22,38,0);Platform(43,58,1);
             Platform(63,80,0);Platform(85,118,0);
             Platform(10,16,3);Platform(28,33,4);Platform(48,55,5);Platform(69,75,4);Platform(87,93,5);
-            // Broken overhead decks leave gaps for vertical exploration and connect each sector by wire.
-            Ceiling(4,20,9);Ceiling(24,40,10);Ceiling(45,61,11);
-            Ceiling(65,82,10);Ceiling(85,97,11);Ceiling(100,117,10);
+            // One unbroken solid ceiling covers the entire level and extends past both camera edges.
+            Ceiling(-40,160,10);
             AncientArt.Display("Eastern gate",AncientArt.World(3),new Vector2(115,0),-1);
             // Six spaced encounters instead of eleven; ranged enemies supply capture ammunition.
             SpawnEnemy(14,3,0);SpawnEnemy(30,4,1);SpawnEnemy(49,1,5);
@@ -113,7 +112,7 @@ namespace Plugin.AncientCivilization
         }
         void Ceiling(float left,float right,float underside)
         {
-            const float thickness=.65f;
+            const float thickness=32;
             var deck=Box("Solid wire ceiling",new Vector2((left+right)*.5f,underside+thickness*.5f),
                 new Vector2(right-left,thickness),new Color(.075f,.13f,.18f),1);
             deck.layer=8;deck.AddComponent<BoxCollider2D>();
@@ -121,8 +120,8 @@ namespace Plugin.AncientCivilization
                 new Vector2(right-left,.05f),new Color(.12f,.62f,.7f),3);
             for(float x=left+.5f;x<right;x+=2)
             {
-                Box("Ceiling structural rib",new Vector2(x,underside+thickness*.5f),
-                    new Vector2(.12f,thickness),new Color(.15f,.24f,.29f),2);
+                Box("Ceiling structural rib",new Vector2(x,underside+.325f),
+                    new Vector2(.12f,.65f),new Color(.15f,.24f,.29f),2);
             }
             for(float x=left+1.5f;x<right-1;x+=4)
             {
