@@ -53,14 +53,14 @@ namespace Plugin.AncientCivilization
             Matrix4x4 oldMatrix=GUI.matrix;int oldDepth=GUI.depth;Color oldColor=GUI.color;
             GUI.matrix=Matrix4x4.identity;GUI.depth=-10000;
             bool isMenu=game.Paused||game.won;
-            Color color=isMenu?new Color(.85f,.95f,1):game.hero.HasWireTarget?AncientGame.Cyan:new Color(.5f,.6f,.65f);
-            if(!isMenu&&game.hero.WireCooldown<1)color=AncientGame.Orange;
+            Color color=isMenu?new Color(.85f,.95f,1):(game.hero.AttackMode||game.hero.HasWireTarget)?AncientGame.Cyan:new Color(.5f,.6f,.65f);
+            if(!isMenu&&!game.hero.AttackMode&&game.hero.WireCooldown<1)color=AncientGame.Orange;
             if(Time.unscaledTime<clickUntil)color=Color.white;
             GUI.color=color;
             float size=32*Mathf.Clamp(Screen.height/900f,.8f,1.4f);
             Vector2 mouse=new Vector2(Input.mousePosition.x,Screen.height-Input.mousePosition.y);
             Vector2 hotspot=isMenu?new Vector2(size*5/32,size*5/32):Vector2.one*size*.5f;
-            if(!isMenu&&game.hero.ZipMode)GUIUtility.RotateAroundPivot(45,mouse);
+            if(!isMenu&&!game.hero.AttackMode&&game.hero.ZipMode)GUIUtility.RotateAroundPivot(45,mouse);
             GUI.DrawTexture(new Rect(Mathf.Round(mouse.x-hotspot.x),Mathf.Round(mouse.y-hotspot.y),size,size),isMenu?menu:aim);
             GUI.color=oldColor;GUI.depth=oldDepth;GUI.matrix=oldMatrix;
         }

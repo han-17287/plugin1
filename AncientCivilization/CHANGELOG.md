@@ -1,3 +1,10 @@
+# v0.7 기반 — 와이어 / 캡처 공격 조작 변경
+- Shift: 와이어 / 공격 모드 토글, 근접 3연타는 V로 이동.
+- 와이어 모드: 좌클릭 직선 견인, 우클릭 스윙. Tab 모드 선택 제거.
+- 공격 모드: 우클릭 유지로 적 투사체 캡처, 좌클릭으로 누적 에너지를 조준 발사.
+- 캡처 위력에 따라 에너지 누적, 최대 3단계 및 별도 100% 충전율. 3회 캡처로 풀충전되지 않음.
+- 누적량에 따라 발사 피해·크기·궤적·피격 범위와 저장 고리 확대. HUD와 도움말 갱신.
+
 # v0.7 — Particle Motorcycle
 
 - Add modular chassis, animated wheels, an aligned rider and an alternate damaged chassis.
