@@ -1,3 +1,13 @@
+# v0.6 — Aimed Wire Controls
+
+- Bind left mouse to pointer-aimed wire, Shift to melee and Alt/C to dodge.
+- Add Tab switching between automatic swing and direct zip-pull, preserving the mode preference.
+- Limit snapping to the cursor neighbourhood and add direction-unrestricted fixed-surface targets in zip mode.
+- Add a pixel reticle with target/cooldown feedback, mode-specific shape and a menu pointer.
+- Restore the native cursor outside the Game view, on focus loss, disable and teardown.
+
+Unity input handling, cursor behaviour, wire physics and rendering remain unverified here.
+
 # v0.5 — Impact and Motion
 
 - Add dedicated anticipation/contact, heavy-strike, jump and hurt sprites with stable actor pivots.

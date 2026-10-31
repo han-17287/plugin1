@@ -1,4 +1,4 @@
-Chapter 0 v0.5 static validation
+Chapter 0 v0.6 static validation
 
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
@@ -19,6 +19,8 @@ PASS: metadata target Assets/Resources/Shaders.meta
 PASS: 32-character GUID Shaders.meta
 PASS: metadata coverage AncientArt.cs
 PASS: metadata coverage AncientAudio.cs
+PASS: metadata target Assets/Scripts/AncientPointer.cs.meta
+PASS: 32-character GUID AncientPointer.cs.meta
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
 PASS: 32-character GUID AncientArt.cs.meta
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
@@ -35,6 +37,7 @@ PASS: metadata coverage AncientCameraFX.cs
 PASS: metadata coverage AncientVisuals.cs
 PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
 PASS: 32-character GUID AncientVisuals.cs.meta
+PASS: metadata coverage AncientPointer.cs
 PASS: metadata coverage Main.unity
 PASS: metadata target Assets/Scenes/Main.unity.meta
 PASS: 32-character GUID Main.unity.meta
@@ -167,8 +170,9 @@ PASS: C# syntax AncientHUD.cs
 PASS: C# syntax AncientGame.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientVisuals.cs
+PASS: C# syntax AncientPointer.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-Static checks do not prove rendered quality or correct gameplay.
-Attack contact/buffering, pause/hit-emphasis interaction, pooled effects, sound levels and UI alignment require Unity Play Mode checks.
+Static checks do not prove input handling, rendering or gameplay.
+Left-click/Shift/Alt/Tab mapping, pointer selection, cursor restoration and zip/swing physics require Unity Play Mode validation.
 No Unity compilation, shader compilation, gameplay or performance benchmark was executed.

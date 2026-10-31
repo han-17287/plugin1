@@ -64,7 +64,7 @@ namespace Plugin.AncientCivilization
             }
             BuildWorld();
             hero=new GameObject("Mechanical Arm Hero").AddComponent<AncientHero>();hero.transform.position=checkpoint;
-            gameObject.AddComponent<AncientVisuals>();
+            gameObject.AddComponent<AncientVisuals>();gameObject.AddComponent<AncientPointer>();
             Notice(checkpointStage==0?"SECTOR 01 / THE BURIED CITY\nRecover three cores. Reach the eastern sanctum.":"Checkpoint restored. The city remembers.",7);
         }
         void BuildWorld()
@@ -264,6 +264,7 @@ namespace Plugin.AncientCivilization
             GUI.Label(new Rect(w-286,24,260,55),"ANCIENT CORES  "+Cores+" / 3\n"+(bossDefeated?"Warden defeated / Reach the gate":Cores==3?"Reach the eastern sanctum":"Explore the upper rooftops"),small);
             GUI.Label(new Rect(28,128,300,30),(hero.bike?"BIKE "+Mathf.CeilToInt(hero.bikeHP)+" / 80":hero.running?"RUN":"WALK")+"   "+(hero.Wired?"WIRE CHAIN "+hero.WireChain:hero.WireChain>1?"CHAIN "+hero.WireChain:"")+"   K / UPGRADES",small);
             GUI.Label(new Rect(w-300,92,284,23),AncientVisuals.HighQuality?"F6 / VISUALS: ENHANCED":"F6 / VISUALS: LIGHT",small);
+            GUI.Label(new Rect(w-300,117,284,23),"TAB / WIRE: "+hero.WireModeName+"   LMB: FIRE",small);
             foreach(var enemy in enemies)
             {
                 if(!enemy)continue;
@@ -295,7 +296,7 @@ namespace Plugin.AncientCivilization
             if(showHelp&&!skills&&!boss&&!won)
             {
                 Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
-                GUI.Label(new Rect(28,h-87,w-56,70),"A/D MOVE   SPACE JUMP   CTRL TAP RUN / HOLD BIKE   SHIFT DASH   F HOLD ABSORB\nJ / LMB COMBO   Q PARTICLE BURST   E / RMB AUTO WIRE   X BIKE EXPLOSION   K UPGRADES   H HIDE HELP",small);
+                GUI.Label(new Rect(28,h-87,w-56,70),"A/D MOVE   SPACE JUMP   CTRL TAP RUN / HOLD BIKE   ALT / C DASH   F HOLD ABSORB\nSHIFT COMBO   Q PARTICLE BURST   LMB AIMED WIRE   TAB WIRE MODE   X BIKE EXPLOSION   K UPGRADES   H HIDE HELP",small);
             }
             if(skills)
             {
@@ -315,7 +316,7 @@ namespace Plugin.AncientCivilization
             if(!skills&&!won)
             {
                 Bar(new Rect(28,156,74,4),hero.DashReady,Cyan);
-                GUI.Label(new Rect(28,162,90,22),"SHIFT / DASH",small);
+                GUI.Label(new Rect(28,162,90,22),"ALT / DASH",small);
                 Bar(new Rect(120,156,74,4),hero.BurstReady,Orange);
                 GUI.Label(new Rect(120,162,100,22),"Q / BURST",small);
                 AncientPickup nearest=null;float distance=float.MaxValue;
@@ -351,12 +352,17 @@ namespace Plugin.AncientCivilization
         public float HorizontalSpeed {get{return body?body.linearVelocity.x:0;}}
         public float DashReady {get{return Mathf.Clamp01(1-(dashReady-Time.time)/.8f);}}
         public float BurstReady {get{return Mathf.Clamp01(1-(burstReady-Time.time)/.65f);}}
+        public float WireCooldown {get{return Mathf.Clamp01(1-(wireReady-Time.time)/.18f);}}
+        public bool HasWireTarget {get;private set;}
+        public Vector2 WireTarget {get;private set;}
+        public bool ZipMode {get;private set;}
+        public string WireModeName {get{return ZipMode?"ZIP":"SWING";}}
         Rigidbody2D body;SpriteRenderer art,bikeArt;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
         DistanceJoint2D wireJoint;SpriteRenderer hook;SpriteRenderer[] wirePulses;
         float direction=1,controlAt,attackAt,invulnerableUntil,wireReady,lastGrounded=-100;
         float dashUntil,dashReady,comboUntil,absorbAt=-10,burstReady,jumpBufferedUntil=-10;
         float wireAttachedAt,wireLength,wireMinLength,swingDirection,arcTravel,momentumUntil,lastWireRelease=-10;
-        Vector2 previousRadial;int wireChain;
+        Vector2 previousRadial;int wireChain;bool wireZip;
         bool controlConsumed,wired,airJumpUsed;float axis;int combo;
         Sprite[] frames,actions;
         float attackBufferedUntil=-10,strikeAt,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
@@ -364,6 +370,7 @@ namespace Plugin.AncientCivilization
         void Start()
         {
             var g=AncientGame.Instance;
+            ZipMode=AncientGame.Saved("wireMode")!=0;
             bikeUnlocked=AncientGame.Saved("bike")!=0;doubleJump=AncientGame.Saved("jump")!=0;
             reservoir=AncientGame.Saved("capacity")!=0;armor=AncientGame.Saved("armor")!=0;hp=MaxHP;
             body=gameObject.AddComponent<Rigidbody2D>();body.freezeRotation=true;body.collisionDetectionMode=CollisionDetectionMode2D.Continuous;body.interpolation=RigidbodyInterpolation2D.Interpolate;
@@ -417,7 +424,7 @@ namespace Plugin.AncientCivilization
             if(Input.GetKeyDown(KeyCode.Space))jumpBufferedUntil=Time.time+.12f;
             if(Input.GetKeyUp(KeyCode.Space))cutJump=true;
             if(Input.GetKeyDown(KeyCode.F))absorbAt=Time.time;
-            if(Input.GetKeyDown(KeyCode.LeftShift)||Input.GetKeyDown(KeyCode.RightShift))
+            if(Input.GetKeyDown(KeyCode.LeftAlt)||Input.GetKeyDown(KeyCode.RightAlt)||Input.GetKeyDown(KeyCode.C))
             {
                 if(Time.time>=dashReady&&!bike)
                 {StopWire(false);dashUntil=Time.time+.16f;dashReady=Time.time+.8f;invulnerableUntil=Mathf.Max(invulnerableUntil,dashUntil);g.Burst(transform.position,AncientGame.Cyan,8);}
@@ -434,8 +441,13 @@ namespace Plugin.AncientCivilization
             }
             if((Input.GetKeyUp(KeyCode.LeftControl)||Input.GetKeyUp(KeyCode.RightControl))&&!controlConsumed)running=!running;
             if(Input.GetKeyDown(KeyCode.X)&&bike)ExplodeBike();
-            if(Input.GetKeyDown(KeyCode.E)||Input.GetMouseButtonDown(1))FireWire();
-            if(Input.GetKeyDown(KeyCode.J)||Input.GetMouseButtonDown(0))attackBufferedUntil=Time.time+.16f;
+            if(Input.GetKeyDown(KeyCode.Tab))
+            {
+                StopWire(false);ZipMode=!ZipMode;AncientGame.SetSaved("wireMode",ZipMode?1:0);PlayerPrefs.Save();
+                g.Notice(ZipMode?"WIRE / ZIP - direct pull to the aimed target":"WIRE / SWING - automatic arc and release",2);
+            }
+            if(Input.GetMouseButtonDown(0))FireWire();
+            if(Input.GetKeyDown(KeyCode.LeftShift)||Input.GetKeyDown(KeyCode.RightShift))attackBufferedUntil=Time.time+.16f;
             if(Time.time>=attackAt&&Time.time<=attackBufferedUntil&&Time.time>=hurtUntil)BeginAttack();
             if(strikePending&&Time.time>=strikeAt)
             {
@@ -499,19 +511,30 @@ namespace Plugin.AncientCivilization
             {
                 Vector2 delta=anchor-body.position;Vector2 radial=delta.normalized;
                 float age=Time.time-wireAttachedAt;
-                // A one-sided distance constraint produces an arc, rather than teleporting to the anchor.
-                wireLength=Mathf.MoveTowards(wireLength,wireMinLength,8*Time.fixedDeltaTime);
-                wireJoint.distance=wireLength;
-                Vector2 tangent=new Vector2(radial.y,-radial.x)*swingDirection;
-                velocity+=(radial*10+tangent*19)*Time.fixedDeltaTime;
-                velocity=Vector2.ClampMagnitude(velocity,30);
-                Vector2 outward=-radial;
-                arcTravel=Mathf.Max(0,arcTravel+Vector2.SignedAngle(previousRadial,outward)*swingDirection);previousRadial=outward;
-                bool occluded=!VisibleAnchor(anchor);
-                bool risingExit=age>.32f && arcTravel>66 && velocity.x*swingDirection>4 && velocity.y>1;
-                if(occluded || age>=1.35f || delta.magnitude<2 || risingExit)
+                if(wireZip)
                 {
-                    body.linearVelocity=velocity;StopWire(!occluded);velocity=body.linearVelocity;
+                    float speed=Mathf.Clamp(12+delta.magnitude*1.2f,16,30);
+                    velocity=Vector2.MoveTowards(velocity,radial*speed,95*Time.fixedDeltaTime);
+                    bool blocked=!VisibleAnchor(anchor);
+                    if(blocked||delta.magnitude<1.8f||age>1.25f)
+                    {body.linearVelocity=velocity;StopWire(!blocked);velocity=body.linearVelocity;}
+                }
+                else
+                {
+                    // A one-sided distance constraint produces an arc, rather than teleporting to the anchor.
+                    wireLength=Mathf.MoveTowards(wireLength,wireMinLength,8*Time.fixedDeltaTime);
+                    wireJoint.distance=wireLength;
+                    Vector2 tangent=new Vector2(radial.y,-radial.x)*swingDirection;
+                    velocity+=(radial*10+tangent*19)*Time.fixedDeltaTime;
+                    velocity=Vector2.ClampMagnitude(velocity,30);
+                    Vector2 outward=-radial;
+                    arcTravel=Mathf.Max(0,arcTravel+Vector2.SignedAngle(previousRadial,outward)*swingDirection);previousRadial=outward;
+                    bool occluded=!VisibleAnchor(anchor);
+                    bool risingExit=age>.32f && arcTravel>66 && velocity.x*swingDirection>4 && velocity.y>1;
+                    if(occluded || age>=1.35f || delta.magnitude<2 || risingExit)
+                    {
+                        body.linearVelocity=velocity;StopWire(!occluded);velocity=body.linearVelocity;
+                    }
                 }
             }
             else
@@ -529,7 +552,7 @@ namespace Plugin.AncientCivilization
                 {StopWire(false);velocity.y=12;airJumpUsed=true;jumpBufferedUntil=-10;g.Burst(transform.position,AncientGame.Cyan,10);}
             }
             if(cutJump&&velocity.y>4&&!wired&&!bike)velocity.y*=.55f;
-            cutJump=false;body.gravityScale=!wired&&velocity.y<0?1.2f:1;
+            cutJump=false;body.gravityScale=wired?(wireZip?.15f:1):(velocity.y<0?1.2f:1);
             velocity.y=Mathf.Max(velocity.y,-25);body.linearVelocity=velocity;
             if(g.ArenaActive)
             {
@@ -545,26 +568,31 @@ namespace Plugin.AncientCivilization
         bool PickAnchor(out Vector2 selected)
         {
             selected=Vector2.zero;var camera=Camera.main;if(!camera)return false;
+            Vector2 pixel=Input.mousePosition;
+            if(pixel.x<0||pixel.y<0||pixel.x>=Screen.width||pixel.y>=Screen.height)return false;
             Vector2 hand=(Vector2)transform.position+Vector2.up*.35f;
             Vector2 mouse=camera.ScreenToWorldPoint(Input.mousePosition);
             Vector2 aim=(mouse-hand).normalized;
-            float best=float.MaxValue;bool found=false;
-            foreach(var p in AncientGame.Instance.anchors)
+            float snapPixels=58*Mathf.Clamp(Screen.height/900f,.8f,1.4f);
+            float best=snapPixels;bool found=false;
+            foreach(var point in AncientGame.Instance.anchors)
             {
-                float distance=Vector2.Distance(hand,p);
-                if(distance<2.2f||distance>22||p.y<transform.position.y+1||!VisibleAnchor(p))continue;
-                // A cursor-centred score keeps selection predictable, and prevents accidental side swaps.
-                float score=Vector2.Distance(mouse,p);
-                if(wired&&Vector2.Distance(p,anchor)<.25f)score+=8;
-                if(score<best){best=score;selected=p;found=true;}
+                float distance=Vector2.Distance(hand,point);
+                if(distance<2.2f||distance>22||(!ZipMode&&point.y<transform.position.y+1)||!VisibleAnchor(point))continue;
+                Vector3 screen=camera.WorldToScreenPoint(point);if(screen.z<=0)continue;
+                float score=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
+                if(score<best){best=score;selected=point;found=true;}
             }
-            // Elevated solid platform edges and undersides can also be latched, not only preset nodes.
+            // Surface picking is limited to the cursor neighbourhood, rather than a remote point on its ray.
+            float tolerance=snapPixels/(Screen.height/(camera.orthographicSize*2));
             if(aim.sqrMagnitude>.1f)
             {
-                RaycastHit2D hit=Physics2D.Raycast(hand,aim,22,1<<8);
-                if(hit && hit.point.y>transform.position.y+2.3f && Vector2.Distance(hit.point,hand)>2.5f)
+                float reach=Mathf.Min(22,Vector2.Distance(hand,mouse)+tolerance);
+                RaycastHit2D hit=Physics2D.Raycast(hand,aim,reach,1<<8);
+                if(hit && (ZipMode||hit.point.y>transform.position.y+2.3f) && Vector2.Distance(hit.point,hand)>2.5f)
                 {
-                    float score=Vector2.Distance(mouse,hit.point);
+                    Vector3 screen=camera.WorldToScreenPoint(hit.point);
+                    float score=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
                     if(score<best){selected=hit.point;found=true;}
                 }
             }
@@ -574,21 +602,23 @@ namespace Plugin.AncientCivilization
         {
             if(Time.time<wireReady)return;
             Vector2 selected;var g=AncientGame.Instance;
-            if(!PickAnchor(out selected)){g.Notice("Aim at a cyan node or elevated rooftop edge within 22m.");return;}
+            if(!PickAnchor(out selected)){g.Notice("Point at a cyan node or a high rooftop edge within 22m, then left-click.");return;}
             bool different=Vector2.Distance(selected,anchor)>.5f;
             if(wired&&!different)return;
             bool chain=(wired||Time.time-lastWireRelease<1.2f)&&different;
             if(wired)StopWire(false);
             wireChain=chain?Mathf.Min(wireChain+1,5):1;
-            anchor=selected;wired=true;wireAttachedAt=Time.time;wireReady=Time.time+.18f;dashUntil=0;
+            anchor=selected;wired=true;wireZip=ZipMode;wireAttachedAt=Time.time;wireReady=Time.time+.18f;dashUntil=0;
             Vector2 delta=anchor-body.position;Vector2 radial=delta.normalized;
             swingDirection=Mathf.Abs(body.linearVelocity.x)>2?Mathf.Sign(body.linearVelocity.x):direction;
             previousRadial=-radial;arcTravel=0;
             wireLength=delta.magnitude;wireMinLength=Mathf.Min(wireLength,Mathf.Clamp(wireLength*.68f,3.2f,8));
-            wireJoint.connectedAnchor=anchor;wireJoint.distance=wireLength;wireJoint.enabled=true;
+            wireJoint.connectedAnchor=anchor;wireJoint.distance=wireLength;wireJoint.enabled=!wireZip;
             Vector2 velocity=body.linearVelocity+radial*11+new Vector2(radial.y,-radial.x)*swingDirection*5;
             velocity.x=swingDirection*Mathf.Max(12+Mathf.Min(4,wireChain),velocity.x*swingDirection);
-            velocity.y=Mathf.Max(8,velocity.y);body.linearVelocity=Vector2.ClampMagnitude(velocity,30);
+            velocity.y=Mathf.Max(8,velocity.y);
+            if(wireZip)velocity=radial*Mathf.Clamp(body.linearVelocity.magnitude+8,18,28);
+            body.linearVelocity=Vector2.ClampMagnitude(velocity,30);
             airJumpUsed=false;g.Sound(3);g.Burst(anchor,AncientGame.Cyan,14);g.Burst(transform.position,AncientGame.Cyan,8);g.Shake(.045f);
         }
         void StopWire(bool launch)
@@ -599,8 +629,16 @@ namespace Plugin.AncientCivilization
             if(launch&&body)
             {
                 Vector2 velocity=body.linearVelocity;
-                velocity.x=swingDirection*Mathf.Max(13,velocity.x*swingDirection);
-                velocity.y=Mathf.Max(5,velocity.y);
+                if(wireZip)
+                {
+                    float facing=Mathf.Abs(velocity.x)>.1f?Mathf.Sign(velocity.x):direction;
+                    velocity.x=facing*Mathf.Max(8,Mathf.Abs(velocity.x));velocity.y=Mathf.Max(5,velocity.y);
+                }
+                else
+                {
+                    velocity.x=swingDirection*Mathf.Max(13,velocity.x*swingDirection);
+                    velocity.y=Mathf.Max(5,velocity.y);
+                }
                 body.linearVelocity=Vector2.ClampMagnitude(velocity,30);
                 AncientGame.Instance.Burst(transform.position,AncientGame.Cyan,9);
             }
@@ -629,9 +667,10 @@ namespace Plugin.AncientCivilization
                     wirePulses[i].transform.position=Vector2.Lerp(hand,end,Mathf.Repeat(age*2.6f+i/(float)wirePulses.Length,1));
             }
             Vector2 target=Vector2.zero;bool hasTarget=!g.Paused&&!g.won&&PickAnchor(out target);
-            wireTarget.enabled=hasTarget;
+            HasWireTarget=hasTarget;WireTarget=target;wireTarget.enabled=hasTarget;
             if(hasTarget)
             {
+                wireTarget.positionCount=ZipMode?4:8;
                 float radius=.43f+Mathf.Sin(Time.time*7)*.045f;
                 for(int i=0;i<wireTarget.positionCount;i++)
                 {
