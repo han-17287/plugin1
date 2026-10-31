@@ -391,6 +391,7 @@ namespace Plugin.AncientCivilization
         Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;
         CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
         DistanceJoint2D wireJoint;SpriteRenderer hook;SpriteRenderer[] wirePulses;
+        LineRenderer wireBraidA,wireBraidB,wireCuff,wireLatch;
         float direction=1,controlAt,attackAt,invulnerableUntil,wireReady,lastGrounded=-100;
         float dashUntil,dashReady,comboUntil,absorbAt=-10,burstReady,jumpBufferedUntil=-10;
         float wireAttachedAt,wireLength,wireMinLength,swingDirection,arcTravel,momentumUntil,lastWireRelease=-10;
@@ -415,19 +416,29 @@ namespace Plugin.AncientCivilization
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-.825f),10,transform);
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
             motorcycle=gameObject.AddComponent<AncientMotorcycle>();motorcycle.Initialize(this);
-            wire=g.Line("Particle cable core",new Color(.8f,1,1),.018f,17);
+            wire=g.Line("Particle cable core",new Color(.8f,1,1,.85f),.025f,17);
             wireGlow=g.Line("Particle cable sheath",new Color(.12f,.9f,1,.28f),.11f,16);
             wireTarget=g.Line("Wire targeting reticle",AncientGame.Cyan,.035f,18);wireTarget.loop=true;wireTarget.positionCount=8;
-            wire.positionCount=wireGlow.positionCount=20;
+            wireBraidA=g.Line("Particle braid A",new Color(.15f,.85f,1,.8f),.025f,18);
+            wireBraidB=g.Line("Particle braid B",new Color(.5f,1,1,.6f),.018f,18);
+            wire.positionCount=wireGlow.positionCount=wireBraidA.positionCount=wireBraidB.positionCount=48;
+            foreach(var cable in new[]{wire,wireGlow,wireBraidA,wireBraidB})
+            {
+                cable.numCapVertices=3;cable.numCornerVertices=2;
+                cable.widthCurve=new AnimationCurve(new Keyframe(0,.35f),new Keyframe(.08f,1),new Keyframe(.9f,1),new Keyframe(1,.3f));
+            }
+            wireCuff=g.Line("Wire emitter cuff",AncientGame.Cyan,.035f,19);wireCuff.loop=true;wireCuff.positionCount=12;
+            wireLatch=g.Line("Wire hexagonal latch",new Color(.7f,1,1),.035f,19);wireLatch.loop=true;wireLatch.positionCount=6;
+            wireBraidA.enabled=wireBraidB.enabled=wireCuff.enabled=wireLatch.enabled=false;
             chargeRing=g.Line("Captured particle reservoir",AncientGame.Cyan,.04f,18);
             chargeRing.loop=true;chargeRing.positionCount=32;chargeRing.enabled=false;
             absorb=g.Line("Absorption stream",AncientGame.Cyan,.04f);
             wire.enabled=wireGlow.enabled=wireTarget.enabled=absorb.enabled=false;
             hook=AncientArt.Display("Wire latch",AncientArt.World(2),Vector2.zero,18);hook.transform.localScale=Vector3.one*.18f;hook.enabled=false;
-            wirePulses=new SpriteRenderer[4];
+            wirePulses=new SpriteRenderer[32];
             for(int i=0;i<wirePulses.Length;i++)
             {
-                var pulse=g.Box("Cable energy pulse",Vector2.zero,new Vector2(.065f,.065f),AncientGame.Cyan,19);
+                var pulse=g.Box("Cable energy pulse",Vector2.zero,new Vector2(.055f,.055f),AncientGame.Cyan,19);
                 wirePulses[i]=pulse.GetComponent<SpriteRenderer>();wirePulses[i].enabled=false;
             }
             trail=gameObject.AddComponent<TrailRenderer>();trail.material=wire.sharedMaterial;
@@ -715,23 +726,47 @@ namespace Plugin.AncientCivilization
             }
             bool visible=wired&&!g.won;
             wire.enabled=wireGlow.enabled=hook.enabled=visible;
-            foreach(var pulse in wirePulses)pulse.enabled=visible;
+            wireBraidA.enabled=wireBraidB.enabled=visible&&AncientVisuals.HighQuality;
+            wireCuff.enabled=wireLatch.enabled=visible;
+            for(int i=0;i<wirePulses.Length;i++)wirePulses[i].enabled=visible&&(AncientVisuals.HighQuality||i%2==0);
             if(visible)
             {
                 Vector2 hand=(Vector2)transform.position+new Vector2(direction*.4f,.45f);
                 float age=Time.time-wireAttachedAt;float shot=Mathf.Clamp01(age/.055f);
                 Vector2 end=Vector2.Lerp(hand,anchor,shot);
                 Vector2 normal=Vector2.Perpendicular(end-hand).normalized;
+                float length=Vector2.Distance(hand,end);
+                float twist=length*4;
                 for(int i=0;i<wire.positionCount;i++)
                 {
                     float t=i/(float)(wire.positionCount-1);
-                    float wave=Mathf.Sin(t*Mathf.PI*5-age*28)*Mathf.Sin(t*Mathf.PI)*.13f*Mathf.Exp(-age*9);
-                    Vector2 point=Vector2.Lerp(hand,end,t)+normal*wave;
+                    Vector2 point=CablePoint(hand,end,age,t);
+                    float braid=Mathf.Sin(t*twist-age*12)*.055f*Mathf.Sin(t*Mathf.PI);
                     wire.SetPosition(i,point);wireGlow.SetPosition(i,point);
+                    wireBraidA.SetPosition(i,point+normal*braid);wireBraidB.SetPosition(i,point-normal*braid);
                 }
-                hook.transform.position=end;hook.transform.Rotate(0,0,220*Time.deltaTime);
+                hook.transform.position=end;hook.transform.rotation=Quaternion.Euler(0,0,age*90);
+                hook.transform.localScale=Vector3.one*(.13f+Mathf.Exp(-age*12)*.08f);
                 for(int i=0;i<wirePulses.Length;i++)
-                    wirePulses[i].transform.position=Vector2.Lerp(hand,end,Mathf.Repeat(age*2.6f+i/(float)wirePulses.Length,1));
+                {
+                    float t=Mathf.Repeat(age*(wireZip?1.8f:.95f)+i/(float)wirePulses.Length,1);
+                    float sparkle=.65f+.35f*Mathf.Sin(age*19+i*2.4f);
+                    var pulse=wirePulses[i];
+                    pulse.transform.position=CablePoint(hand,end,age,t)+normal*(Mathf.Sin(t*twist-age*12)*.055f);
+                    pulse.transform.rotation=Quaternion.Euler(0,0,45);
+                    pulse.transform.localScale=Vector3.one*(.035f+sparkle*.045f);
+                    pulse.color=Color.Lerp(AncientGame.Cyan,Color.white,sparkle*.8f);
+                }
+                for(int i=0;i<wireCuff.positionCount;i++)
+                {
+                    float a=i*Mathf.PI*2/wireCuff.positionCount-age*3;
+                    wireCuff.SetPosition(i,hand+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.16f);
+                }
+                for(int i=0;i<wireLatch.positionCount;i++)
+                {
+                    float a=i*Mathf.PI*2/wireLatch.positionCount+age;
+                    wireLatch.SetPosition(i,end+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*(.22f+Mathf.Exp(-age*9)*.2f));
+                }
             }
             Vector2 target=Vector2.zero;bool hasTarget=!AttackMode&&!g.Paused&&!g.won&&PickAnchor(out target);
             HasWireTarget=hasTarget;WireTarget=target;wireTarget.enabled=hasTarget;
@@ -745,6 +780,14 @@ namespace Plugin.AncientCivilization
                     wireTarget.SetPosition(i,target+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius);
                 }
             }
+        }
+        Vector2 CablePoint(Vector2 hand,Vector2 end,float age,float t)
+        {
+            Vector2 normal=Vector2.Perpendicular(end-hand).normalized;
+            float envelope=Mathf.Sin(t*Mathf.PI);
+            float ripple=Mathf.Sin(t*Mathf.PI*6-age*25)*.16f*Mathf.Exp(-age*8);
+            float sag=wireZip?0:-.12f;
+            return Vector2.Lerp(hand,end,t)+normal*ripple*envelope+Vector2.up*sag*envelope;
         }
         public bool CaptureShot(AncientProjectile shot)
         {
@@ -818,6 +861,8 @@ namespace Plugin.AncientCivilization
         void OnDestroy()
         {
             if(wire)Destroy(wire.gameObject);if(wireGlow)Destroy(wireGlow.gameObject);
+            if(wireBraidA)Destroy(wireBraidA.gameObject);if(wireBraidB)Destroy(wireBraidB.gameObject);
+            if(wireCuff)Destroy(wireCuff.gameObject);if(wireLatch)Destroy(wireLatch.gameObject);
             if(wireTarget)Destroy(wireTarget.gameObject);if(hook)Destroy(hook.gameObject);
             if(wirePulses!=null)foreach(var pulse in wirePulses)if(pulse)Destroy(pulse.gameObject);
             if(absorb)Destroy(absorb.gameObject);if(chargeRing)Destroy(chargeRing.gameObject);
@@ -931,8 +976,8 @@ namespace Plugin.AncientCivilization
         void FireProjectile(Vector2 target,float speed,bool scrap,float gravity)
         {
             var g=AncientGame.Instance;Vector2 aim=(target-AimPoint).normalized;if(aim.sqrMagnitude<.1f)aim=Vector2.right*facing;
-            var shot=new GameObject(scrap?"Thrown scrap":"Energy bolt").AddComponent<AncientProjectile>();
-            shot.scrap=scrap;shot.gravity=gravity;shot.damage=kind==3?20:scrap?25:kind==4?12:15;
+            var shot=new GameObject(scrap?"Thrown scrap":kind==4?"Metal rotor disc":kind==3?"Warden metal slug":"Armored metal round").AddComponent<AncientProjectile>();
+            shot.scrap=scrap;shot.metalKind=kind==4?1:kind==3?2:0;shot.gravity=gravity;shot.damage=kind==3?20:scrap?25:kind==4?12:15;
             Vector2 origin=AimPoint+aim*.65f;shot.transform.position=origin;
             shot.velocity=gravity>0?(target-origin)/.95f+Vector2.up*(gravity*.95f*.5f):aim*speed;
             g.shots.Add(shot);
@@ -992,25 +1037,30 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientProjectile : MonoBehaviour
     {
-        public bool scrap,friendly;public float power;public Vector2 velocity;public float damage=15,gravity;
-        float age;bool removed;LineRenderer glow;
+        public bool scrap,friendly;public int metalKind;public float power;public Vector2 velocity;public float damage=15,gravity;
+        float age;bool removed;LineRenderer glow;Transform metalVisual;
         void Start()
         {
             var g=AncientGame.Instance;
-            if(scrap)
+            if(friendly)
             {
-                AncientArt.Display("Thrown metal chunk",AncientArt.Scrap(),Vector2.zero,12,transform);
+                glow=g.Line("Captured energy streak",AncientGame.Cyan,.12f+power*.5f,12);
             }
             else
             {
-                glow=g.Line("Energy streak",AncientGame.Cyan,friendly?.12f+power*.5f:.075f,12);
+                var metal=AncientArt.Display(scrap?"Thrown metal chunk":"Solid metal projectile",
+                    scrap?AncientArt.Scrap():AncientArt.MetalProjectile(metalKind),Vector2.zero,12,transform);
+                metalVisual=metal.transform;
+                float size=scrap?.65f:metalKind==2?.65f:metalKind==1?.48f:.5f;
+                metalVisual.localScale=Vector3.one*size;
+                metalVisual.localRotation=Quaternion.Euler(0,0,Mathf.Atan2(velocity.y,velocity.x)*Mathf.Rad2Deg);
             }
         }
         void Update()
         {
             if(removed)return;var g=AncientGame.Instance;if(g.won){Remove();return;}if(g.Paused)return;
             age+=Time.deltaTime;velocity+=Vector2.down*gravity*Time.deltaTime;Vector2 previous=transform.position;Vector2 next=previous+velocity*Time.deltaTime;
-            if(Physics2D.Linecast(previous,next,1<<8)){g.Burst(previous,AncientGame.Cyan,4);Remove();return;}
+            if(Physics2D.Linecast(previous,next,1<<8)){g.Burst(previous,friendly?AncientGame.Cyan:new Color(.65f,.48f,.3f),friendly?4:8);Remove();return;}
             if(friendly)
             {
                 foreach(var enemy in g.enemies.ToArray())
@@ -1037,7 +1087,12 @@ namespace Plugin.AncientCivilization
             }
             transform.position=next;
             if(glow){glow.SetPosition(0,next);glow.SetPosition(1,next-velocity.normalized*(friendly?.8f+power*1.8f:.7f));}
-            if(scrap)transform.Rotate(0,0,300*Time.deltaTime);if(age>5)Remove();
+            if(metalVisual)
+            {
+                if(scrap||metalKind==1)metalVisual.Rotate(0,0,(scrap?260:480)*Time.deltaTime);
+                else metalVisual.rotation=Quaternion.Euler(0,0,Mathf.Atan2(velocity.y,velocity.x)*Mathf.Rad2Deg);
+            }
+            if(age>5)Remove();
         }
         public void Remove()
         {if(removed)return;removed=true;AncientGame.Instance.shots.Remove(this);Destroy(gameObject);}

@@ -84,6 +84,32 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Scrap()
         {var t=Texture("Scrap");return Slice("Scrap","thrown-scrap",new Rect(0,0,t.width,t.height),1100,Vector2.one*.5f);}
+        public static Sprite MetalProjectile(int kind)
+        {
+            string key="metal-projectile-"+kind;Sprite sprite;
+            if(sprites.TryGetValue(key,out sprite)&&sprite)return sprite;
+            const int size=32;var texture=new Texture2D(size,size,TextureFormat.RGBA32,false);
+            texture.filterMode=FilterMode.Point;texture.wrapMode=TextureWrapMode.Clamp;
+            var pixels=new Color[size*size];
+            for(int y=0;y<size;y++)for(int x=0;x<size;x++)
+            {
+                float dx=x-15.5f,dy=y-15.5f;float ax=Mathf.Abs(dx),ay=Mathf.Abs(dy);
+                bool inside=kind==1?ax<14&&ay<14&&ax+ay<21:
+                    ax<15&&ay<(kind==2?10:7)&&ax+ay<(kind==2?21:18);
+                if(!inside)continue;
+                bool edge=kind==1?ax>11||ay>11||ax+ay>18:
+                    ax>12||ay>(kind==2?7:4)||ax+ay>(kind==2?18:15);
+                Color color=edge?new Color(.12f,.16f,.19f):dy>0?new Color(.64f,.7f,.72f):new Color(.31f,.38f,.42f);
+                if(!edge&&dy>2&&dy<5)color=new Color(.86f,.9f,.88f);
+                if(kind==1&&ax<5&&ay<5)color=new Color(.18f,.22f,.24f);
+                if(kind!=1&&dx>-8&&dx<-4&&!edge)color=new Color(.75f,.4f,.16f);
+                if(kind==2&&ax<3&&ay<4)color=new Color(.85f,.49f,.2f);
+                pixels[y*size+x]=color;
+            }
+            texture.SetPixels(pixels);texture.Apply();textures[key]=texture;
+            sprite=Sprite.Create(texture,new Rect(0,0,size,size),Vector2.one*.5f,32);
+            sprites[key]=sprite;return sprite;
+        }
         public static Sprite Enemy(int kind)
         {
             // Hand-measured gutters keep weapons and the boss's gauntlet intact.
