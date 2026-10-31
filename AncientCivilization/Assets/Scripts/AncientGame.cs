@@ -78,18 +78,13 @@ namespace Plugin.AncientCivilization
             Platform(-5,20,0);Platform(22,38,0);Platform(43,58,1);
             Platform(63,80,0);Platform(85,118,0);
             Platform(10,16,3);Platform(28,33,4);Platform(48,55,5);Platform(69,75,4);Platform(87,93,5);
-            foreach(Vector2 p in new [] {new Vector2(18,10),new Vector2(30,12),new Vector2(41,11),new Vector2(58,12),new Vector2(69,11),new Vector2(81,12),new Vector2(94,12),new Vector2(104,10),new Vector2(113,10)})
-            {
-                anchors.Add(p);
-                var support=AncientArt.Display("Hanging industrial support",AncientArt.World(1),p+Vector2.down*.2f,-2);
-                support.transform.localScale=Vector3.one*.75f;
-                var node=AncientArt.Display("Cyan wire anchor",AncientArt.World(2),p,3);
-                node.transform.localScale=Vector3.one*.48f;
-            }
+            // Broken overhead decks leave gaps for vertical exploration and connect each sector by wire.
+            Ceiling(4,20,9);Ceiling(24,40,10);Ceiling(45,61,11);
+            Ceiling(65,82,10);Ceiling(85,97,11);Ceiling(100,117,10);
             AncientArt.Display("Eastern gate",AncientArt.World(3),new Vector2(115,0),-1);
-            SpawnEnemy(14,3,0);SpawnEnemy(27,0,1);SpawnEnemy(35,0,2);
-            SpawnEnemy(49,1,5);SpawnEnemy(51,5,1);SpawnEnemy(60,6,4);SpawnEnemy(66,0,0);SpawnEnemy(74,4,2);
-            SpawnEnemy(90,5,1);SpawnEnemy(93,0,5);SpawnEnemy(100,7,4);
+            // Six spaced encounters instead of eleven; ranged enemies supply capture ammunition.
+            SpawnEnemy(14,3,0);SpawnEnemy(30,4,1);SpawnEnemy(49,1,5);
+            SpawnEnemy(72,4,2);SpawnEnemy(90,5,1);SpawnEnemy(103,7,4);
             SpawnPickup(new Vector2(31,5),0);SpawnPickup(new Vector2(72,5),1);SpawnPickup(new Vector2(90,6),2);
             for(int i=0;i<8;i++)SpawnPickup(new Vector2(7+i*12,1.6f),-1);
             Beacon(new Vector2(46,1));Beacon(new Vector2(86,0));
@@ -115,6 +110,28 @@ namespace Plugin.AncientCivilization
                     Box("Wet amber glint",new Vector2(x+width-.6f,top-.02f),new Vector2(.35f,.02f),new Color(1,.5f,.2f,.35f),3);
                 }
             }
+        }
+        void Ceiling(float left,float right,float underside)
+        {
+            const float thickness=.65f;
+            var deck=Box("Solid wire ceiling",new Vector2((left+right)*.5f,underside+thickness*.5f),
+                new Vector2(right-left,thickness),new Color(.075f,.13f,.18f),1);
+            deck.layer=8;deck.AddComponent<BoxCollider2D>();
+            Box("Ceiling cyan underside",new Vector2((left+right)*.5f,underside+.025f),
+                new Vector2(right-left,.05f),new Color(.12f,.62f,.7f),3);
+            for(float x=left+.5f;x<right;x+=2)
+            {
+                Box("Ceiling structural rib",new Vector2(x,underside+thickness*.5f),
+                    new Vector2(.12f,thickness),new Color(.15f,.24f,.29f),2);
+            }
+            for(float x=left+1.5f;x<right-1;x+=4)
+            {
+                Vector2 point=new Vector2(x,underside-.025f);anchors.Add(point);
+                var node=AncientArt.Display("Ceiling wire anchor",AncientArt.World(2),point,4);
+                node.transform.localScale=Vector3.one*.32f;
+            }
+            // Layer 8 makes the whole underside pickable by the existing surface raycast,
+            // and blocks both the hero and projectiles rather than being a decorative roof.
         }
         public GameObject Box(string name,Vector2 pos,Vector2 size,Color color,int order)
         {
