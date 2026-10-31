@@ -92,6 +92,13 @@ namespace Plugin.AncientCivilization
             int index=kind==3?5:kind==4?3:kind==5?4:kind;
             return Slice("Enemies","enemy-"+kind,enemyCells[index],kind==3?135:kind==4?150:185,new Vector2(.5f,0));
         }
+        public static Sprite Motorcycle(int part)
+        {
+            Rect[] bikeCells={new Rect(0,0,950,512),new Rect(980,80,470,432),new Rect(0,520,730,504),new Rect(730,560,806,464)};
+            float ppu=part==1?500:320;
+            Vector2 pivot=part==2?new Vector2(467f/730,0):Vector2.one*.5f;
+            return Slice("Motorcycle","motorcycle-"+part,bikeCells[part],ppu,pivot,true,part==2);
+        }
         public static Sprite City()
         {return Slice("City", "city", new Rect(0,0,1536,1024), 32, Vector2.one*.5f,false);}
         public static SpriteRenderer Display(string name, Sprite sprite, Vector2 position, int order, Transform parent = null)

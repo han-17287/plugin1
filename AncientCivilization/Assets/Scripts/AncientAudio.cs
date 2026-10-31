@@ -9,6 +9,7 @@ namespace Plugin.AncientCivilization
         AudioSource source,ambient;AudioClip ambience;bool muted;
         readonly Dictionary<int,AudioClip> clips=new Dictionary<int,AudioClip>();
         readonly float[] nextVoice=new float[9];
+        public bool Muted {get{return muted;}}
         void Awake()
         {
             source=gameObject.AddComponent<AudioSource>();source.spatialBlend=0;

@@ -1,3 +1,14 @@
+# v0.7 — Particle Motorcycle
+
+- Add modular chassis, animated wheels, an aligned rider and an alternate damaged chassis.
+- Add phased assembly, suspension-style visual motion, headlight/exhaust effects and speed-driven engine audio.
+- Add progressive acceleration, coasting, reverse braking and an S/Down brake.
+- Add a mount-clearance check and a vehicle-sized collision box, restored to the hero capsule on dismount/death.
+- Add low-health sparks, velocity-aware explosion launch, visual component debris and a bike health/speed HUD.
+- Preserve the existing unlock, 30-particle construction cost and 80 health.
+
+This is an arcade vehicle, not a wheel-physics simulator. Unity compilation, collisions, rider alignment, audio and handling remain unverified here.
+
 # v0.6 — Aimed Wire Controls
 
 - Bind left mouse to pointer-aimed wire, Shift to melee and Alt/C to dodge.

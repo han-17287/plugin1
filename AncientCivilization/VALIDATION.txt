@@ -1,4 +1,4 @@
-Chapter 0 v0.6 static validation
+Chapter 0 v0.7 static validation
 
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
@@ -30,11 +30,14 @@ PASS: 32-character GUID AncientHUD.cs.meta
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
 PASS: metadata coverage AncientHUD.cs
+PASS: metadata coverage AncientMotorcycle.cs
 PASS: metadata coverage AncientGame.cs
 PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
 PASS: 32-character GUID AncientCameraFX.cs.meta
 PASS: metadata coverage AncientCameraFX.cs
 PASS: metadata coverage AncientVisuals.cs
+PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
+PASS: 32-character GUID AncientMotorcycle.cs.meta
 PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
 PASS: 32-character GUID AncientVisuals.cs.meta
 PASS: metadata coverage AncientPointer.cs
@@ -50,6 +53,7 @@ PASS: metadata target Assets/Resources/Shaders/ParticleGlow.shader.meta
 PASS: 32-character GUID ParticleGlow.shader.meta
 PASS: metadata target Assets/Resources/Shaders/Presentation.shader.meta
 PASS: 32-character GUID Presentation.shader.meta
+PASS: metadata coverage Motorcycle.png
 PASS: metadata coverage Enemies.png
 PASS: metadata target Assets/Resources/Art/Enemies.png.meta
 PASS: 32-character GUID Enemies.png.meta
@@ -64,6 +68,8 @@ PASS: metadata target Assets/Resources/Art/Scrap.png.meta
 PASS: 32-character GUID Scrap.png.meta
 PASS: metadata target Assets/Resources/Art/Rooftop.png.meta
 PASS: 32-character GUID Rooftop.png.meta
+PASS: metadata target Assets/Resources/Art/Motorcycle.png.meta
+PASS: 32-character GUID Motorcycle.png.meta
 PASS: metadata coverage City.png
 PASS: metadata target Assets/Resources/Art/Actions.png.meta
 PASS: 32-character GUID Actions.png.meta
@@ -106,6 +112,11 @@ PASS: Actions.png PNG chunk integrity
 PASS: Actions expected image dimensions
 PASS: Actions has RGBA channel
 PASS: Actions readable point-filtered uncompressed import
+PASS: Motorcycle.png PNG signature
+PASS: Motorcycle.png PNG chunk integrity
+PASS: Motorcycle expected image dimensions
+PASS: Motorcycle has RGBA channel
+PASS: Motorcycle readable point-filtered uncompressed import
 PASS: eight explicit world asset slices
 PASS: world slice in texture bounds 0
 PASS: world slice in texture bounds 1
@@ -122,6 +133,11 @@ PASS: enemy slice in texture bounds 2
 PASS: enemy slice in texture bounds 3
 PASS: enemy slice in texture bounds 4
 PASS: enemy slice in texture bounds 5
+PASS: four modular motorcycle components
+PASS: motorcycle component in texture bounds 0
+PASS: motorcycle component in texture bounds 1
+PASS: motorcycle component in texture bounds 2
+PASS: motorcycle component in texture bounds 3
 PASS: shader resource and program delimiters ParticleGlow
 PASS: shader resource and program delimiters CharacterRim
 PASS: shader resource and program delimiters Presentation
@@ -163,16 +179,23 @@ PASS: enemy silhouette and transparent gutters 2
 PASS: enemy silhouette and transparent gutters 3
 PASS: enemy silhouette and transparent gutters 4
 PASS: enemy silhouette and transparent gutters 5
+PASS: motorcycle component silhouette and transparent gutters 0
+PASS: motorcycle component silhouette and transparent gutters 1
+PASS: motorcycle component silhouette and transparent gutters 2
+PASS: motorcycle component silhouette and transparent gutters 3
+PASS: rotating wheel silhouette is circular
+PASS: healthy and damaged chassis display widths agree
 PASS: scrap projectile silhouette and transparent gutters
 PASS: C# syntax AncientArt.cs
 PASS: C# syntax AncientAudio.cs
 PASS: C# syntax AncientHUD.cs
+PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientVisuals.cs
 PASS: C# syntax AncientPointer.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-Static checks do not prove input handling, rendering or gameplay.
-Left-click/Shift/Alt/Tab mapping, pointer selection, cursor restoration and zip/swing physics require Unity Play Mode validation.
+Static checks do not establish rendered quality, correct collision or handling.
+Motorcycle assembly, component alignment, wheel direction, mount clearance, rider/vehicle collider switching, swept projectile hits, suspension presentation, braking, explosion launch and audio require Unity Play Mode checks.
 No Unity compilation, shader compilation, gameplay or performance benchmark was executed.

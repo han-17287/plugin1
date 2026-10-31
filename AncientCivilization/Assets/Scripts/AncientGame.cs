@@ -296,7 +296,7 @@ namespace Plugin.AncientCivilization
             if(showHelp&&!skills&&!boss&&!won)
             {
                 Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
-                GUI.Label(new Rect(28,h-87,w-56,70),"A/D MOVE   SPACE JUMP   CTRL TAP RUN / HOLD BIKE   ALT / C DASH   F HOLD ABSORB\nSHIFT COMBO   Q PARTICLE BURST   LMB AIMED WIRE   TAB WIRE MODE   X BIKE EXPLOSION   K UPGRADES   H HIDE HELP",small);
+                GUI.Label(new Rect(28,h-87,w-56,70),"A/D MOVE   SPACE JUMP   CTRL TAP RUN / HOLD BIKE   ALT / C DASH   F HOLD ABSORB   S BIKE BRAKE\nSHIFT COMBO   Q PARTICLE BURST   LMB AIMED WIRE   TAB WIRE MODE   X BIKE EXPLOSION   K UPGRADES   H HIDE HELP",small);
             }
             if(skills)
             {
@@ -319,6 +319,11 @@ namespace Plugin.AncientCivilization
                 GUI.Label(new Rect(28,162,90,22),"ALT / DASH",small);
                 Bar(new Rect(120,156,74,4),hero.BurstReady,Orange);
                 GUI.Label(new Rect(120,162,100,22),"Q / BURST",small);
+                if(hero.bike)
+                {
+                    Bar(new Rect(220,156,84,4),hero.bikeHP/80,Cyan);
+                    GUI.Label(new Rect(220,162,120,22),Mathf.RoundToInt(Mathf.Abs(hero.HorizontalSpeed)*3.6f)+" km/h",small);
+                }
                 AncientPickup nearest=null;float distance=float.MaxValue;
                 foreach(var item in pickups)if(item&&item.core>=0)
                 {float d=Vector2.Distance(item.transform.position,hero.transform.position);if(d<distance){distance=d;nearest=item;}}
@@ -350,6 +355,8 @@ namespace Plugin.AncientCivilization
         public int WireChain {get{return wireChain;}}
         public float Facing {get{return direction;}}
         public float HorizontalSpeed {get{return body?body.linearVelocity.x:0;}}
+        public float VerticalSpeed {get{return body?body.linearVelocity.y:0;}}
+        public bool BikeGrounded {get;private set;}
         public float DashReady {get{return Mathf.Clamp01(1-(dashReady-Time.time)/.8f);}}
         public float BurstReady {get{return Mathf.Clamp01(1-(burstReady-Time.time)/.65f);}}
         public float WireCooldown {get{return Mathf.Clamp01(1-(wireReady-Time.time)/.18f);}}
@@ -357,7 +364,8 @@ namespace Plugin.AncientCivilization
         public Vector2 WireTarget {get;private set;}
         public bool ZipMode {get;private set;}
         public string WireModeName {get{return ZipMode?"ZIP":"SWING";}}
-        Rigidbody2D body;SpriteRenderer art,bikeArt;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
+        Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;
+        CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
         DistanceJoint2D wireJoint;SpriteRenderer hook;SpriteRenderer[] wirePulses;
         float direction=1,controlAt,attackAt,invulnerableUntil,wireReady,lastGrounded=-100;
         float dashUntil,dashReady,comboUntil,absorbAt=-10,burstReady,jumpBufferedUntil=-10;
@@ -376,12 +384,13 @@ namespace Plugin.AncientCivilization
             body=gameObject.AddComponent<Rigidbody2D>();body.freezeRotation=true;body.collisionDetectionMode=CollisionDetectionMode2D.Continuous;body.interpolation=RigidbodyInterpolation2D.Interpolate;
             wireJoint=gameObject.AddComponent<DistanceJoint2D>();wireJoint.autoConfigureDistance=false;
             wireJoint.autoConfigureConnectedAnchor=false;wireJoint.maxDistanceOnly=true;wireJoint.enabled=false;
-            var collider=gameObject.AddComponent<CapsuleCollider2D>();collider.size=new Vector2(.7f,1.65f);
-            var frictionless=new PhysicsMaterial2D("Free movement"){friction=0,bounciness=0};collider.sharedMaterial=frictionless;
+            heroCollider=gameObject.AddComponent<CapsuleCollider2D>();heroCollider.size=new Vector2(.7f,1.65f);
+            var frictionless=new PhysicsMaterial2D("Free movement"){friction=0,bounciness=0};heroCollider.sharedMaterial=frictionless;
+            bikeCollider=gameObject.AddComponent<BoxCollider2D>();bikeCollider.size=new Vector2(2.85f,1.8f);bikeCollider.offset=new Vector2(0,.085f);bikeCollider.edgeRadius=.01f;bikeCollider.sharedMaterial=frictionless;bikeCollider.enabled=false;
             frames=new Sprite[8];actions=new Sprite[8];for(int i=0;i<frames.Length;i++){frames[i]=AncientArt.Hero(i);actions[i]=AncientArt.Action(i);}
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-.825f),10,transform);
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
-            bikeArt=AncientArt.Display("Particle motorcycle",AncientArt.World(7),new Vector2(0,-.825f),9,transform);bikeArt.gameObject.SetActive(false);
+            motorcycle=gameObject.AddComponent<AncientMotorcycle>();motorcycle.Initialize(this);
             wire=g.Line("Particle cable core",new Color(.8f,1,1),.018f,17);
             wireGlow=g.Line("Particle cable sheath",new Color(.12f,.9f,1,.28f),.11f,16);
             wireTarget=g.Line("Wire targeting reticle",AncientGame.Cyan,.035f,18);wireTarget.loop=true;wireTarget.positionCount=8;
@@ -405,14 +414,14 @@ namespace Plugin.AncientCivilization
             AncientGame.SetSaved("capacity",reservoir?1:0);AncientGame.SetSaved("armor",armor?1:0);
         }
         bool Grounded()
-        {return Physics2D.BoxCast((Vector2)transform.position+Vector2.down*.78f,new Vector2(.58f,.12f),0,Vector2.down,.12f,1<<8).collider!=null;}
+        {return Physics2D.BoxCast((Vector2)transform.position+Vector2.down*.78f,new Vector2(bike?2.5f:.58f,.12f),0,Vector2.down,.12f,1<<8).collider!=null;}
         void Update()
         {
             var g=AncientGame.Instance;if(!body)return;
             if(g.won){StopWire(false);body.linearVelocity=Vector2.zero;body.gravityScale=0;absorb.enabled=false;trail.emitting=false;return;}
             if(g.Paused){absorb.enabled=false;return;}
             if(transform.position.y<-9){Respawn();return;}
-            bool onGround=Grounded();
+            bool onGround=Grounded();BikeGrounded=onGround;
             if(onGround)
             {
                 if(!wasGrounded&&fallSpeed<-7){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.4f,.57f,.65f),10);g.Sound(7);landingUntil=Time.time+.10f;g.Shake(.025f);}
@@ -437,7 +446,8 @@ namespace Plugin.AncientCivilization
                 if(bike)g.Notice("Press X to detonate and launch.");
                 else if(!bikeUnlocked)g.Notice("Recover a core, then unlock motorcycle fabrication in K.");
                 else if(particles<30)g.Notice("Construction needs 30 particles. Absorb enemy fire or find a cache.");
-                else{particles-=30;bike=true;bikeHP=80;g.Burst(transform.position,AncientGame.Cyan,24);g.Shake(.08f);}
+                else if(Physics2D.OverlapBox((Vector2)transform.position+Vector2.up*.11f,new Vector2(2.87f,1.77f),0,1<<8))g.Notice("Need more space to assemble the motorcycle.");
+                else{particles-=30;SetBike(true);bikeHP=80;motorcycle.Assemble();g.Burst(transform.position,AncientGame.Cyan,24);g.Shake(.08f);}
             }
             if((Input.GetKeyUp(KeyCode.LeftControl)||Input.GetKeyUp(KeyCode.RightControl))&&!controlConsumed)running=!running;
             if(Input.GetKeyDown(KeyCode.X)&&bike)ExplodeBike();
@@ -491,7 +501,7 @@ namespace Plugin.AncientCivilization
             if(onGround&&Mathf.Abs(body.linearVelocity.x)>7&&Time.time>=dustAt){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.35f,.48f,.55f),2);dustAt=Time.time+.18f;}
             art.transform.localPosition=new Vector3(0,bike?-.25f:-.825f,0);
             art.color=Time.time<invulnerableUntil&&(int)(Time.time*14)%2==0?new Color(1,1,1,.45f):Color.white;
-            bikeArt.gameObject.SetActive(bike);bikeArt.flipX=direction<0;
+            art.enabled=!bike;
             trail.emitting=Time.time<dashUntil||wired||bike;
         }
         void BeginAttack()
@@ -539,10 +549,22 @@ namespace Plugin.AncientCivilization
             }
             else
             {
-                float speed=bike?15:running?9:5;
                 bool grounded=Grounded();
-                bool carry=!grounded&&Time.time<momentumUntil&&Mathf.Abs(velocity.x)>speed&&(axis==0||Mathf.Sign(axis)==Mathf.Sign(velocity.x));
-                if(!carry&&(axis!=0||grounded))velocity.x=Mathf.MoveTowards(velocity.x,axis*speed,(grounded?70:22)*Time.fixedDeltaTime);
+                if(bike)
+                {
+                    bool brake=Input.GetKey(KeyCode.S)||Input.GetKey(KeyCode.DownArrow);
+                    float target=brake?0:axis*17;
+                    float rate=brake?60:Mathf.Abs(axis)<.01f?11:Mathf.Sign(axis)!=Mathf.Sign(velocity.x)&&Mathf.Abs(velocity.x)>1?45:28;
+                    if(!grounded)rate=brake?12:8;
+                    bool carry=!grounded&&!brake&&Time.time<momentumUntil&&Mathf.Abs(velocity.x)>17&&(axis==0||Mathf.Sign(axis)==Mathf.Sign(velocity.x));
+                    if(!carry&&(axis!=0||grounded||brake))velocity.x=Mathf.MoveTowards(velocity.x,target,rate*Time.fixedDeltaTime);
+                }
+                else
+                {
+                    float speed=running?9:5;
+                    bool carry=!grounded&&Time.time<momentumUntil&&Mathf.Abs(velocity.x)>speed&&(axis==0||Mathf.Sign(axis)==Mathf.Sign(velocity.x));
+                    if(!carry&&(axis!=0||grounded))velocity.x=Mathf.MoveTowards(velocity.x,axis*speed,(grounded?70:22)*Time.fixedDeltaTime);
+                }
             }
             if(Time.time<jumpBufferedUntil)
             {
@@ -690,22 +712,37 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;if(Time.time<invulnerableUntil||g.won)return;
             invulnerableUntil=Time.time+.65f;g.Shake(.14f);
-            if(bike){bikeHP-=damage;if(bikeHP<=0)ExplodeBike();return;}
+            if(bike){bikeHP=Mathf.Max(0,bikeHP-damage);motorcycle.Damage();if(bikeHP<=0)ExplodeBike();return;}
             strikePending=false;attackBufferedUntil=-10;actionUntil=0;hurtUntil=Time.time+.18f;
             hp-=damage;g.DamageEmphasis();g.Sound(1);g.Impact(transform.position,AncientGame.Orange,false);g.Burst(transform.position,AncientGame.Orange,9);
             if(hp<=0)Respawn();
         }
+        public bool BikeProjectileHit(Vector2 start,Vector2 end)
+        {
+            if(!bike)return false;
+            var bounds=bikeCollider.bounds;
+            if(bounds.size.x<.01f)bounds=new Bounds(transform.TransformPoint(bikeCollider.offset),new Vector3(2.87f,1.82f,1));
+            bounds.Expand(new Vector3(.14f,.14f,1));Vector2 delta=end-start;
+            if(delta.sqrMagnitude<.000001f)return bounds.Contains(start);
+            float distance;return bounds.IntersectRay(new Ray(start,delta.normalized),out distance)&&distance<=delta.magnitude;
+        }
+        void SetBike(bool active)
+        {
+            bike=active;heroCollider.enabled=!active;bikeCollider.enabled=active;body.mass=active?1.4f:1;
+            if(art)art.enabled=!active;
+        }
         public void ExplodeBike()
         {
-            if(!bike)return;bike=false;StopWire(false);momentumUntil=Time.time+.8f;
+            if(!bike)return;motorcycle.Detonate();SetBike(false);StopWire(false);momentumUntil=Time.time+.8f;
             var g=AncientGame.Instance;g.Sound(4);g.Burst(transform.position,AncientGame.Orange,45);g.Shake(.3f);
             foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<5)e.Hit(85,true);
-            body.linearVelocity=new Vector2(direction*17,19);invulnerableUntil=Time.time+.7f;
+            float launch=Mathf.Abs(body.linearVelocity.x)>1.5f?Mathf.Sign(body.linearVelocity.x):direction;
+            body.linearVelocity=new Vector2(launch*Mathf.Clamp(Mathf.Abs(body.linearVelocity.x)*.85f,17,23),19);invulnerableUntil=Time.time+.7f;
             g.Notice("EXPLOSION LAUNCH / connect the next anchor.",2);
         }
         void Respawn()
         {
-            StopWire(false);wireChain=0;momentumUntil=0;strikePending=false;actionUntil=0;attackBufferedUntil=-10;fallSpeed=0;hp=MaxHP;particles=Mathf.Max(40,particles);bike=false;dashUntil=0;body.linearVelocity=Vector2.zero;
+            StopWire(false);wireChain=0;momentumUntil=0;strikePending=false;actionUntil=0;attackBufferedUntil=-10;fallSpeed=0;hp=MaxHP;particles=Mathf.Max(40,particles);SetBike(false);dashUntil=0;body.linearVelocity=Vector2.zero;
             invulnerableUntil=Time.time+1.5f;AncientGame.Instance.HeroDied();
         }
         void OnDestroy()
@@ -908,7 +945,7 @@ namespace Plugin.AncientCivilization
             {
                 Vector2 h=g.hero.transform.position;Vector2 segment=next-previous;
                 float t=segment.sqrMagnitude>0?Mathf.Clamp01(Vector2.Dot(h-previous,segment)/segment.sqrMagnitude):0;
-                if(Vector2.Distance(h,previous+segment*t)<.75f)
+                if(g.hero.bike?g.hero.BikeProjectileHit(previous,next):Vector2.Distance(h,previous+segment*t)<.75f)
                 {
                     if(Input.GetKey(KeyCode.F))g.hero.AbsorbShot(this);
                     else{g.hero.Hurt(damage);Remove();}return;

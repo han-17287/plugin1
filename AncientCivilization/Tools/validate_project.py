@@ -61,7 +61,7 @@ def main():
     scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text())[1]
     check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(), 'Main scene build GUID')
     dimensions = {}
-    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions'):
+    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions', 'Motorcycle'):
         path = ROOT / ('Assets/Resources/Art/' + name + '.png')
         header = png_info(path)
         dimensions[name] = header[:2]
@@ -83,6 +83,12 @@ def main():
     check(len(enemy_rects) == 6, 'six distinct enemy sprite slices')
     for i, (x, y, w, h) in enumerate(enemy_rects):
         check(x >= 0 and y >= 0 and x + w <= 1536 and y + h <= 1024, 'enemy slice in texture bounds ' + str(i))
+    bike_block = art.split('Rect[] bikeCells={', 1)[1].split('};', 1)[0]
+    bike_rects = [tuple(map(int, m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', bike_block)]
+    check(len(bike_rects) == 4, 'four modular motorcycle components')
+    for i, (x, y, w, h) in enumerate(bike_rects):
+        check(x >= 0 and y >= 0 and x + w <= 1536 and y + h <= 1024,
+              'motorcycle component in texture bounds ' + str(i))
     for name in ('ParticleGlow', 'CharacterRim', 'Presentation'):
         shader = ROOT / ('Assets/Resources/Shaders/' + name + '.shader')
         source = shader.read_text()
@@ -125,6 +131,20 @@ def main():
             bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
             check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
                   'enemy silhouette and transparent gutters ' + str(i))
+        image = Image.open(ROOT / 'Assets/Resources/Art/Motorcycle.png')
+        bike_bounds = []
+        for i, (x, y, w, h) in enumerate(bike_rects):
+            region = image.getchannel('A').crop((x, y, x + w, y + h))
+            bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
+            check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
+                  'motorcycle component silhouette and transparent gutters ' + str(i))
+            bike_bounds.append(bbox)
+        wheel = bike_bounds[1]
+        check(abs((wheel[2] - wheel[0]) / (wheel[3] - wheel[1]) - 1) < .05,
+              'rotating wheel silhouette is circular')
+        normal, damaged = bike_bounds[0], bike_bounds[3]
+        check(abs((damaged[2] - damaged[0]) * 1.06 / (normal[2] - normal[0]) - 1) < .05,
+              'healthy and damaged chassis display widths agree')
         image = Image.open(ROOT / 'Assets/Resources/Art/Scrap.png')
         bbox = image.getchannel('A').point(lambda a: 255 if a >= 110 else 0).getbbox()
         check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < image.width and bbox[3] < image.height,
