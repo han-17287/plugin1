@@ -11,7 +11,10 @@ namespace Plugin.AncientCivilization
         Material glowMaterial,rimMaterial;Texture2D softTexture;Sprite softSprite;
         readonly List<SpriteRenderer> lights=new List<SpriteRenderer>();
         readonly List<Color> colours=new List<Color>();
-        LineRenderer[] rain;Vector2[] rainPositions;float[] rainSpeeds;
+        const int RainCount=72;
+        Mesh rainMesh;MeshRenderer rainRenderer;Material rainMaterial;
+        readonly Vector3[] rainVertices=new Vector3[RainCount*4];
+        Vector2[] rainPositions;float[] rainSpeeds;
         SpriteRenderer[] haze;SpriteRenderer armGlow;
         AncientGame game;System.Random random=new System.Random(47287);
         float Next(float min,float max){return min+(float)random.NextDouble()*(max-min);}
@@ -43,12 +46,22 @@ namespace Plugin.AncientCivilization
                 if((x>20&&x<22)||(x>38&&x<43)||(x>58&&x<63)||(x>80&&x<85))continue;
                 Glow(new Vector2(x,top-.45f),AncientGame.Orange,2.6f,3);
             }
-            rain=new LineRenderer[72];rainPositions=new Vector2[rain.Length];rainSpeeds=new float[rain.Length];
-            for(int i=0;i<rain.Length;i++)
+            var rainObject=new GameObject("Batched distant rain");rainObject.transform.SetParent(transform,false);
+            rainRenderer=rainObject.AddComponent<MeshRenderer>();rainRenderer.sortingOrder=-6;
+            rainMaterial=new Material(Shader.Find("Sprites/Default"));rainRenderer.sharedMaterial=rainMaterial;
+            rainMesh=new Mesh{name="72 rain streaks / one mesh"};rainMesh.MarkDynamic();
+            rainObject.AddComponent<MeshFilter>().sharedMesh=rainMesh;
+            rainPositions=new Vector2[RainCount];rainSpeeds=new float[RainCount];
+            var triangles=new int[RainCount*6];var colors=new Color[RainCount*4];
+            for(int i=0;i<RainCount;i++)
             {
-                rain[i]=game.Line("Distant rain",new Color(.4f,.65f,.8f,Next(.08f,.21f)),Next(.008f,.018f),-6);
+                Color color=new Color(.4f,.65f,.8f,Next(.08f,.21f));Next(.008f,.018f);
                 rainPositions[i]=new Vector2(Next(-26,26),Next(-15,15));rainSpeeds[i]=Next(8,16);
+                int v=i*4,k=i*6;triangles[k]=v;triangles[k+1]=v+1;triangles[k+2]=v+2;
+                triangles[k+3]=v+2;triangles[k+4]=v+1;triangles[k+5]=v+3;
+                for(int n=0;n<4;n++)colors[v+n]=color;
             }
+            rainMesh.vertices=rainVertices;rainMesh.triangles=triangles;rainMesh.colors=colors;
             haze=new SpriteRenderer[3];
             for(int i=0;i<haze.Length;i++)
             {
@@ -77,31 +90,41 @@ namespace Plugin.AncientCivilization
         }
         void LateUpdate()
         {
-            if(!game||!game.hero||!Camera.main)return;
-            Vector2 camera=Camera.main.transform.position;
+            if(!game||!game.hero||!game.View)return;
+            var view=game.View;Vector2 camera=view.transform.position;
+            bool fullEffects=HighQuality&&!game.MainMenu;
+            float halfHeight=view.orthographicSize+4,halfWidth=view.orthographicSize*view.aspect+4;
             if(armGlow)armGlow.transform.localPosition=new Vector2(game.hero.Facing*.4f,.15f);
             for(int i=0;i<lights.Count;i++)if(lights[i])
             {
-                lights[i].enabled=HighQuality;
+                Vector2 delta=(Vector2)lights[i].transform.position-camera;
+                bool visible=fullEffects&&Mathf.Abs(delta.x)<halfWidth&&Mathf.Abs(delta.y)<halfHeight;
+                lights[i].enabled=visible;if(!visible)continue;
                 Color c=colours[i];c.a*=.93f+Mathf.Sin(Time.time*3+i*1.7f)*.07f;lights[i].color=c;
             }
-            for(int i=0;i<rain.Length;i++)
+            rainRenderer.enabled=fullEffects;
+            if(fullEffects)
             {
-                rain[i].enabled=HighQuality;
-                if(!HighQuality)continue;
-                rainPositions[i]+=new Vector2(-1,-rainSpeeds[i])*Time.deltaTime;
-                if(rainPositions[i].y<-15){rainPositions[i].y=15;rainPositions[i].x=Next(-26,26);}
-                Vector2 p=camera+rainPositions[i];rain[i].SetPosition(0,p);rain[i].SetPosition(1,p+new Vector2(.07f,.4f));
+                for(int i=0;i<RainCount;i++)
+                {
+                    rainPositions[i]+=new Vector2(-1,-rainSpeeds[i])*Time.deltaTime;
+                    if(rainPositions[i].y<-15){rainPositions[i].y=15;rainPositions[i].x=Next(-26,26);}
+                    Vector2 p=camera+rainPositions[i];int v=i*4;
+                    rainVertices[v]=p+Vector2.left*.007f;rainVertices[v+1]=p+Vector2.right*.007f;
+                    rainVertices[v+2]=p+new Vector2(.063f,.4f);rainVertices[v+3]=p+new Vector2(.077f,.4f);
+                }
+                rainMesh.vertices=rainVertices;rainMesh.RecalculateBounds();
             }
             for(int i=0;i<haze.Length;i++)
             {
-                haze[i].enabled=HighQuality;
+                haze[i].enabled=fullEffects;
+                if(!fullEffects)continue;
                 haze[i].transform.position=new Vector2(camera.x-13+i*13+Mathf.Sin(Time.time*.13f+i)*4,camera.y-5+i*1.6f);
             }
         }
         void OnDestroy()
         {
-            if(rain!=null)foreach(var line in rain)if(line)Destroy(line.gameObject);
+            if(rainMesh)Destroy(rainMesh);if(rainMaterial)Destroy(rainMaterial);
             foreach(var light in lights)if(light)Destroy(light.gameObject);
             if(haze!=null)foreach(var fog in haze)if(fog)Destroy(fog.gameObject);
             if(glowMaterial)Destroy(glowMaterial);if(rimMaterial)Destroy(rimMaterial);

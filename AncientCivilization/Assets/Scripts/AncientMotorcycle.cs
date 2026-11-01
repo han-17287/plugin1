@@ -8,7 +8,7 @@ namespace Plugin.AncientCivilization
         AncientHero hero;AncientGame game;AncientAudio audioSettings;
         Transform model,frame;
         SpriteRenderer chassis,rider,rear,front;
-        TrailRenderer exhaust,exhaustCore;LineRenderer headlight,assembly;
+        TrailRenderer exhaust,exhaustCore;TrailRenderer[] skidTrails;Material skidMaterial;float nextSkidAt;LineRenderer headlight,assembly;
         Sprite normalBody,damagedBody;Material effects;AudioSource engine;AudioClip engineClip;
         MaterialPropertyBlock armProperties;
         float assemblyAt,lastSpeed,wheelAngle,compression,sparkAt,flashUntil;bool previousGrounded;
@@ -32,6 +32,17 @@ namespace Plugin.AncientCivilization
             var shader=Resources.Load<Shader>("Shaders/ParticleGlow");if(!shader||!shader.isSupported)shader=Shader.Find("Sprites/Default");
             effects=new Material(shader);
             exhaust=MakeTrail("Particle exhaust",.17f,.19f);exhaustCore=MakeTrail("Exhaust core",.06f,.10f);
+            skidMaterial=new Material(Shader.Find("Sprites/Default"));
+            skidTrails=new TrailRenderer[2];
+            for(int i=0;i<2;i++)
+            {
+                var tire=new GameObject("Pooled tire skid trail");tire.transform.SetParent(model,false);
+                tire.transform.localPosition=new Vector2(i==0?-1.15f:1.16f,-.88f);
+                var trace=tire.AddComponent<TrailRenderer>();trace.sharedMaterial=skidMaterial;trace.sortingOrder=4;
+                trace.startWidth=.1f;trace.endWidth=.035f;trace.time=1.1f;trace.minVertexDistance=.08f;
+                trace.startColor=new Color(.17f,.2f,.22f,.7f);trace.endColor=new Color(.17f,.2f,.22f,0);trace.emitting=false;
+                skidTrails[i]=trace;
+            }
             headlight=game.Line("Motorcycle headlight",new Color(.6f,.9f,1,.09f),.06f,5);
             headlight.material=effects;headlight.endWidth=1.15f;headlight.endColor=new Color(.5f,.8f,1,0);
             assembly=game.Line("Particle assembly outline",AncientGame.Cyan,.035f,14);assembly.loop=true;assembly.positionCount=8;
@@ -64,7 +75,7 @@ namespace Plugin.AncientCivilization
         {
             assemblyAt=Time.time;wheelAngle=0;compression=0;lastSpeed=hero.HorizontalSpeed;
             frame.localPosition=Vector3.zero;frame.localRotation=Quaternion.identity;previousGrounded=false;
-            exhaust.Clear();exhaustCore.Clear();model.gameObject.SetActive(true);
+            exhaust.Clear();exhaustCore.Clear();foreach(var trace in skidTrails){trace.emitting=false;trace.Clear();}model.gameObject.SetActive(true);
             game.Impact(transform.position,AncientGame.Cyan,true);game.Sound(3);
         }
         public void Damage()
@@ -87,28 +98,29 @@ namespace Plugin.AncientCivilization
         void LateUpdate()
         {
             if(!hero||!model)return;
-            float speed=Mathf.Abs(hero.HorizontalSpeed);bool running=hero.bike&&!game.Paused&&!game.won;
+            float speed=Mathf.Abs(hero.HorizontalSpeed);float skid=hero.BikeSkid;bool running=hero.bike&&!game.Paused&&!game.won;
             float volume=running&&audioSettings&&!audioSettings.Muted ? 0.065f : 0f;
             engine.volume=!running||!audioSettings||audioSettings.Muted?0:Mathf.MoveTowards(engine.volume,volume,Time.unscaledDeltaTime*.3f);
-            engine.pitch=Mathf.Lerp(engine.pitch,.75f+Mathf.Clamp01(speed/17)*1.15f,1-Mathf.Exp(-6*Time.unscaledDeltaTime));
+            engine.pitch=Mathf.Lerp(engine.pitch,.75f+Mathf.Clamp01(speed/17)*1.15f+skid*.2f,1-Mathf.Exp(-6*Time.unscaledDeltaTime));
             if(!hero.bike)
             {
                 model.gameObject.SetActive(false);headlight.enabled=assembly.enabled=false;
+                foreach(var trace in skidTrails)trace.emitting=false;
                 exhaust.emitting=exhaustCore.emitting=false;previousGrounded=false;return;
             }
             model.gameObject.SetActive(true);
             float facing=speed>1.5f?Mathf.Sign(hero.HorizontalSpeed):hero.Facing;
             float age=Time.time-assemblyAt,t=Mathf.Clamp01(age/.28f);
-            model.localScale=new Vector3(facing,1,1);
+            model.localScale=new Vector3(facing*(1-skid*.12f),1,1);
             float acceleration=(hero.HorizontalSpeed-lastSpeed)/Mathf.Max(.001f,Time.deltaTime);lastSpeed=hero.HorizontalSpeed;
             bool grounded=hero.BikeGrounded;
             if(grounded&&!previousGrounded)compression=.09f;
             previousGrounded=grounded;compression=Mathf.MoveTowards(compression,0,Time.deltaTime*.7f);
             float bounce=grounded?Mathf.Sin(Time.time*(12+speed))*.009f*Mathf.Clamp01(speed/10):0;
-            frame.localPosition=new Vector2(0,-compression+bounce);
-            float pitch=Mathf.Clamp(acceleration*facing*.12f,-4,4)+(grounded?0:Mathf.Clamp(hero.VerticalSpeed*.35f,-7,7));
+            frame.localPosition=new Vector2(-skid*.16f,-compression+bounce-skid*.06f);
+            float pitch=-skid*7+Mathf.Clamp(acceleration*facing*.12f,-4,4)+(grounded?0:Mathf.Clamp(hero.VerticalSpeed*.35f,-7,7));
             frame.localRotation=Quaternion.Lerp(frame.localRotation,Quaternion.Euler(0,0,pitch),1-Mathf.Exp(-9*Time.deltaTime));
-            wheelAngle=Mathf.Repeat(wheelAngle-hero.HorizontalSpeed*facing/.37f*Mathf.Rad2Deg*Time.deltaTime,360);
+            wheelAngle=Mathf.Repeat(wheelAngle-hero.HorizontalSpeed*facing/.37f*Mathf.Rad2Deg*Time.deltaTime*(1+skid*.3f),360);
             rear.transform.localRotation=front.transform.localRotation=Quaternion.Euler(0,0,wheelAngle);
             bool damaged=hero.bikeHP<=28;
             chassis.sprite=damaged?damagedBody:normalBody;
@@ -119,6 +131,16 @@ namespace Plugin.AncientCivilization
             tint.a=Mathf.Clamp01(age/.18f);chassis.color=tint;
             rear.color=front.color=new Color(1,1,1,Mathf.Clamp01((age-.025f)/.15f));
             rider.color=Color.white;
+            bool skidding=running&&grounded&&skid>.15f&&speed>2;
+            foreach(var trace in skidTrails)trace.emitting=skidding;
+            if(skidding&&Time.time>=nextSkidAt)
+            {
+                nextSkidAt=Time.time+.09f;
+                Vector2 tire=rear.transform.position;tire.y=transform.position.y-.88f;
+                game.Burst(tire,new Color(.45f,.5f,.52f),AncientVisuals.HighQuality?4:2);
+                if(speed>8)game.Burst(tire,AncientGame.Orange,1);
+                game.Sound(7);
+            }
             bool effectsVisible=AncientVisuals.HighQuality&&running;
             exhaust.emitting=exhaustCore.emitting=effectsVisible&&speed>3;
             headlight.enabled=effectsVisible&&age>.08f;
@@ -141,7 +163,7 @@ namespace Plugin.AncientCivilization
         {
             if(headlight)Destroy(headlight.gameObject);if(assembly)Destroy(assembly.gameObject);
             if(engine){engine.Stop();engine.clip=null;}
-            if(effects)Destroy(effects);if(engineClip)Destroy(engineClip);
+            if(skidMaterial)Destroy(skidMaterial);if(effects)Destroy(effects);if(engineClip)Destroy(engineClip);
         }
     }
     public sealed class AncientBikeDebris : MonoBehaviour

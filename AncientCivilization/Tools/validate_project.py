@@ -99,10 +99,16 @@ def main():
         image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
         for i in range(8):
             x, y, w, h = i % 4 * 384, i // 4 * 512, 384, 512
+            if i == 2:
+                x, w = 768, 400
+            if i == 3:
+                x, w = 1168, 368
+            if i == 4:
+                x, w = 0, 392
             if i == 5:
-                x, w = 384, 376
+                x, w = 392, 364
             if i == 6:
-                x, w = 760, 408
+                x, w = 756, 412
             if i == 7:
                 x, w = 1168, 368
             region = image.getchannel('A').crop((x, y, x + w, y + h))

@@ -13,7 +13,7 @@ namespace Plugin.AncientCivilization
         }
         void OnRenderImage(RenderTexture source,RenderTexture destination)
         {
-            if(!grade){Graphics.Blit(source,destination);return;}
+            if(!grade||(!AncientVisuals.HighQuality&&(!AncientGame.Instance||AncientGame.Instance.DamageFlash<.001f))){Graphics.Blit(source,destination);return;}
             grade.SetFloat("_BloomStrength",AncientVisuals.HighQuality ? 0.25f : 0f);
             grade.SetFloat("_DamageAmount",AncientGame.Instance?AncientGame.Instance.DamageFlash:0);
             Graphics.Blit(source,destination,grade);

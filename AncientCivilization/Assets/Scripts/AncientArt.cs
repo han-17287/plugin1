@@ -50,13 +50,14 @@ namespace Plugin.AncientCivilization
         public static Sprite Hero(int frame)
         {
             Rect cell = new Rect(frame % 4 * 384, frame / 4 * 512, 384, 512);
-            // The absorption pose's rear boot crosses the nominal grid by eight pixels.
-            // Split at the actual transparent gutter so neither pose contains a neighbour.
-            if (frame == 5) cell = new Rect(384, 512, 376, 512);
-            // Keep the absorption module and neighbouring mounted pose in separate clear gutters.
-            if (frame == 6) cell = new Rect(760, 512, 408, 512);
+            // Measured transparent gutters around the wider chain housing and anchor tips.
+            if (frame == 2) cell = new Rect(768, 0, 400, 512);
+            if (frame == 3) cell = new Rect(1168, 0, 368, 512);
+            if (frame == 4) cell = new Rect(0, 512, 392, 512);
+            if (frame == 5) cell = new Rect(392, 512, 364, 512);
+            if (frame == 6) cell = new Rect(756, 512, 412, 512);
             if (frame == 7) cell = new Rect(1168, 512, 368, 512);
-            float root=frame==6?223:frame==7?199:215;
+            float root=frame==3||frame==7?199:frame==5?207:frame==6?227:215;
             return Slice("Hero", "hero-" + frame, cell, 195, new Vector2(root/cell.width,0),true,true);
         }
         public static Sprite World(int index)
@@ -86,6 +87,23 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Scrap()
         {var t=Texture("Scrap");return Slice("Scrap","thrown-scrap",new Rect(0,0,t.width,t.height),1100,Vector2.one*.5f);}
+        public static Sprite ChainLink()
+        {
+            const string key="chain-link";Sprite sprite;
+            if(sprites.TryGetValue(key,out sprite)&&sprite)return sprite;
+            var texture=new Texture2D(32,16,TextureFormat.RGBA32,false);texture.filterMode=FilterMode.Point;
+            var pixels=new Color[32*16];
+            for(int y=0;y<16;y++)for(int x=0;x<32;x++)
+            {
+                float dx=Mathf.Abs(x-15.5f),dy=Mathf.Abs(y-7.5f);
+                bool outer=dx<15&&dy<7&&dx+dy<20;
+                bool hole=dx<10&&dy<3&&dx+dy<12;
+                if(outer&&!hole)pixels[y*32+x]=y>=8?new Color(.88f,.94f,.96f):new Color(.26f,.34f,.4f);
+            }
+            texture.SetPixels(pixels);texture.Apply();textures[key]=texture;
+            sprite=Sprite.Create(texture,new Rect(0,0,32,16),Vector2.one*.5f,32);
+            sprites[key]=sprite;return sprite;
+        }
         public static Sprite MetalProjectile(int kind)
         {
             string key="metal-projectile-"+kind;Sprite sprite;
