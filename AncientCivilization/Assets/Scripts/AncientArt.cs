@@ -53,8 +53,10 @@ namespace Plugin.AncientCivilization
             // The absorption pose's rear boot crosses the nominal grid by eight pixels.
             // Split at the actual transparent gutter so neither pose contains a neighbour.
             if (frame == 5) cell = new Rect(384, 512, 376, 512);
-            if (frame == 6) cell = new Rect(760, 512, 392, 512);
-            float root=frame==6?223:215;
+            // The robot's open fingers extend past the nominal third column; end in the clear gutter.
+            if (frame == 6) cell = new Rect(760, 512, 408, 512);
+            if (frame == 7) cell = new Rect(1168, 512, 368, 512);
+            float root=frame==6?223:frame==7?199:215;
             return Slice("Hero", "hero-" + frame, cell, 195, new Vector2(root/cell.width,0),true,true);
         }
         public static Sprite World(int index)

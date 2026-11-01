@@ -102,7 +102,9 @@ def main():
             if i == 5:
                 x, w = 384, 376
             if i == 6:
-                x, w = 760, 392
+                x, w = 760, 408
+            if i == 7:
+                x, w = 1168, 368
             region = image.getchannel('A').crop((x, y, x + w, y + h))
             bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
             check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
