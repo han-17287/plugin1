@@ -10,6 +10,7 @@ namespace Plugin.AncientCivilization
         SpriteRenderer chassis,rider,rear,front;
         TrailRenderer exhaust,exhaustCore;LineRenderer headlight,assembly;
         Sprite normalBody,damagedBody;Material effects;AudioSource engine;AudioClip engineClip;
+        MaterialPropertyBlock armProperties;
         float assemblyAt,lastSpeed,wheelAngle,compression,sparkAt,flashUntil;bool previousGrounded;
         public void Initialize(AncientHero owner)
         {
@@ -51,6 +52,13 @@ namespace Plugin.AncientCivilization
             var trail=o.AddComponent<TrailRenderer>();trail.material=effects;trail.sortingOrder=7;
             trail.startColor=new Color(.25f,.95f,1,.7f);trail.endColor=new Color(.05f,.6f,1,0);
             trail.startWidth=width;trail.endWidth=0;trail.time=lifetime;trail.minVertexDistance=.04f;trail.emitting=false;return trail;
+        }
+        public void SetArmPower(float charge,float activity)
+        {
+            if(!rider)return;
+            if(armProperties==null)armProperties=new MaterialPropertyBlock();
+            armProperties.SetFloat("_ArmCharge",charge);armProperties.SetFloat("_ArmPulse",activity);
+            rider.SetPropertyBlock(armProperties);
         }
         public void Assemble()
         {

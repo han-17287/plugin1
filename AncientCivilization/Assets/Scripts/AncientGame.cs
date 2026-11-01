@@ -411,6 +411,7 @@ namespace Plugin.AncientCivilization
         CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
         DistanceJoint2D wireJoint;SpriteRenderer hook;SpriteRenderer[] wirePulses;
         LineRenderer wireBraidA,wireBraidB,wireCuff,wireLatch;
+        MaterialPropertyBlock armProperties;
         float direction=1,controlAt,attackAt,invulnerableUntil,wireReady,lastGrounded=-100;
         float dashUntil,dashReady,comboUntil,absorbAt=-10,burstReady,jumpBufferedUntil=-10;
         float wireAttachedAt,wireLength,wireMinLength,swingDirection,arcTravel,momentumUntil,lastWireRelease=-10;
@@ -435,6 +436,7 @@ namespace Plugin.AncientCivilization
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-.825f),10,transform);
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
             motorcycle=gameObject.AddComponent<AncientMotorcycle>();motorcycle.Initialize(this);
+            armProperties=new MaterialPropertyBlock();
             wire=g.Line("Particle cable core",new Color(.8f,1,1,.85f),.025f,17);
             wireGlow=g.Line("Particle cable sheath",new Color(.12f,.9f,1,.28f),.11f,16);
             wireTarget=g.Line("Wire targeting reticle",AncientGame.Cyan,.035f,18);wireTarget.loop=true;wireTarget.positionCount=8;
@@ -732,6 +734,10 @@ namespace Plugin.AncientCivilization
         void LateUpdate()
         {
             if(!body||!wire)return;var g=AncientGame.Instance;
+            float armCharge=CaptureEnergy/100f;
+            float armPulse=Capturing?1:wired?.65f:Mathf.Clamp01((launchReady-Time.time)/.25f);
+            armProperties.SetFloat("_ArmCharge",armCharge);armProperties.SetFloat("_ArmPulse",armPulse);
+            art.SetPropertyBlock(armProperties);motorcycle.SetArmPower(armCharge,armPulse);
             chargeRing.enabled=CaptureEnergy>0&&!g.won;
             if(chargeRing.enabled)
             {
