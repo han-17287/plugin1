@@ -14,7 +14,12 @@ namespace Plugin.AncientCivilization
         public readonly List<AncientPickup> pickups = new List<AncientPickup>();
         public AncientEnemy boss;
         public bool skills, won, bossDefeated, showHelp = true;
-        public bool Paused {get {return skills;}}
+        public bool MainMenu {get;private set;}
+        public bool HasSession {get;private set;}
+        public bool HasSavedProgress {get{return Saved("started")!=0||Saved("checkpoint")!=0||Saved("cores")!=0||Saved("credits")!=0||Saved("kills")!=0||Saved("score")!=0||Saved("bike")!=0||Saved("jump")!=0||Saved("capacity")!=0||Saved("armor")!=0||Saved("boss")!=0;}}
+        public bool Paused {get {return MainMenu||skills;}}
+        public bool GameplayInputReady {get{return Time.frameCount>inputReadyFrame;}}
+        static bool startAfterReload;int inputReadyFrame;
         public int coreMask, credits, kills, score;
         public int Cores {get {return ((coreMask&1)!=0?1:0)+((coreMask&2)!=0?1:0)+((coreMask&4)!=0?1:0);}}
         public bool ArenaActive {get {return boss && !bossDefeated;}}
@@ -42,7 +47,7 @@ namespace Plugin.AncientCivilization
         public static void SetSaved(string key,int value){PlayerPrefs.SetInt(SaveKey+key,value);}
         void Awake()
         {
-            Instance=this; audioCues=gameObject.AddComponent<AncientAudio>(); Time.timeScale=1; Physics2D.gravity=new Vector2(0,-32);
+            Instance=this;MainMenu=!startAfterReload;HasSession=startAfterReload;startAfterReload=false; audioCues=gameObject.AddComponent<AncientAudio>(); Time.timeScale=1; Physics2D.gravity=new Vector2(0,-32);
             coreMask=Saved("cores"); credits=Saved("credits"); checkpointStage=Saved("checkpoint");
             bossDefeated=Saved("boss")!=0; kills=Saved("kills");score=Saved("score");
             if(checkpointStage==1)checkpoint=new Vector2(46,2.3f);
@@ -64,7 +69,9 @@ namespace Plugin.AncientCivilization
             }
             BuildWorld();
             hero=new GameObject("Mechanical Arm Hero").AddComponent<AncientHero>();hero.transform.position=checkpoint;
-            gameObject.AddComponent<AncientVisuals>();gameObject.AddComponent<AncientPointer>();
+            gameObject.AddComponent<AncientVisuals>();gameObject.AddComponent<AncientPointer>();gameObject.AddComponent<AncientMainMenu>();
+            Time.timeScale=MainMenu?0:1;
+            if(HasSession){SetSaved("started",1);PlayerPrefs.Save();inputReadyFrame=Time.frameCount+1;}
             Notice(checkpointStage==0?"SECTOR 01 / THE BURIED CITY\nRecover three cores. Reach the eastern sanctum.":"Checkpoint restored. The city remembers.",7);
         }
         void BuildWorld()
@@ -204,12 +211,24 @@ namespace Plugin.AncientCivilization
             foreach(var shot in shots.ToArray())if(shot)shot.Remove();
             hero.transform.position=checkpoint;Save();Notice("Reconstructed at checkpoint. Your recovered cores are safe.",4);
         }
-        void ToggleSkills(){skills=!skills;Time.timeScale=skills?0:1;}
+        public void BeginSession()
+        {
+            MainMenu=false;skills=false;HasSession=true;Time.timeScale=1;inputReadyFrame=Time.frameCount+1;
+            SetSaved("started",1);PlayerPrefs.Save();
+            Notice("SECTOR 01 / THE BURIED CITY\nShift: wire / attack mode. Recover three ancient cores.",6);
+        }
+        public void ReturnToMainMenu()
+        {
+            if(HasSession)Save();skills=false;MainMenu=true;Time.timeScale=0;hitPauseUntil=0;shake=0;
+        }
+        void ToggleSkills(){if(MainMenu)return;skills=!skills;Time.timeScale=Paused?0:1;}
         void Update()
         {
+            if(MainMenu){Time.timeScale=0;return;}
             if(Input.GetKeyDown(KeyCode.K)||Input.GetKeyDown(KeyCode.Escape))ToggleSkills();
             if(Input.GetKeyDown(KeyCode.H))showHelp=!showHelp;
-            Time.timeScale=skills?0:Time.unscaledTime<hitPauseUntil?.12f:1;
+            Time.timeScale=Paused?0:Time.unscaledTime<hitPauseUntil?.12f:1;
+            if(Paused)return;
             damageFlash=Mathf.MoveTowards(damageFlash,0,Time.unscaledDeltaTime*2.8f);
             if(hero)healthEcho=hero.hp>=healthEcho?hero.hp:Mathf.MoveTowards(healthEcho,hero.hp,Time.unscaledDeltaTime*34);
             if(!skills && !won)runTime+=Time.deltaTime;
@@ -239,7 +258,7 @@ namespace Plugin.AncientCivilization
             p.x=Mathf.Round(p.x*displayPPU)/displayPPU;p.y=Mathf.Round(p.y*displayPPU)/displayPPU;view.transform.position=p;
             backdrop.position=new Vector3(8+(p.x-8)*.82f,6+(p.y-4)*.72f,0);
         }
-        void OnApplicationQuit(){Save();}
+        void OnApplicationQuit(){if(HasSession)Save();}
         void OnDestroy(){Time.timeScale=1;AncientHUD.Dispose();if(lineMaterial)Destroy(lineMaterial);}
         void Panel(Rect r,Color c){AncientHUD.Panel(r,c);}
         void Bar(Rect r,float value,Color c)
@@ -248,10 +267,10 @@ namespace Plugin.AncientCivilization
             Panel(r,new Color(.04f,.07f,.10f,.95f));
             Panel(new Rect(r.x+pad,r.y+pad,(r.width-pad*2)*Mathf.Clamp01(value),r.height-pad*2),c);
         }
-        void NewRun()
+        public void NewRun()
         {
-            foreach(string key in new[]{"cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor"})PlayerPrefs.DeleteKey(SaveKey+key);
-            PlayerPrefs.Save();Time.timeScale=1;SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor"})PlayerPrefs.DeleteKey(SaveKey+key);
+            PlayerPrefs.Save();startAfterReload=true;Time.timeScale=1;SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
         void Upgrade(Rect rect,string text,int price,int required,bool owned,System.Action unlock)
         {
@@ -262,7 +281,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!hero)return;
+            if(!hero||MainMenu)return;
             GUIStyle oldButton=GUI.skin.button;GUI.skin.button=AncientHUD.Button;
             if(small==null)
             {
@@ -328,7 +347,7 @@ namespace Plugin.AncientCivilization
                 Upgrade(new Rect(x+25,y+226,470,42),"Particle reservoir / capacity 150",12,2,hero.reservoir,()=>hero.reservoir=true);
                 Upgrade(new Rect(x+25,y+278,470,42),"Reinforced body / health 125",12,2,hero.armor,()=>{hero.armor=true;hero.hp=hero.MaxHP;});
                 if(GUI.Button(new Rect(x+25,y+340,470,35),"Resume / K or Esc"))ToggleSkills();
-                GUI.Label(new Rect(x+25,y+385,470,25),"Autosaves at checkpoints, core pickups and upgrades.",small);
+                if(GUI.Button(new Rect(x+25,y+383,470,30),"Save and return to main menu"))ReturnToMainMenu();
                 if(GUI.Button(new Rect(x+25,y+423,470,28),"Hold N + click to erase progress and start a new run")&&Input.GetKey(KeyCode.N))NewRun();
             }
             if(!skills&&!won)
@@ -456,7 +475,7 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;if(!body)return;
             if(g.won){StopWire(false);body.linearVelocity=Vector2.zero;body.gravityScale=0;absorb.enabled=false;trail.emitting=false;return;}
-            if(g.Paused){absorb.enabled=false;return;}
+            if(g.Paused||!g.GameplayInputReady){absorb.enabled=false;return;}
             if(transform.position.y<-9){Respawn();return;}
             bool onGround=Grounded();BikeGrounded=onGround;
             if(onGround)
