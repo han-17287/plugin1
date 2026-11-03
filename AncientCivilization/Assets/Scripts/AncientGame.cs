@@ -12,6 +12,7 @@ namespace Plugin.AncientCivilization
         public readonly List<AncientEnemy> enemies = new List<AncientEnemy>();
         public readonly List<AncientProjectile> shots = new List<AncientProjectile>();
         public readonly List<AncientPickup> pickups = new List<AncientPickup>();
+        public readonly List<AncientParkedBike> parkedBikes=new List<AncientParkedBike>();
         public AncientEnemy boss;
         public bool skills, won, bossDefeated, showHelp = true;
         public bool MainMenu {get;private set;}
@@ -75,7 +76,7 @@ namespace Plugin.AncientCivilization
             gameObject.AddComponent<AncientVisuals>();gameObject.AddComponent<AncientPointer>();gameObject.AddComponent<AncientMainMenu>();
             Time.timeScale=MainMenu?0:1;
             if(HasSession){SetSaved("started",1);PlayerPrefs.Save();inputReadyFrame=Time.frameCount+1;}
-            Notice(checkpointStage==0?"SECTOR 01 / THE BURIED CITY\nRecover three cores. Reach the eastern sanctum.":"Checkpoint restored. The city remembers.",7);
+            Notice(checkpointStage==0?"LOWER CITY / PATROL ALERT\nUpper-level suspect stole energy cores and escaped in a truck.":"Checkpoint restored. The city remembers.",7);
         }
         void BuildWorld()
         {
@@ -97,6 +98,11 @@ namespace Plugin.AncientCivilization
             SpawnPickup(new Vector2(31,5),0);SpawnPickup(new Vector2(72,5),1);SpawnPickup(new Vector2(90,6),2);
             for(int i=0;i<8;i++)SpawnPickup(new Vector2(7+i*12,1.6f),-1);
             Beacon(new Vector2(46,1));Beacon(new Vector2(86,0));
+            foreach(var p in new[]{new Vector2(8,.84f),new Vector2(46,1.84f),new Vector2(86,.84f)})
+            {
+                var vehicle=new GameObject("Placed patrol motorcycle").AddComponent<AncientParkedBike>();
+                vehicle.Initialize(p);parkedBikes.Add(vehicle);
+            }
         }
         void Beacon(Vector2 p)
         {
@@ -212,13 +218,14 @@ namespace Plugin.AncientCivilization
         {
             if(boss){enemies.Remove(boss);Destroy(boss.gameObject);boss=null;}
             foreach(var shot in shots.ToArray())if(shot)shot.Remove();
+            foreach(var vehicle in parkedBikes)if(vehicle)vehicle.ResetAtSpawn();
             hero.transform.position=checkpoint;Save();Notice("Reconstructed at checkpoint. Your recovered cores are safe.",4);
         }
         public void BeginSession()
         {
             MainMenu=false;skills=false;HasSession=true;Time.timeScale=1;inputReadyFrame=Time.frameCount+1;
             SetSaved("started",1);PlayerPrefs.Save();
-            Notice("SECTOR 01 / THE BURIED CITY\nMouse wheel: wire / attack. RMB: capture in either mode. Recover three ancient cores.",6);
+            Notice("LOWER CITY / PATROL ALERT\nEnergy-core theft. Find a parked motorcycle. E: ride / park.",6);
         }
         public void ReturnToMainMenu()
         {
@@ -300,7 +307,7 @@ namespace Plugin.AncientCivilization
             Panel(new Rect(30,51,268*Mathf.Clamp01(hero.hp/hero.MaxHP),14),Orange);Bar(new Rect(28,73,272,13),hero.particles/hero.MaxParticles,Cyan);
             GUI.Label(new Rect(28,91,275,25),"HP "+Mathf.CeilToInt(hero.hp)+"   PARTICLES "+Mathf.FloorToInt(hero.particles)+"   TECH "+credits,small);
             Panel(new Rect(w-300,16,284,74),new Color(.025f,.045f,.065f,.88f));
-            GUI.Label(new Rect(w-286,24,260,55),"ANCIENT CORES  "+Cores+" / 3\n"+(bossDefeated?"Warden defeated / Reach the gate":Cores==3?"Reach the eastern sanctum":"Explore the upper rooftops"),small);
+            GUI.Label(new Rect(w-286,24,260,55),"ENERGY CORES  "+Cores+" / 3\n"+(bossDefeated?"Warden defeated / Reach the gate":Cores==3?"Reach the eastern sanctum":"Explore the upper rooftops"),small);
             GUI.Label(new Rect(28,128,300,30),(hero.bike?"BIKE "+Mathf.CeilToInt(hero.bikeHP)+" / 80":hero.running?"RUN":"WALK")+"   "+(hero.Wired?"WIRE CHAIN "+hero.WireChain:hero.WireChain>1?"CHAIN "+hero.WireChain:"")+"   K / UPGRADES",small);
             GUI.Label(new Rect(w-300,92,284,23),(AncientVisuals.HighQuality?"F6 / ENHANCED":"F6 / LIGHT")+"   "+Mathf.RoundToInt(FramesPerSecond)+" FPS",small);
             GUI.Label(new Rect(w-300,117,284,23),"WHEEL / "+hero.WireModeName+"   RMB CAPTURE",small);
@@ -337,7 +344,7 @@ namespace Plugin.AncientCivilization
             if(showHelp&&!skills&&!boss&&!won)
             {
                 Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
-                GUI.Label(new Rect(28,h-87,w-56,70),"A/D MOVE   SPACE JUMP   CTRL TAP RUN / HOLD BIKE   ALT / C DASH   F HOLD ABSORB   S BIKE BRAKE\nWHEEL MODE   RMB CAPTURE   WIRE: LMB ZIP / MMB SWING   ATTACK: LMB LAUNCH   V COMBO   Q BURST   X BIKE EXPLOSION   K UPGRADES   H HIDE HELP",small);
+                GUI.Label(new Rect(28,h-87,w-56,70),"A/D MOVE   SPACE JUMP   R RUN   E RIDE / PARK   ALT / C DASH   F HOLD ABSORB   S BIKE BRAKE\nWHEEL MODE   RMB CAPTURE   WIRE: LMB ZIP / MMB SWING   ATTACK: LMB LAUNCH   V COMBO   Q BURST   X BIKE EXPLOSION   K UPGRADES   H HIDE HELP",small);
             }
             if(skills)
             {
@@ -346,7 +353,7 @@ namespace Plugin.AncientCivilization
                 Panel(new Rect(x,y,520,475),new Color(.035f,.065f,.09f,.98f));
                 GUI.Label(new Rect(x+25,y+20,470,35),"PARTICLE ENGINEERING",title);
                 GUI.Label(new Rect(x+25,y+57,470,52),"Tech fragments: "+credits+"   /   Ancient cores: "+Cores+"\nCollect cores and defeat sentinels to unlock upgrades.",small);
-                Upgrade(new Rect(x+25,y+122,470,42),"Motorcycle fabrication",8,1,hero.bikeUnlocked,()=>hero.bikeUnlocked=true);
+                GUI.Label(new Rect(x+25,y+122,470,42),"Patrol motorcycles are parked in the city. E to ride / park.",small);
                 Upgrade(new Rect(x+25,y+174,470,42),"Aerial step / double jump",10,1,hero.doubleJump,()=>hero.doubleJump=true);
                 Upgrade(new Rect(x+25,y+226,470,42),"Particle reservoir / capacity 150",12,2,hero.reservoir,()=>hero.reservoir=true);
                 Upgrade(new Rect(x+25,y+278,470,42),"Reinforced body / health 125",12,2,hero.armor,()=>{hero.armor=true;hero.hp=hero.MaxHP;});
@@ -389,7 +396,7 @@ namespace Plugin.AncientCivilization
     public sealed class AncientHero : MonoBehaviour
     {
         public float hp=100,particles=70,bikeHP;
-        public bool running,bike,bikeUnlocked,doubleJump,reservoir,armor;
+        public bool running,bike,doubleJump,reservoir,armor;
         public float MaxHP {get{return armor?125:100;}}
         public float MaxParticles {get{return reservoir?150:100;}}
         public bool Wired {get{return wired;}}
@@ -419,11 +426,12 @@ namespace Plugin.AncientCivilization
         MaterialPropertyBlock armProperties;
         Camera aimCamera;
         readonly Vector3[] cablePoints=new Vector3[48];
-        float direction=1,controlAt,attackAt,invulnerableUntil,wireReady,lastGrounded=-100;
+        AncientParkedBike mountedBike;
+        float direction=1,attackAt,invulnerableUntil,wireReady,lastGrounded=-100;
         float dashUntil,dashReady,comboUntil,absorbAt=-10,burstReady,jumpBufferedUntil=-10;
         float wireAttachedAt,wireLength,wireMinLength,swingDirection,arcTravel,momentumUntil,lastWireRelease=-10;
         Vector2 previousRadial;int wireChain;bool wireZip;
-        bool controlConsumed,wired,airJumpUsed;float axis;int combo;
+        bool wired,airJumpUsed;float axis;int combo;
         Sprite[] frames,actions;
         float attackBufferedUntil=-10,strikeAt,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
         bool strikePending,wasGrounded,cutJump;float strikeFacing;
@@ -431,7 +439,7 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;aimCamera=g.View;
             ZipMode=true;
-            bikeUnlocked=AncientGame.Saved("bike")!=0;doubleJump=AncientGame.Saved("jump")!=0;
+            doubleJump=AncientGame.Saved("jump")!=0;
             reservoir=AncientGame.Saved("capacity")!=0;armor=AncientGame.Saved("armor")!=0;hp=MaxHP;
             body=gameObject.AddComponent<Rigidbody2D>();body.freezeRotation=true;body.collisionDetectionMode=CollisionDetectionMode2D.Continuous;body.interpolation=RigidbodyInterpolation2D.Interpolate;
             wireJoint=gameObject.AddComponent<DistanceJoint2D>();wireJoint.autoConfigureDistance=false;
@@ -473,7 +481,7 @@ namespace Plugin.AncientCivilization
         }
         public void SaveUpgrades()
         {
-            AncientGame.SetSaved("bike",bikeUnlocked?1:0);AncientGame.SetSaved("jump",doubleJump?1:0);
+            AncientGame.SetSaved("jump",doubleJump?1:0);
             AncientGame.SetSaved("capacity",reservoir?1:0);AncientGame.SetSaved("armor",armor?1:0);
         }
         bool Grounded()
@@ -501,18 +509,8 @@ namespace Plugin.AncientCivilization
                 if(Time.time>=dashReady&&!bike)
                 {StopWire(false);dashUntil=Time.time+.16f;dashReady=Time.time+.8f;invulnerableUntil=Mathf.Max(invulnerableUntil,dashUntil);g.Burst(transform.position,AncientGame.Cyan,8);}
             }
-            bool control=Input.GetKey(KeyCode.LeftControl)||Input.GetKey(KeyCode.RightControl);
-            if(Input.GetKeyDown(KeyCode.LeftControl)||Input.GetKeyDown(KeyCode.RightControl)){controlAt=Time.time;controlConsumed=false;}
-            if(control&&!controlConsumed&&Time.time-controlAt>=.45f)
-            {
-                controlConsumed=true;
-                if(bike)g.Notice("Press X to detonate and launch.");
-                else if(!bikeUnlocked)g.Notice("Recover a core, then unlock motorcycle fabrication in K.");
-                else if(particles<30)g.Notice("Construction needs 30 particles. Absorb enemy fire or find a cache.");
-                else if(Physics2D.OverlapBox((Vector2)transform.position+Vector2.up*.11f,new Vector2(2.87f,1.77f),0,1<<8))g.Notice("Need more space to assemble the motorcycle.");
-                else{particles-=30;SetBike(true);bikeHP=80;motorcycle.Assemble();g.Burst(transform.position,AncientGame.Cyan,24);g.Shake(.08f);}
-            }
-            if((Input.GetKeyUp(KeyCode.LeftControl)||Input.GetKeyUp(KeyCode.RightControl))&&!controlConsumed)running=!running;
+            if(Input.GetKeyDown(KeyCode.R))running=!running;
+            if(Input.GetKeyDown(KeyCode.E))InteractBike();
             if(Input.GetKeyDown(KeyCode.X)&&bike)ExplodeBike();
             // Directional wheel selection never toggles back repeatedly during a long scroll gesture.
             float wheel=Input.mouseScrollDelta.y;
@@ -867,6 +865,41 @@ namespace Plugin.AncientCivilization
             if(delta.sqrMagnitude<.000001f)return bounds.Contains(start);
             float distance;return bounds.IntersectRay(new Ray(start,delta.normalized),out distance)&&distance<=delta.magnitude;
         }
+        void InteractBike()
+        {
+            var g=AncientGame.Instance;
+            if(!Grounded()){g.Notice("Land before riding or parking a motorcycle.");return;}
+            if(bike)
+            {
+                if(!mountedBike)return;
+                Vector2 vehiclePosition=body.position;
+                Vector2 exit=vehiclePosition;
+                foreach(float side in new[]{direction,-direction})
+                {
+                    Vector2 candidate=vehiclePosition+new Vector2(side*1.85f,.08f);
+                    bool ground=Physics2D.Raycast(candidate,Vector2.down,1.1f,1<<8);
+                    bool blocked=Physics2D.OverlapCapsule(candidate,heroCollider.size,CapsuleDirection2D.Vertical,0,1<<8);
+                    if(ground&&!blocked){exit=candidate;break;}
+                }
+                StopWire(false);mountedBike.Park(vehiclePosition,direction,bikeHP);mountedBike=null;
+                motorcycle.Park();SetBike(false);BikeSkid=0;momentumUntil=0;body.position=exit;body.linearVelocity=Vector2.zero;
+                g.Notice("MOTORCYCLE PARKED / E to ride again.",1.5f);return;
+            }
+            AncientParkedBike nearest=null;float best=2.8f*2.8f;
+            foreach(var vehicle in g.parkedBikes)
+            {
+                if(!vehicle||!vehicle.Available)continue;
+                float distance=((Vector2)vehicle.transform.position-body.position).sqrMagnitude;
+                if(distance<best&&!Physics2D.Linecast(body.position,vehicle.transform.position,1<<8)){nearest=vehicle;best=distance;}
+            }
+            if(!nearest){g.Notice("Find a parked motorcycle and press E.",1.5f);return;}
+            Vector2 seat=nearest.transform.position;
+            if(Physics2D.OverlapBox(seat+Vector2.up*.085f,new Vector2(2.87f,1.77f),0,1<<8))
+            {g.Notice("The motorcycle needs clear space before you can ride.");return;}
+            StopWire(false);mountedBike=nearest;bikeHP=nearest.Health;direction=nearest.Facing;
+            nearest.Take();SetBike(true);body.position=seat;body.linearVelocity=Vector2.zero;BikeSkid=0;
+            dashUntil=0;momentumUntil=0;motorcycle.Mount();g.Sound(3);
+        }
         void SetBike(bool active)
         {
             bike=active;heroCollider.enabled=!active;bikeCollider.enabled=active;body.mass=active?1.4f:1;
@@ -874,7 +907,7 @@ namespace Plugin.AncientCivilization
         }
         public void ExplodeBike()
         {
-            if(!bike)return;motorcycle.Detonate();SetBike(false);StopWire(false);momentumUntil=Time.time+.8f;
+            if(!bike)return;if(mountedBike)mountedBike.Wreck();mountedBike=null;motorcycle.Detonate();SetBike(false);StopWire(false);momentumUntil=Time.time+.8f;
             var g=AncientGame.Instance;g.Sound(4);g.Burst(transform.position,AncientGame.Orange,45);g.Shake(.3f);
             foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<5)e.Hit(85,true);
             float launch=Mathf.Abs(body.linearVelocity.x)>1.5f?Mathf.Sign(body.linearVelocity.x):direction;
@@ -883,6 +916,7 @@ namespace Plugin.AncientCivilization
         }
         void Respawn()
         {
+            mountedBike=null;motorcycle.Park();
             StopWire(false);CaptureEnergy=0;AttackMode=false;wireChain=0;momentumUntil=0;strikePending=false;actionUntil=0;attackBufferedUntil=-10;fallSpeed=0;hp=MaxHP;particles=Mathf.Max(40,particles);SetBike(false);BikeSkid=0;dashUntil=0;body.linearVelocity=Vector2.zero;
             invulnerableUntil=Time.time+1.5f;AncientGame.Instance.HeroDied();
         }

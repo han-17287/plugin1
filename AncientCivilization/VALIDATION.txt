@@ -22,6 +22,8 @@ PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
 PASS: metadata coverage AncientPointer.cs
 PASS: metadata coverage AncientArt.cs
+PASS: metadata target Assets/Scripts/AncientParkedBike.cs.meta
+PASS: 32-character GUID AncientParkedBike.cs.meta
 PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
 PASS: 32-character GUID AncientVisuals.cs.meta
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
@@ -34,6 +36,7 @@ PASS: metadata coverage AncientAudio.cs
 PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
 PASS: 32-character GUID AncientMotorcycle.cs.meta
 PASS: metadata coverage AncientVisuals.cs
+PASS: metadata coverage AncientParkedBike.cs
 PASS: metadata coverage AncientHUD.cs
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
 PASS: 32-character GUID AncientArt.cs.meta
@@ -193,6 +196,7 @@ PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientAudio.cs
 PASS: C# syntax AncientVisuals.cs
+PASS: C# syntax AncientParkedBike.cs
 PASS: C# syntax AncientHUD.cs
 PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs

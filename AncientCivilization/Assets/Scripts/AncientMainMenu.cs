@@ -44,7 +44,7 @@ namespace Plugin.AncientCivilization
             Label(new Rect(left+18,top+22,500,28),"CHAPTER 0  /  THE BURIED CITY",caption,AncientGame.Cyan);
             Label(new Rect(left+12,top+55,520,92),"PLUGIN",logo,Color.white);
             Label(new Rect(left+18,top+153,510,45),"ANCIENT CIVILIZATION",heading,Color.white);
-            Label(new Rect(left+18,top+208,480,62),"Beneath a sealed sky, turn the city's weapons against it. Recover the three ancient cores.",body,new Color(.65f,.77f,.81f));
+            Label(new Rect(left+18,top+208,480,62),"A lower-city peace officer. An upper-level thief. Locally made energy cores stolen and carried away in a truck.",body,new Color(.65f,.77f,.81f));
             float xButton=left+18,yButton=top+298;
             bool canContinue=game.HasSession||game.HasSavedProgress;
             GUI.enabled=canContinue;
@@ -76,7 +76,7 @@ namespace Plugin.AncientCivilization
                 AncientHUD.Panel(new Rect(px,py,660,520),new Color(.025f,.055f,.08f,.99f));
                 Label(new Rect(px+30,py+24,600,45),confirmNew?"START A NEW RUN?":"FIELD MANUAL",heading,Color.white);
                 string text=confirmNew?"This replaces your saved cores, upgrades and checkpoint. Audio and graphics settings are kept.":
-                    "A / D or arrows   Move\nSpace   Jump\nCtrl   Tap: run / hold: fabricate motorcycle\nAlt / C   Dash\n\nWHEEL   Up: ATTACK / down: WIRE\nWIRE   Left click: pull / middle click: swing\nBOTH MODES   Hold right click: capture\nATTACK   Left click: launch captured energy\nCapture energy increases damage and effect size (3 stages).\n\nV   Melee combo     F   Absorb     Q   Particle burst\nX   Motorcycle explosion     S / down   Brake\nK / Esc   Pause, upgrades and return to main menu";
+                    "A / D or arrows   Move\nSpace   Jump\nR   Toggle run / E   Ride or park a nearby motorcycle\nAlt / C   Dash\n\nWHEEL   Up: ATTACK / down: WIRE\nWIRE   Left click: pull / middle click: swing\nBOTH MODES   Hold right click: capture\nATTACK   Left click: launch captured energy\nCapture energy increases damage and effect size (3 stages).\n\nV   Melee combo     F   Absorb     Q   Particle burst\nX   Motorcycle explosion     S / down   Brake\nK / Esc   Pause, upgrades and return to main menu";
                 Label(new Rect(px+30,py+85,600,350),text,body,new Color(.75f,.86f,.9f));
                 if(confirmNew)
                 {
