@@ -61,7 +61,7 @@ def main():
     scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text())[1]
     check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(), 'Main scene build GUID')
     dimensions = {}
-    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions', 'Motorcycle'):
+    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions', 'Motorcycle', 'Truck', 'Dialogue'):
         path = ROOT / ('Assets/Resources/Art/' + name + '.png')
         header = png_info(path)
         dimensions[name] = header[:2]

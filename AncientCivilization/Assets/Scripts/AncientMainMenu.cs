@@ -62,7 +62,7 @@ namespace Plugin.AncientCivilization
                 Application.Quit();
 #endif
             }
-            Label(new Rect(left+18,top+561,500,28),"F6  GRAPHICS     F7  AUDIO     v0.7 / PROTOTYPE",caption,new Color(.42f,.59f,.64f));
+            Label(new Rect(left+18,top+561,500,28),"F6  GRAPHICS     F7  AUDIO     v0.8 / PROTOTYPE",caption,new Color(.42f,.59f,.64f));
             Rect portrait=new Rect(left+630,top+75,430,520);
             GUI.color=new Color(.8f,.95f,1,.9f);
             var hero=AncientArt.Hero(0);Rect tex=hero.textureRect;
@@ -75,8 +75,8 @@ namespace Plugin.AncientCivilization
                 float px=w/2-330,py=h/2-260;
                 AncientHUD.Panel(new Rect(px,py,660,520),new Color(.025f,.055f,.08f,.99f));
                 Label(new Rect(px+30,py+24,600,45),confirmNew?"START A NEW RUN?":"FIELD MANUAL",heading,Color.white);
-                string text=confirmNew?"This replaces your saved cores, upgrades and checkpoint. Audio and graphics settings are kept.":
-                    "A / D or arrows   Move\nSpace   Jump\nR   Toggle run / E   Ride or park a nearby motorcycle\nAlt / C   Dash\n\nWHEEL   Up: ATTACK / down: WIRE\nWIRE   Left click: pull / middle click: swing\nBOTH MODES   Hold right click: capture\nATTACK   Left click: launch captured energy\nCapture energy increases damage and effect size (3 stages).\n\nV   Melee combo     F   Absorb     Q   Particle burst\nX   Motorcycle explosion     S / down   Brake\nK / Esc   Pause, upgrades and return to main menu";
+                string text=confirmNew?"This replaces your story, civic points, cores, upgrades and checkpoint. Audio and graphics settings are kept.":
+                    "A / D or arrows   Move\nSpace   Jump\nCtrl   Toggle run / E   Ride, park or use the lift\n\nWHEEL   Up: ATTACK / down: WIRE\nWIRE   Left click: pull / middle click: swing\nBOTH MODES   Hold right click: capture\nATTACK   Tap: blade + collect / hold and release: laser\nCapture energy increases damage and effect size (3 stages).\n\nF   Hold to absorb resources\nX   Motorcycle explosion     S / down   Brake\nK / Esc   Pause / upgrades     Space / Enter   Advance dialogue";
                 Label(new Rect(px+30,py+85,600,350),text,body,new Color(.75f,.86f,.9f));
                 if(confirmNew)
                 {

@@ -7,3 +7,7 @@ Logs/
 UserSettings/
 *.csproj
 *.sln
+
+!Tools/RulesChecks.csproj
+Tools/bin/
+Tools/obj/

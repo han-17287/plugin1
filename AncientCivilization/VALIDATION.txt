@@ -24,8 +24,13 @@ PASS: metadata coverage AncientPointer.cs
 PASS: metadata coverage AncientArt.cs
 PASS: metadata target Assets/Scripts/AncientParkedBike.cs.meta
 PASS: 32-character GUID AncientParkedBike.cs.meta
+PASS: metadata coverage AncientRules.cs
+PASS: metadata target Assets/Scripts/AncientCombat.cs.meta
+PASS: 32-character GUID AncientCombat.cs.meta
 PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
 PASS: 32-character GUID AncientVisuals.cs.meta
+PASS: metadata target Assets/Scripts/AncientRules.cs.meta
+PASS: 32-character GUID AncientRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
 PASS: 32-character GUID AncientGame.cs.meta
 PASS: metadata coverage AncientCameraFX.cs
@@ -37,7 +42,11 @@ PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
 PASS: 32-character GUID AncientMotorcycle.cs.meta
 PASS: metadata coverage AncientVisuals.cs
 PASS: metadata coverage AncientParkedBike.cs
+PASS: metadata target Assets/Scripts/AncientStory.cs.meta
+PASS: 32-character GUID AncientStory.cs.meta
+PASS: metadata coverage AncientCombat.cs
 PASS: metadata coverage AncientHUD.cs
+PASS: metadata coverage AncientStory.cs
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
 PASS: 32-character GUID AncientArt.cs.meta
 PASS: metadata coverage AncientMotorcycle.cs
@@ -52,6 +61,11 @@ PASS: metadata target Assets/Resources/Art/Scrap.png.meta
 PASS: 32-character GUID Scrap.png.meta
 PASS: metadata target Assets/Resources/Art/City.png.meta
 PASS: 32-character GUID City.png.meta
+PASS: metadata target Assets/Resources/Art/Truck.png.meta
+PASS: 32-character GUID Truck.png.meta
+PASS: metadata target Assets/Resources/Art/Dialogue.png.meta
+PASS: 32-character GUID Dialogue.png.meta
+PASS: metadata coverage Dialogue.png
 PASS: metadata target Assets/Resources/Art/World.png.meta
 PASS: 32-character GUID World.png.meta
 PASS: metadata target Assets/Resources/Art/Hero.png.meta
@@ -72,6 +86,7 @@ PASS: 32-character GUID Motorcycle.png.meta
 PASS: metadata coverage World.png
 PASS: metadata target Assets/Resources/Art/Actions.png.meta
 PASS: 32-character GUID Actions.png.meta
+PASS: metadata coverage Truck.png
 PASS: metadata target Assets/Resources/Shaders/CharacterRim.shader.meta
 PASS: 32-character GUID CharacterRim.shader.meta
 PASS: metadata target Assets/Resources/Shaders/Presentation.shader.meta
@@ -121,6 +136,16 @@ PASS: Motorcycle.png PNG chunk integrity
 PASS: Motorcycle expected image dimensions
 PASS: Motorcycle has RGBA channel
 PASS: Motorcycle readable point-filtered uncompressed import
+PASS: Truck.png PNG signature
+PASS: Truck.png PNG chunk integrity
+PASS: Truck expected image dimensions
+PASS: Truck has RGBA channel
+PASS: Truck readable point-filtered uncompressed import
+PASS: Dialogue.png PNG signature
+PASS: Dialogue.png PNG chunk integrity
+PASS: Dialogue expected image dimensions
+PASS: Dialogue has RGBA channel
+PASS: Dialogue readable point-filtered uncompressed import
 PASS: eight explicit world asset slices
 PASS: world slice in texture bounds 0
 PASS: world slice in texture bounds 1
@@ -192,12 +217,17 @@ PASS: healthy and damaged chassis display widths agree
 PASS: scrap projectile silhouette and transparent gutters
 PASS: C# syntax AncientPointer.cs
 PASS: C# syntax AncientArt.cs
+PASS: C# syntax AncientRules.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientAudio.cs
 PASS: C# syntax AncientVisuals.cs
 PASS: C# syntax AncientParkedBike.cs
+PASS: C# syntax AncientCombat.cs
 PASS: C# syntax AncientHUD.cs
+PASS: C# syntax AncientStory.cs
 PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
+
+PASS: 67 combat and quest rule checks

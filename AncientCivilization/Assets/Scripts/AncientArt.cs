@@ -140,10 +140,17 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Motorcycle(int part)
         {
-            Rect[] bikeCells={new Rect(0,0,950,512),new Rect(980,80,470,432),new Rect(0,520,730,504),new Rect(730,560,806,464)};
+            Rect[] bikeCells={new Rect(0,0,950,480),new Rect(980,80,470,432),new Rect(0,480,730,544),new Rect(730,560,806,464)};
             float ppu=part==1?500:320;
             Vector2 pivot=part==2?new Vector2(467f/730,0):Vector2.one*.5f;
             return Slice("Motorcycle","motorcycle-"+part,bikeCells[part],ppu,pivot,true,part==2);
+        }
+        public static Sprite Truck()
+        {var t=Texture("Truck");return Slice("Truck","cargo-truck",new Rect(0,0,t.width,t.height),t.width/6.5f,new Vector2(.5f,0));}
+        public static Sprite DialoguePortrait(int index)
+        {
+            Rect cell=index==0?new Rect(0,0,512,1024):index==1?new Rect(512,0,528,1024):new Rect(1040,0,496,1024);
+            return Slice("Dialogue","dialogue-face-"+index,cell,256,new Vector2(.5f,0),false);
         }
         public static Sprite City()
         {return Slice("City", "city", new Rect(0,0,1536,1024), 32, Vector2.one*.5f,false);}

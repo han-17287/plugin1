@@ -38,7 +38,7 @@ namespace Plugin.AncientCivilization
             foreach(var anchor in game.anchors)Glow(anchor,AncientGame.Cyan,2.3f,4);
             Glow(new Vector2(46,1.65f),AncientGame.Cyan,3,4);Glow(new Vector2(86,.65f),AncientGame.Cyan,3,4);
             Glow(new Vector2(115,2.5f),AncientGame.Cyan,5,-1);
-            armGlow=Glow(new Vector2(.4f,.1f),AncientGame.Cyan,1.2f,11,game.hero.transform);
+            armGlow=Glow(new Vector2(.4f,.1f),new Color(.25f,1,.65f),1.2f,11,game.hero.transform);
             for(int i=0;i<20;i++)
             {
                 float x=Next(0,118);float top=x>43&&x<58?1:0;
