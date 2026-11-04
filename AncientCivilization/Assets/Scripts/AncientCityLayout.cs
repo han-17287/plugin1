@@ -29,6 +29,8 @@ namespace Plugin.AncientCivilization
                 new AncientTraversalLayout.Ledge(x+65,x+72,1.5f),new AncientTraversalLayout.Ledge(x+77,x+84,2.2f),
                 new AncientTraversalLayout.Ledge(x+89,x+98,1),new AncientTraversalLayout.Ledge(x+103,x+126,0)};
         }
+        public static bool SafeResume(int floor,float x,float y)
+        {return floor>=0&&floor<=LastFloor&&x>Left(floor)&&x<Right(floor)&&y>=.5f&&y<8.5f;}
         public static bool CanLift(int stage,int points,int cleared,int current,int target)
         {
             if(current<0||current>LastFloor||target<0||target>=LastFloor||current==target)return false;

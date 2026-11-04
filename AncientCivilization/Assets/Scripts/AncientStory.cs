@@ -121,9 +121,7 @@ namespace Plugin.AncientCivilization
                 if(Time.time>=nextTrainingShot&&game.shots.Count<4)
                 {
                     nextTrainingShot=Time.time+1.5f;float side=hero.transform.position.x>12?-1:1;
-                    var shot=new GameObject("Training thrown object").AddComponent<AncientProjectile>();
-                    shot.transform.position=hero.transform.position+new Vector3(side*5,.35f,0);
-                    shot.velocity=Vector2.left*side*4;shot.damage=4;shot.scrap=true;game.shots.Add(shot);
+                    game.Projectiles.Spawn((Vector2)hero.transform.position+new Vector2(side*5,.35f),Vector2.left*side*4,4,true);
                 }
                 if(AncientRules.TutorialReady(Stage,flags)){SetStage(4);foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();TheftReport();}
             }
@@ -140,12 +138,12 @@ namespace Plugin.AncientCivilization
                 if(game.bossDefeated)
                 {ResidencePoints=AncientRules.PointsAfterArrest(ResidencePoints,Stage);SetStage(7);ArrestDialogue();}
                 else if(!game.boss&&hero.transform.position.x>98)
-                {game.SpawnEnemy(109,0,3);game.boss.PrepareMiniBoss();game.Notice("미니 보스 / 화물 수호기",3);}
+                {game.CombatCheckpoint(0,new Vector2(99.5f,1.3f));game.SpawnEnemy(109,0,3);game.boss.PrepareMiniBoss();game.Notice("미니 보스 / 화물 수호기",3);}
             }
         }
         public bool TryUseLift()
         {
-            if(CurrentFloor==4||!game.hero||Mathf.Abs(game.hero.transform.position.x-LiftX)>2.5f)return false;
+            if((game.Finale&&game.Finale.Active)||CurrentFloor==4||!game.hero||Mathf.Abs(game.hero.transform.position.x-LiftX)>2.5f)return false;
             if(DialogueOpen||LiftBusy)return true;
             if(game.hero.bike){game.Notice("오토바이를 주차한 뒤 이동 엘리베이터에 탑승하세요.");return false;}
             if(!game.hero.IsOnGround){game.Notice("지면에 착지한 뒤 엘리베이터를 이용하세요.");return true;}
@@ -193,6 +191,10 @@ namespace Plugin.AncientCivilization
             }
             if(GUI.Button(new Rect(x+28,y+431,544,42),"닫기 / Esc",nextButton)){liftMenu=false;game.BlockGameplayInput();}
         }
+        public void FinaleBriefing(string first,string second)
+        {Talk(null,new Line("치안경찰",first,0),new Line("통신관",second,1));}
+        public void FieldDialogue(string speaker,string words)
+        {Talk(null,new Line(speaker,words,1));}
         public void OnDistrictCleared(int floor)
         {
             if(floor<3)ResidencePoints=Mathf.Max(ResidencePoints,(floor+1)*1000);
@@ -236,7 +238,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||game.MainMenu||!game.HasSession)return;
+            if(!game||game.MainMenu||!game.HasSession||(game.Journal&&game.Journal.Open)||(game.Finale&&(game.Finale.Active||game.Finale.Finished)))return;
             var old=GUI.matrix;var color=GUI.color;int depth=GUI.depth;
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-50;
             float w=Screen.width/scale,h=Screen.height/scale;
@@ -284,9 +286,8 @@ namespace Plugin.AncientCivilization
                 transform.position=new Vector2(x,Mathf.MoveTowards(transform.position.y,AncientDistrict.RoadHeight(x),3*Time.deltaTime));
                 if(Time.time>=nextThrow&&Time.time>suppressedUntil&&game.shots.Count<12&&Vector2.Distance(transform.position,game.hero.transform.position)<22)
                 {
-                    nextThrow=Time.time+1.1f;var shot=new GameObject("Truck thrown cargo").AddComponent<AncientProjectile>();
-                    shot.transform.position=transform.position+new Vector3(-2,1.8f,0);shot.scrap=true;shot.damage=12;
-                    shot.velocity=((Vector2)game.hero.transform.position-(Vector2)shot.transform.position).normalized*8;game.shots.Add(shot);
+                    nextThrow=Time.time+1.1f;Vector2 origin=(Vector2)transform.position+new Vector2(-2,1.8f);
+                    game.Projectiles.Spawn(origin,((Vector2)game.hero.transform.position-origin).normalized*8,12,true);
                 }
             }
             else if(!dropped)

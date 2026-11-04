@@ -9,6 +9,7 @@ namespace Plugin.AncientCivilization
     {
         static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
         static readonly Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
+        static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3];
         public static Texture2D Texture(string name)
         {
             Texture2D texture;
@@ -59,6 +60,7 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Hero(int frame)
         {
+            if(heroCache[frame])return heroCache[frame];
             Rect[] cells={new Rect(0,0,384,512),new Rect(384,0,316,480),
                 new Rect(700,0,420,480),new Rect(1120,0,416,512),
                 new Rect(0,512,424,512),new Rect(424,480,312,544),
@@ -66,7 +68,7 @@ namespace Plugin.AncientCivilization
             Rect cell=cells[frame];float root=frame%4*384+215-cell.x;
             // The downloadable sheet previews equipment; live wire/intake effects must not be baked into the actor.
             string sheet=frame==5||frame==6?"HeroEmitterBody":"Hero";
-            return Slice(sheet, "hero-" + frame, cell, 220, new Vector2(root/cell.width,0),true,true);
+            heroCache[frame]=Slice(sheet, "hero-" + frame, cell, 220, new Vector2(root/cell.width,0),true,true);return heroCache[frame];
         }
         public static Sprite World(int index)
         {
@@ -179,8 +181,9 @@ namespace Plugin.AncientCivilization
         {var t=Texture("Truck");return Slice("Truck","cargo-truck",new Rect(0,0,t.width,t.height),t.width/6.5f,new Vector2(.5f,0));}
         public static Sprite DialoguePortrait(int index)
         {
+            if(portraitCache[index])return portraitCache[index];
             Rect cell=new Rect(index*512,0,512,1024);
-            return Slice("Dialogue","dialogue-face-"+index,cell,256,new Vector2(.5f,0),false);
+            portraitCache[index]=Slice("Dialogue","dialogue-face-"+index,cell,256,new Vector2(.5f,0),false);return portraitCache[index];
         }
         public static Sprite City()
         {return Slice("City", "city", new Rect(0,0,1536,1024), 32, Vector2.one*.5f,false);}

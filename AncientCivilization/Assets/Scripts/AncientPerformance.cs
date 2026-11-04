@@ -1,0 +1,83 @@
+using System;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using Unity.Profiling;
+using UnityEngine;
+
+namespace Plugin.AncientCivilization
+{
+    public sealed class AncientPerformance : MonoBehaviour
+    {
+        static readonly int[] targets={60,120,144,240,-1};
+        readonly float[] samples=new float[240],sorted=new float[240];
+        AncientGame game;int cursor,count,targetIndex;float updateAt;bool details;
+        float mean,p95,peak;string summary="",diagnostics="";GUIStyle style;
+        ProfilerRecorder allocations;
+        public int Target {get{return targets[targetIndex];}}
+        public string TargetLabel {get{return Target<0?"무제한":Target.ToString(CultureInfo.InvariantCulture);}}
+        public string Summary {get{return summary;}}
+        public void Initialize(AncientGame owner)
+        {
+            game=owner;int saved=AncientGame.Saved("frameTarget",240);targetIndex=Array.IndexOf(targets,saved);
+            if(targetIndex<0)targetIndex=3;ApplyTarget();
+        }
+        void ApplyTarget()
+        {QualitySettings.vSyncCount=0;QualitySettings.maxQueuedFrames=2;Application.targetFrameRate=Target;}
+        public void CycleTarget()
+        {targetIndex=(targetIndex+1)%targets.Length;ApplyTarget();AncientGame.SetSaved("frameTarget",Target);PlayerPrefs.Save();Refresh();game.Notice("프레임 목표 "+TargetLabel+" / 실제 성능은 기기에 따라 다릅니다.",2);}
+        void Update()
+        {
+            if(Input.GetKeyDown(KeyCode.F8))CycleTarget();
+            if(Input.GetKeyDown(KeyCode.F9))
+            {
+                details=!details;
+                if(details&&!allocations.Valid)
+                {try{allocations=ProfilerRecorder.StartNew(ProfilerCategory.Memory,"GC Allocated In Frame",1);}catch(Exception){allocations=default(ProfilerRecorder);}}
+                if(!details&&allocations.Valid)allocations.Dispose();
+                Refresh();
+            }
+            if(details&&Input.GetKeyDown(KeyCode.F10))Export();
+            if(!game.HasSession||game.Paused||!Application.isFocused)return;
+            float dt=Time.unscaledDeltaTime;if(dt<=0||dt>1)return;
+            samples[cursor]=dt*1000;cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
+            if(Time.unscaledTime<updateAt)return;updateAt=Time.unscaledTime+.5f;Refresh();
+        }
+        void Refresh()
+        {
+            float total=0;peak=0;
+            for(int i=0;i<count;i++){float value=samples[i];total+=value;peak=Mathf.Max(peak,value);sorted[i]=value;}
+            mean=count>0?total/count:0;Array.Sort(sorted,0,count);p95=count>0?sorted[Mathf.Clamp(Mathf.CeilToInt(count*.95f)-1,0,count-1)]:0;
+            summary="목표 "+TargetLabel+" / "+(mean>0?(1000/mean).ToString("F0"):"—")+" FPS";
+            if(!details)return;
+            long bytes=allocations.Valid?allocations.LastValue:-1;
+            diagnostics="프레임 평균 "+mean.ToString("F2")+"ms · P95 "+p95.ToString("F2")+"ms\n최대 "+peak.ToString("F2")+"ms / 최근 GC "+(bytes>=0?(bytes/1024f).ToString("F1")+"KB":"미지원")+
+                "\n정적 장식 "+game.WorldBatch.QuadCount+"개 → 묶음 "+game.WorldBatch.RendererCount+"개 / 현재 "+game.WorldBatch.ActiveRendererCount+"개\n활성 적 "+game.enemies.Count+" / 투척물 "+game.shots.Count+" / 풀 "+game.Projectiles.Capacity+" (누락 "+game.Projectiles.DroppedSpawns+")\nF8 프레임 목표 · F9 닫기 · F10 CSV 저장";
+        }
+        void Export()
+        {
+            try
+            {
+                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced\n");
+                for(int i=0;i<count;i++)
+                {
+                    int at=count==samples.Length?(cursor+i)%samples.Length:i;
+                    text.Append(i).Append(',').Append(samples[at].ToString("F4",CultureInfo.InvariantCulture)).Append(',')
+                        .Append(game.Story.CurrentFloor).Append(',').Append(Target).Append(',').Append(AncientVisuals.HighQuality?1:0).Append('\n');
+                }
+                string path=Path.Combine(Application.persistentDataPath,"performance-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv");
+                File.WriteAllText(path,text.ToString());game.Notice("성능 기록 저장: "+path,6);
+            }
+            catch(Exception e){game.Notice("성능 기록 저장 실패: "+e.Message,4);}
+        }
+        void OnGUI()
+        {
+            if(!details||game.MainMenu||Event.current.type!=EventType.Repaint)return;
+            if(style==null)style=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,wordWrap=true};
+            var matrix=GUI.matrix;GUI.matrix=Matrix4x4.identity;
+            float x=Mathf.Max(12,Screen.width-430);AncientHUD.Panel(new Rect(x,220,415,148),new Color(.015f,.035f,.05f,.94f));
+            GUI.Label(new Rect(x+12,228,390,135),diagnostics,style);GUI.matrix=matrix;
+        }
+        void OnDestroy(){if(allocations.Valid)allocations.Dispose();}
+    }
+}

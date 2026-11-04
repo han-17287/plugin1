@@ -6,6 +6,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="RulesChecks.cs" />
+    <Compile Include="../Assets/Scripts/AncientFinaleRules.cs" />
+    <Compile Include="../Assets/Scripts/AncientProgressRules.cs" />
+    <Compile Include="../Assets/Scripts/AncientCombatRules.cs" />
+    <Compile Include="../Assets/Scripts/AncientWireMath.cs" />
     <Compile Include="../Assets/Scripts/AncientCityLayout.cs" />
     <Compile Include="../Assets/Scripts/AncientTraversalLayout.cs" />
     <Compile Include="../Assets/Scripts/AncientRules.cs" />

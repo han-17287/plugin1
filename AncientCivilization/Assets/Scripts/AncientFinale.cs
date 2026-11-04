@@ -1,0 +1,229 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Plugin.AncientCivilization
+{
+    public sealed class AncientFinale : MonoBehaviour
+    {
+        AncientGame game;int phase,zone;float countdown=60,phaseAt;bool restored;
+        AncientFinalTruck truck;SpriteRenderer notebook,windowTruck;LineRenderer supportShot,blast;
+        GUIStyle label,title,button;string caption="";float captionAt;string visibleCaption="";int visibleLetters=-1;
+        readonly List<AncientEnemy> crew=new List<AncientEnemy>();
+        bool fired;
+        public bool Active {get{return phase>=2&&phase<=4;}}
+        public bool Cinematic {get{return phase>=3;}}
+        public bool Finished {get{return phase==5;}}
+        public int Phase {get{return phase;}}
+        public void Build(AncientGame owner)
+        {
+            game=owner;phase=Mathf.Clamp(AncientGame.Saved("finalePhase"),0,5);zone=Mathf.Clamp(AncientGame.Saved("finaleZone"),0,4);
+            countdown=Mathf.Clamp(AncientGame.Saved("finaleCountdown",60),0,60);
+            for(float x=AncientFinaleRules.Start;x<AncientFinaleRules.Finish;x+=12)
+            {
+                float end=Mathf.Min(AncientFinaleRules.Finish,x+12),y=AncientFinaleRules.Road(x),last=AncientFinaleRules.Road(end);
+                float angle=Mathf.Atan2(last-y,end-x)*Mathf.Rad2Deg,length=new Vector2(end-x,last-y).magnitude;
+                var ramp=new GameObject("Descending cargo road");ramp.layer=8;ramp.transform.position=new Vector2((x+end)/2,(y+last)/2);
+                ramp.transform.rotation=Quaternion.Euler(0,0,angle);
+                var road=ramp.AddComponent<BoxCollider2D>();road.size=new Vector2(length,3.9f);road.offset=new Vector2(0,-1.95f);
+                for(float local=-length/2;local<length/2;local+=6)
+                {
+                    float width=Mathf.Min(6,length/2-local);
+                    Vector2 point=ramp.transform.TransformPoint(new Vector2(local+width/2,0));
+                    game.WorldBatch.RotatedSprite(AncientArt.Rooftop(width,true),point,Vector2.one,Color.white,0,angle);
+                }
+                game.Ceiling(x,end,y+10);
+                int district=4-AncientFinaleRules.Zone(x);
+                Color tint=district>=3?new Color(.14f,.16f,.22f):district==2?new Color(.08f,.18f,.24f):new Color(.1f,.14f,.16f);
+                game.StaticBox("Cargo shaft district wall",new Vector2((x+end)/2,(y+last)/2+4.8f),new Vector2(end-x,10),tint,-9);
+            }
+            game.Platform(AncientFinaleRules.Finish,AncientFinaleRules.Finish+22,0);
+            for(int i=0;i<5;i++)
+            {
+                float x=AncientFinaleRules.Checkpoint(i);
+                var bike=new GameObject("Cargo-road parked motorcycle").AddComponent<AncientParkedBike>();
+                bike.Initialize(new Vector2(x+1,AncientFinaleRules.Road(x+1)+.84f));game.parkedBikes.Add(bike);
+            }
+            var desk=game.Box("Empty chairman desk",new Vector2(742,1),new Vector2(2.8f,1.1f),new Color(.22f,.15f,.1f),3);
+            desk.transform.SetParent(transform,true);
+            notebook=game.Box("Chairman recovery notebook",new Vector2(742,1.68f),new Vector2(.48f,.15f),new Color(.9f,.8f,.5f),5).GetComponent<SpriteRenderer>();notebook.transform.SetParent(transform,true);
+            windowTruck=AncientArt.Display("Operation truck outside office",AncientArt.Truck(),new Vector2(734,4.8f),-5,transform);
+            windowTruck.transform.localScale=Vector3.one*.4f;windowTruck.enabled=false;
+            supportShot=game.Line("Sniper support shot",Color.white,.025f,28);supportShot.enabled=false;
+            blast=game.Line("Core chain-reaction shockwave",new Color(.7f,.95f,1),.14f,27);blast.loop=true;blast.positionCount=40;blast.enabled=false;
+        }
+        public void WriteSave()
+        {AncientGame.SetSaved("finalePhase",phase);AncientGame.SetSaved("finaleZone",zone);AncientGame.SetSaved("finaleCountdown",Mathf.CeilToInt(countdown));}
+        void Persist(){WriteSave();game.Save();}
+        public bool TryInteract()
+        {
+            if(game.Story.CurrentFloor!=4||(game.City.Cleared&(1<<4))==0||Mathf.Abs(game.hero.transform.position.x-742)>3)return false;
+            if(phase==0)
+            {
+                phase=1;countdown=60;Persist();windowTruck.enabled=true;
+                game.Story.FinaleBriefing("회장은 없다. 연구 노트와 회수 계획만 남았군. C-00 물량은 이 작전에 묶여 있었어.",
+                    "작전 개시까지 1분. 창밖이다! 회장과 특수부대가 코어 운송 트럭에 타고 있어. 화물 승강로로 내려가면 따라붙을 수 있다.");return true;
+            }
+            if(phase==1){BeginChase();return true;}return false;
+        }
+        void SetCaption(string text)
+        {if(caption==text)return;caption=text;captionAt=Time.unscaledTime;visibleLetters=-1;}
+        void ClearTruck()
+        {
+            foreach(var enemy in crew)if(enemy){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}crew.Clear();
+            if(truck)Destroy(truck.gameObject);truck=null;
+            foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();
+        }
+        void BeginChase()
+        {
+            phase=2;game.won=false;fired=false;windowTruck.enabled=false;supportShot.enabled=blast.enabled=false;ClearTruck();
+            float start=AncientFinaleRules.Checkpoint(zone);
+            game.hero.TravelTo(new Vector2(start,AncientFinaleRules.Road(start)+1.3f));game.City.OnEnterFloor();
+            truck=new GameObject("Chairman core transport truck").AddComponent<AncientFinalTruck>();truck.Initialize(game,this,start+13);
+            var enemy=new GameObject("Truck special-operations guard").AddComponent<AncientEnemy>();enemy.Initialize(1);
+            enemy.ConfigureDistrict(4,false);enemy.transform.SetParent(truck.transform,false);enemy.transform.localPosition=new Vector2(.7f,2.5f);
+            game.enemies.Add(enemy);crew.Add(enemy);Persist();game.SnapCameraToHero();game.BlockGameplayInput();
+            game.Notice("최상층 → 최하층 추격 / 배치된 오토바이는 E · 점프와 와이어로 트럭 지붕에 접근",5);
+        }
+        public bool Retry()
+        {if(phase!=2)return false;foreach(var bike in game.parkedBikes)if(bike)bike.ResetAtSpawn();BeginChase();return true;}
+        public void HitTruck(Vector2 start,Vector2 end,float damage)
+        {if(truck&&phase==2)truck.HitBeam(start,end,damage);}
+        public void TruckArrived()
+        {
+            phase=3;phaseAt=Time.unscaledTime;game.hero.TravelTo((Vector2)truck.transform.position+new Vector2(.7f,3.65f));
+            game.hero.AimWeaponAt(truck.transform.position+Vector3.right*2);game.hero.CinematicPose(false,1);
+            var threat=new GameObject("Cab special-operations ambush").AddComponent<AncientEnemy>();threat.Initialize(1);threat.ConfigureDistrict(4,false);
+            threat.transform.SetParent(truck.transform,false);threat.transform.localPosition=new Vector2(1.6f,2.5f);threat.FaceToward(game.hero.transform.position.x);
+            game.enemies.Add(threat);crew.Add(threat);
+            SetCaption("움직이지 마.");Persist();game.BlockGameplayInput();
+        }
+        void Update()
+        {
+            if(!game.Story||!game.hero)return;
+            if(!restored&&game.HasSession)
+            {
+                restored=true;
+                if(AncientFinaleRules.RestorePhase(phase)==2){phase=2;BeginChase();}
+                else if(phase==5){game.won=true;phaseAt=Time.unscaledTime;}
+                else if(phase==1)windowTruck.enabled=true;
+            }
+            if(game.MainMenu)return;
+            if(phase==3)
+            {
+                float age=Time.unscaledTime-phaseAt;
+                if(age>=1.2f&&!fired)
+                {
+                    fired=true;SetCaption("엎드려!");game.Sound(6);game.Shake(.18f);
+                    Vector3 core=truck.transform.position+new Vector3(.5f,1.5f,0),weapon=truck.transform.position+new Vector3(1.6f,3.45f,0);
+                    supportShot.enabled=true;supportShot.SetPosition(0,weapon+(weapon-core).normalized*16);supportShot.SetPosition(1,core);
+                    game.hero.CinematicPose(true,1);
+                    foreach(var enemy in crew)if(enemy)enemy.Hit(999,true);
+                }
+                if(age>1.32f)supportShot.enabled=false;
+                if(age>1.9f)SetCaption("코어가…!");
+                if(age>2.6f){phase=4;phaseAt=Time.unscaledTime;SetCaption("보호부가 깨졌어!");blast.enabled=true;game.Sound(4);Persist();}
+                return;
+            }
+            if(phase==4)
+            {
+                float age=Time.unscaledTime-phaseAt;
+                Vector2 centre=truck?truck.transform.position:(Vector2)game.hero.transform.position;
+                float radius=.2f+age*12;
+                for(int i=0;i<blast.positionCount;i++){float a=i*Mathf.PI*2/blast.positionCount;blast.SetPosition(i,centre+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius);}
+                blast.startColor=blast.endColor=new Color(.75f,.95f,1,Mathf.Clamp01(1-age/.9f));
+                if(age>.6f)SetCaption("떨어진다!");
+                Vector2 point=centre+new Vector2(.7f,3.65f-Mathf.Max(0,age-.5f)*8);game.hero.TravelTo(point);
+                if(age>=2.2f){phase=5;game.won=true;AncientGame.SetSaved("firstRunCleared",1);blast.enabled=false;Persist();}
+                return;
+            }
+            if(game.Paused)return;
+            if(phase==1)
+            {countdown-=Time.deltaTime;if(countdown<=0)BeginChase();}
+            if(phase==2&&truck)
+            {
+                int next=AncientFinaleRules.Zone(game.hero.transform.position.x);
+                if(next>zone){zone=next;Persist();game.Feel.Signal(AncientCityLayout.Name(4-zone)+" 화물로 진입",new Color(.6f,.95f,1),1.8f);}
+                if(game.hero.transform.position.y<AncientFinaleRules.Road(game.hero.transform.position.x)-6)game.hero.RetryFromCheckpoint();
+            }
+        }
+        void ReturnToCity()
+        {
+            ClearTruck();foreach(var bike in game.parkedBikes)if(bike)bike.ResetAtSpawn();
+            phase=0;countdown=60;zone=0;game.won=false;game.hero.hp=game.hero.MaxHP;
+            game.hero.TravelTo(new Vector2(AncientCityLayout.Entry(4),1.3f));game.SetLiftCheckpoint(4);game.City.OnEnterFloor();
+            Persist();game.BlockGameplayInput();game.SnapCameraToHero();Time.timeScale=1;
+        }
+        void OnGUI()
+        {
+            if(!game.Story||game.MainMenu)return;
+            if(label==null)
+            {
+                label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=20,alignment=TextAnchor.MiddleCenter,wordWrap=true};
+                title=new GUIStyle(label){fontSize=34,fontStyle=FontStyle.Bold};button=new GUIStyle(AncientHUD.Button){alignment=TextAnchor.MiddleCenter};
+            }
+            var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;
+            float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-70;
+            float w=Screen.width/scale,h=Screen.height/scale;
+            if(phase==0&&game.Story.CurrentFloor==4&&(game.City.Cleared&(1<<4))!=0&&!game.Paused)
+            {GUI.Label(new Rect(w/2-230,h-165,460,50),"회장실 책상 / E: 노트와 회수 계획 확인",label);}
+            else if(phase==1&&!game.Story.DialogueOpen)
+            {GUI.Label(new Rect(w/2-260,h-145,520,70),"회수 작전 개시까지 "+Mathf.CeilToInt(countdown)+"초\n회장실에서 E: 화물 승강로로 먼저 진입",label);}
+            else if(phase==2&&!game.Paused)
+            {GUI.Label(new Rect(w/2-260,20,520,60),AncientCityLayout.Name(4-AncientFinaleRules.Zone(game.hero.transform.position.x))+" 하강 추격\n트럭 끝에서 점프 / 와이어로 지붕에 올라타세요",label);}
+            if(phase==3||phase==4)
+            {
+                float age=Time.unscaledTime-phaseAt;
+                if(phase==4){GUI.color=new Color(1,1,1,Mathf.Clamp01(1-age*2));GUI.DrawTexture(new Rect(0,0,w,h),Texture2D.whiteTexture);}
+                int chars=Mathf.Min(caption.Length,Mathf.FloorToInt((Time.unscaledTime-captionAt)/.045f));
+                if(chars!=visibleLetters){visibleLetters=chars;visibleCaption=caption.Substring(0,chars);}
+                GUI.color=Color.white;AncientHUD.Panel(new Rect(0,h-105,w,105),new Color(.01f,.02f,.035f,.92f));
+                GUI.Label(new Rect(40,h-83,w-80,60),visibleCaption,title);
+                if(phase==4){GUI.color=new Color(0,0,0,Mathf.Clamp01((age-.8f)/1.1f));GUI.DrawTexture(new Rect(0,0,w,h),Texture2D.whiteTexture);}
+            }
+            if(phase==5)
+            {
+                GUI.color=Color.black;GUI.DrawTexture(new Rect(0,0,w,h),Texture2D.whiteTexture);GUI.color=Color.white;
+                GUI.Label(new Rect(w/2-380,h/2-150,760,70),"도시 아래로",title);
+                GUI.Label(new Rect(w/2-380,h/2-65,760,90),"빛이 꺼졌다.\n그리고, 아래에서 다른 빛이 깨어났다.",label);
+                if(GUI.Button(new Rect(w/2-250,h/2+70,500,45),"도시로 돌아가기",button))ReturnToCity();
+                if(GUI.Button(new Rect(w/2-250,h/2+130,500,45),"저장 후 메인 화면",button))game.ReturnToMainMenu();
+            }
+            GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;
+        }
+        void OnDestroy(){if(supportShot)Destroy(supportShot.gameObject);if(blast)Destroy(blast.gameObject);}
+    }
+    public sealed class AncientFinalTruck : MonoBehaviour
+    {
+        AncientGame game;AncientFinale finale;Rigidbody2D body;float nextThrow,suppressedUntil;
+        public void Initialize(AncientGame owner,AncientFinale story,float x)
+        {
+            game=owner;finale=story;gameObject.layer=8;transform.position=new Vector2(x,AncientFinaleRules.Road(x));
+            body=gameObject.AddComponent<Rigidbody2D>();body.bodyType=RigidbodyType2D.Kinematic;body.interpolation=RigidbodyInterpolation2D.Interpolate;
+            var solid=gameObject.AddComponent<BoxCollider2D>();solid.size=new Vector2(4.8f,2.5f);solid.offset=new Vector2(0,1.25f);
+            var art=AncientArt.Display("Chairman getaway transport",AncientArt.Truck(),Vector2.zero,7,transform);art.transform.localScale=Vector3.one*.75f;
+        }
+        void FixedUpdate()
+        {
+            if(game.Paused)return;
+            float speed=AncientFinaleRules.TruckSpeed(game.hero.transform.position.x,body.position.x);
+            float x=Mathf.Min(AncientFinaleRules.Finish-7,body.position.x+speed*Time.fixedDeltaTime);
+            body.MovePosition(new Vector2(x,AncientFinaleRules.Road(x)));
+            if(AncientFinaleRules.CanBoardEnd(x,game.hero.transform.position.x,game.hero.transform.position.y))finale.TruckArrived();
+        }
+        void Update()
+        {
+            if(game.Paused||Time.time<nextThrow||Time.time<suppressedUntil||game.shots.Count>=14)return;
+            if(((Vector2)game.hero.transform.position-(Vector2)transform.position).sqrMagnitude>24*24)return;
+            nextThrow=Time.time+1.45f;
+            Vector2 origin=(Vector2)transform.position+new Vector2(-2,2.8f);
+            game.Projectiles.Spawn(origin,((Vector2)game.hero.transform.position-origin).normalized*9,12,true);
+        }
+        public void HitBeam(Vector2 start,Vector2 end,float damage)
+        {
+            Vector2 delta=end-start;if(delta.sqrMagnitude<.01f)return;
+            var bounds=new Bounds(transform.position+Vector3.up*1.25f,new Vector3(4.8f,2.5f,1));float hit;
+            if(bounds.IntersectRay(new Ray(start,delta.normalized),out hit)&&hit<=delta.magnitude)
+            {suppressedUntil=Time.time+3;game.Feel.Signal("운송 장치 억제 · 투척 정지",new Color(.6f,.95f,1),1);}
+        }
+    }
+}

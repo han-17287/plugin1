@@ -24,15 +24,15 @@ namespace Plugin.AncientCivilization
             for(int i=0;i<4;i++)
             {
                 float a=x+21+i*23;game.Platform(a,a+2.5f,6.2f);
-                game.Box("Expert route edge",new Vector2(a+1.25f,6.23f),new Vector2(2.5f,.045f),new Color(1,.8f,.2f),4);
+                game.StaticBox("Expert route edge",new Vector2(a+1.25f,6.23f),new Vector2(2.5f,.045f),new Color(1,.8f,.2f),4);
             }
             var tint=floor==2?new Color(.1f,.22f,.3f):floor==3?new Color(.2f,.24f,.21f):new Color(.19f,.12f,.21f);
             for(int i=0;i<12;i++)
             {
                 float bx=x+5+i*10;
-                game.Box("District wall panel",new Vector2(bx,4.7f),new Vector2(8.5f,9.4f),tint,-7);
+                game.StaticBox("District wall panel",new Vector2(bx,4.7f),new Vector2(8.5f,9.4f),tint,-7);
                 for(int row=0;row<3;row++)
-                    game.Box("District window",new Vector2(bx,3.7f+row*1.7f),new Vector2(3.5f,.75f),tint*1.8f,-6);
+                    game.StaticBox("District window",new Vector2(bx,3.7f+row*1.7f),new Vector2(3.5f,.75f),tint*1.8f,-6);
             }
             foreach(float bx in new[]{x-1,right+1})
             {
@@ -42,8 +42,8 @@ namespace Plugin.AncientCivilization
             if(floor<4)game.BuildLiftTerminal(AncientCityLayout.Entry(floor));
             else
             {
-                game.Box("Illegal maintenance hatch",new Vector2(x+4,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
-                game.Box("Sealed chairman office",new Vector2(right-2,2),new Vector2(2,4),new Color(.23f,.13f,.18f),1);
+                game.StaticBox("Illegal maintenance hatch",new Vector2(x+4,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
+                game.StaticBox("Sealed chairman office",new Vector2(right-2,2),new Vector2(2,4),new Color(.23f,.13f,.18f),1);
             }
             for(int i=0;i<3;i++)
             {
@@ -73,6 +73,11 @@ namespace Plugin.AncientCivilization
                 if(enemy&&enemy.DistrictFloor>0){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}
             if(game.boss&&game.boss.DistrictFloor>0)game.boss=null;
             foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();
+            for(int i=game.pickups.Count-1;i>=0;i--)
+            {
+                var pickup=game.pickups[i];
+                if(pickup&&pickup.Transient){game.pickups.RemoveAt(i);Destroy(pickup.gameObject);}
+            }
             activeBoss=null;activeFloor=-1;
         }
         AncientEnemy Spawn(float x,float y,int kind,int floor,bool boss)
@@ -83,7 +88,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!game||!game.Story||!game.hero||game.Paused||game.Story.CurrentFloor==0)return;
+            if(!game||!game.Story||!game.hero||game.Paused||game.Story.CurrentFloor==0||(game.Finale&&game.Finale.Active))return;
             int floor=game.Story.CurrentFloor;float x=AncientCityLayout.Left(floor);var p=game.hero.transform.position;
             if(activeFloor!=floor)
             {
@@ -101,6 +106,7 @@ namespace Plugin.AncientCivilization
             }
             if(!activeBoss&&(Cleared&(1<<floor))==0&&p.x>=AncientCityLayout.ArenaLeft(floor)+1&&p.y<4)
             {
+                game.CombatCheckpoint(floor,new Vector2(AncientCityLayout.ArenaLeft(floor)+1.5f,1.3f));
                 Spawn(AncientCityLayout.ArenaRight(floor)-4,0,floor==4?1:3,floor,true);
                 game.Notice(floor==4?"저격수 / 조준 전조를 보고 엄폐·접근하세요.":"구역 보스 / 전조를 피하고 공격 후 빈틈을 노리세요.",3);
             }
@@ -136,7 +142,10 @@ namespace Plugin.AncientCivilization
                 game.Story.TravelBySidePassage(4);return true;
             }
             if(floor==4&&Mathf.Abs(x-AncientCityLayout.Entry(4))<3)
-            {game.Story.TravelBySidePassage(3);return true;}
+            {
+                if(game.Finale&&game.Finale.Phase==1){game.Notice("회수 작전이 시작됩니다. 회장실에서 화물 승강로로 진입하세요.",3);return true;}
+                game.Story.TravelBySidePassage(3);return true;
+            }
             return false;
         }
         public bool TryBladeTarget(Vector2 origin,Vector2 direction)
@@ -151,7 +160,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||!game.Story||game.Paused||game.MainMenu)return;
+            if(!game||!game.Story||game.Paused||game.MainMenu||(game.Finale&&game.Finale.Active)||Event.current.type!=EventType.Repaint)return;
             int floor=game.Story.CurrentFloor;if(floor==0)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             string hint=floor==1?"생활구 / 부유체 반동 → 와이어 재연결":floor==2?"행정구 / 붉은 예고 뒤 셔터 폐쇄 · 낮은 경로로 우회":floor==3?"거주구 / 환기 상승류로 금색 지름길 진입":"최상층 / 발판 점멸 후 붕괴 · 안정된 아래 경로는 유지";

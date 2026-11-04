@@ -200,6 +200,89 @@ class RulesChecks
         Check(selected[99]!=0,"Diagonal sword pixels stay attached through eight-neighbour extraction");
         var empty=AncientPixels.Isolate(new uint[100],10,10,5,5);
         Check(Array.TrueForAll(empty,c=>c==0),"An empty sprite region stays transparent");
+        Check(AncientWireMath.Samples(2,true)==24,"Short wires use a small geometry budget");
+        Check(AncientWireMath.Samples(5,true)==48,"Medium wires use an intermediate geometry budget");
+        Check(AncientWireMath.Samples(22,false)==96,"Light mode caps helix vertices");
+        Check(AncientWireMath.Samples(22,true)==192,"Long high-quality wires retain smooth helices");
+        foreach(float length in new[]{0f,.1f,2f,6f,22f})foreach(float age in new[]{0f,.5f,1.35f})
+        {
+            var normal=new float[192];var depth=new float[192];bool equivalent=true;
+            AncientWireMath.Fill(length,age,0,192,normal,depth);
+            for(int i=0;i<192;i++)
+            {
+                float n,z;AncientRules.WireHelixOffset(length,age,i/191f,0,out n,out z);
+                equivalent&=Math.Abs(n-normal[i])<.00001f&&Math.Abs(z-depth[i])<.00001f;
+            }
+            Check(equivalent,"Optimized wire recurrence preserves the agreed DNA geometry");
+        }
+        Check(AncientCombatRules.Damage(20,false,false)==20,"Ordinary enemies keep full incoming damage");
+        Check(AncientCombatRules.Damage(20,true,false)==12,"Boss armor reduces damage outside its opening");
+        Check(AncientCombatRules.Damage(20,true,true)==25,"Boss opening rewards a timed attack");
+        Check(AncientCombatRules.Damage(0,true,true)==0,"Zero damage stays zero");
+        Check(AncientCombatRules.Damage(-10,true,true)==0,"Negative input cannot heal an enemy");
+        Check(AncientCombatRules.Recovery(4,1,false)>=1.5f,"Sniper reload has a readable punish window");
+        for(int district=0;district<=4;district++)for(int pattern=0;pattern<2;pattern++)
+            Check(AncientCombatRules.Recovery(district,pattern,true)>=.7f,"Enrage never removes all reaction time");
+        Check(AncientCombatRules.PerfectBreak(1,-1),"Close incoming object can earn a precise-break reward");
+        Check(!AncientCombatRules.PerfectBreak(4,-1),"Distant object break is ordinary");
+        Check(!AncientCombatRules.PerfectBreak(1,1),"A departing object does not award a precise parry");
+        for(int floor=0;floor<=4;floor++)
+        {
+            Check(AncientCityLayout.SafeResume(floor,AncientCityLayout.Entry(floor),1.3f),"Saved floor entry is a valid retry position");
+            Check(AncientCityLayout.SafeResume(floor,AncientCityLayout.ArenaLeft(floor)+1.5f,1.3f),"Boss checkpoint stays inside its own floor");
+        }
+        Check(!AncientCityLayout.SafeResume(5,700,1.3f),"Retry cannot enter a second-run ancient map");
+        Check(!AncientCityLayout.SafeResume(2,110,1.3f),"Retry cannot restore coordinates on another floor");
+        Check(!AncientCityLayout.SafeResume(2,310,-5),"Retry never restores the player below safe ground");
+        int cacheMask=0;
+        for(int id=0;id<AncientProgressRules.CacheCount;id++)
+        {
+            Check(!AncientProgressRules.HasCache(cacheMask,id),"New exploration reward is initially available");
+            cacheMask=AncientProgressRules.ClaimCache(cacheMask,id);
+            Check(AncientProgressRules.HasCache(cacheMask,id),"Exploration reward is persisted");
+            Check(AncientProgressRules.ClaimCache(cacheMask,id)==cacheMask,"Repeated collection cannot award the same cache twice");
+        }
+        for(int floor=0;floor<=4;floor++)Check(AncientProgressRules.CachesOnFloor(cacheMask,floor)==2,"Each floor has two optional rewards");
+        Check(AncientProgressRules.ClaimCache(cacheMask,99)==cacheMask,"Invalid cache cannot corrupt progression mask");
+        Check(!AncientProgressRules.KnowsEvidence(1,4,0),"Theft evidence is not revealed before its dialogue ends");
+        Check(AncientProgressRules.KnowsEvidence(1,5,0),"Confirmed theft evidence appears in journal");
+        Check(!AncientProgressRules.KnowsEvidence(4,9,0),"Top-floor access clue is not spoiled early");
+        Check(AncientProgressRules.KnowsEvidence(4,9,8),"Denied promotion clue follows the residential encounter");
+        Check(AncientProgressRules.KnowsEvidence(5,9,16),"Friend recognition note follows the sniper encounter");
+        Check(AncientFinaleRules.Road(800)==60,"Final chase starts at the top cargo road");
+        Check(AncientFinaleRules.Road(1400)==0,"Final chase reaches the lowest city floor");
+        Check(AncientFinaleRules.Road(1500)==0,"There is no playable ancient road below the endpoint");
+        for(int section=0;section<5;section++)
+        {
+            float x=AncientFinaleRules.Checkpoint(section);
+            Check(AncientFinaleRules.Zone(x)==section,"Every chase checkpoint restores its matching section");
+            Check(AncientFinaleRules.Road(x)>=0&&AncientFinaleRules.Road(x)<=60,"Checkpoint remains on the city descent");
+        }
+        bool continuous=true,clearance=true;
+        for(float x=800;x<1400;x+=12)
+        {
+            float y0=AncientFinaleRules.Road(x),y1=AncientFinaleRules.Road(x+12);
+            continuous&=Math.Abs((y0-y1)-1.2f)<.00002f;
+            clearance&=y1+10-y0>2.1f;
+        }
+        Check(continuous,"Descending road segments meet without height gaps");
+        Check(clearance,"Stepped cargo ceiling leaves full character headroom");
+        Check(AncientFinaleRules.TruckSpeed(800,900)==5,"Distant truck slows so the player can catch up");
+        Check(AncientFinaleRules.TruckSpeed(1000,900)==15,"Leading player cannot accelerate the truck without bound");
+        Check(!AncientFinaleRules.CanBoardEnd(900,900,54),"Support-shot climax cannot start halfway down");
+        Check(!AncientFinaleRules.CanBoardEnd(1393,1393,1.75f),"Running beside the truck is not boarding it");
+        Check(AncientFinaleRules.CanBoardEnd(1393,1393,4.25f),"Standing on the final truck roof triggers the climax");
+        Check(!AncientProgressRules.KnowsEvidence(6,9,31,0),"Optional clinic evidence stays unknown until earned");
+        Check(AncientProgressRules.KnowsEvidence(6,9,31,1),"Clinic job records its discovered evidence");
+        Check(!AncientProgressRules.KnowsEvidence(7,9,31,1),"Clinic job cannot unlock the administrative evidence");
+        Check(AncientProgressRules.KnowsEvidence(7,9,31,2),"Original/snapshot comparison records the second field case");
+        Check(AncientProgressRules.KnowsEvidence(8,9,31,4),"Guarded terminal records its own field evidence");
+        Check(AncientFinaleRules.RestorePhase(0)==0,"Unstarted finale stays unstarted");
+        Check(AncientFinaleRules.RestorePhase(1)==1,"Operation countdown can resume");
+        Check(AncientFinaleRules.RestorePhase(2)==2,"Chase restores to its road checkpoint");
+        Check(AncientFinaleRules.RestorePhase(3)==2,"Interrupted ambush restores to playable chase, not a frozen movie");
+        Check(AncientFinaleRules.RestorePhase(4)==2,"Interrupted explosion restores to playable chase");
+        Check(AncientFinaleRules.RestorePhase(5)==5,"Completed first-run end card stays completed");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

@@ -15,7 +15,7 @@ namespace Plugin.AncientCivilization
         public float ArmActivity {get{return Charging?ChargeProgress:Mathf.Clamp01((laserUntil-Time.time)/.18f);}}
         public bool CanCollect {get{return hero&&AncientRules.CanCollectParticles(Input.GetMouseButton(1),Application.isFocused,game.Paused,game.GameplayInputReady,hero.CaptureEnergy);}}
         AncientHero hero;AncientGame game;LineRenderer slashTrail,slashGlow,aim,beam,beamGlow,beamCore;
-        AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,comboUntil,bladeBufferedUntil;bool bladeHitPending;
+        AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,comboUntil,bladeBufferedUntil;bool bladeHitPending,readySignal;
         Vector2 bladeDirection,beamStart,beamEnd;
         static readonly Color Yellow=new Color(1,.88f,.18f);
         public void Initialize(AncientHero owner)
@@ -52,18 +52,19 @@ namespace Plugin.AncientCivilization
             {heldAt=-1;aim.enabled=false;return;}
             if(!hero.AttackMode)
             {heldAt=-1;aim.enabled=false;bladeHitPending=false;bladeUntil=bladeBufferedUntil=0;hero.CancelBladePose();return;}
-            if(Input.GetMouseButtonDown(0)){heldAt=Time.time;}
+            if(Input.GetMouseButtonDown(0)){heldAt=Time.time;readySignal=false;}
             if(Input.GetMouseButtonUp(0)&&heldAt>=0)
             {
                 float held=Time.time-heldAt;heldAt=-1;aim.enabled=false;
                 var action=AncientRules.ResolveLeftRelease(held,hero.CaptureEnergy);
                 if(action==LeftReleaseAction.Blade)StrikeBlade();
                 else if(action==LeftReleaseAction.Laser||action==LeftReleaseAction.Empty)FireLaser();
-                else game.Notice("Laser cancelled / hold until the aiming guide turns gold.",1.2f);
+                else game.Notice("레이저 취소 / 조준선이 금색이 될 때까지 누르세요.",1.2f);
             }
             if(Charging)
             {
                 hero.AimWeaponAt(AimPoint());Vector2 start=Origin,end=ResolveBeam(start,AimPoint());aim.enabled=true;
+                if(ChargeProgress>=1&&!readySignal){readySignal=true;game.Sound(3);game.Feel.Signal("레이저 준비 완료",Yellow,.5f);}
                 aim.startColor=aim.endColor=ChargeProgress>=1?Yellow:new Color(.25f,1,.7f,.45f);
                 aim.SetPosition(0,start);aim.SetPosition(1,end);
             }
@@ -89,13 +90,19 @@ namespace Plugin.AncientCivilization
         }
         void ResolveBladeHit()
         {
-            Vector2 origin=Origin;bool rebound=(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
+            Vector2 origin=Origin;bool rebound=(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
             for(int i=game.shots.Count-1;i>=0;i--)
             {
                 var shot=game.shots[i];if(!shot)continue;
                 Vector2 delta=(Vector2)shot.transform.position-origin;
                 if(delta.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,shot.transform.position,1<<8))
-                {rebound=true;EmitParticles(shot.transform.position,Mathf.Clamp(shot.damage,8,25));shot.Remove();BrokenObjects++;game.Story.OnTraining(5);}
+                {
+                    rebound=true;
+                    bool perfect=AncientCombatRules.PerfectBreak(delta.sqrMagnitude,Vector2.Dot(delta.normalized,shot.velocity.normalized));
+                    EmitParticles(shot.transform.position,Mathf.Clamp(shot.damage,8,25)*(perfect?1.25f:1));
+                    if(perfect){game.Feel.Signal("정밀 파괴 · 에너지 +25%",Yellow,.7f);game.Sound(2);}
+                    shot.Remove();BrokenObjects++;game.Story.OnTraining(5);
+                }
             }
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
@@ -132,7 +139,7 @@ namespace Plugin.AncientCivilization
         }
         public void FireLaser()
         {
-            if(hero.CaptureEnergy<=0){game.Notice("No captured particles. Break a thrown object with a tap, then collect its particles.",2);return;}
+            if(hero.CaptureEnergy<=0){game.Notice("입자가 없습니다. 물체를 베고 나온 입자를 우클릭으로 수집하세요.",2);return;}
             float energy=hero.SpendCapturedEnergy(),power=energy/100f;
             hero.AimWeaponAt(AimPoint());beamStart=Origin;beamEnd=ResolveBeam(beamStart,AimPoint());Vector2 delta=beamEnd-beamStart;
             float radius=.25f+power*.4f,damage=30+energy*1.6f;
@@ -143,6 +150,7 @@ namespace Plugin.AncientCivilization
                 if(Vector2.Distance(enemy.AimPoint,beamStart+delta*t)<radius+.6f)enemy.Hit(damage,true);
             }
             if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage);
+            if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage);
             laserUntil=Time.time+.32f;beam.startWidth=beam.endWidth=.16f+power*.32f;
             beamCore.startWidth=beamCore.endWidth=.05f+power*.1f;
             beamGlow.startWidth=beamGlow.endWidth=.45f+power*.8f;

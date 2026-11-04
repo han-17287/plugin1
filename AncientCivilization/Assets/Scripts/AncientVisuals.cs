@@ -11,6 +11,8 @@ namespace Plugin.AncientCivilization
         Material glowMaterial,rimMaterial;Texture2D softTexture;Sprite softSprite;
         readonly List<SpriteRenderer> lights=new List<SpriteRenderer>();
         readonly List<Color> colours=new List<Color>();
+        readonly List<Vector2> lightPositions=new List<Vector2>();
+        readonly List<bool> lightAttached=new List<bool>(),lightVisible=new List<bool>();
         const int RainCount=72;
         Mesh rainMesh;MeshRenderer rainRenderer;Material rainMaterial;
         readonly Vector3[] rainVertices=new Vector3[RainCount*4];
@@ -47,7 +49,7 @@ namespace Plugin.AncientCivilization
                 Glow(new Vector2(x,top-.45f),AncientGame.Orange,2.6f,3);
             }
             var rainObject=new GameObject("Batched distant rain");rainObject.transform.SetParent(transform,false);
-            rainRenderer=rainObject.AddComponent<MeshRenderer>();rainRenderer.sortingOrder=-6;
+            rainRenderer=rainObject.AddComponent<MeshRenderer>();rainRenderer.sortingOrder=-4;
             rainMaterial=new Material(Shader.Find("Sprites/Default"));rainRenderer.sharedMaterial=rainMaterial;
             rainMesh=new Mesh{name="72 rain streaks / one mesh"};rainMesh.MarkDynamic();
             rainObject.AddComponent<MeshFilter>().sharedMesh=rainMesh;
@@ -62,6 +64,7 @@ namespace Plugin.AncientCivilization
                 for(int n=0;n<4;n++)colors[v+n]=color;
             }
             rainMesh.vertices=rainVertices;rainMesh.triangles=triangles;rainMesh.colors=colors;
+            rainMesh.bounds=new Bounds(Vector3.zero,new Vector3(56,34,1));
             haze=new SpriteRenderer[3];
             for(int i=0;i<haze.Length;i++)
             {
@@ -81,7 +84,7 @@ namespace Plugin.AncientCivilization
             var glow=AncientArt.Display("Local particle light",softSprite,p,order,parent);
             glow.transform.localScale=Vector3.one*size;glow.color=new Color(colour.r,colour.g,colour.b,.48f);
             if(glowMaterial)glow.sharedMaterial=glowMaterial;
-            lights.Add(glow);colours.Add(glow.color);return glow;
+            lights.Add(glow);colours.Add(glow.color);lightPositions.Add(p);lightAttached.Add(parent!=null);lightVisible.Add(true);return glow;
         }
         void Update()
         {
@@ -97,23 +100,24 @@ namespace Plugin.AncientCivilization
             if(armGlow)armGlow.transform.localPosition=new Vector2(game.hero.Facing*.4f,.15f);
             for(int i=0;i<lights.Count;i++)if(lights[i])
             {
-                Vector2 delta=(Vector2)lights[i].transform.position-camera;
+                Vector2 delta=(lightAttached[i]?(Vector2)lights[i].transform.position:lightPositions[i])-camera;
                 bool visible=fullEffects&&Mathf.Abs(delta.x)<halfWidth&&Mathf.Abs(delta.y)<halfHeight;
-                lights[i].enabled=visible;if(!visible)continue;
+                if(lightVisible[i]!=visible){lights[i].enabled=visible;lightVisible[i]=visible;}if(!visible)continue;
                 Color c=colours[i];c.a*=.93f+Mathf.Sin(Time.time*3+i*1.7f)*.07f;lights[i].color=c;
             }
             rainRenderer.enabled=fullEffects;
-            if(fullEffects)
+            if(fullEffects&&!game.Paused)
             {
+                rainRenderer.transform.position=camera;
                 for(int i=0;i<RainCount;i++)
                 {
                     rainPositions[i]+=new Vector2(-1,-rainSpeeds[i])*Time.deltaTime;
                     if(rainPositions[i].y<-15){rainPositions[i].y=15;rainPositions[i].x=Next(-26,26);}
-                    Vector2 p=camera+rainPositions[i];int v=i*4;
+                    Vector2 p=rainPositions[i];int v=i*4;
                     rainVertices[v]=p+Vector2.left*.007f;rainVertices[v+1]=p+Vector2.right*.007f;
                     rainVertices[v+2]=p+new Vector2(.063f,.4f);rainVertices[v+3]=p+new Vector2(.077f,.4f);
                 }
-                rainMesh.vertices=rainVertices;rainMesh.RecalculateBounds();
+                rainMesh.vertices=rainVertices;
             }
             for(int i=0;i<haze.Length;i++)
             {

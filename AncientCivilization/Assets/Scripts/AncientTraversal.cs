@@ -21,9 +21,9 @@ namespace Plugin.AncientCivilization
                 cranes[i].Initialize(game,new Vector2(38+i*22,7.6f),i);
             }
             foreach(var ledge in AncientTraversalLayout.LowerRoute)
-                game.Box("Factory roof route",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),AncientGame.Cyan,4);
+                game.StaticBox("Factory roof route",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),AncientGame.Cyan,4);
             foreach(var ledge in AncientTraversalLayout.LowerFastRoute)
-                game.Box("Factory crane shortcut",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),new Color(1,.8f,.18f),4);
+                game.StaticBox("Factory crane shortcut",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),new Color(1,.8f,.18f),4);
             targets=new AncientAirTarget[AncientTraversalLayout.TargetX.Length];
             for(int i=0;i<targets.Length;i++)
             {
@@ -34,14 +34,14 @@ namespace Plugin.AncientCivilization
             Mark(139,"Upper route start",AncientGame.Cyan);
             Mark(252,"Upper route finish",new Color(1,.85f,.2f));
             foreach(var ledge in AncientTraversalLayout.FastRoute)
-                game.Box("Fast route amber edge",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),new Color(1,.8f,.18f),4);
+                game.StaticBox("Fast route amber edge",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),new Color(1,.8f,.18f),4);
             foreach(var ledge in AncientTraversalLayout.MainRoute)
-                game.Box("Main route cyan edge",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),AncientGame.Cyan,4);
+                game.StaticBox("Main route cyan edge",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),AncientGame.Cyan,4);
         }
         void Mark(float x,string name,Color color)
         {
-            game.Box(name,new Vector2(x,2),new Vector2(.08f,4),color,2);
-            game.Box(name+" lamp",new Vector2(x,4.05f),new Vector2(.5f,.15f),color,3);
+            game.StaticBox(name,new Vector2(x,2),new Vector2(.08f,4),color,2);
+            game.StaticBox(name+" lamp",new Vector2(x,4.05f),new Vector2(.5f,.15f),color,3);
         }
         public bool TryBladeTarget(Vector2 origin,Vector2 direction)
         {
@@ -140,7 +140,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1)return;
+            if(!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1||Event.current.type!=EventType.Repaint)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;GUI.depth=-10;
             if(!game.Story.InUpperCity)

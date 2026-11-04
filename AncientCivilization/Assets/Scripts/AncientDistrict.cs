@@ -133,6 +133,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
+            if(Event.current.type!=EventType.Repaint)return;
             if(!game||!game.hero||game.Paused||game.MainMenu||!game.View||(game.Story&&game.Story.InUpperCity))return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,fontStyle=FontStyle.Bold,alignment=TextAnchor.MiddleCenter};
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;

@@ -30,6 +30,8 @@ namespace Plugin.AncientCivilization
             }
             ambience=AudioClip.Create("Buried city ambience",data.Length,1,rate,false);ambience.SetData(data,0);
             ambient.clip=ambience;ambient.Play();
+            // Prewarm once while the menu is loading, avoiding synthesis on the first combat hit.
+            for(int cue=0;cue<nextVoice.Length;cue++)Tone(cue);
         }
         void ApplyVolume(){source.volume=muted?0:.22f;ambient.volume=muted?0:.055f;}
         void Update()
