@@ -11,9 +11,9 @@ namespace Plugin.AncientCivilization
         public bool InUpperCity {get;private set;}
         public AncientTruck Truck {get;private set;}
         public int ResidencePoints {get;private set;}
-        AncientGame game;int flags,lineIndex;float nextTrainingShot,typedAt;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
+        AncientGame game;int flags,lineIndex;float nextTrainingShot,nextLetterAt;int revealedChars;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
         struct Line {public string speaker,text;public int portrait;public Line(string who,string words,int face){speaker=who;text=words;portrait=face;}}
-        readonly List<Line> lines=new List<Line>();GUIStyle body,nameStyle,small;int spawnedEncounters;
+        readonly List<Line> lines=new List<Line>();GUIStyle body,nameStyle,small,nextButton;int spawnedEncounters;
         public void Initialize(AncientGame owner)
         {game=owner;Stage=AncientGame.Saved("questStage");flags=AncientGame.Saved("questFlags");ResidencePoints=AncientGame.Saved("residencePoints");InUpperCity=AncientGame.Saved("upperCity")!=0;}
         void Start(){if(game.HasSession)Begin();}
@@ -30,34 +30,44 @@ namespace Plugin.AncientCivilization
             if(Stage==0)
             {
                 SetStage(1);
-                Talk(null,new Line("DISPATCH","Morning patrol, Officer. Keep the lower district safe. Points buy people a life above us; down here, we keep each other alive.",1),
-                    new Line("OFFICER","Understood. I'll check the streets, my chain relic, and the patrol bike before taking calls.",0));
+                Talk(null,new Line("통신관","아침 순찰 시작이다. 포인트를 모으면 위로 올라갈 수 있겠지만, 아래 구역의 안전은 우리가 지킨다.",1),
+                    new Line("치안경찰","알겠습니다. 기계팔과 입자 와이어, 순찰 오토바이부터 점검하겠습니다.",0));
             }
             else if(Stage==4)TheftReport();
             else if(Stage==7)ArrestDialogue();
         }
         void Talk(Action done,params Line[] script)
-        {lines.Clear();lines.AddRange(script);lineIndex=0;typedAt=Time.unscaledTime;showFull=false;visibleChars=-1;afterDialogue=done;game.BlockGameplayInput();}
+        {lines.Clear();lines.AddRange(script);lineIndex=0;ResetTyping();afterDialogue=done;game.BlockGameplayInput();}
+        void ResetTyping()
+        {revealedChars=0;nextLetterAt=Time.unscaledTime+.08f;showFull=false;visibleChars=-1;shownText="";}
+        void TickTyping()
+        {
+            if(showFull||!DialogueOpen||Time.unscaledTime<nextLetterAt)return;
+            string text=lines[lineIndex].text;if(revealedChars>=text.Length)return;
+            char letter=text[revealedChars++];
+            float pause=letter=='.'||letter=='?'||letter=='!'||letter=='…'?.16f:letter==','?.08f:0;
+            nextLetterAt=Time.unscaledTime+.045f+pause;
+        }
         void Advance()
         {
             if(!DialogueOpen)return;
-            if(!showFull&&Time.unscaledTime-typedAt<lines[lineIndex].text.Length*.025f){showFull=true;return;}
-            lineIndex++;showFull=false;visibleChars=-1;typedAt=Time.unscaledTime;
+            if(!showFull&&revealedChars<lines[lineIndex].text.Length){showFull=true;return;}
+            lineIndex++;ResetTyping();
             if(lineIndex>=lines.Count)
             {lines.Clear();var action=afterDialogue;afterDialogue=null;game.BlockGameplayInput();action?.Invoke();}
         }
         void TheftReport()
         {
-            Talk(()=>SetStage(5),new Line("DISPATCH","Priority call. An upper-city suspect has loaded locally manufactured energy cores into a cargo truck. That is their getaway vehicle, not the stolen property.",1),
-                new Line("OFFICER","Those cores power this district. I'm pursuing. Get civilians clear of the road.",0));
+            Talk(()=>SetStage(5),new Line("통신관","긴급 신고다. 상층 출신 용의자가 생산소의 에너지 코어를 트럭에 싣고 도주하고 있다.",1),
+                new Line("치안경찰","저 코어가 끊기면 이 구역이 멈춥니다. 주민부터 대피시켜 주세요. 제가 쫓겠습니다.",0));
         }
         void ArrestDialogue()
         {
-            Talk(()=>{SetStage(8);},new Line("OFFICER","You're under arrest. You're from the upper city. Why steal energy cores made down here?",0),
-                new Line("SUSPECT","You think the points tell you what a person is worth? Ask where your own cores go.",2),
-                new Line("OFFICER","That doesn't explain it. You had the points to live above us... why risk all of that for these cores?",0),
-                new Line("DISPATCH","Arrest confirmed. Your civic points have reached "+ResidencePoints+". Residence and transit clearance: one city level higher.",1),
-                new Line("OFFICER","A promotion for recovering our own power. And I still don't know why they wanted it. I'll take the lift and find out.",0));
+            Talk(()=>{SetStage(8);},new Line("치안경찰","당신을 에너지 코어 절도 혐의로 체포한다. 상층에 사는 사람이 왜 아래층의 코어를 훔친 거지?",0),
+                new Line("용의자","포인트가 사람의 값을 정해 준다고 믿어? 너희가 만든 코어가 어디로 가는지나 알아봐.",2),
+                new Line("치안경찰","그걸 대답이라고 하나. 위에서 살 포인트도 있었을 텐데… 이 코어 때문에 전부 걸었다고?",0),
+                new Line("통신관","검거 확인. 이번 보상으로 시민 포인트가 "+ResidencePoints+"점에 도달했다. 한 단계 위 도시의 거주·통행 자격이 승인됐다.",1),
+                new Line("치안경찰","우리 동력을 되찾았더니 올라가도 된다는 건가. 저자가 왜 그걸 원했는지… 위에서 알아봐야겠군.",0));
         }
         void EnsureTruck(bool atGate=false)
         {
@@ -73,7 +83,7 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             if(DialogueOpen)
-            {if(!game.MainMenu&&(Input.GetKeyDown(KeyCode.Space)||Input.GetKeyDown(KeyCode.Return)))Advance();return;}
+            {if(!game.MainMenu){TickTyping();if(Input.GetKeyDown(KeyCode.Space)||Input.GetKeyDown(KeyCode.Return))Advance();}return;}
             if(game.Paused||!game.HasSession||!game.GameplayInputReady||!game.hero)return;
             var hero=game.hero;
             if(Stage<=3)
@@ -85,9 +95,9 @@ namespace Plugin.AncientCivilization
                 if(hero.bike)OnTraining(4);
             }
             if(Stage==1&&AncientRules.TutorialReady(Stage,flags))
-            {SetStage(2);Talk(null,new Line("DISPATCH","Good. Test the chain on the ceiling, then ride the parked motorcycle with E. Park it again before the blade drill.",1));}
+            {SetStage(2);Talk(null,new Line("통신관","천장에 입자 와이어를 연결해 봐라. 정비소의 오토바이는 E로 타고 내린다. 확인했으면 블레이드 훈련으로 넘어가자.",1));}
             else if(Stage==2&&AncientRules.TutorialReady(Stage,flags))
-            {SetStage(3);Talk(null,new Line("DISPATCH","Training objects incoming. Wheel up selects attack. Tap left click to cut one with the yellow filament blade and collect its particles. Hold left click, aim, then release when the guide is gold to fire a laser.",1));}
+            {SetStage(3);Talk(null,new Line("통신관","훈련용 물체를 보낸다. 휠을 위로 돌리고 좌클릭을 짧게 눌러 부숴라. 나온 입자는 우클릭을 누르고 모은다. 좌클릭은 길게 눌러 조준한 뒤, 표시가 금색이 되면 놓아서 레이저를 쏜다.",1));}
             else if(Stage==3)
             {
                 if(Time.time>=nextTrainingShot&&game.shots.Count<4)
@@ -104,7 +114,7 @@ namespace Plugin.AncientCivilization
             {
                 EnsureTruck();SpawnEncounters();
                 if(AncientRules.CanStartMiniBoss(Stage,Truck.Stopped,game.Cores,hero.transform.position.x))
-                {SetStage(6);Talk(null,new Line("SUSPECT","Stay back! The cargo enforcer still answers to my clearance.",2),new Line("OFFICER","The cores are secured. Shut it down and step away from the truck.",0));}
+                {SetStage(6);Talk(null,new Line("용의자","다가오지 마! 화물 수호기는 아직 내 통행 권한으로 움직인다고!",2),new Line("치안경찰","코어는 확보했다. 장치를 끄고 트럭에서 내려.",0));}
             }
             else if(Stage==6)
             {
@@ -112,7 +122,7 @@ namespace Plugin.AncientCivilization
                 if(game.bossDefeated)
                 {ResidencePoints=AncientRules.PointsAfterArrest(ResidencePoints,Stage);SetStage(7);ArrestDialogue();}
                 else if(!game.boss&&hero.transform.position.x>98)
-                {game.SpawnEnemy(109,0,3);game.boss.PrepareMiniBoss();game.Notice("MINI BOSS / CARGO ENFORCER",3);}
+                {game.SpawnEnemy(109,0,3);game.boss.PrepareMiniBoss();game.Notice("미니 보스 / 화물 수호기",3);}
             }
         }
         public bool TryUseLift()
@@ -120,21 +130,21 @@ namespace Plugin.AncientCivilization
             if(!AncientRules.CanEnterUpperCity(Stage,ResidencePoints,InUpperCity)||!game.hero||Mathf.Abs(game.hero.transform.position.x-115)>4)return false;
             if(DialogueOpen)return true;
             if(game.hero.bike)return false;
-            if(!game.hero.IsOnGround){game.Notice("Land before using the lift.");return true;}
+            if(!game.hero.IsOnGround){game.Notice("지면에 착지한 뒤 승강기를 이용하세요.");return true;}
             InUpperCity=true;SetStage(9);game.hero.TravelTo(new Vector2(132,1.3f));game.Checkpoint(3);game.SnapCameraToHero();game.Save();
-            Talk(null,new Line("DISPATCH","Transit authorized. Welcome to the next city level, Officer.",1),new Line("OFFICER","Cleaner streets. Brighter lights. But somebody up here needed what we made below.",0));return true;
+            Talk(null,new Line("통신관","통행 허가 확인. 다음 층 도시로 진입한다.",1),new Line("치안경찰","거리도, 불빛도 다르군. 그런데 이곳의 누군가는 우리가 아래에서 만든 것이 필요했다….",0));return true;
         }
         string Check(int bit,string label){return (Has(bit)?"[x] ":"[ ] ")+label;}
         string Objective()
         {
-            if(Stage<=1)return "PATROL / "+Check(0,"Move")+"  "+Check(1,"Jump")+"  "+Check(2,"Ctrl run");
-            if(Stage==2)return "EQUIPMENT / "+Check(3,"Ceiling chain")+"  "+Check(4,"E ride motorcycle");
-            if(Stage==3)return "BLADE DRILL / "+Check(5,"Break object")+"  "+Check(6,"LMB collect")+"  "+Check(7,"Hold / release laser");
-            if(Stage<=5)return "CORE THEFT / Pursue the truck. Recover energy cores "+game.Cores+" / 3";
-            if(Stage==6)return "MINI BOSS / Disable the cargo enforcer and arrest the suspect";
-            if(Stage==7)return "ARREST / Find out why an upper-city resident stole lower-city cores";
-            if(Stage==8)return "PROMOTION / "+ResidencePoints+" points. Reach the east lift and press E";
-            return "UPPER CITY / Entry authorized. The theft's motive remains unresolved";
+            if(Stage<=1)return "순찰 / "+Check(0,"이동")+"  "+Check(1,"점프")+"  "+Check(2,"Ctrl 달리기");
+            if(Stage==2)return "장비 점검 / "+Check(3,"입자 와이어")+"  "+Check(4,"E 오토바이 탑승");
+            if(Stage==3)return "블레이드 훈련 / "+Check(5,"물체 파괴")+"  "+Check(6,"우클릭 입자 수집")+"  "+Check(7,"눌러 조준 / 놓아 발사");
+            if(Stage<=5)return "코어 도난 / 트럭 추격 · 에너지 코어 회수 "+game.Cores+" / 3";
+            if(Stage==6)return "미니 보스 / 화물 수호기 제압 · 용의자 검거";
+            if(Stage==7)return "검거 / 상층 주민이 코어를 훔친 이유를 물어보자";
+            if(Stage==8)return "통행 허가 / "+ResidencePoints+"점 · 동쪽 승강기에서 E";
+            return "상층 도시 / 진입 허가 · 절도의 동기는 아직 알 수 없다";
         }
         void Portrait(int index,Rect rect)
         {
@@ -147,15 +157,15 @@ namespace Plugin.AncientCivilization
             var old=GUI.matrix;var color=GUI.color;int depth=GUI.depth;
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-50;
             float w=Screen.width/scale,h=Screen.height/scale;
-            if(body==null){body=new GUIStyle(GUI.skin.label){fontSize=21,wordWrap=true};nameStyle=new GUIStyle(body){fontSize=22,fontStyle=FontStyle.Bold};small=new GUIStyle(body){fontSize=14};}
+            if(body==null){body=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=21,wordWrap=true};nameStyle=new GUIStyle(body){fontSize=22,fontStyle=FontStyle.Bold};small=new GUIStyle(body){fontSize=14};nextButton=new GUIStyle(AncientHUD.Button){font=body.font,fontSize=14};}
             if(!DialogueOpen)
             {
                 if(!game.skills)
                 {
                     AncientHUD.Panel(new Rect(w/2-250,16,500,64),new Color(.015f,.045f,.065f,.94f));
                     GUI.Label(new Rect(w/2-236,24,472,52),Objective(),small);
-                    GUI.Label(new Rect(28,200,285,42),"CIVIC POINTS "+ResidencePoints+" / "+(InUpperCity?"UPPER CITY":"LOWER CITY"),small);
-                    if(Stage==8&&Mathf.Abs(game.hero.transform.position.x-115)<4)GUI.Label(new Rect(w/2-220,h-145,440,35),(game.hero.bike?"E / PARK BEFORE USING THE LIFT":"E / TAKE THE LIFT TO THE NEXT CITY"),nameStyle);
+                    GUI.Label(new Rect(28,200,285,42),"시민 포인트 "+ResidencePoints+" / "+(InUpperCity?"상층 도시":"하층 도시"),small);
+                    if(Stage==8&&Mathf.Abs(game.hero.transform.position.x-115)<4)GUI.Label(new Rect(w/2-220,h-145,440,35),(game.hero.bike?"E / 먼저 오토바이 주차":"E / 다음 층 도시로 이동"),nameStyle);
                 }
             }
             else
@@ -165,10 +175,10 @@ namespace Plugin.AncientCivilization
                 var line=lines[lineIndex];Portrait(line.portrait,new Rect(38,y-72,180,268));
                 GUI.color=new Color(1,.8f,.16f);GUI.DrawTexture(new Rect(232,y+22,3,154),Texture2D.whiteTexture);GUI.color=Color.white;
                 GUI.Label(new Rect(255,y+18,w-320,38),line.speaker,nameStyle);
-                int chars=showFull?line.text.Length:Mathf.Min(line.text.Length,Mathf.FloorToInt((Time.unscaledTime-typedAt)/.025f));
+                int chars=showFull?line.text.Length:revealedChars;
                 if(chars!=visibleChars){visibleChars=chars;shownText=line.text.Substring(0,chars);}
                 GUI.Label(new Rect(255,y+65,w-320,112),shownText,body);
-                if(GUI.Button(new Rect(w-250,y+170,205,28),"SPACE / CONTINUE"))Advance();
+                if(GUI.Button(new Rect(w-250,y+170,205,28),"Space / 다음",nextButton))Advance();
             }
             GUI.matrix=old;GUI.color=color;GUI.depth=depth;
         }
@@ -178,7 +188,7 @@ namespace Plugin.AncientCivilization
         AncientGame game;float nextThrow,health=180,suppressedUntil;bool dropped;
         public bool Stopped {get{return transform.position.x>=105.9f;}}
         public void Initialize(AncientGame owner,float x)
-        {game=owner;transform.position=new Vector2(x,x>=43&&x<=58?1:0);AncientArt.Display("Core theft cargo truck",AncientArt.Truck(),Vector2.zero,7,transform);}
+        {game=owner;transform.position=new Vector2(x,AncientDistrict.RoadHeight(x));AncientArt.Display("Core theft cargo truck",AncientArt.Truck(),Vector2.zero,7,transform);}
         void Update()
         {
             if(!game||game.Paused||game.Story.Stage<5)return;
@@ -187,7 +197,7 @@ namespace Plugin.AncientCivilization
                 float lead=game.hero.transform.position.x+13-transform.position.x;
                 float speed=Mathf.Clamp(lead*.85f,2,health<=0?4:8);
                 float x=Mathf.Min(106,transform.position.x+speed*Time.deltaTime);
-                transform.position=new Vector2(x,Mathf.MoveTowards(transform.position.y,x>=43&&x<=58?1:0,3*Time.deltaTime));
+                transform.position=new Vector2(x,Mathf.MoveTowards(transform.position.y,AncientDistrict.RoadHeight(x),3*Time.deltaTime));
                 if(Time.time>=nextThrow&&Time.time>suppressedUntil&&game.shots.Count<12&&Vector2.Distance(transform.position,game.hero.transform.position)<22)
                 {
                     nextThrow=Time.time+1.1f;var shot=new GameObject("Truck thrown cargo").AddComponent<AncientProjectile>();
@@ -196,7 +206,7 @@ namespace Plugin.AncientCivilization
                 }
             }
             else if(!dropped)
-            {dropped=true;for(int i=0;i<3;i++)game.SpawnPickup(new Vector2(98+i*4,1.3f),i);game.Notice("TRUCK STOPPED / Recover the stolen cores, then secure the suspect.",5);}
+            {dropped=true;for(int i=0;i<3;i++)game.SpawnPickup(new Vector2(98+i*4,1.3f),i);game.Notice("트럭 정지 / 도난 코어를 회수하고 용의자를 확보하세요.",5);}
         }
         public void HitByLaser(Vector2 start,Vector2 end,float damage)
         {

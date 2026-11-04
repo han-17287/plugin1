@@ -21,7 +21,7 @@ namespace Plugin.AncientCivilization
             chassis=AncientArt.Display("Reactor chassis",normalBody,new Vector2(0,-.18f),9,frame);
             rear=AncientArt.Display("Rear wheel",AncientArt.Motorcycle(1),new Vector2(-1.15f,-.45f),10,model);
             front=AncientArt.Display("Front wheel",AncientArt.Motorcycle(1),new Vector2(1.16f,-.45f),10,model);
-            rider=AncientArt.Display("Mounted rider",AncientArt.Motorcycle(2),new Vector2(-.05f,-.42f),11,frame);
+            rider=AncientArt.Display("Mounted rider",AncientArt.Hero(7),new Vector2(-.05f,-.42f),11,frame);
             if(AncientVisuals.Instance)
             {
                 AncientVisuals.Instance.Rim(chassis);AncientVisuals.Instance.Rim(rider);

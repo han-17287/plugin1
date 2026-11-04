@@ -19,7 +19,7 @@ namespace Plugin.AncientCivilization
             get
             {
                 if(button!=null)return button;
-                button=new GUIStyle(GUI.skin.button){fontSize=14,fontStyle=FontStyle.Bold,alignment=TextAnchor.MiddleLeft,border=new RectOffset(2,2,2,2),padding=new RectOffset(16,12,6,6)};
+                button=new GUIStyle(GUI.skin.button){font=AncientKoreanUI.Font,fontSize=14,fontStyle=FontStyle.Bold,alignment=TextAnchor.MiddleLeft,border=new RectOffset(2,2,2,2),padding=new RectOffset(16,12,6,6)};
                 button.normal.background=Surface(new Color(.025f,.065f,.09f),new Color(.12f,.28f,.33f));
                 button.hover.background=Surface(new Color(.04f,.14f,.19f),new Color(.18f,.8f,.9f));
                 button.active.background=Surface(new Color(.02f,.08f,.11f),new Color(.7f,1,1));

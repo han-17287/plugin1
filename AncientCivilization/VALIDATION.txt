@@ -14,6 +14,8 @@ PASS: metadata target Assets/Scenes/Main.unity.meta
 PASS: 32-character GUID Main.unity.meta
 PASS: metadata target Assets/Scripts/AncientMainMenu.cs.meta
 PASS: 32-character GUID AncientMainMenu.cs.meta
+PASS: metadata target Assets/Scripts/AncientDistrict.cs.meta
+PASS: 32-character GUID AncientDistrict.cs.meta
 PASS: metadata target Assets/Scripts/AncientPointer.cs.meta
 PASS: 32-character GUID AncientPointer.cs.meta
 PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
@@ -38,13 +40,20 @@ PASS: metadata target Assets/Scripts/AncientHUD.cs.meta
 PASS: 32-character GUID AncientHUD.cs.meta
 PASS: metadata coverage AncientMainMenu.cs
 PASS: metadata coverage AncientAudio.cs
+PASS: metadata coverage AncientPixels.cs
+PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
+PASS: 32-character GUID AncientPixels.cs.meta
 PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
 PASS: 32-character GUID AncientMotorcycle.cs.meta
 PASS: metadata coverage AncientVisuals.cs
+PASS: metadata coverage AncientKoreanUI.cs
+PASS: metadata coverage AncientDistrict.cs
 PASS: metadata coverage AncientParkedBike.cs
 PASS: metadata target Assets/Scripts/AncientStory.cs.meta
 PASS: 32-character GUID AncientStory.cs.meta
 PASS: metadata coverage AncientCombat.cs
+PASS: metadata target Assets/Scripts/AncientKoreanUI.cs.meta
+PASS: 32-character GUID AncientKoreanUI.cs.meta
 PASS: metadata coverage AncientHUD.cs
 PASS: metadata coverage AncientStory.cs
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
@@ -55,8 +64,11 @@ PASS: metadata target Assets/Resources/Art.meta
 PASS: 32-character GUID Art.meta
 PASS: metadata coverage Art
 PASS: metadata coverage Shaders
+PASS: metadata coverage Fonts
 PASS: metadata target Assets/Resources/Shaders.meta
 PASS: 32-character GUID Shaders.meta
+PASS: metadata target Assets/Resources/Fonts.meta
+PASS: 32-character GUID Fonts.meta
 PASS: metadata target Assets/Resources/Art/Scrap.png.meta
 PASS: 32-character GUID Scrap.png.meta
 PASS: metadata target Assets/Resources/Art/City.png.meta
@@ -96,6 +108,12 @@ PASS: metadata coverage ParticleGlow.shader
 PASS: metadata coverage CharacterRim.shader
 PASS: metadata target Assets/Resources/Shaders/ParticleGlow.shader.meta
 PASS: 32-character GUID ParticleGlow.shader.meta
+PASS: metadata target Assets/Resources/Fonts/LICENSE.txt.meta
+PASS: 32-character GUID LICENSE.txt.meta
+PASS: metadata coverage NeoDunggeunmo.ttf
+PASS: metadata coverage LICENSE.txt
+PASS: metadata target Assets/Resources/Fonts/NeoDunggeunmo.ttf.meta
+PASS: 32-character GUID NeoDunggeunmo.ttf.meta
 PASS: unique asset GUIDs
 PASS: Main scene build GUID
 PASS: City.png PNG signature
@@ -221,7 +239,10 @@ PASS: C# syntax AncientRules.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientAudio.cs
+PASS: C# syntax AncientPixels.cs
 PASS: C# syntax AncientVisuals.cs
+PASS: C# syntax AncientKoreanUI.cs
+PASS: C# syntax AncientDistrict.cs
 PASS: C# syntax AncientParkedBike.cs
 PASS: C# syntax AncientCombat.cs
 PASS: C# syntax AncientHUD.cs
@@ -230,4 +251,6 @@ PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: 67 combat and quest rule checks
+PASS: 94 combat and quest rule checks
+
+No Unity Editor executable is installed; no claim of Play Mode or player build validation.

@@ -23,9 +23,9 @@ namespace Plugin.AncientCivilization
             float w=Screen.width/scale,h=Screen.height/scale;
             if(logo==null)
             {
-                logo=new GUIStyle(GUI.skin.label){fontSize=76,fontStyle=FontStyle.Bold};
-                heading=new GUIStyle(GUI.skin.label){fontSize=30,fontStyle=FontStyle.Bold};
-                body=new GUIStyle(GUI.skin.label){fontSize=17,wordWrap=true};
+                logo=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=76,fontStyle=FontStyle.Bold};
+                heading=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=30,fontStyle=FontStyle.Bold};
+                body=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=17,wordWrap=true};
                 caption=new GUIStyle(body){fontSize=13};
             }
             GUI.DrawTexture(new Rect(0,0,w,h),AncientArt.Texture("City"),ScaleMode.ScaleAndCrop);
@@ -62,7 +62,7 @@ namespace Plugin.AncientCivilization
                 Application.Quit();
 #endif
             }
-            Label(new Rect(left+18,top+561,500,28),"F6  GRAPHICS     F7  AUDIO     v0.8 / PROTOTYPE",caption,new Color(.42f,.59f,.64f));
+            Label(new Rect(left+18,top+561,500,28),"F6  GRAPHICS     F7  AUDIO     v0.8.2 / DOUBLE HELIX",caption,new Color(.42f,.59f,.64f));
             Rect portrait=new Rect(left+630,top+75,430,520);
             GUI.color=new Color(.8f,.95f,1,.9f);
             var hero=AncientArt.Hero(0);Rect tex=hero.textureRect;
@@ -76,7 +76,7 @@ namespace Plugin.AncientCivilization
                 AncientHUD.Panel(new Rect(px,py,660,520),new Color(.025f,.055f,.08f,.99f));
                 Label(new Rect(px+30,py+24,600,45),confirmNew?"START A NEW RUN?":"FIELD MANUAL",heading,Color.white);
                 string text=confirmNew?"This replaces your story, civic points, cores, upgrades and checkpoint. Audio and graphics settings are kept.":
-                    "A / D or arrows   Move\nSpace   Jump\nCtrl   Toggle run / E   Ride, park or use the lift\n\nWHEEL   Up: ATTACK / down: WIRE\nWIRE   Left click: pull / middle click: swing\nBOTH MODES   Hold right click: capture\nATTACK   Tap: blade + collect / hold and release: laser\nCapture energy increases damage and effect size (3 stages).\n\nF   Hold to absorb resources\nX   Motorcycle explosion     S / down   Brake\nK / Esc   Pause / upgrades     Space / Enter   Advance dialogue";
+                    "A / D or arrows   Move\nSpace   Jump\nCtrl   Toggle run / E   Ride, park or use the lift\n\nWHEEL   Up: ATTACK / down: WIRE\nWIRE   Left click: pull / middle click: swing\nBOTH MODES   Hold RIGHT click: collect loose particles\nATTACK   LEFT tap: blade / hold and release: laser\nCapture energy increases damage and effect size (3 stages).\n\nF   Dismantle thrown objects / RIGHT click collects particles\nX   Motorcycle explosion     S / down   Brake\nK / Esc   Pause / upgrades     Space / Enter   Advance dialogue";
                 Label(new Rect(px+30,py+85,600,350),text,body,new Color(.75f,.86f,.9f));
                 if(confirmNew)
                 {

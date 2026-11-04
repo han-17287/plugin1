@@ -15,6 +15,16 @@ namespace Plugin.AncientCivilization
             if (textures.TryGetValue(name, out texture) && texture) return texture;
             texture = Resources.Load<Texture2D>("Art/" + name);
             if (!texture) throw new System.InvalidOperationException("Missing Art/" + name + ".png");
+            if(name=="Hero"||name=="Actions"||name=="Dialogue")
+            {
+                var pixels=texture.GetPixels32();var packed=new uint[pixels.Length];
+                for(int i=0;i<pixels.Length;i++)packed[i]=((uint)pixels[i].r<<24)|((uint)pixels[i].g<<16)|((uint)pixels[i].b<<8)|pixels[i].a;
+                bool rider=name=="Motorcycle";
+                packed=AncientPixels.Grid(packed,texture.width,texture.height,8,rider?730:texture.width,rider?544:texture.height);
+                for(int i=0;i<pixels.Length;i++){uint c=packed[i];pixels[i]=new Color32((byte)(c>>24),(byte)(c>>16),(byte)(c>>8),(byte)c);}
+                var native=new Texture2D(texture.width,texture.height,TextureFormat.RGBA32,false);
+                native.name=name+" / 8px native grid";native.SetPixels32(pixels);native.Apply();texture=native;
+            }
             texture.filterMode = FilterMode.Point; texture.wrapMode = TextureWrapMode.Clamp;
             textures[name] = texture; return texture;
         }
@@ -50,15 +60,10 @@ namespace Plugin.AncientCivilization
         public static Sprite Hero(int frame)
         {
             Rect cell = new Rect(frame % 4 * 384, frame / 4 * 512, 384, 512);
-            // Measured transparent gutters around the wider chain housing and anchor tips.
-            if (frame == 2) cell = new Rect(768, 0, 400, 512);
-            if (frame == 3) cell = new Rect(1168, 0, 368, 512);
-            if (frame == 4) cell = new Rect(0, 512, 392, 512);
-            if (frame == 5) cell = new Rect(392, 512, 364, 512);
-            if (frame == 6) cell = new Rect(756, 512, 412, 512);
-            if (frame == 7) cell = new Rect(1168, 512, 368, 512);
-            float root=frame==3||frame==7?199:frame==5?207:frame==6?227:215;
-            return Slice("Hero", "hero-" + frame, cell, 195, new Vector2(root/cell.width,0),true,true);
+            if(frame==1)cell=new Rect(384,0,384,480);
+            if(frame==5)cell=new Rect(384,480,384,544);
+            float root=215;
+            return Slice("Hero", "hero-" + frame, cell, 220, new Vector2(root/cell.width,0),true,true);
         }
         public static Sprite World(int index)
         {
@@ -74,11 +79,13 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Action(int frame)
         {
-            Rect cell=new Rect(frame%4*384,frame/4*512,384,512);
-            if(frame==1)cell=new Rect(384,0,392,512);
-            if(frame==2)cell=new Rect(776,0,376,512);
-            float root=frame==2?207:215;
-            return Slice("Actions","action-"+frame,cell,225,new Vector2(root/cell.width,0),true,true);
+            // Measured gutters: the extended sword poses cross nominal grid columns.
+            Rect[] cells={new Rect(0,0,310,512),new Rect(310,0,478,512),
+                new Rect(788,0,312,512),new Rect(1100,0,436,512),
+                new Rect(0,512,345,512),new Rect(345,512,395,512),
+                new Rect(740,512,406,512),new Rect(1146,512,390,512)};
+            Rect cell=cells[frame];float root=frame%4*384+215-cell.x;
+            return Slice("Actions","action-"+frame,cell,220,new Vector2(root/cell.width,0),true,true);
         }
         public static Sprite Rooftop(float width,bool tall)
         {
@@ -87,22 +94,19 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Scrap()
         {var t=Texture("Scrap");return Slice("Scrap","thrown-scrap",new Rect(0,0,t.width,t.height),1100,Vector2.one*.5f);}
-        public static Sprite ChainLink()
+        public static Sprite WireParticle()
         {
-            const string key="chain-link";Sprite sprite;
+            const string key="wire-particle";Sprite sprite;
             if(sprites.TryGetValue(key,out sprite)&&sprite)return sprite;
-            var texture=new Texture2D(32,16,TextureFormat.RGBA32,false);texture.filterMode=FilterMode.Point;
-            var pixels=new Color[32*16];
-            for(int y=0;y<16;y++)for(int x=0;x<32;x++)
+            var texture=new Texture2D(16,16,TextureFormat.RGBA32,false);texture.filterMode=FilterMode.Point;
+            var pixels=new Color[16*16];
+            for(int y=0;y<16;y++)for(int x=0;x<16;x++)
             {
-                float dx=Mathf.Abs(x-15.5f),dy=Mathf.Abs(y-7.5f);
-                bool outer=dx<15&&dy<7&&dx+dy<20;
-                bool hole=dx<10&&dy<3&&dx+dy<12;
-                if(outer&&!hole)pixels[y*32+x]=y>=8?new Color(.88f,.94f,.96f):new Color(.26f,.34f,.4f);
+                float distance=Mathf.Abs(x-7.5f)+Mathf.Abs(y-7.5f);
+                if(distance<7)pixels[y*16+x]=distance<3?Color.white:new Color(.35f,.75f,1,.65f);
             }
             texture.SetPixels(pixels);texture.Apply();textures[key]=texture;
-            sprite=Sprite.Create(texture,new Rect(0,0,32,16),Vector2.one*.5f,32);
-            sprites[key]=sprite;return sprite;
+            sprite=Sprite.Create(texture,new Rect(0,0,16,16),Vector2.one*.5f,16);sprites[key]=sprite;return sprite;
         }
         public static Sprite MetalProjectile(int kind)
         {
@@ -149,7 +153,7 @@ namespace Plugin.AncientCivilization
         {var t=Texture("Truck");return Slice("Truck","cargo-truck",new Rect(0,0,t.width,t.height),t.width/6.5f,new Vector2(.5f,0));}
         public static Sprite DialoguePortrait(int index)
         {
-            Rect cell=index==0?new Rect(0,0,512,1024):index==1?new Rect(512,0,528,1024):new Rect(1040,0,496,1024);
+            Rect cell=new Rect(index*512,0,512,1024);
             return Slice("Dialogue","dialogue-face-"+index,cell,256,new Vector2(.5f,0),false);
         }
         public static Sprite City()

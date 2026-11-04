@@ -40,6 +40,39 @@ class RulesChecks
         Check(!AncientRules.CanEnterUpperCity(8,999,false),"Upper city requires enough points");
         Check(AncientRules.CanEnterUpperCity(8,1000,false),"Promotion authorizes upper city");
         Check(!AncientRules.CanEnterUpperCity(9,1000,true),"Already arrived cannot enter lift again");
+        Check(!AncientRules.CanCollectParticles(false,true,false,true,0),"Left click without RMB cannot collect particles");
+        Check(AncientRules.CanCollectParticles(true,true,false,true,0),"RMB collects loose particles");
+        Check(!AncientRules.CanCollectParticles(true,false,false,true,0),"Unfocused window cannot collect");
+        Check(!AncientRules.CanCollectParticles(true,true,true,true,0),"Dialogue and pause block collection");
+        Check(!AncientRules.CanCollectParticles(true,true,false,false,0),"Menu-close input guard blocks collection");
+        Check(!AncientRules.CanCollectParticles(true,true,false,true,100),"Full reservoir cannot collect");
+        Check(AncientPixels.Quantize(0xFFFFFFFFu)==AncientPixels.Quantize(AncientPixels.Quantize(0xFFFFFFFFu)),"Palette quantization is stable");
+        Check(AncientPixels.Quantize(0xFFFFFF30u)==0,"Soft background alpha becomes transparent");
+        Check((AncientPixels.Quantize(0x7193B2FFu)&255)==255,"Visible pixels are opaque without soft edges");
+        var source=new uint[16*16];for(int i=0;i<source.Length;i++)source[i]=((uint)i<<24)|0x005070FFu;
+        var grid=AncientPixels.Grid(source,16,16,8,16,16);bool block=true;
+        for(int y=0;y<8;y++)for(int x=0;x<8;x++)block&=grid[y*16+x]==grid[0];
+        Check(block,"Native pixel blocks are identical 8x8 squares");
+        var partial=AncientPixels.Grid(source,16,16,8,5,7);bool untouched=true;
+        for(int y=0;y<16;y++)for(int x=0;x<16;x++)if(x>=5||y>=7)untouched&=partial[y*16+x]==source[y*16+x];
+        Check(untouched,"Pixel processing preserves motorcycle parts outside the rider region");
+        Check(source[0]==0x005070FFu,"Pixel processing never mutates source resources");
+        foreach(float length in new[]{0f,.1f,2f,14f,30f})
+        {
+            bool centred=true,bounded=true,anchored=true;
+            for(int i=0;i<=100;i++)
+            {
+                float t=i/100f,n0,z0,n1,z1;
+                AncientRules.WireHelixOffset(length,1.7f,t,0,out n0,out z0);
+                AncientRules.WireHelixOffset(length,1.7f,t,1,out n1,out z1);
+                centred&=Math.Abs(n0+n1)<.00001&&Math.Abs(z0+z1)<.00001;
+                bounded&=n0*n0+z0*z0<=.10501f*.10501f;
+                if(i==0||i==100)anchored&=Math.Abs(n0)+Math.Abs(z0)<.00001;
+            }
+            Check(centred,"Double helix remains centred on straight core at length "+length);
+            Check(bounded,"Helix stays within wire envelope at length "+length);
+            Check(anchored,"Helix converges at emitter and anchor at length "+length);
+        }
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

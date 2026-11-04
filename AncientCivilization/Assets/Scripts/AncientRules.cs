@@ -12,6 +12,16 @@ namespace Plugin.AncientCivilization
             if(held<ReadyDelay)return LeftReleaseAction.Cancel;
             return energy>0?LeftReleaseAction.Laser:LeftReleaseAction.Empty;
         }
+        public static bool CanCollectParticles(bool rightHeld,bool focused,bool paused,bool ready,float energy)
+        {return rightHeld&&focused&&!paused&&ready&&energy<100;}
+        // Radius fades to zero at the emitter and anchor; opposite phases preserve the straight axis.
+        public static void WireHelixOffset(float length,float age,float t,int strand,out float normal,out float depth)
+        {
+            t=System.Math.Max(0,System.Math.Min(1,t));
+            double radius=.105*System.Math.Max(0,System.Math.Min(1,t*length/.2))*System.Math.Max(0,System.Math.Min(1,(1-t)*length/.2));
+            double angle=t*length*System.Math.PI*2/1.15-age*7+strand*System.Math.PI;
+            normal=(float)(System.Math.Sin(angle)*radius);depth=(float)(System.Math.Cos(angle)*radius);
+        }
         public static bool TutorialReady(int stage,int flags)
         {
             int mask=stage==1?7:stage==2?24:stage==3?224:0;

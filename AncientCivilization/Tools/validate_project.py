@@ -99,18 +99,10 @@ def main():
         image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
         for i in range(8):
             x, y, w, h = i % 4 * 384, i // 4 * 512, 384, 512
-            if i == 2:
-                x, w = 768, 400
-            if i == 3:
-                x, w = 1168, 368
-            if i == 4:
-                x, w = 0, 392
+            if i == 1:
+                y, h = 0, 480
             if i == 5:
-                x, w = 392, 364
-            if i == 6:
-                x, w = 756, 412
-            if i == 7:
-                x, w = 1168, 368
+                y, h = 480, 544
             region = image.getchannel('A').crop((x, y, x + w, y + h))
             bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
             check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
@@ -121,17 +113,14 @@ def main():
             check(region.point(lambda a: 255 if a >= 110 else 0).getbbox() is not None,
                   'world slice contains visible art ' + str(i))
         image = Image.open(ROOT / 'Assets/Resources/Art/Actions.png')
-        for i in range(8):
-            x, y, w, h = i % 4 * 384, i // 4 * 512, 384, 512
-            if i == 1:
-                x, w = 384, 392
-            if i == 2:
-                x, w = 776, 376
+        action_cells = [(0,0,310,512),(310,0,478,512),(788,0,312,512),(1100,0,436,512),
+                        (0,512,345,512),(345,512,395,512),(740,512,406,512),(1146,512,390,512)]
+        for i, (x,y,w,h) in enumerate(action_cells):
             region = image.getchannel('A').crop((x, y, x + w, y + h))
             bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
             check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
                   'action pose has clear transparent gutters ' + str(i))
-            root = 207 if i == 2 else 215
+            root = i % 4 * 384 + 215 - x
             check(bbox and bbox[0] <= root < bbox[2], 'action root lies inside silhouette width ' + str(i))
         image = Image.open(ROOT / 'Assets/Resources/Art/Enemies.png')
         for i, (x, y, w, h) in enumerate(enemy_rects):
