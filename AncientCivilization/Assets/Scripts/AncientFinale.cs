@@ -194,12 +194,12 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientFinalTruck : MonoBehaviour
     {
-        AncientGame game;AncientFinale finale;Rigidbody2D body;SpriteRenderer core,casing;bool coreActive;float nextThrow,suppressedUntil;
+        AncientGame game;AncientFinale finale;Rigidbody2D body;BoxCollider2D solid;SpriteRenderer core,casing;bool coreActive;float nextThrow,suppressedUntil;
         public void Initialize(AncientGame owner,AncientFinale story,float x)
         {
             game=owner;finale=story;gameObject.layer=8;transform.position=new Vector2(x,AncientFinaleRules.Road(x));
             body=gameObject.AddComponent<Rigidbody2D>();body.bodyType=RigidbodyType2D.Kinematic;body.interpolation=RigidbodyInterpolation2D.Interpolate;
-            var solid=gameObject.AddComponent<BoxCollider2D>();solid.size=new Vector2(4.8f,2.5f);solid.offset=new Vector2(0,1.25f);
+            solid=gameObject.AddComponent<BoxCollider2D>();solid.size=new Vector2(4.8f,2.5f);solid.offset=new Vector2(0,1.25f);
             var art=AncientArt.Display("Chairman getaway transport",AncientArt.Truck(),Vector2.zero,7,transform);art.transform.localScale=Vector3.one*.75f;
             var protection=game.Box("Core protective housing",Vector2.zero,new Vector2(.85f,1.05f),new Color(.06f,.16f,.2f),8);
             protection.transform.SetParent(transform,false);protection.transform.localPosition=new Vector2(.5f,1.5f);casing=protection.GetComponent<SpriteRenderer>();
@@ -233,8 +233,9 @@ namespace Plugin.AncientCivilization
         public void HitBeam(Vector2 start,Vector2 end,float damage)
         {
             Vector2 delta=end-start;if(delta.sqrMagnitude<.01f)return;
-            var bounds=new Bounds(transform.position+Vector3.up*1.25f,new Vector3(4.8f,2.5f,1));float hit;
-            if(bounds.IntersectRay(new Ray(start,delta.normalized),out hit)&&hit<=delta.magnitude)
+            // Use the actual collider, including kinematic interpolation, rather than a separately estimated visual box.
+            var bounds=solid.bounds;bounds.Expand(Vector3.forward);float hit;
+            if(bounds.IntersectRay(new Ray(start,delta.normalized),out hit)&&hit<=delta.magnitude+.01f)
             {suppressedUntil=Time.time+3;game.Feel.Signal("운송 장치 억제 · 투척 정지",new Color(.6f,.95f,1),1);}
         }
     }

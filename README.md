@@ -15,3 +15,5 @@
 - [검증 결과와 한계](AncientCivilization/VALIDATION.txt)
 - [스토리와 9시간 제작 목표](AncientCivilization/STORY_KO.md)
 - [보관한 고그래픽 무기 시안](ArtReferences)
+
+[이번 2시간 작업 기록](AncientCivilization/DEVELOPMENT_REPORT_KO.md)

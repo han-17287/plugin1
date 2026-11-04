@@ -1,5 +1,5 @@
 PLUGIN v0.10.0 / Unity 6000.6.7f1 source project
-Validation UTC: 2026-11-04 11:18
+Validation UTC: 2026-11-04 11:24
 
 PASS: portable asset/metadata/PNG/C# syntax checks below.
 PASS: 551 independent C# combat, progression, layout, frame-statistics and wire-math checks.
