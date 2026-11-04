@@ -97,6 +97,31 @@ class RulesChecks
         Check(!AncientRules.WireImpactOnStep(2,2,4,0,false),"Wire near miss does not deal collision damage");
         Check(!AncientRules.WireImpactOnStep(4,0,1,0,false),"Distant target is not hit before arrival");
         Check(AncientRules.WireImpactOnStep(.5f,0,0,0,false),"Close-range wire hit resolves without division by zero");
+        Check(AncientRules.BladeReboundSpeed(-20)==6,"Blade rebound arrests a fall with a small upward impulse");
+        Check(AncientRules.BladeReboundSpeed(3)==7,"Blade rebound adds lift during an ordinary ascent");
+        Check(AncientRules.BladeReboundSpeed(8)==9,"Repeated rebound upward speed is capped");
+        Check(AncientRules.BladeReboundSpeed(14)==14,"Rebound never slows an existing fast jump");
+        Check(AncientTraversalLayout.MainRoute[0].left<=132&&AncientTraversalLayout.MainRoute[0].right>=136,"Elevator and course entrance stand on safe ground");
+        Check(AncientTraversalLayout.MainRoute[AncientTraversalLayout.MainRoute.Length-1].right>AncientTraversalLayout.Finish,"Finish is on a wide landing");
+        foreach(var ledge in AncientTraversalLayout.MainRoute)
+        {
+            Check(ledge.right-ledge.left>=4,"Beginner route has forgiving landing width");
+            Check(ledge.top+2.1f<AncientTraversalLayout.Ceiling,"Beginner ledge has full player headroom");
+        }
+        for(int i=1;i<AncientTraversalLayout.MainRoute.Length;i++)
+        {
+            var before=AncientTraversalLayout.MainRoute[i-1];var next=AncientTraversalLayout.MainRoute[i];
+            Check(next.left-before.right<=6,"Beginner route gap remains within short wire range");
+            Check(next.top-before.top<3.0f,"Beginner route avoids oversized vertical steps");
+        }
+        foreach(var ledge in AncientTraversalLayout.FastRoute)
+        {
+            Check(ledge.top+2.1f<AncientTraversalLayout.Ceiling,"Fast route leaves clearance under continuous ceiling");
+            Check(ledge.top>5,"Fast route is separated from beginner platforms");
+        }
+        Check(AncientTraversalLayout.TargetX.Length==AncientTraversalLayout.TargetY.Length,"All rebound targets have complete coordinates");
+        for(int i=0;i<AncientTraversalLayout.TargetX.Length;i++)
+            Check(AncientTraversalLayout.TargetY[i]+.6f<AncientTraversalLayout.Ceiling,"Rebound target floats below ceiling");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

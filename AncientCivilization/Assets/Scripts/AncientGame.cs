@@ -15,6 +15,7 @@ namespace Plugin.AncientCivilization
         public readonly List<AncientPickup> pickups = new List<AncientPickup>();
         public readonly List<AncientParkedBike> parkedBikes=new List<AncientParkedBike>();
         public AncientEnemy boss;
+        public AncientTraversal Traversal {get;private set;}
         public bool skills, won, bossDefeated, showHelp = true;
         public bool MainMenu {get;private set;}
         public bool HasSession {get;private set;}
@@ -94,11 +95,16 @@ namespace Plugin.AncientCivilization
             Platform(4,7,3.5f);Platform(12,16,3.4f);Platform(28,33,4);
             Platform(46,52,4.8f);Platform(68,72,3.5f);Platform(88,94,4);
             // One unbroken solid ceiling covers the entire level and extends past both camera edges.
-            Ceiling(-40,180,10);
-            Platform(128,174,0);Platform(139,144,4);Platform(159,165,4);
+            Ceiling(-40,280,10);
+            foreach(var ledge in AncientTraversalLayout.MainRoute)Platform(ledge.left,ledge.right,ledge.top);
+            foreach(var ledge in AncientTraversalLayout.FastRoute)Platform(ledge.left,ledge.right,ledge.top);
+            Platform(128,264,-4.5f);
+            Traversal=gameObject.AddComponent<AncientTraversal>();Traversal.Initialize(this);
             AncientArt.Display("Upper city entry",AncientArt.World(3),new Vector2(132,0),-1);
             AncientArt.Display("Eastern gate",AncientArt.World(3),new Vector2(115,0),-1);
             BuildLiftTerminal(115);BuildLiftTerminal(132);
+            var courseEnd=Box("Maintenance exit bulkhead",new Vector2(265,5),new Vector2(.4f,10),new Color(.06f,.13f,.18f),1);
+            courseEnd.layer=8;courseEnd.AddComponent<BoxCollider2D>();
             // Separate city exits; floors are connected only by the elevator.
             foreach(float x in new[]{119f,127f})
             {var boundary=Box("Elevator shaft boundary",new Vector2(x,5),new Vector2(.4f,10),new Color(.05f,.1f,.13f),-2);boundary.layer=8;boundary.AddComponent<BoxCollider2D>();}
@@ -282,7 +288,7 @@ namespace Plugin.AncientCivilization
             float zoom=hero.Wired?7.5f:hero.bike?6.8f:5.8f;
             view.orthographicSize=Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
             float lead=hero.Facing*Mathf.Lerp(2.5f,4,Mathf.Clamp01(speed/25));
-            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Story&&Story.InUpperCity?133:5,Story&&Story.InUpperCity?166:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
+            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Story&&Story.InUpperCity?133:5,Story&&Story.InUpperCity?256:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
             cameraFollow=Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
             var p=cameraFollow;if(shake>0&&!skills){p+=(Vector3)(Random.insideUnitCircle*shake);shake=Mathf.MoveTowards(shake,0,Time.deltaTime);}
             float displayPPU=Mathf.Max(1,Screen.height/(view.orthographicSize*2));
@@ -300,7 +306,7 @@ namespace Plugin.AncientCivilization
         }
         public void NewRun()
         {
-            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity"})PlayerPrefs.DeleteKey(SaveKey+key);
+            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs"})PlayerPrefs.DeleteKey(SaveKey+key);
             PlayerPrefs.Save();startAfterReload=true;Time.timeScale=1;SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
         void Upgrade(Rect rect,string text,int price,int required,bool owned,System.Action unlock)
@@ -533,7 +539,7 @@ namespace Plugin.AncientCivilization
             if(Input.GetKeyUp(KeyCode.Space))cutJump=true;
             if(Input.GetKeyDown(KeyCode.F))absorbAt=Time.time;
             if(Input.GetKeyDown(KeyCode.LeftControl)||Input.GetKeyDown(KeyCode.RightControl))running=!running;
-            if(Input.GetKeyDown(KeyCode.E)&&!g.Story.TryUseLift())InteractBike();
+            if(Input.GetKeyDown(KeyCode.E)&&!g.Story.TryUseLift()&&!(g.Traversal&&g.Traversal.TryInteract()))InteractBike();
             if(Input.GetKeyDown(KeyCode.X)&&bike)ExplodeBike();
             // Directional wheel selection never toggles back repeatedly during a long scroll gesture.
             float wheel=Input.mouseScrollDelta.y;
@@ -577,6 +583,15 @@ namespace Plugin.AncientCivilization
             art.color=Time.time<invulnerableUntil&&(int)(Time.time*14)%2==0?new Color(1,1,1,.45f):Color.white;
             art.enabled=!bike;
             trail.emitting=wired||bike;
+        }
+        public void BladeRebound()
+        {
+            if(!body||bike||Grounded())return;
+            StopWire(false);Vector2 velocity=body.linearVelocity;
+            velocity.y=AncientRules.BladeReboundSpeed(velocity.y);body.linearVelocity=velocity;
+            // Preserve horizontal momentum so the rebound can feed into the next wire.
+            momentumUntil=Time.time+.65f;cutJump=false;jumpBufferedUntil=-10;lastGrounded=-100;
+            AncientGame.Instance.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(1,.9f,.2f),7);
         }
         public void BladePose(float facing,int index)
         {combo=index;strikeFacing=facing;strikeAt=Time.time+.08f;actionUntil=Time.time+.24f;}

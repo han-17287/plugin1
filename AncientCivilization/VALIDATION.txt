@@ -12,6 +12,7 @@ PASS: 32-character GUID Scripts.meta
 PASS: metadata coverage Main.unity
 PASS: metadata target Assets/Scenes/Main.unity.meta
 PASS: 32-character GUID Main.unity.meta
+PASS: metadata coverage AncientTraversalLayout.cs
 PASS: metadata target Assets/Scripts/AncientMainMenu.cs.meta
 PASS: 32-character GUID AncientMainMenu.cs.meta
 PASS: metadata target Assets/Scripts/AncientDistrict.cs.meta
@@ -27,10 +28,15 @@ PASS: metadata coverage AncientArt.cs
 PASS: metadata target Assets/Scripts/AncientParkedBike.cs.meta
 PASS: 32-character GUID AncientParkedBike.cs.meta
 PASS: metadata coverage AncientRules.cs
+PASS: metadata coverage AncientTraversal.cs
 PASS: metadata target Assets/Scripts/AncientCombat.cs.meta
 PASS: 32-character GUID AncientCombat.cs.meta
 PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
 PASS: 32-character GUID AncientVisuals.cs.meta
+PASS: metadata target Assets/Scripts/AncientTraversal.cs.meta
+PASS: 32-character GUID AncientTraversal.cs.meta
+PASS: metadata target Assets/Scripts/AncientTraversalLayout.cs.meta
+PASS: 32-character GUID AncientTraversalLayout.cs.meta
 PASS: metadata target Assets/Scripts/AncientRules.cs.meta
 PASS: 32-character GUID AncientRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
@@ -233,9 +239,11 @@ PASS: motorcycle component silhouette and transparent gutters 3
 PASS: rotating wheel silhouette is circular
 PASS: healthy and damaged chassis display widths agree
 PASS: scrap projectile silhouette and transparent gutters
+PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientPointer.cs
 PASS: C# syntax AncientArt.cs
 PASS: C# syntax AncientRules.cs
+PASS: C# syntax AncientTraversal.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientAudio.cs
@@ -251,4 +259,4 @@ PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: 118 combat and quest rule checks
+PASS: 187 combat and quest rule checks

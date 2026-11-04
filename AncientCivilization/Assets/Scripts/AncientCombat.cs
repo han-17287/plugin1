@@ -75,19 +75,20 @@ namespace Plugin.AncientCivilization
             combo=Time.time>comboUntil?1:combo%3+1;comboUntil=Time.time+.8f;
             bladeDirection=(AimPoint()-Origin).normalized;if(bladeDirection.sqrMagnitude<.1f)bladeDirection=Vector2.right*hero.Facing;
             hero.BladePose(bladeDirection.x<0?-1:1,combo);BladeUses++;game.Sound(0);
-            Vector2 origin=Origin;
+            Vector2 origin=Origin;bool rebound=game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection);
             for(int i=game.shots.Count-1;i>=0;i--)
             {
                 var shot=game.shots[i];if(!shot||shot.friendly)continue;
                 Vector2 delta=(Vector2)shot.transform.position-origin;
                 if(delta.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,shot.transform.position,1<<8))
-                {EmitParticles(shot.transform.position,Mathf.Clamp(shot.damage,8,25));shot.Remove();BrokenObjects++;game.Story.OnTraining(5);}
+                {rebound=true;EmitParticles(shot.transform.position,Mathf.Clamp(shot.damage,8,25));shot.Remove();BrokenObjects++;game.Story.OnTraining(5);}
             }
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
                 var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
-                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8))enemy.Hit(combo==3?42:28,combo==3);
+                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8)){if(enemy.kind==4)rebound=true;enemy.Hit(combo==3?42:28,combo==3);}
             }
+            if(rebound)hero.BladeRebound();
             game.Burst(origin+bladeDirection*1.5f,Yellow,6);
         }
         public void EmitParticles(Vector2 position,float energy)
