@@ -415,6 +415,23 @@ class RulesChecks
         Check(AncientClockRules.BroadHit(2,-5,11),"Moving outside underfoot safe lane enters broad attack");
         Check(AncientClockRules.BroadHit(0,0,11),"Boss centre is not an accidental safe spot");
         Check(!AncientClockRules.BroadHit(12,0,11),"Broad attack does not damage outside its displayed radius");
+        Check(AncientFieldLayout.Routes.Length==20,"Every field mission has authored route data");
+        foreach(var route in AncientFieldLayout.Routes)
+        {
+            Check(route.Length==9,"Field route retains all three required investigation sections");
+            for(int i=0;i<route.Length;i++)
+            {
+                var ledge=route[i];Check(ledge.right-ledge.left>=7,"Main field route has broad ordinary landings");
+                Check(ledge.left>=14&&ledge.right<=114,"Field landings remain between entry and exit");
+                Check(ledge.top>=0&&ledge.top+2.2f<9,"Required ledges preserve character clearance beneath the solid ceiling");
+                if(i>0)
+                {
+                    var previousLedge=route[i-1];Check(ledge.left-previousLedge.right>0&&ledge.left-previousLedge.right<4.6f,"Ordinary route gaps stay below the jump budget");
+                    Check(Math.Abs(ledge.top-previousLedge.top)<=2.2f,"Main route does not demand expert wire tech at every landing");
+                }
+            }
+            Check(route[0].top<1.5f&&route[8].top<2.5f,"Entrance and return to exit remain approachable");
+        }
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

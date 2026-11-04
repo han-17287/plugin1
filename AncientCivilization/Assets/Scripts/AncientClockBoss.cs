@@ -62,6 +62,7 @@ namespace Plugin.AncientCivilization
         }
         public void Tick()
         {
+            owner.BossContact();
             Vector2 target=game.hero.transform.position;float facing=target.x<owner.transform.position.x?-1:1;
             owner.BossVisual(state==State.Rest?5:state==State.Vector?1:state==State.AreaActive?2:3,facing,WindupProgress,Telegraphing,Recovering);
             if(state==State.Rest)
@@ -118,6 +119,7 @@ namespace Plugin.AncientCivilization
             }
             if(state==State.RainTell)
             {
+                landing.startColor=landing.endColor=AncientGame.Orange;
                 Circle(landing,new Vector2(Mathf.Clamp(target.x,left+1,right-1),8.4f),.45f);
                 if(Time.time>=until){Hide();Enter(State.Rain,4.2f);nextRain=Time.time;}
                 return;

@@ -1,4 +1,4 @@
-PASS: 2310 combat and quest rule checks
+PASS: 3211 combat and quest rule checks
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
 PASS: metadata coverage Scenes
@@ -76,6 +76,8 @@ PASS: metadata target Assets/Scripts/AncientFieldCases.cs.meta
 PASS: 32-character GUID AncientFieldCases.cs.meta
 PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
 PASS: 32-character GUID AncientVisuals.cs.meta
+PASS: metadata target Assets/Scripts/AncientFieldLayout.cs.meta
+PASS: 32-character GUID AncientFieldLayout.cs.meta
 PASS: metadata target Assets/Scripts/AncientTraversal.cs.meta
 PASS: 32-character GUID AncientTraversal.cs.meta
 PASS: metadata target Assets/Scripts/AncientTraversalLayout.cs.meta
@@ -146,6 +148,7 @@ PASS: metadata coverage AncientFieldScenery.cs
 PASS: metadata target Assets/Scripts/AncientKoreanUI.cs.meta
 PASS: 32-character GUID AncientKoreanUI.cs.meta
 PASS: metadata coverage AncientHUD.cs
+PASS: metadata coverage AncientFieldLayout.cs
 PASS: metadata coverage AncientStory.cs
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
 PASS: 32-character GUID AncientArt.cs.meta
@@ -626,6 +629,7 @@ PASS: C# syntax AncientFinale.cs
 PASS: C# syntax AncientCombat.cs
 PASS: C# syntax AncientFieldScenery.cs
 PASS: C# syntax AncientHUD.cs
+PASS: C# syntax AncientFieldLayout.cs
 PASS: C# syntax AncientStory.cs
 PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs

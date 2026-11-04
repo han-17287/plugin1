@@ -55,15 +55,17 @@ namespace Plugin.AncientCivilization
             if(mission.Kind==2)game.Platform(left+14,right-18,0);
             else for(int i=0;i<9;i++)
             {
-                float x=left+16+i*11;float top=Height(mission.Id,i);
-                game.Platform(x,x+8,top);
-                game.StaticBox("Field route edge",new Vector2(x+4,top+.025f),new Vector2(8,.05f),AncientGame.Cyan,3);
-                if(i%3==1)game.Platform(x+1,x+3.5f,6.2f);
+                var segment=AncientFieldLayout.Segment(mission.Id,i);float x=left+segment.left,top=segment.top;
+                game.Platform(x,left+segment.right,top);
+                game.StaticBox("Field route edge",new Vector2(left+(segment.left+segment.right)*.5f,top+.025f),new Vector2(segment.right-segment.left,.05f),AncientGame.Cyan,3);
+                if(i%3==1)
+                {float fastTop=Mathf.Max(6.2f,top+2.2f);game.Platform(x+1,x+3.2f,fastTop);game.StaticBox("Expert field shortcut",new Vector2(x+2.1f,fastTop+.03f),new Vector2(2.2f,.05f),new Color(1,.82f,.2f),4);}
             }
             if(mission.Floor==0)for(int index=3;index<=6;index+=3)
             {
-                float top=mission.Kind==2?0:Height(mission.Id,index),x=left+16+index*11;
-                game.StaticBox("Visible field conveyor",new Vector2(x+4,top+.04f),new Vector2(8,.08f),index==3?AncientGame.Cyan:AncientGame.Orange,4);
+                var segment=AncientFieldLayout.Segment(mission.Id,index);
+                float top=mission.Kind==2?0:segment.top,x=left+segment.left,width=segment.right-segment.left;
+                game.StaticBox("Visible field conveyor",new Vector2(x+width*.5f,top+.04f),new Vector2(width,.08f),index==3?AncientGame.Cyan:AncientGame.Orange,4);
             }
             foreach(float x in new[]{left-.2f,right+.2f})
             {var wall=game.Box("Field boundary",new Vector2(x,4),new Vector2(.4f,12),tint,0);wall.layer=8;wall.AddComponent<BoxCollider2D>();}
@@ -95,12 +97,12 @@ namespace Plugin.AncientCivilization
         }
         readonly List<AncientAirTarget> buoys=new List<AncientAirTarget>();
         readonly List<AncientMovingAnchor> cranes=new List<AncientMovingAnchor>();
-        static float Height(int id,int ledge){return .6f+((ledge*2+id)%4)*.65f;}
+        static float Height(int id,int ledge){return AncientFieldLayout.Segment(id,ledge).top;}
         static bool UsesBlade(int kind,int node){return kind==1||kind==2&&node==0||kind==3&&node==0;}
         static Vector2 NodePoint(int id,int index)
         {
             var mission=AncientCampaignData.Missions[id];float left=AncientCampaignRules.Left(id);
-            int ledge=2+index*3;float x=left+20+ledge*11;
+            int ledge=2+index*3;var segment=AncientFieldLayout.Segment(id,ledge);float x=left+(segment.left+segment.right)*.5f;
             if(mission.Kind==2)return new Vector2(index==2?left+119:index==1?left+45:left+31,1.2f);
             return new Vector2(x,Height(id,ledge)+1.3f);
         }
@@ -132,7 +134,7 @@ namespace Plugin.AncientCivilization
             game.hero.TravelTo(new Vector2(left+6,1.3f));
             for(int i=0;i<2;i++)
             {
-                int ledge=2+i*4;float x=left+20+ledge*11;float y=AncientCampaignData.Missions[id].Kind==2?0:Height(id,ledge);
+                int ledge=2+i*4;var segment=AncientFieldLayout.Segment(id,ledge);float x=left+(segment.left+segment.right)*.5f;float y=AncientCampaignData.Missions[id].Kind==2?0:Height(id,ledge);
                 var enemy=new GameObject("Field criminal").AddComponent<AncientEnemy>();int kind=i==0?0:game.Story.CurrentFloor==3?4:game.Story.CurrentFloor==2?5:id%3==0?2:1;enemy.Initialize(kind);
                 if(kind==4)y+=2.5f;
                 enemy.transform.position=new Vector2(x,y);enemy.ConfigureDistrict(game.Story.CurrentFloor,false);foes.Add(enemy);game.enemies.Add(enemy);
@@ -287,8 +289,8 @@ namespace Plugin.AncientCivilization
             {
                 for(int index=3;index<=6;index+=3)
                 {
-                    float x=left+16+index*11,top=AncientCampaignData.Missions[active].Kind==2?0:Height(active,index);
-                    if(p.x>=x&&p.x<=x+8&&Mathf.Abs(p.y-(top+1.05f))<.3f)game.hero.ConveyorDrift(index==3?1:-1);
+                    var segment=AncientFieldLayout.Segment(active,index);float x=left+segment.left,top=AncientCampaignData.Missions[active].Kind==2?0:segment.top;
+                    if(p.x>=x&&p.x<=left+segment.right&&Mathf.Abs(p.y-(top+1.05f))<.3f)game.hero.ConveyorDrift(index==3?1:-1);
                 }
             }
             if(AncientCampaignData.Missions[active].Kind==2&&following&&(tasks&4)==0)
@@ -322,7 +324,7 @@ namespace Plugin.AncientCivilization
                 }
                 if(AncientCampaignData.Missions[active].Floor==0)for(int index=3;index<=6;index+=3)
                 {
-                    float x=AncientCampaignRules.Left(active)+20+index*11,top=AncientCampaignData.Missions[active].Kind==2?0:Height(active,index);
+                    var segment=AncientFieldLayout.Segment(active,index);float x=AncientCampaignRules.Left(active)+(segment.left+segment.right)*.5f,top=AncientCampaignData.Missions[active].Kind==2?0:segment.top;
                     var point=game.View.WorldToScreenPoint(new Vector2(x,top+.7f));
                     if(point.x>0&&point.x<Screen.width)GUI.Label(new Rect(point.x-100,Screen.height-point.y-20,200,30),index==3?"운송 벨트 →":"← 역방향 벨트",label);
                 }

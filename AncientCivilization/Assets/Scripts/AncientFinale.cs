@@ -184,7 +184,7 @@ namespace Plugin.AncientCivilization
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-70;
             float w=Screen.width/scale,h=Screen.height/scale;
             if(phase==0&&game.Story.CurrentFloor==4&&(game.City.Cleared&(1<<4))!=0&&!game.Paused)
-            {GUI.Label(new Rect(w/2-230,h-165,460,50),"회장실 책상 / E: 노트와 회수 계획 확인",label);}
+            {GUI.Label(new Rect(w/2-230,h-165,460,50),game.City.SecretaryCleared?"회장실 책상 / E: 노트와 회수 계획 확인":game.Campaign.ReadyForFinale?"비서실장을 제압하고 회장실로 진입":"보관실 관리인 유담 / 마지막 자료 대조",label);}
             else if(phase==1&&!game.Story.DialogueOpen)
             {GUI.Label(new Rect(w/2-260,h-145,520,70),"회수 작전 개시까지 "+Mathf.CeilToInt(countdown)+"초\n회장실에서 E: 화물 승강로로 먼저 진입",label);}
             else if(phase==2&&!game.Paused)
