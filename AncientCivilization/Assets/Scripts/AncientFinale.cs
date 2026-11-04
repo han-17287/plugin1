@@ -6,7 +6,8 @@ namespace Plugin.AncientCivilization
     public sealed class AncientFinale : MonoBehaviour
     {
         AncientGame game;int phase,zone;float countdown=60,phaseAt;bool restored;
-        AncientFinalTruck truck;SpriteRenderer notebook,windowTruck;LineRenderer supportShot,blast;
+        AncientFinalTruck truck;SpriteRenderer notebook,windowTruck;
+        readonly SpriteRenderer[] boardingCrew=new SpriteRenderer[3];LineRenderer supportShot,blast;
         GUIStyle label,title,button;string caption="";float captionAt;string visibleCaption="";int visibleLetters=-1;
         readonly List<AncientEnemy> crew=new List<AncientEnemy>();
         bool fired;
@@ -48,9 +49,16 @@ namespace Plugin.AncientCivilization
             notebook=game.Box("Chairman recovery notebook",new Vector2(742,1.68f),new Vector2(.48f,.15f),new Color(.9f,.8f,.5f),5).GetComponent<SpriteRenderer>();notebook.transform.SetParent(transform,true);
             windowTruck=AncientArt.Display("Operation truck outside office",AncientArt.Truck(),new Vector2(734,4.8f),-5,transform);
             windowTruck.transform.localScale=Vector3.one*.4f;windowTruck.enabled=false;
+            for(int i=0;i<boardingCrew.Length;i++)
+            {
+                boardingCrew[i]=AncientArt.Display(i==0?"Chairman boarding transport":"Special operations boarding transport",i==0?AncientCitizenArt.Sprite(3):AncientArt.Enemy(1),new Vector2(-5-i*1.2f,0),-4,windowTruck.transform);
+                boardingCrew[i].transform.localScale=Vector3.one*(i==0?1:.65f);boardingCrew[i].enabled=false;
+            }
             supportShot=game.Line("Sniper support shot",Color.white,.025f,28);supportShot.enabled=false;
             blast=game.Line("Core chain-reaction shockwave",new Color(.7f,.95f,1),.14f,27);blast.loop=true;blast.positionCount=40;blast.enabled=false;
         }
+        void ShowBoarding(bool shown)
+        {windowTruck.enabled=shown;foreach(var person in boardingCrew)person.enabled=shown;}
         public void WriteSave()
         {AncientGame.SetSaved("finalePhase",phase);AncientGame.SetSaved("finaleZone",zone);AncientGame.SetSaved("finaleCountdown",Mathf.CeilToInt(countdown));}
         void Persist(){WriteSave();game.Save();}
@@ -59,7 +67,8 @@ namespace Plugin.AncientCivilization
             if(game.Story.CurrentFloor!=4||(game.City.Cleared&(1<<4))==0||Mathf.Abs(game.hero.transform.position.x-742)>3)return false;
             if(phase==0)
             {
-                phase=1;countdown=60;Persist();windowTruck.enabled=true;
+                if(!game.Campaign.ReadyForFinale){game.Notice("회장실 자료 대조를 먼저 마치세요. 회장실 앞 보관실 관리인 유담에게 현장을 확인하세요.",4);return true;}
+                phase=1;countdown=60;Persist();ShowBoarding(true);
                 game.Story.FinaleBriefing("회장은 없다. 노트에는 최하층 아래에 묻힌 고대 문명이 적혀 있어… 옆에는 회수 계획. C-00 코어는 이 작전에 묶인 물량이었군.",
                     "작전 개시까지 1분. 창밖이다! 회장과 특수부대가 코어 운송 트럭에 타고 있어. 화물 승강로로 내려가면 따라붙을 수 있다.");return true;
             }
@@ -75,7 +84,7 @@ namespace Plugin.AncientCivilization
         }
         void BeginChase()
         {
-            phase=2;game.won=false;fired=false;windowTruck.enabled=false;supportShot.enabled=blast.enabled=false;ClearTruck();
+            phase=2;game.won=false;fired=false;ShowBoarding(false);supportShot.enabled=blast.enabled=false;ClearTruck();
             float start=AncientFinaleRules.Checkpoint(zone);
             game.hero.TravelTo(new Vector2(start,AncientFinaleRules.Road(start)+1.3f));game.City.OnEnterFloor();
             truck=new GameObject("Chairman core transport truck").AddComponent<AncientFinalTruck>();truck.Initialize(game,this,start+13);
@@ -105,7 +114,7 @@ namespace Plugin.AncientCivilization
                 restored=true;
                 if(AncientFinaleRules.RestorePhase(phase)==2){phase=2;BeginChase();}
                 else if(phase==5){game.won=true;phaseAt=Time.unscaledTime;}
-                else if(phase==1)windowTruck.enabled=true;
+                else if(phase==1)ShowBoarding(true);
             }
             if(game.MainMenu)return;
             if(phase==3)
@@ -138,7 +147,16 @@ namespace Plugin.AncientCivilization
             }
             if(game.Paused)return;
             if(phase==1)
-            {countdown-=Time.deltaTime;if(countdown<=0)BeginChase();}
+            {
+                countdown-=Time.deltaTime;
+                float elapsed=60-countdown;
+                for(int i=0;i<boardingCrew.Length;i++)
+                {
+                    float t=Mathf.Clamp01((elapsed-i*.65f)/2.3f);
+                    boardingCrew[i].transform.localPosition=Vector2.Lerp(new Vector2(-5-i*1.2f,0),new Vector2(-.7f+i*.7f,2.15f),t);
+                }
+                if(countdown<=0)BeginChase();
+            }
             if(phase==2&&truck)
             {
                 int next=AncientFinaleRules.Zone(game.hero.transform.position.x);

@@ -44,7 +44,7 @@ namespace Plugin.AncientCivilization
             Label(new Rect(left+18,top+22,500,28),"도시 1회차 / 아래에서 시작된 사건",caption,AncientGame.Cyan);
             Label(new Rect(left+12,top+55,520,92),"PLUGIN",logo,Color.white);
             Label(new Rect(left+18,top+153,510,45),"ANCIENT CIVILIZATION",heading,Color.white);
-            Label(new Rect(left+18,top+208,480,62),"하층 치안경찰의 순찰. 사라진 에너지 코어. 검거한 사건의 기록은 왜 가려져 있을까.",body,new Color(.65f,.77f,.81f));
+            Label(new Rect(left+18,top+208,480,62),"하층 치안경찰 백명의 순찰. 사라진 에너지 코어. 검거한 사건의 기록은 왜 가려져 있을까.",body,new Color(.65f,.77f,.81f));
             float xButton=left+18,yButton=top+298;
             bool canContinue=game.HasSession||game.HasSavedProgress;
             GUI.enabled=canContinue;
@@ -62,7 +62,7 @@ namespace Plugin.AncientCivilization
                 Application.Quit();
 #endif
             }
-            Label(new Rect(left+18,top+561,500,28),"F6 효과   F7 소리   v0.10.0 / CITY DESCENT",caption,new Color(.42f,.59f,.64f));
+            Label(new Rect(left+18,top+561,500,28),"F6 효과   F7 소리   v0.11.0 / BAEK MYEONG",caption,new Color(.42f,.59f,.64f));
             Rect portrait=new Rect(left+630,top+75,430,520);
             GUI.color=new Color(.8f,.95f,1,.9f);
             var hero=AncientArt.Hero(0);Rect tex=hero.textureRect;

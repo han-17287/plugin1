@@ -303,6 +303,71 @@ class RulesChecks
         Check(AncientFrameRules.P95Index(1)==0,"One-frame percentile is in bounds");
         Check(AncientFrameRules.P95Index(20)==18,"P95 uses the nearest rank");
         Check(AncientFrameRules.P95Index(240)==227,"Full sample window percentile remains in bounds");
+        Check(AncientCampaignData.Missions.Length==20,"Five chapters contain twenty playable field cases");
+        Check(AncientCampaignData.Citizens.Length==25,"Twenty-five residents have dialogue");
+        Check(AncientCampaignData.HeroName=="백명","The agreed protagonist name is canonical");
+        int campaignMask=0;
+        for(int id=0;id<20;id++)
+        {
+            var mission=AncientCampaignData.Missions[id];int floor=id/4;
+            Check(mission.Id==id&&mission.Floor==floor,"Mission IDs and chapter assignment are stable save keys");
+            Check(AncientCampaignRules.Next(campaignMask,floor)==id,"Chapter cases unlock in narrative order");
+            Check(!AncientCampaignRules.CanStart(campaignMask,id,(floor+1)%5,9,31),"A field case cannot start from the wrong city floor");
+            Check(AncientCampaignRules.CanStart(campaignMask,id,floor,9,31),"Ordered field case is playable after its story prerequisites");
+            Check(!AncientCampaignRules.CanStart(campaignMask,id,floor,0,31),"Field cases cannot bypass the opening tutorial");
+            Check(mission.Tasks.Length==3&&AncientCampaignData.Details[id].Length==3,"Every case has three concrete objectives and evidence details");
+            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+6)==id,"Each interior entry maps to the correct room");
+            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+131)==id,"Each field exit remains in its room");
+            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+138)==-1,"Inter-room void cannot be mistaken for another field");
+            Check(AncientCityLayout.VisualSector(AncientCampaignRules.Left(id)+42)==floor,"Field scenery displays on its actual city floor");
+            campaignMask=AncientCampaignRules.Claim(campaignMask,id);
+            Check(AncientCampaignRules.Claim(campaignMask,id)==campaignMask,"Field reward claim is idempotent");
+        }
+        for(int floor=0;floor<=4;floor++)
+        {
+            Check(AncientCampaignRules.FloorCount(campaignMask,floor)==4,"Each floor records exactly four resolved field cases");
+            Check(AncientCampaignRules.Next(campaignMask,floor)==-1,"Completed chapter has no duplicate next case");
+        }
+        Check(!AncientCampaignRules.ReadyForBoss(0,1),"New campaign boss cannot skip all investigation");
+        Check(AncientCampaignRules.ReadyForBoss(7<<16,4),"Top sniper follows the first three infiltration cases");
+        Check(!AncientCampaignRules.CanStart(7<<16,19,4,9,0),"Office comparison waits for the sniper encounter");
+        Check(AncientCampaignRules.CanStart(7<<16,19,4,9,16),"Office comparison follows the unnamed sniper encounter");
+        Check(!AncientCampaignRules.AllTasks(3),"Two tasks cannot finish a three-objective field case");
+        Check(AncientCampaignRules.AllTasks(7),"All three objectives permit reporting subject to actual threat clearance");
+        Check(AncientCampaignRules.Objective(1,0)==1,"Repeating a field interaction does not duplicate an objective");
+        Check(AncientCampaignRules.RoomAt(float.NaN)==-1,"Invalid room coordinate never alters chapter rendering");
+        Check(AncientCampaignRules.RoomAt(1400)==-1,"Final descent remains separate from city field interiors");
+        foreach(var citizen in AncientCampaignData.Citizens)
+        {
+            Check(citizen.Before.Length>=2&&citizen.After.Length>=1,"Each resident has early and later dialogue");
+            Check(citizen.Floor==citizen.Id/5,"Resident identity stays on its assigned floor");
+            bool supported=false;
+            if(citizen.Floor==0)supported=Math.Abs(citizen.Y-(citizen.X>=43&&citizen.X<=58?1:0))<.01f;
+            else
+            {
+                var route=citizen.Floor==1?AncientTraversalLayout.MainRoute:AncientCityLayout.Route(citizen.Floor);
+                foreach(var ledge in route)if(citizen.X>=ledge.left&&citizen.X<=ledge.right&&Math.Abs(citizen.Y-ledge.top)<.01f)supported=true;
+            }
+            Check(supported,"Every resident stands on an actual safe city ledge");
+        }
+        Check(AncientCampaignRules.RepeatableEnergyNode(3,0,0),"Power case panel supplies particles before initial collection");
+        Check(AncientCampaignRules.RepeatableEnergyNode(3,1,0),"Broken power panel can refill energy after death clears motes");
+        Check(AncientCampaignRules.RepeatableEnergyNode(3,3,0),"Energy expiry cannot soft-lock the unfinished laser receiver");
+        Check(!AncientCampaignRules.RepeatableEnergyNode(3,7,0),"Finished receiver stops the recovery source");
+        Check(!AncientCampaignRules.RepeatableEnergyNode(0,0,0),"Ordinary record interaction cannot become an energy farm");
+        Check(!AncientCampaignRules.RepeatableEnergyNode(3,0,1),"Evidence console is not a breakable recovery source");
+        Check(!AncientCampaignRules.RepeatableEnergyNode(3,0,2),"Laser receiver never supplies its own charge");
+        Check(!AncientCampaignRules.UseLaterDialogue(true,true,false),"A resident's first Joker clue survives late first contact");
+        Check(AncientCampaignRules.UseLaterDialogue(true,true,true),"After the clue is heard the resident moves to later dialogue");
+        Check(AncientCampaignRules.UseLaterDialogue(true,false,false),"Ordinary resident dialogue reflects solved cases immediately");
+        Check(!AncientCampaignRules.UseLaterDialogue(false,true,true),"Early chapter state retains its appropriate conversation");
+        foreach(var mission in AncientCampaignData.Missions)if(mission.Kind==2)
+        {
+            int person=AncientCampaignRules.Witness(mission.Id);
+            Check(person>=0&&person<25,"Protected witness uses a real resident appearance");
+            Check(AncientCampaignRules.WalkRow(person)>=0,"Protected witness has a dedicated walk cycle");
+        }
+        Check(AncientCampaignRules.WalkRow(0)==-1,"Static residents cannot accidentally use another character's walk row");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

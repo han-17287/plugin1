@@ -71,7 +71,7 @@ namespace Plugin.AncientCivilization
         {
             if(game.Traversal)game.Traversal.ResetForTravel();
             foreach(var enemy in game.enemies.ToArray())
-                if(enemy&&enemy.DistrictFloor>0){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}
+                if(enemy&&(enemy.DistrictFloor>0||(game.Story&&game.Story.Stage>=8&&enemy.DistrictFloor==0&&!enemy.IsBoss))){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}
             if(game.boss&&game.boss.DistrictFloor>0)game.boss=null;
             foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();
             for(int i=game.pickups.Count-1;i>=0;i--)
@@ -89,7 +89,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!game||!game.Story||!game.hero||game.Paused||game.Story.CurrentFloor==0||(game.Finale&&game.Finale.Active))return;
+            if(!game||!game.Story||!game.hero||game.Paused||game.Story.CurrentFloor==0||(game.Campaign&&game.Campaign.Active)||(game.Finale&&game.Finale.Active))return;
             int floor=game.Story.CurrentFloor;float x=AncientCityLayout.Left(floor);var p=game.hero.transform.position;
             if(activeFloor!=floor)
             {
@@ -105,7 +105,7 @@ namespace Plugin.AncientCivilization
                     }
                 }
             }
-            if(!activeBoss&&(Cleared&(1<<floor))==0&&p.x>=AncientCityLayout.ArenaLeft(floor)+1&&p.y<4)
+            if(!activeBoss&&game.Campaign.ReadyForBoss(floor)&&(Cleared&(1<<floor))==0&&p.x>=AncientCityLayout.ArenaLeft(floor)+1&&p.y<4)
             {
                 game.CombatCheckpoint(floor,new Vector2(AncientCityLayout.ArenaLeft(floor)+1.5f,1.3f));
                 Spawn(AncientCityLayout.ArenaRight(floor)-4,0,floor==4?1:3,floor,true);
@@ -161,7 +161,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||!game.Story||game.Paused||game.MainMenu||(game.Finale&&game.Finale.Active)||Event.current.type!=EventType.Repaint)return;
+            if(!game||!game.Story||game.Paused||game.MainMenu||(game.Campaign&&game.Campaign.Active)||(game.Finale&&game.Finale.Active)||Event.current.type!=EventType.Repaint)return;
             int floor=game.Story.CurrentFloor;if(floor==0)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             string hint=floor==1?"생활구 / 부유체 반동 → 와이어 재연결":floor==2?"행정구 / 붉은 예고 뒤 셔터 폐쇄 · 낮은 경로로 우회":floor==3?"거주구 / 환기 상승류로 금색 지름길 진입":"최상층 / 발판 점멸 후 붕괴 · 안정된 아래 경로는 유지";
@@ -181,16 +181,18 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientSecurityShutter : MonoBehaviour
     {
-        AncientGame game;SpriteRenderer art;BoxCollider2D solid;Vector2 centre;float phase;
+        AncientGame game;SpriteRenderer art;BoxCollider2D solid;Vector2 centre;float phase;int room;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point,int index)
         {
-            game=owner;centre=point;phase=index*1.1f;
+            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);phase=index*1.1f;
             var o=game.Box("Telegraphed shutter",point,new Vector2(.35f,3.2f),AncientGame.Cyan,3);o.transform.SetParent(transform,true);
             art=o.GetComponent<SpriteRenderer>();o.layer=8;solid=o.AddComponent<BoxCollider2D>();solid.enabled=false;
         }
         void Update()
         {
-            if(game.Paused)return;bool close=AncientCityLayout.ShutterClosed(Time.time,phase);
+            bool visible=game.Story&&game.Story.CurrentFloor==AncientCityLayout.VisualSector(centre.x)&&game.Campaign.CurrentRoom==room;
+            if(shown!=visible){shown=visible;art.enabled=visible;if(!visible)solid.enabled=false;}
+            if(!visible||game.Paused)return;bool close=AncientCityLayout.ShutterClosed(Time.time,phase);
             // Never materialize a solid shutter inside the character.
             if(game.hero&&Mathf.Abs(game.hero.transform.position.x-centre.x)<.65f&&Mathf.Abs(game.hero.transform.position.y-centre.y)<2.7f)close=false;
             solid.enabled=close;art.color=close?new Color(.8f,.2f,.1f):AncientCityLayout.ShutterWarning(Time.time,phase)?new Color(1,.65f,.1f):new Color(.1f,.7f,.8f,.2f);
@@ -198,16 +200,18 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientCityVent : MonoBehaviour
     {
-        AncientGame game;Vector2 centre;int floor;SpriteRenderer plume;
+        AncientGame game;Vector2 centre;int floor,room;SpriteRenderer plume;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point,int district)
         {
-            game=owner;centre=point;floor=district;
+            game=owner;centre=point;floor=district;room=AncientCampaignRules.RoomAt(point.x);
             plume=game.Box("Visible ventilation column",point+Vector2.up*2,new Vector2(1.5f,4.5f),new Color(.4f,.9f,.7f,.18f),2).GetComponent<SpriteRenderer>();
             plume.transform.SetParent(transform,true);
         }
         void Update()
         {
-            if(game.Paused)return;
+            bool visible=game.Story&&game.Story.CurrentFloor==floor&&game.Campaign.CurrentRoom==room;
+            if(shown!=visible){shown=visible;plume.enabled=visible;}
+            if(!visible||game.Paused)return;
             plume.color=new Color(.4f,.9f,.7f,.12f+.1f*(.5f+.5f*Mathf.Sin(Time.time*5)));
             if(game.Story.CurrentFloor!=floor||game.hero.bike)return;
             Vector2 delta=(Vector2)game.hero.transform.position-centre;
@@ -216,15 +220,17 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientCrumbleLedge : MonoBehaviour
     {
-        AncientGame game;BoxCollider2D solid;SpriteRenderer art;Vector2 centre;float collapseAt=-1,restoreAt;
+        AncientGame game;BoxCollider2D solid;SpriteRenderer art;Vector2 centre;float collapseAt=-1,restoreAt;int room;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point)
         {
-            game=owner;centre=point;var o=game.Box("Collapsible illegal-access scaffold",point,new Vector2(3,.3f),new Color(1,.65f,.2f),3);
+            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);var o=game.Box("Collapsible illegal-access scaffold",point,new Vector2(3,.3f),new Color(1,.65f,.2f),3);
             o.transform.SetParent(transform,true);o.layer=8;solid=o.AddComponent<BoxCollider2D>();art=o.GetComponent<SpriteRenderer>();
         }
         void Update()
         {
-            if(game.Paused)return;
+            bool visible=game.Story&&game.Story.CurrentFloor==4&&game.Campaign.CurrentRoom==room;
+            if(shown!=visible){shown=visible;if(!visible){art.enabled=false;solid.enabled=false;}}
+            if(!visible||game.Paused)return;
             Vector2 delta=(Vector2)game.hero.transform.position-centre;
             if(!solid.enabled)
             {

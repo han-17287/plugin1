@@ -130,6 +130,41 @@ def main():
         projected = sum(1 for r,g,b,a in rgba_pixels(body_image.crop((640,480,750,565)))
                         if a >= 110 and g > 130 and b > 150 and r < 150)
         check(projected < 30, 'runtime emitter body has no baked wire to duplicate the live helix')
+        atlas = (ROOT / 'Assets/Scripts/AncientCitizenAtlas.cs').read_text()
+        atlas_rects = [tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',atlas.split('Rect[] Bounds={')[1].split('};')[0])]
+        walk_rects = [tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',atlas.split('Rect[] WalkBounds={')[1].split('};')[0])]
+        check(len(atlas_rects)==25 and len(walk_rects)==16,'measured citizen and walk crop coverage')
+        def measured_grid(image,x0,y0,w,h,step):
+            alpha=image.getchannel('A').load()
+            points=[(x,y) for y in range(y0,y0+h,step) for x in range(x0,x0+w,step) if alpha[x+step//2,y+step//2-1]>=110]
+            if not points:return None,frozenset()
+            left=min(x for x,y in points)-3;top=min(y for x,y in points)-3
+            right=max(x for x,y in points)+step+3;bottom=max(y for x,y in points)+step+3
+            return (left,top,right-left,bottom-top),frozenset((x-x0,y-y0) for x,y in points)
+        identities=[]
+        for floor in range(5):
+            path=ROOT / ('Assets/Resources/Art/Citizens'+str(floor)+'.png');info=png_info(path)
+            check(info[:2]==(1536,1024) and info[3]==6,'citizen atlas RGBA dimensions '+str(floor))
+            citizen_image=Image.open(path)
+            for slot in range(6):
+                x0=slot%3*512;y0=slot//3*512;rect,shape=measured_grid(citizen_image,x0,y0,512,512,8)
+                if slot==5:
+                    check(rect is None,'citizen spare cell is truly transparent '+str(floor));continue
+                check(rect==atlas_rects[floor*5+slot],'citizen crop matches exact native-grid alpha '+str(floor*5+slot))
+                x,y,w,h=rect;check(x>x0 and y>y0 and x+w<x0+512 and y+h<y0+512,'citizen silhouette clear gutter '+str(floor*5+slot))
+                px=citizen_image.load();identities.append(tuple(px[x0+xx+4,y0+yy+3] for xx,yy in sorted(shape)))
+            meta=path.with_suffix('.png.meta').read_text()
+            check('isReadable: 1' in meta and 'filterMode: 0' in meta,'citizen point readable import '+str(floor))
+        check(len(set(identities))==25,'all twenty-five citizen appearances are distinct')
+        walk_image=Image.open(ROOT / 'Assets/Resources/Art/CitizensWalk.png')
+        check(walk_image.size==(1536,1024),'four-person walking sheet dimensions')
+        for row in range(4):
+            poses=[]
+            for frame in range(4):
+                rect,shape=measured_grid(walk_image,frame*384,row*256,384,256,4)
+                check(rect==walk_rects[row*4+frame],'walking crop matches native-grid alpha '+str(row*4+frame))
+                poses.append(shape)
+            check(len(set(poses))==4,'escort has four distinct walk phases '+str(row))
         image = Image.open(ROOT / 'Assets/Resources/Art/World.png')
         for i, (x, y, w, h) in enumerate(rects):
             region = image.getchannel('A').crop((x, y, x + w, y + h))
@@ -200,6 +235,12 @@ def main():
             check(not tree.root_node.has_error, 'C# syntax ' + script.name)
     except ImportError:
         results.append('SKIP: C# syntax parser (tree-sitter packages unavailable)')
+    runtime = '\n'.join(p.read_text() for p in (ROOT / 'Assets/Scripts').glob('*.cs'))
+    for spoiler in ('옛 친구', '옛 동료', '명아', '너였어?', '이제야 알아보네'):
+        check(spoiler not in runtime, 'first-run script withholds friendship reveal: ' + spoiler)
+    campaign = (ROOT / 'Assets/Scripts/AncientCampaignData.cs').read_text()
+    check(campaign.count('조커') == 5, 'five sparse Joker mentions across city resident dialogue')
+    check('new Line("치안경찰"' not in runtime, 'protagonist dialogue consistently uses Baek Myeong')
     results.append('NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build')
     print('\n'.join(results))
 

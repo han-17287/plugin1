@@ -9,22 +9,23 @@ namespace Plugin.AncientCivilization
     {
         static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
         static readonly Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
-        static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3],metalCache=new Sprite[3];
+        static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3],metalCache=new Sprite[3],citizenCache=new Sprite[25],citizenWalkCache=new Sprite[16];
         public static Texture2D Texture(string name)
         {
             Texture2D texture;
             if (textures.TryGetValue(name, out texture) && texture) return texture;
             texture = Resources.Load<Texture2D>("Art/" + name);
             if (!texture) throw new System.InvalidOperationException("Missing Art/" + name + ".png");
-            if(name=="Hero"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue")
+            if(name=="Hero"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name.StartsWith("Citizens"))
             {
                 var pixels=texture.GetPixels32();var packed=new uint[pixels.Length];
                 for(int i=0;i<pixels.Length;i++)packed[i]=((uint)pixels[i].r<<24)|((uint)pixels[i].g<<16)|((uint)pixels[i].b<<8)|pixels[i].a;
                 bool rider=name=="Motorcycle";
-                packed=AncientPixels.Grid(packed,texture.width,texture.height,8,rider?730:texture.width,rider?544:texture.height);
+                int grid=name=="CitizensWalk"?4:8;
+                packed=AncientPixels.Grid(packed,texture.width,texture.height,grid,rider?730:texture.width,rider?544:texture.height);
                 for(int i=0;i<pixels.Length;i++){uint c=packed[i];pixels[i]=new Color32((byte)(c>>24),(byte)(c>>16),(byte)(c>>8),(byte)c);}
                 var native=new Texture2D(texture.width,texture.height,TextureFormat.RGBA32,false);
-                native.name=name+" / 8px native grid";native.SetPixels32(pixels);native.Apply();texture=native;
+                native.name=name+" / native palette grid";native.SetPixels32(pixels);native.Apply();texture=native;
             }
             texture.filterMode = FilterMode.Point; texture.wrapMode = TextureWrapMode.Clamp;
             textures[name] = texture; return texture;
@@ -69,6 +70,20 @@ namespace Plugin.AncientCivilization
             // The downloadable sheet previews equipment; live wire/intake effects must not be baked into the actor.
             string sheet=frame==5||frame==6?"HeroEmitterBody":"Hero";
             heroCache[frame]=Slice(sheet, "hero-" + frame, cell, 220, new Vector2(root/cell.width,0),true,true);return heroCache[frame];
+        }
+        public static Sprite Citizen(int id)
+        {
+            id=Mathf.Clamp(id,0,24);if(citizenCache[id])return citizenCache[id];
+            Rect rect=AncientCitizenAtlas.Bounds[id];
+            citizenCache[id]=Slice("Citizens"+(id/5),"citizen-"+id,rect,240,new Vector2((AncientCitizenAtlas.RootX[id]-rect.x)/rect.width,0),false);
+            return citizenCache[id];
+        }
+        public static Sprite CitizenWalk(int id,int frame)
+        {
+            int row=AncientCampaignRules.WalkRow(id);if(row<0)return Citizen(id);int index=row*4+Mathf.Clamp(frame,0,3);
+            if(citizenWalkCache[index])return citizenWalkCache[index];Rect rect=AncientCitizenAtlas.WalkBounds[index];
+            citizenWalkCache[index]=Slice("CitizensWalk","citizen-walk-"+index,rect,AncientCitizenAtlas.WalkPpu[row],new Vector2((AncientCitizenAtlas.WalkRootX[index]-rect.x)/rect.width,0),false);
+            return citizenWalkCache[index];
         }
         public static Sprite World(int index)
         {

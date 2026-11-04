@@ -24,6 +24,7 @@ namespace Plugin.AncientCivilization
         public AncientJournal Journal {get;private set;}
         public AncientFieldCases Cases {get;private set;}
         public AncientFinale Finale {get;private set;}
+        public AncientCampaign Campaign {get;private set;}
         public AncientProjectilePool Projectiles {get;private set;}
         public bool skills, won, bossDefeated, showHelp = true;
         public bool MainMenu {get;private set;}
@@ -108,7 +109,7 @@ namespace Plugin.AncientCivilization
             WorldBatch=gameObject.AddComponent<AncientWorldBatch>();WorldBatch.Initialize(this,square);
             BuildWorld();WorldBatch.Complete();
             Projectiles=gameObject.AddComponent<AncientProjectilePool>();Projectiles.Initialize(this);
-            hero=new GameObject("Lower-city patrol officer").AddComponent<AncientHero>();hero.transform.position=checkpoint;
+            hero=new GameObject("백명 / 하층 치안경찰").AddComponent<AncientHero>();hero.transform.position=checkpoint;
             Story=gameObject.AddComponent<AncientStory>();Story.Initialize(this);
             Performance=gameObject.AddComponent<AncientPerformance>();Performance.Initialize(this);
             Feel=gameObject.AddComponent<AncientGameFeel>();Feel.Initialize(this);
@@ -140,6 +141,7 @@ namespace Plugin.AncientCivilization
             Traversal=gameObject.AddComponent<AncientTraversal>();Traversal.Initialize(this);
             City=gameObject.AddComponent<AncientCityCampaign>();City.Initialize(this);
             Finale=gameObject.AddComponent<AncientFinale>();Finale.Build(this);
+            Campaign=gameObject.AddComponent<AncientCampaign>();Campaign.Initialize(this);
             AncientArt.Display("Upper city entry",AncientArt.World(3),new Vector2(132,0),-1);
             AncientArt.Display("Eastern gate",AncientArt.World(3),new Vector2(115,0),-1);
             BuildLiftTerminal(115);BuildLiftTerminal(132);
@@ -261,7 +263,7 @@ namespace Plugin.AncientCivilization
         {
             SetSaved("storyCores",coreMask);SetSaved("credits",credits);SetSaved("storyCheckpoint",checkpointStage);
             SetSaved("storyBoss",bossDefeated?1:0);SetSaved("kills",kills);SetSaved("score",score);
-            if(hero)hero.SaveUpgrades();if(Finale)Finale.WriteSave();PlayerPrefs.Save();
+            if(hero)hero.SaveUpgrades();if(Finale)Finale.WriteSave();if(Campaign)Campaign.WriteSave();PlayerPrefs.Save();
         }
         public void Checkpoint(int stage)
         {
@@ -282,6 +284,7 @@ namespace Plugin.AncientCivilization
         }
         public void HeroDied()
         {
+            if(Campaign&&Campaign.Retry())return;
             if(Finale&&Finale.Retry())return;
             if(boss){enemies.Remove(boss);Destroy(boss.gameObject);boss=null;}
             if(City)City.OnEnterFloor();
@@ -338,6 +341,7 @@ namespace Plugin.AncientCivilization
             float lead=hero.Facing*Mathf.Lerp(2.5f,4,Mathf.Clamp01(speed/25));
             Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Story&&Story.InUpperCity?AncientCityLayout.Left(Story.CurrentFloor)+5:5,Story&&Story.InUpperCity?AncientCityLayout.Right(Story.CurrentFloor)-6:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
             if(arena)target=new Vector3((arenaLeft+arenaRight)*.5f,4.6f,-10);
+            if(Campaign&&Campaign.Active)target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Campaign.CameraLeft,Campaign.CameraRight),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
             if(Finale&&Finale.Active)target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,AncientFinaleRules.Start+5,AncientFinaleRules.Finish+12),Mathf.Max(1.5f,hero.transform.position.y+2),-10);
             cameraFollow=Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
             var p=cameraFollow;if(shake>0&&!skills){p+=(Vector3)(Random.insideUnitCircle*shake);shake=Mathf.MoveTowards(shake,0,Time.unscaledDeltaTime);}
@@ -358,7 +362,7 @@ namespace Plugin.AncientCivilization
         }
         public void NewRun()
         {
-            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared"})PlayerPrefs.DeleteKey(SaveKey+key);
+            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks"})PlayerPrefs.DeleteKey(SaveKey+key);
             PlayerPrefs.Save();startAfterReload=true;Time.timeScale=1;SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
         void Upgrade(Rect rect,string text,int price,int required,bool owned,System.Action unlock)
@@ -639,7 +643,7 @@ namespace Plugin.AncientCivilization
             if(Input.GetKeyDown(KeyCode.LeftControl)||Input.GetKeyDown(KeyCode.RightControl))running=!running;
             if(Input.GetKeyDown(KeyCode.E))
             {
-                bool used=g.Story.TryUseLift()||(g.Finale&&g.Finale.TryInteract())||(g.Cases&&g.Cases.TryInteract())||
+                bool used=(g.Campaign&&g.Campaign.TryInteract())||g.Story.TryUseLift()||(g.Finale&&g.Finale.TryInteract())||(g.Cases&&g.Cases.TryInteract())||
                     (g.City&&g.City.TryInteract())||(g.Traversal&&g.Traversal.TryInteract());
                 if(!used)InteractBike();
                 if(g.Paused||!g.GameplayInputReady)return;
@@ -897,6 +901,7 @@ namespace Plugin.AncientCivilization
             if(wired)StopWire(false);
             wireChain=chain?Mathf.Min(wireChain+1,5):1;
             if(g.Traversal)g.Traversal.TryMovingAnchor(selected,out wireMovingAnchor);
+            if(!wireMovingAnchor&&g.Campaign)g.Campaign.TryMovingAnchor(selected,out wireMovingAnchor);
             wireMovingLocal=Vector2.zero;
             if(!wireMovingAnchor)
             {

@@ -90,7 +90,7 @@ namespace Plugin.AncientCivilization
         }
         void ResolveBladeHit()
         {
-            Vector2 origin=Origin;bool rebound=(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
+            Vector2 origin=Origin;bool rebound=(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
             for(int i=game.shots.Count-1;i>=0;i--)
             {
                 var shot=game.shots[i];if(!shot)continue;
@@ -149,6 +149,7 @@ namespace Plugin.AncientCivilization
                 float t=delta.sqrMagnitude>.001f?Mathf.Clamp01(Vector2.Dot(enemy.AimPoint-beamStart,delta)/delta.sqrMagnitude):0;
                 if(Vector2.Distance(enemy.AimPoint,beamStart+delta*t)<radius+.6f&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8))enemy.Hit(damage,true);
             }
+            if(game.Campaign)game.Campaign.OnLaser(beamStart,beamEnd);
             if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage);
             if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage);
             laserUntil=Time.time+.32f;beam.startWidth=beam.endWidth=.16f+power*.32f;

@@ -34,13 +34,14 @@ namespace Plugin.AncientCivilization
             if(Stage==0)
             {
                 SetStage(1);
-                Talk(null,new Line("통신관","아침 순찰 시작이다. 포인트를 모으면 위로 올라갈 수 있겠지만, 아래 구역의 안전은 우리가 지킨다.",1),
-                    new Line("치안경찰","알겠습니다. 기계팔과 입자 와이어, 순찰 오토바이부터 점검하겠습니다.",0),
+                Talk(null,new Line("통신관","백명 경위, 아침 순찰 시작이다. 포인트를 모으면 위로 올라갈 수 있겠지만, 아래 구역의 안전은 우리가 지킨다.",1),
+                    new Line("백명","알겠습니다. 기계팔과 입자 와이어, 순찰 오토바이부터 점검하겠습니다.",0),
                     new Line("통신관","생산소의 C-00 예비분은 점검 대상에서 빼라. 정기 배정 물량이라고 한다.",1));
             }
             else if(Stage==4)TheftReport();
             else if(Stage==7)ArrestDialogue();
         }
+        int citizenPortrait=3;
         void Talk(Action done,params Line[] script)
         {lines.Clear();lines.AddRange(script);lineIndex=0;ResetTyping();afterDialogue=done;game.BlockGameplayInput();}
         void ResetTyping()
@@ -64,18 +65,18 @@ namespace Plugin.AncientCivilization
         void TheftReport()
         {
             Talk(()=>SetStage(5),new Line("통신관","긴급 신고다. 상층 출신 용의자가 생산소의 에너지 코어를 트럭에 싣고 도주하고 있다.",1),
-                new Line("치안경찰","저 코어가 끊기면 이 구역이 멈춥니다. 주민부터 대피시켜 주세요. 제가 쫓겠습니다.",0),
+                new Line("백명","저 코어가 끊기면 이 구역이 멈춥니다. 주민부터 대피시켜 주세요. 제가 쫓겠습니다.",0),
                 new Line("통신관","운송장을 보내겠다. 이상하군… 수량은 있는데 최종 수령처가 비어 있다. 우선 현장부터 확보해라.",1));
         }
         void ArrestDialogue()
         {
-            Talk(()=>{SetStage(8);},new Line("치안경찰","당신을 에너지 코어 절도 혐의로 체포한다. 상층에 사는 사람이 왜 아래층의 코어를 훔친 거지?",0),
+            Talk(()=>{SetStage(8);},new Line("백명","당신을 에너지 코어 절도 혐의로 체포한다. 상층에 사는 사람이 왜 아래층의 코어를 훔친 거지?",0),
                 new Line("용의자","그 코어, 여기서 쓸 물건이라고 들었지? 운송장 마지막 칸까지 봤어?",2),
-                new Line("치안경찰","그걸 대답이라고 하나. 위에서 살 포인트도 있었을 텐데… 이 코어 때문에 전부 걸었다고?",0),
+                new Line("백명","그걸 대답이라고 하나. 위에서 살 포인트도 있었을 텐데… 이 코어 때문에 전부 걸었다고?",0),
                 new Line("통신관","검거 확인. 이번 보상으로 시민 포인트가 "+ResidencePoints+"점에 도달했다. 한 단계 위 도시의 거주·통행 자격이 승인됐다. 이동 엘리베이터에서 목적 층을 선택하면 된다.",1),
-                new Line("치안경찰","잠깐, 수령처부터 확인하겠습니다. 용의자도 아직 할 말이 있는 것 같습니다.",0),
+                new Line("백명","잠깐, 수령처부터 확인하겠습니다. 용의자도 아직 할 말이 있는 것 같습니다.",0),
                 new Line("통신관","회수품과 용의자는 별도 이송으로 바뀌었다. 승인 코드 C-00… 원본 운송장은 내 권한으로도 열리지 않는다. 사본은 남겨 두겠다.",1),
-                new Line("치안경찰","점검에서도 빠지고, 수령처도 볼 수 없고… 일단 사본부터 보내 주세요.",0));
+                new Line("백명","점검에서도 빠지고, 수령처도 볼 수 없고… 일단 사본부터 보내 주세요.",0));
         }
         void EnsureTruck(bool atGate=false)
         {
@@ -130,7 +131,7 @@ namespace Plugin.AncientCivilization
             {
                 EnsureTruck();SpawnEncounters();
                 if(AncientRules.CanStartMiniBoss(Stage,Truck.Stopped,game.Cores,hero.transform.position.x))
-                {SetStage(6);Talk(null,new Line("용의자","다가오지 마! 화물 수호기는 아직 내 통행 권한으로 움직인다고!",2),new Line("치안경찰","코어는 확보했다. 장치를 끄고 트럭에서 내려.",0));}
+                {SetStage(6);Talk(null,new Line("용의자","다가오지 마! 화물 수호기는 아직 내 통행 권한으로 움직인다고!",2),new Line("백명","코어는 확보했다. 장치를 끄고 트럭에서 내려.",0));}
             }
             else if(Stage==6)
             {
@@ -151,7 +152,7 @@ namespace Plugin.AncientCivilization
         }
         void StartLiftTravel(int destination)
         {
-            if(!AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,destination))return;
+            if(!AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,destination)||!game.Campaign.ReadyForLift(destination))return;
             liftMenu=false;liftTravelling=true;liftDestination=destination;liftStarted=Time.unscaledTime;
             game.hero.TravelTo(new Vector2(LiftX,1.3f));game.BlockGameplayInput();game.Sound(2);
         }
@@ -163,7 +164,7 @@ namespace Plugin.AncientCivilization
             Persist();game.SnapCameraToHero();liftTravelling=false;game.BlockGameplayInput();
             game.Notice(InUpperCity?"상층 도시 도착 / 같은 엘리베이터로 하층에 돌아갈 수 있습니다.":"하층 도시 도착 / 상층 출입 권한은 유지됩니다.",4);
             if(firstArrival)Talk(null,new Line("통신관","상층 도착. 귀환할 때도 이동 엘리베이터를 이용해라. 하층 출입 권한도 유지된다.",1),
-                new Line("치안경찰","엘리베이터 관제에도 C-00이 찍혀 있군. 생산소 배정 번호인 줄 알았는데.",0),
+                new Line("백명","엘리베이터 관제에도 C-00이 찍혀 있군. 생산소 배정 번호인 줄 알았는데.",0),
                 new Line("통신관","공용 설비 규격일 수도 있다. 사본은 보관했다. 이곳을 조사하고 아래에서도 확인해 보자.",1));
         }
         void DrawLift(float w,float h)
@@ -182,9 +183,9 @@ namespace Plugin.AncientCivilization
             for(int floor=0;floor<=4;floor++)
             {
                 bool current=CurrentFloor==floor;
-                bool allowed=AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,floor);
+                bool allowed=AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,floor)&&game.Campaign.ReadyForLift(floor);
                 string text=AncientCityLayout.Name(floor);
-                if(current)text+="  [현재 층]";else if(floor==4)text+="  [특별 승인: 승진으로 진입 불가]";else if(!allowed)text+="  [잠김: 이전 구역 사건 해결 필요]";
+                if(current)text+="  [현재 층]";else if(floor==4)text+="  [특별 승인: 승진으로 진입 불가]";else if(!allowed)text+="  [잠김: 해당 구역의 현장 조사·사건 해결 필요]";
                 GUI.enabled=allowed;
                 if(GUI.Button(new Rect(x+28,y+120+floor*57,544,48),text,nextButton))StartLiftTravel(floor);
                 GUI.enabled=true;
@@ -192,8 +193,23 @@ namespace Plugin.AncientCivilization
             if(GUI.Button(new Rect(x+28,y+431,544,42),"닫기 / Esc",nextButton)){liftMenu=false;game.BlockGameplayInput();}
         }
         public void FinaleBriefing(string first,string second)
-        {Talk(null,new Line("치안경찰",first,0),
+        {Talk(null,new Line("백명",first,0),
             new Line("회수 계획 주석","기동 준비된 코어는 보호부를 분리하지 말 것. 외부 충격에 의한 보호부 파손은 연쇄 활성화를 유발한다.",1),new Line("통신관",second,1));}
+        public void Conversation(Action done,int role,string[] speakers,string[] words)
+        {
+            if(speakers==null||words==null||speakers.Length!=words.Length||words.Length==0)return;
+            citizenPortrait=Mathf.Clamp(role,0,3);var script=new Line[words.Length];
+            for(int i=0;i<words.Length;i++)
+            {
+                int portrait=-10-citizenPortrait;
+                foreach(var npc in AncientCampaignData.Citizens)
+                    if(npc.Name==speakers[i]||speakers[i].EndsWith(" "+npc.Name.Substring(npc.Name.LastIndexOf(' ')+1)))
+                    {portrait=-100-npc.Id;break;}
+                if(speakers[i].Contains("작업반장")||speakers[i].Contains("재하"))portrait=-104;
+                script[i]=new Line(speakers[i],words[i],speakers[i]=="백명"?0:speakers[i]=="통신관"?1:portrait);
+            }
+            Talk(done,script);
+        }
         public void FieldDialogue(string speaker,string words)
         {Talk(null,new Line(speaker,words,1));}
         public void OnDistrictCleared(int floor)
@@ -201,13 +217,14 @@ namespace Plugin.AncientCivilization
             if(floor<3)ResidencePoints=Mathf.Max(ResidencePoints,(floor+1)*1000);
             Persist();
             if(floor==4)
-                Talk(null,new Line("치안경찰","그 사격 자세… 너였어? 그때 같은 구역에서 근무하던….",0),
-                    new Line("저격수","이제야 알아보네. 너도 정문으로는 못 올라왔나 보군.",0),
-                    new Line("치안경찰","너와 싸울 이유는 없어. 나는 C-00 기록을 확인하러 왔다.",0),
-                    new Line("저격수","그럼 각자 할 일을 하자. 살아서 내려가.",0));
+                Talk(null,new Line("백명","정문을 피해서 들어왔군. 나를 쫓아온 건가?",0),
+                    new Line("저격수","쫓기는 쪽이야. 포인트는 동결됐고 이의 신청은 사라졌지. 너도 정식 출입 기록이 없군.",-2),
+                    new Line("백명","기록을 조회하자 내 심사도 멈췄다. 여기 오기 위해 승진한 건 아니었는데.",0),
+                    new Line("저격수","그럼 길을 막을 이유는 없겠네. 난 내 기록을 찾겠다.",-2),
+                    new Line("백명","나는 코어 회수 계획을 확인한다. 각자 움직이자.",0));
             else if(floor==3)
-                Talk(null,new Line("통신관","구역은 확보했다. 하지만 최상층은 승진 대상이 아니다. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
-                    new Line("치안경찰","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
+                Talk(null,new Line("통신관","구역은 확보했다. 하지만 네 포인트 심사가 보류됐다. 최상층은 승진 대상도 아니야. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
+                    new Line("백명","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
             else Talk(null,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 입구 엘리베이터에서 목적지를 선택해라.",1));
         }
         public void TravelBySidePassage(int destination)
@@ -243,7 +260,8 @@ namespace Plugin.AncientCivilization
         }
         void Portrait(int index,Rect rect)
         {
-            var sprite=AncientArt.DialoguePortrait(index);var r=sprite.textureRect;var t=sprite.texture;
+            var sprite=index<=-100?AncientCitizenArt.ForCitizen(-index-100):index==-2?AncientArt.Enemy(1):index<0?AncientCitizenArt.Sprite(index<=-10?-index-10:citizenPortrait):AncientArt.DialoguePortrait(index);var r=sprite.textureRect;var t=sprite.texture;
+            if(index<0){float width=rect.height*r.width/r.height;rect=new Rect(rect.center.x-width/2,rect.y,width,rect.height);}
             GUI.DrawTextureWithTexCoords(rect,t,new Rect(r.x/t.width,r.y/t.height,r.width/t.width,r.height/t.height));
         }
         void OnGUI()
@@ -260,7 +278,7 @@ namespace Plugin.AncientCivilization
                 if(!game.skills)
                 {
                     AncientHUD.Panel(new Rect(w/2-250,16,500,64),new Color(.015f,.045f,.065f,.94f));
-                    GUI.Label(new Rect(w/2-236,24,472,52),cachedObjective,small);
+                    GUI.Label(new Rect(w/2-236,24,472,52),game.Campaign.Active?game.Campaign.ObjectiveText:cachedObjective,small);
                     GUI.Label(new Rect(28,200,285,42),cachedResidence,small);
                     if(CurrentFloor<4&&Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
                 }

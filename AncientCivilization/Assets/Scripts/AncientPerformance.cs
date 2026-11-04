@@ -11,7 +11,7 @@ namespace Plugin.AncientCivilization
     {
         static readonly int[] targets={60,120,144,240,-1};
         readonly float[] samples=new float[240],sorted=new float[240];
-        readonly int[] sampleFloor=new int[240],sampleTarget=new int[240],sampleQuality=new int[240],samplePhase=new int[240];
+        readonly int[] sampleFloor=new int[240],sampleTarget=new int[240],sampleQuality=new int[240],samplePhase=new int[240],sampleRoom=new int[240];
         AncientGame game;int cursor,count,targetIndex;float updateAt;bool details;
         float mean,p95,peak;string summary="",diagnostics="";GUIStyle style;
         ProfilerRecorder allocations;
@@ -42,7 +42,7 @@ namespace Plugin.AncientCivilization
             if(!game.HasSession||game.Paused||!Application.isFocused)return;
             float dt=Time.unscaledDeltaTime;if(!AncientFrameRules.ValidSample(dt))return;
             samples[cursor]=dt*1000;sampleFloor[cursor]=game.Story.CurrentFloor;sampleTarget[cursor]=Target;
-            sampleQuality[cursor]=AncientVisuals.HighQuality?1:0;samplePhase[cursor]=game.Finale?game.Finale.Phase:0;cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
+            sampleQuality[cursor]=AncientVisuals.HighQuality?1:0;samplePhase[cursor]=game.Finale?game.Finale.Phase:0;sampleRoom[cursor]=game.Campaign?game.Campaign.CurrentRoom:-1;cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
             if(Time.unscaledTime<updateAt)return;updateAt=Time.unscaledTime+.5f;Refresh();
         }
         void Refresh()
@@ -61,12 +61,12 @@ namespace Plugin.AncientCivilization
             if(count==0){game.Notice("플레이 중 프레임을 수집한 뒤 F10으로 저장하세요.",3);return;}
             try
             {
-                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase\n");
+                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room\n");
                 for(int i=0;i<count;i++)
                 {
                     int at=count==samples.Length?(cursor+i)%samples.Length:i;
                     text.Append(i).Append(',').Append(samples[at].ToString("F4",CultureInfo.InvariantCulture)).Append(',')
-                        .Append(sampleFloor[at]).Append(',').Append(sampleTarget[at]).Append(',').Append(sampleQuality[at]).Append(',').Append(samplePhase[at]).Append('\n');
+                        .Append(sampleFloor[at]).Append(',').Append(sampleTarget[at]).Append(',').Append(sampleQuality[at]).Append(',').Append(samplePhase[at]).Append(',').Append(sampleRoom[at]).Append('\n');
                 }
                 string path=Path.Combine(Application.persistentDataPath,"performance-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv");
                 File.WriteAllText(path,text.ToString());game.Notice("성능 기록 저장: "+path,6);

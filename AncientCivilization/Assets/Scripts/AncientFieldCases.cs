@@ -64,8 +64,8 @@ namespace Plugin.AncientCivilization
             started|=1<<(floor-1);Persist();
             if(floor==1)
             {
-                if(relayOpen){Complete(1);game.Story.FieldDialogue("진료소 기록","비상 전력 복구 확인. 정기 배정 물량은 이미 줄어 있었다. 도난 사건 이전에도 코어가 도착하지 않았다.");}
-                else game.Story.FieldDialogue("통신관","진료소 비상선이 끊겨 있다. 동쪽 공중 배전함의 파손된 절연판을 블레이드로 제거해 봐라. 복구되면 배정 기록을 받을 수 있다.");
+                if(relayOpen){Complete(1);game.Story.FieldDialogue("진료소 기록","예비 전력 복구 확인. 정기 배정 물량은 이미 줄어 있었다. 도난 사건 이전에도 코어가 도착하지 않았다.");}
+                else game.Story.FieldDialogue("통신관","진료소 주배전망과 별개인 예비선이 끊겨 있다. 동쪽 공중 배전함의 파손된 절연판을 블레이드로 제거해 봐라. 복구되면 배정 기록을 받을 수 있다.");
             }
             else if(floor==2)
             {

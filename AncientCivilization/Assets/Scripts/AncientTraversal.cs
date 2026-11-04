@@ -63,7 +63,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!game||!game.hero||!game.Story||game.Paused)return;
+            if(!game||!game.hero||!game.Story||game.Paused||(game.Campaign&&game.Campaign.Active))return;
             if(!game.Story.InUpperCity){UpdateLower();return;}
             if(game.Story.CurrentFloor!=1)return;
             var hero=game.hero;Vector2 p=hero.transform.position;
@@ -144,7 +144,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1||Event.current.type!=EventType.Repaint)return;
+            if(!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1||(game.Campaign&&game.Campaign.Active)||Event.current.type!=EventType.Repaint)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;GUI.depth=-10;
             if(!game.Story.InUpperCity)
@@ -169,19 +169,21 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientMovingAnchor : MonoBehaviour
     {
-        AncientGame game;Vector2 centre;int slot,index;LineRenderer rail;
+        AncientGame game;Vector2 centre;int slot,index,room;LineRenderer rail;SpriteRenderer node;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point,int number)
         {
-            game=owner;centre=point;index=number;slot=game.anchors.Count;game.anchors.Add(point);
+            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);index=number;slot=game.anchors.Count;game.anchors.Add(point);
             transform.position=point;
-            var node=AncientArt.Display("Moving crane hook",AncientArt.WireParticle(),Vector2.zero,5,transform);
+            node=AncientArt.Display("Moving crane hook",AncientArt.WireParticle(),Vector2.zero,5,transform);
             node.transform.localScale=Vector3.one*.55f;node.color=new Color(1,.8f,.2f);
             rail=game.Line("Crane overhead rail",new Color(.3f,.45f,.5f),.045f,2);
             rail.SetPosition(0,point+new Vector2(-3,.6f));rail.SetPosition(1,point+new Vector2(3,.6f));
         }
         void Update()
         {
-            if(game.Paused)return;
+            bool visible=game.Story&&game.Story.CurrentFloor==AncientCityLayout.VisualSector(centre.x)&&game.Campaign&&game.Campaign.CurrentRoom==room;
+            if(shown!=visible){shown=visible;node.enabled=rail.enabled=visible;}
+            if(!visible||game.Paused)return;
             Vector2 point=centre+new Vector2(AncientRules.CraneOffset(Time.time,index),0);
             transform.position=point;game.anchors[slot]=point;
         }
@@ -189,11 +191,11 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientAirTarget : MonoBehaviour
     {
-        AncientGame game;Vector2 centre;SpriteRenderer core,ring;float readyAt,phase;
+        AncientGame game;Vector2 centre;SpriteRenderer core,ring;float readyAt,phase;int room;bool shown=true;
         public bool Ready {get{return Time.time>=readyAt;}}
         public void Initialize(AncientGame owner,Vector2 point)
         {
-            game=owner;centre=point;phase=point.x;transform.position=point;
+            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);phase=point.x;transform.position=point;
             ring=AncientArt.Display("Ancient rebound shell",AncientArt.WireParticle(),Vector2.zero,11,transform);
             ring.transform.localScale=Vector3.one*.8f;ring.color=new Color(.1f,.55f,.8f);
             core=AncientArt.Display("Blade reactive amber core",AncientArt.WireParticle(),Vector2.zero,12,transform);
@@ -206,7 +208,9 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(game.Paused)return;
+            bool visible=game.Story&&game.Story.CurrentFloor==AncientCityLayout.VisualSector(centre.x)&&game.Campaign.CurrentRoom==room;
+            if(shown!=visible){shown=visible;core.enabled=ring.enabled=visible;}
+            if(!visible||game.Paused)return;
             transform.position=centre+Vector2.up*(Mathf.Sin(Time.time*1.8f+phase)*.18f);
             ring.transform.Rotate(0,0,55*Time.deltaTime);
             core.color=Ready?new Color(1,.9f,.2f):new Color(.18f,.25f,.3f);

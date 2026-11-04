@@ -1,15 +1,15 @@
-PLUGIN v0.10.0 / Unity 6000.6.7f1 source project
-Validation UTC: 2026-11-04 11:24
+PLUGIN v0.11.0 / Campaign work-in-progress checkpoint
+Validation UTC: 2026-11-04 14:00 (KST 23:00)
 
-PASS: portable asset/metadata/PNG/C# syntax checks below.
-PASS: 551 independent C# combat, progression, layout, frame-statistics and wire-math checks.
-PASS: supplemental type check with warnings treated as errors, using UnityEngine.Modules 2021.3.33 reference DLLs.
-      Temporary source copies rename only Rigidbody2D .linearVelocity to .velocity for these older references.
-      Shipped Unity 6 source still uses .linearVelocity unchanged.
+PASS: 888 independent C# rule checks.
+PASS: PNG/metadata/native-grid crop/walk-phase/Korean story spoiler checks below.
+PASS: supplemental Unity 2021.3.33 reference DLL type check, warnings treated as errors.
+Only temporary validation copies rename .linearVelocity to .velocity for the older reference API.
+Actual shipping Unity 6 source is unchanged.
 
-NOT RUN: actual Unity 6000.6.7f1 C# compilation, shader compilation, import,
-         Play Mode, full traversal/combat/chase playtest, player build, real game FPS.
-Nine hours remains a finished-game design target, not the current prototype duration.
+NOT RUN: Unity 6000.6.7f1 compilation/import/shaders/Play/full completion/player build/actual FPS.
+This is an intermediate checkpoint during the requested ten-hour work, not a 90% or perfect release.
+The nine-hour first-run target has not been implemented or measured as completed content.
 
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
@@ -25,7 +25,11 @@ PASS: 32-character GUID Scripts.meta
 PASS: metadata coverage Main.unity
 PASS: metadata target Assets/Scenes/Main.unity.meta
 PASS: 32-character GUID Main.unity.meta
+PASS: metadata target Assets/Scripts/AncientCitizenArt.cs.meta
+PASS: 32-character GUID AncientCitizenArt.cs.meta
 PASS: metadata coverage AncientTraversalLayout.cs
+PASS: metadata target Assets/Scripts/AncientCampaign.cs.meta
+PASS: 32-character GUID AncientCampaign.cs.meta
 PASS: metadata target Assets/Scripts/AncientMainMenu.cs.meta
 PASS: 32-character GUID AncientMainMenu.cs.meta
 PASS: metadata coverage AncientWireParticleBatch.cs
@@ -40,9 +44,12 @@ PASS: 32-character GUID AncientWireParticleBatch.cs.meta
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
 PASS: metadata coverage AncientCityLayout.cs
+PASS: metadata target Assets/Scripts/AncientCampaignRules.cs.meta
+PASS: 32-character GUID AncientCampaignRules.cs.meta
 PASS: metadata coverage AncientFrameRules.cs
 PASS: metadata target Assets/Scripts/AncientPerformance.cs.meta
 PASS: 32-character GUID AncientPerformance.cs.meta
+PASS: metadata coverage AncientCampaignRules.cs
 PASS: metadata target Assets/Scripts/AncientExploration.cs.meta
 PASS: 32-character GUID AncientExploration.cs.meta
 PASS: metadata coverage AncientPointer.cs
@@ -56,11 +63,17 @@ PASS: 32-character GUID AncientProjectilePool.cs.meta
 PASS: metadata coverage AncientCityCampaign.cs
 PASS: metadata coverage AncientRules.cs
 PASS: metadata coverage AncientTraversal.cs
+PASS: metadata target Assets/Scripts/AncientCampaignData.cs.meta
+PASS: 32-character GUID AncientCampaignData.cs.meta
 PASS: metadata target Assets/Scripts/AncientCombat.cs.meta
 PASS: 32-character GUID AncientCombat.cs.meta
+PASS: metadata coverage AncientCitizenAtlas.cs
+PASS: metadata target Assets/Scripts/AncientFieldScenery.cs.meta
+PASS: 32-character GUID AncientFieldScenery.cs.meta
 PASS: metadata coverage AncientCombatRules.cs
 PASS: metadata coverage AncientFinaleRules.cs
 PASS: metadata coverage AncientJournal.cs
+PASS: metadata coverage AncientCampaignData.cs
 PASS: metadata coverage AncientWireMath.cs
 PASS: metadata target Assets/Scripts/AncientFieldCases.cs.meta
 PASS: 32-character GUID AncientFieldCases.cs.meta
@@ -95,6 +108,7 @@ PASS: 32-character GUID AncientFinaleRules.cs.meta
 PASS: metadata coverage AncientPixels.cs
 PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
 PASS: 32-character GUID AncientPixels.cs.meta
+PASS: metadata coverage AncientCitizenArt.cs
 PASS: metadata coverage AncientExploration.cs
 PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
 PASS: 32-character GUID AncientMotorcycle.cs.meta
@@ -106,16 +120,20 @@ PASS: metadata coverage AncientDistrict.cs
 PASS: metadata target Assets/Scripts/AncientProgressRules.cs.meta
 PASS: 32-character GUID AncientProgressRules.cs.meta
 PASS: metadata coverage AncientPerformance.cs
+PASS: metadata target Assets/Scripts/AncientCitizenAtlas.cs.meta
+PASS: 32-character GUID AncientCitizenAtlas.cs.meta
 PASS: metadata coverage AncientGameFeel.cs
 PASS: metadata coverage AncientParkedBike.cs
 PASS: metadata target Assets/Scripts/AncientWorldBatch.cs.meta
 PASS: 32-character GUID AncientWorldBatch.cs.meta
+PASS: metadata coverage AncientCampaign.cs
 PASS: metadata target Assets/Scripts/AncientCombatRules.cs.meta
 PASS: 32-character GUID AncientCombatRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientStory.cs.meta
 PASS: 32-character GUID AncientStory.cs.meta
 PASS: metadata coverage AncientFinale.cs
 PASS: metadata coverage AncientCombat.cs
+PASS: metadata coverage AncientFieldScenery.cs
 PASS: metadata target Assets/Scripts/AncientKoreanUI.cs.meta
 PASS: 32-character GUID AncientKoreanUI.cs.meta
 PASS: metadata coverage AncientHUD.cs
@@ -139,15 +157,26 @@ PASS: metadata target Assets/Resources/Shaders.meta
 PASS: 32-character GUID Shaders.meta
 PASS: metadata target Assets/Resources/Fonts.meta
 PASS: 32-character GUID Fonts.meta
+PASS: metadata target Assets/Resources/Art/Citizens3.png.meta
+PASS: 32-character GUID Citizens3.png.meta
 PASS: metadata target Assets/Resources/Art/Scrap.png.meta
 PASS: 32-character GUID Scrap.png.meta
+PASS: metadata coverage Citizens1.png
+PASS: metadata coverage Citizens0.png
+PASS: metadata target Assets/Resources/Art/Citizens1.png.meta
+PASS: 32-character GUID Citizens1.png.meta
 PASS: metadata target Assets/Resources/Art/City.png.meta
 PASS: 32-character GUID City.png.meta
+PASS: metadata coverage Citizens3.png
+PASS: metadata target Assets/Resources/Art/Citizens4.png.meta
+PASS: 32-character GUID Citizens4.png.meta
+PASS: metadata coverage CitizensWalk.png
 PASS: metadata target Assets/Resources/Art/Truck.png.meta
 PASS: 32-character GUID Truck.png.meta
 PASS: metadata target Assets/Resources/Art/Dialogue.png.meta
 PASS: 32-character GUID Dialogue.png.meta
 PASS: metadata coverage Dialogue.png
+PASS: metadata coverage Citizens4.png
 PASS: metadata target Assets/Resources/Art/World.png.meta
 PASS: 32-character GUID World.png.meta
 PASS: metadata coverage HeroEmitterBody.png
@@ -160,14 +189,21 @@ PASS: metadata coverage Rooftop.png
 PASS: metadata target Assets/Resources/Art/HeroEmitterBody.png.meta
 PASS: 32-character GUID HeroEmitterBody.png.meta
 PASS: metadata coverage City.png
+PASS: metadata coverage Citizens2.png
+PASS: metadata target Assets/Resources/Art/CitizensWalk.png.meta
+PASS: 32-character GUID CitizensWalk.png.meta
 PASS: metadata target Assets/Resources/Art/Rooftop.png.meta
 PASS: 32-character GUID Rooftop.png.meta
 PASS: metadata coverage Hero.png
 PASS: metadata coverage Actions.png
 PASS: metadata coverage Enemies.png
 PASS: metadata coverage Motorcycle.png
+PASS: metadata target Assets/Resources/Art/Citizens2.png.meta
+PASS: 32-character GUID Citizens2.png.meta
 PASS: metadata target Assets/Resources/Art/Motorcycle.png.meta
 PASS: 32-character GUID Motorcycle.png.meta
+PASS: metadata target Assets/Resources/Art/Citizens0.png.meta
+PASS: 32-character GUID Citizens0.png.meta
 PASS: metadata coverage World.png
 PASS: metadata target Assets/Resources/Art/Actions.png.meta
 PASS: 32-character GUID Actions.png.meta
@@ -279,6 +315,104 @@ PASS: idle blade has a long sword silhouette rather than a short stub
 PASS: hero equipment sheet contains substantial double-helix wire preview
 PASS: laser preview is a continuous bright beam rather than detached particles
 PASS: runtime emitter body has no baked wire to duplicate the live helix
+PASS: measured citizen and walk crop coverage
+PASS: Citizens0.png PNG signature
+PASS: Citizens0.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 0
+PASS: citizen crop matches exact native-grid alpha 0
+PASS: citizen silhouette clear gutter 0
+PASS: citizen crop matches exact native-grid alpha 1
+PASS: citizen silhouette clear gutter 1
+PASS: citizen crop matches exact native-grid alpha 2
+PASS: citizen silhouette clear gutter 2
+PASS: citizen crop matches exact native-grid alpha 3
+PASS: citizen silhouette clear gutter 3
+PASS: citizen crop matches exact native-grid alpha 4
+PASS: citizen silhouette clear gutter 4
+PASS: citizen spare cell is truly transparent 0
+PASS: citizen point readable import 0
+PASS: Citizens1.png PNG signature
+PASS: Citizens1.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 1
+PASS: citizen crop matches exact native-grid alpha 5
+PASS: citizen silhouette clear gutter 5
+PASS: citizen crop matches exact native-grid alpha 6
+PASS: citizen silhouette clear gutter 6
+PASS: citizen crop matches exact native-grid alpha 7
+PASS: citizen silhouette clear gutter 7
+PASS: citizen crop matches exact native-grid alpha 8
+PASS: citizen silhouette clear gutter 8
+PASS: citizen crop matches exact native-grid alpha 9
+PASS: citizen silhouette clear gutter 9
+PASS: citizen spare cell is truly transparent 1
+PASS: citizen point readable import 1
+PASS: Citizens2.png PNG signature
+PASS: Citizens2.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 2
+PASS: citizen crop matches exact native-grid alpha 10
+PASS: citizen silhouette clear gutter 10
+PASS: citizen crop matches exact native-grid alpha 11
+PASS: citizen silhouette clear gutter 11
+PASS: citizen crop matches exact native-grid alpha 12
+PASS: citizen silhouette clear gutter 12
+PASS: citizen crop matches exact native-grid alpha 13
+PASS: citizen silhouette clear gutter 13
+PASS: citizen crop matches exact native-grid alpha 14
+PASS: citizen silhouette clear gutter 14
+PASS: citizen spare cell is truly transparent 2
+PASS: citizen point readable import 2
+PASS: Citizens3.png PNG signature
+PASS: Citizens3.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 3
+PASS: citizen crop matches exact native-grid alpha 15
+PASS: citizen silhouette clear gutter 15
+PASS: citizen crop matches exact native-grid alpha 16
+PASS: citizen silhouette clear gutter 16
+PASS: citizen crop matches exact native-grid alpha 17
+PASS: citizen silhouette clear gutter 17
+PASS: citizen crop matches exact native-grid alpha 18
+PASS: citizen silhouette clear gutter 18
+PASS: citizen crop matches exact native-grid alpha 19
+PASS: citizen silhouette clear gutter 19
+PASS: citizen spare cell is truly transparent 3
+PASS: citizen point readable import 3
+PASS: Citizens4.png PNG signature
+PASS: Citizens4.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 4
+PASS: citizen crop matches exact native-grid alpha 20
+PASS: citizen silhouette clear gutter 20
+PASS: citizen crop matches exact native-grid alpha 21
+PASS: citizen silhouette clear gutter 21
+PASS: citizen crop matches exact native-grid alpha 22
+PASS: citizen silhouette clear gutter 22
+PASS: citizen crop matches exact native-grid alpha 23
+PASS: citizen silhouette clear gutter 23
+PASS: citizen crop matches exact native-grid alpha 24
+PASS: citizen silhouette clear gutter 24
+PASS: citizen spare cell is truly transparent 4
+PASS: citizen point readable import 4
+PASS: all twenty-five citizen appearances are distinct
+PASS: four-person walking sheet dimensions
+PASS: walking crop matches native-grid alpha 0
+PASS: walking crop matches native-grid alpha 1
+PASS: walking crop matches native-grid alpha 2
+PASS: walking crop matches native-grid alpha 3
+PASS: escort has four distinct walk phases 0
+PASS: walking crop matches native-grid alpha 4
+PASS: walking crop matches native-grid alpha 5
+PASS: walking crop matches native-grid alpha 6
+PASS: walking crop matches native-grid alpha 7
+PASS: escort has four distinct walk phases 1
+PASS: walking crop matches native-grid alpha 8
+PASS: walking crop matches native-grid alpha 9
+PASS: walking crop matches native-grid alpha 10
+PASS: walking crop matches native-grid alpha 11
+PASS: escort has four distinct walk phases 2
+PASS: walking crop matches native-grid alpha 12
+PASS: walking crop matches native-grid alpha 13
+PASS: walking crop matches native-grid alpha 14
+PASS: walking crop matches native-grid alpha 15
+PASS: escort has four distinct walk phases 3
 PASS: world slice contains visible art 0
 PASS: world slice contains visible art 1
 PASS: world slice contains visible art 2
@@ -329,14 +463,17 @@ PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientWireParticleBatch.cs
 PASS: C# syntax AncientCityLayout.cs
 PASS: C# syntax AncientFrameRules.cs
+PASS: C# syntax AncientCampaignRules.cs
 PASS: C# syntax AncientPointer.cs
 PASS: C# syntax AncientArt.cs
 PASS: C# syntax AncientCityCampaign.cs
 PASS: C# syntax AncientRules.cs
 PASS: C# syntax AncientTraversal.cs
+PASS: C# syntax AncientCitizenAtlas.cs
 PASS: C# syntax AncientCombatRules.cs
 PASS: C# syntax AncientFinaleRules.cs
 PASS: C# syntax AncientJournal.cs
+PASS: C# syntax AncientCampaignData.cs
 PASS: C# syntax AncientWireMath.cs
 PASS: C# syntax AncientFieldCases.cs
 PASS: C# syntax AncientProjectilePool.cs
@@ -345,6 +482,7 @@ PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientProgressRules.cs
 PASS: C# syntax AncientAudio.cs
 PASS: C# syntax AncientPixels.cs
+PASS: C# syntax AncientCitizenArt.cs
 PASS: C# syntax AncientExploration.cs
 PASS: C# syntax AncientVisuals.cs
 PASS: C# syntax AncientKoreanUI.cs
@@ -352,22 +490,25 @@ PASS: C# syntax AncientDistrict.cs
 PASS: C# syntax AncientPerformance.cs
 PASS: C# syntax AncientGameFeel.cs
 PASS: C# syntax AncientParkedBike.cs
+PASS: C# syntax AncientCampaign.cs
 PASS: C# syntax AncientFinale.cs
 PASS: C# syntax AncientCombat.cs
+PASS: C# syntax AncientFieldScenery.cs
 PASS: C# syntax AncientHUD.cs
 PASS: C# syntax AncientStory.cs
 PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 PASS: C# syntax AncientHudText.cs
 PASS: C# syntax AncientWorldBatch.cs
+PASS: first-run script withholds friendship reveal: 옛 친구
+PASS: first-run script withholds friendship reveal: 옛 동료
+PASS: first-run script withholds friendship reveal: 명아
+PASS: first-run script withholds friendship reveal: 너였어?
+PASS: first-run script withholds friendship reveal: 이제야 알아보네
+PASS: five sparse Joker mentions across city resident dialogue
+PASS: protagonist dialogue consistently uses Baek Myeong
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: 551 combat and quest rule checks
+PASS: 888 combat and quest rule checks
 
 SUPPLEMENTAL TYPE CHECK: PASS (no warnings/errors).
-
-Pure .NET wire math only; not a Unity FPS or GPU benchmark.
-Frames: 20000, two strands, 192 samples each
-Reference trig: 227.36ms
-Recurrence: 111.62ms
-Recurrence managed allocations: 0 bytes; checksum 200.97252

@@ -9,10 +9,10 @@ namespace Plugin.AncientCivilization
     {
         struct Key : System.IEquatable<Key>
         {
-            public int texture,order,floor;
-            public bool Equals(Key other){return texture==other.texture&&order==other.order&&floor==other.floor;}
+            public int texture,order,floor,room;
+            public bool Equals(Key other){return texture==other.texture&&order==other.order&&floor==other.floor&&room==other.room;}
             public override bool Equals(object value){return value is Key&&Equals((Key)value);}
-            public override int GetHashCode(){unchecked{return (texture*397^order)*397^floor;}}
+            public override int GetHashCode(){unchecked{return ((texture*397^order)*397^floor)*397^room;}}
         }
         sealed class Build
         {
@@ -22,11 +22,11 @@ namespace Plugin.AncientCivilization
             public readonly List<Color32> colors=new List<Color32>();
             public readonly List<int> triangles=new List<int>();
         }
-        struct Entry {public Mesh mesh;public MeshRenderer renderer;public int floor;}
+        struct Entry {public Mesh mesh;public MeshRenderer renderer;public int floor,room;}
         readonly Dictionary<Key,Build> builders=new Dictionary<Key,Build>();
         readonly Dictionary<int,Material> materials=new Dictionary<int,Material>();
         readonly List<Entry> entries=new List<Entry>();
-        AncientGame game;Sprite white;int shownFloor=-99;
+        AncientGame game;Sprite white;int shownFloor=-99,shownRoom=-99;
         public int QuadCount {get;private set;}
         public int RendererCount {get{return entries.Count;}}
         public int ActiveRendererCount {get;private set;}
@@ -42,7 +42,7 @@ namespace Plugin.AncientCivilization
         {Add(sprite,position,scale,color,order,AncientCityLayout.VisualSector(position.x),angle);}
         void Add(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order,int floor,float angle=0)
         {
-            Key key=new Key{texture=sprite.texture.GetInstanceID(),order=order,floor=floor};Build build;
+            Key key=new Key{texture=sprite.texture.GetInstanceID(),order=order,floor=floor,room=AncientCampaignRules.RoomAt(position.x)};Build build;
             if(!builders.TryGetValue(key,out build)){build=new Build{texture=sprite.texture};builders.Add(key,build);}
             float ppu=sprite.pixelsPerUnit;
             Vector2 size=sprite.rect.size/ppu;
@@ -80,18 +80,18 @@ namespace Plugin.AncientCivilization
                 Material material;
                 if(!materials.TryGetValue(key.texture,out material))
                 {material=new Material(Shader.Find("Sprites/Default"));material.mainTexture=build.texture;materials.Add(key.texture,material);}
-                renderer.sharedMaterial=material;entries.Add(new Entry{mesh=mesh,renderer=renderer,floor=key.floor});
+                renderer.sharedMaterial=material;entries.Add(new Entry{mesh=mesh,renderer=renderer,floor=key.floor,room=key.room});
             }
-            builders.Clear();UpdateVisibility(0);
+            builders.Clear();UpdateVisibility(0,-1);
         }
-        void UpdateVisibility(int floor)
+        void UpdateVisibility(int floor,int room)
         {
-            shownFloor=floor;ActiveRendererCount=0;
+            shownFloor=floor;shownRoom=room;ActiveRendererCount=0;
             foreach(var entry in entries)
-            {bool visible=entry.floor<0||entry.floor==floor;entry.renderer.enabled=visible;if(visible)ActiveRendererCount++;}
+            {bool visible=entry.floor<0||entry.floor==floor&&entry.room==room;entry.renderer.enabled=visible;if(visible)ActiveRendererCount++;}
         }
         void LateUpdate()
-        {int floor=game&&game.Finale&&game.Finale.Active?5:game&&game.Story?game.Story.CurrentFloor:0;if(floor!=shownFloor)UpdateVisibility(floor);}
+        {int floor=game&&game.Finale&&game.Finale.Active?5:game&&game.Story?game.Story.CurrentFloor:0;int room=game&&game.Campaign?game.Campaign.CurrentRoom:-1;if(floor!=shownFloor||room!=shownRoom)UpdateVisibility(floor,room);}
         void OnDestroy()
         {
             foreach(var entry in entries)if(entry.mesh)Destroy(entry.mesh);
