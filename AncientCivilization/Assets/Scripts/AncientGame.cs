@@ -92,8 +92,9 @@ namespace Plugin.AncientCivilization
                 image.flipX=i!=0;
             }
             Platform(-5,118,0);Platform(43,58,1);
-            Platform(4,7,3.5f);Platform(12,16,3.4f);Platform(28,33,4);
-            Platform(46,52,4.8f);Platform(68,72,3.5f);Platform(88,94,4);
+            foreach(var ledge in AncientTraversalLayout.LowerRoute)Platform(ledge.left,ledge.right,ledge.top);
+            foreach(var ledge in AncientTraversalLayout.LowerFastRoute)Platform(ledge.left,ledge.right,ledge.top);
+            Platform(4,7,3.5f);Platform(12,16,3.4f);
             // One unbroken solid ceiling covers the entire level and extends past both camera edges.
             Ceiling(-40,280,10);
             foreach(var ledge in AncientTraversalLayout.MainRoute)Platform(ledge.left,ledge.right,ledge.top);
@@ -306,7 +307,7 @@ namespace Plugin.AncientCivilization
         }
         public void NewRun()
         {
-            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs"})PlayerPrefs.DeleteKey(SaveKey+key);
+            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs"})PlayerPrefs.DeleteKey(SaveKey+key);
             PlayerPrefs.Save();startAfterReload=true;Time.timeScale=1;SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
         void Upgrade(Rect rect,string text,int price,int required,bool owned,System.Action unlock)
@@ -454,10 +455,10 @@ namespace Plugin.AncientCivilization
         readonly Vector3[] cablePoints=new Vector3[48];
         AncientParkedBike mountedBike;
         float direction=1,invulnerableUntil,wireReady,lastGrounded=-100;
-        float absorbAt=-10,jumpBufferedUntil=-10;
+        float absorbAt=-10,jumpBufferedUntil=-10,conveyorUntil,conveyorDirection;
         float wireAttachedAt,wireLength,wireMinLength,swingDirection,arcTravel,momentumUntil,lastWireRelease=-10;
         Vector2 previousRadial;int wireChain;bool wireZip;
-        AncientEnemy wireEnemy,wireContactTarget;float wireContactUntil;
+        AncientEnemy wireEnemy,wireContactTarget;Transform wireMovingAnchor;float wireContactUntil;
         bool wired,airJumpUsed;float axis;int combo;
         Sprite[] frames,actions;
         float strikeAt,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
@@ -584,6 +585,11 @@ namespace Plugin.AncientCivilization
             art.enabled=!bike;
             trail.emitting=wired||bike;
         }
+        public void ConveyorDrift(float direction)
+        {
+            if(!body||bike||wired)return;
+            conveyorDirection=direction;conveyorUntil=Time.time+.08f;momentumUntil=Time.time+.3f;
+        }
         public void BladeRebound()
         {
             if(!body||bike||Grounded())return;
@@ -600,7 +606,7 @@ namespace Plugin.AncientCivilization
         public void TravelTo(Vector2 point)
         {
             if(bike)InteractBike();StopWire(false);body.position=point;transform.position=point;body.linearVelocity=Vector2.zero;
-            momentumUntil=0;if(Combat)Combat.ResetCombat();
+            momentumUntil=0;conveyorUntil=0;if(Combat)Combat.ResetCombat();
         }
         Vector2 anchor;
         void FixedUpdate()
@@ -608,6 +614,7 @@ namespace Plugin.AncientCivilization
             var g=AncientGame.Instance;if(g.won||g.Paused)return;
             Vector2 velocity=body.linearVelocity;
             if(!bike||wired)BikeSkid=0;
+            if(wired&&wireMovingAnchor){anchor=wireMovingAnchor.position;if(wireJoint)wireJoint.connectedAnchor=anchor;}
             if(wired&&wireEnemy)
             {
                 if(!wireEnemy.IsAlive){StopWire(false);velocity=body.linearVelocity;}
@@ -669,7 +676,8 @@ namespace Plugin.AncientCivilization
                 {
                     float speed=running?9:5;
                     bool carry=!grounded&&Time.time<momentumUntil&&Mathf.Abs(velocity.x)>speed&&(axis==0||Mathf.Sign(axis)==Mathf.Sign(velocity.x));
-                    if(!carry&&(axis!=0||grounded))velocity.x=Mathf.MoveTowards(velocity.x,axis*speed,(grounded?70:22)*Time.fixedDeltaTime);
+                    float belt=grounded&&Time.time<conveyorUntil?conveyorDirection*3.5f:0;
+                    if(!carry&&(axis!=0||grounded))velocity.x=Mathf.MoveTowards(velocity.x,axis*speed+belt,(grounded?70:22)*Time.fixedDeltaTime);
                 }
             }
             if(Time.time<jumpBufferedUntil)
@@ -757,6 +765,7 @@ namespace Plugin.AncientCivilization
             bool chain=(wired||Time.time-lastWireRelease<1.2f)&&different;
             if(wired)StopWire(false);
             wireChain=chain?Mathf.Min(wireChain+1,5):1;
+            if(g.Traversal)g.Traversal.TryMovingAnchor(selected,out wireMovingAnchor);
             anchor=selected;wireEnemy=target;wired=true;wireZip=ZipMode;wireAttachedAt=Time.time;wireReady=Time.time+(target?.45f:.18f);
             if(wireEnemy)
             {
@@ -779,7 +788,7 @@ namespace Plugin.AncientCivilization
         {
             bool wasWired=wired;
             if(wireEnemy){wireContactTarget=wireEnemy;wireContactUntil=Time.time+.3f;}
-            wireEnemy=null;wired=false;if(wireJoint)wireJoint.enabled=false;
+            wireEnemy=null;wireMovingAnchor=null;wired=false;if(wireJoint)wireJoint.enabled=false;
             if(!wasWired)return;
             lastWireRelease=Time.time;momentumUntil=Time.time+.7f;
             if(launch&&body)

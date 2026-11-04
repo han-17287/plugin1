@@ -122,6 +122,25 @@ class RulesChecks
         Check(AncientTraversalLayout.TargetX.Length==AncientTraversalLayout.TargetY.Length,"All rebound targets have complete coordinates");
         for(int i=0;i<AncientTraversalLayout.TargetX.Length;i++)
             Check(AncientTraversalLayout.TargetY[i]+.6f<AncientTraversalLayout.Ceiling,"Rebound target floats below ceiling");
+        foreach(var ledge in AncientTraversalLayout.LowerRoute)
+        {
+            Check(ledge.right-ledge.left>=4,"Factory main route provides broad landings");
+            Check(ledge.top+2.1f<10,"Factory roof allows full character headroom");
+            float road=ledge.left>=40&&ledge.left<=58?1:0;
+            Check(ledge.top-1-road>2.1f,"Factory roofs leave the chase road clear below");
+        }
+        for(int i=1;i<AncientTraversalLayout.LowerRoute.Length;i++)
+            Check(AncientTraversalLayout.LowerRoute[i].left-AncientTraversalLayout.LowerRoute[i-1].right<=7,"Factory route has short wire gaps");
+        for(int crane=0;crane<3;crane++)
+        {
+            bool bounded=true,moving=false;float previous=AncientRules.CraneOffset(0,crane);
+            for(int i=0;i<500;i++)
+            {
+                float offset=AncientRules.CraneOffset(i*.03f,crane);
+                bounded&=Math.Abs(offset)<=2.70001f;moving|=Math.Abs(offset-previous)>.1f;
+            }
+            Check(bounded,"Crane stays inside its rail span");Check(moving,"Crane anchor changes position over time");
+        }
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

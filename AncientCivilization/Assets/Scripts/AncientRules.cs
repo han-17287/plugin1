@@ -31,6 +31,8 @@ namespace Plugin.AncientCivilization
         {return stage==5&&truckStopped&&cores>=3&&x>98;}
         public static int PointsAfterArrest(int current,int stage)
         {return stage==6?current+1000:current;}
+        public static float CraneOffset(float time,int index)
+        {return (float)System.Math.Sin(time*.9+index*1.7)*2.7f;}
         public static float BladeReboundSpeed(float current)
         {return System.Math.Max(current,System.Math.Min(9,System.Math.Max(6,current+4)));}
         public static bool WireImpactOnStep(float dx,float dy,float stepX,float stepY,bool blocked)
