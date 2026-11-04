@@ -119,6 +119,7 @@ namespace Plugin.AncientCivilization
             Plate("동쪽 검문소",90.5f,6.1f,6.5f,Teal);
             Quad(94,1.7f,.18f,3.4f,Edge);Quad(95.2f,3.35f,2.6f,.18f,Edge);
             Plate("화물 도로  →",94,4.7f,4.8f,Warm);
+            Plate("예비 동력 배정 / C-00",54,3.2f,5.2f,Teal);
             Building(99,118,0,8.9f,7);Plate("화물 승강장",109,6.6f,7.4f,Warm);
             for(float x=101;x<117;x+=2)
             {Quad(x,1.2f,1.5f,2.4f,new Color(.09f,.16f,.19f));Quad(x,1.25f,1.2f,.08f,Edge);}

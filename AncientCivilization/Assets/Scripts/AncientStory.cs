@@ -34,7 +34,8 @@ namespace Plugin.AncientCivilization
             {
                 SetStage(1);
                 Talk(null,new Line("통신관","아침 순찰 시작이다. 포인트를 모으면 위로 올라갈 수 있겠지만, 아래 구역의 안전은 우리가 지킨다.",1),
-                    new Line("치안경찰","알겠습니다. 기계팔과 입자 와이어, 순찰 오토바이부터 점검하겠습니다.",0));
+                    new Line("치안경찰","알겠습니다. 기계팔과 입자 와이어, 순찰 오토바이부터 점검하겠습니다.",0),
+                    new Line("통신관","생산소의 C-00 예비분은 점검 대상에서 빼라. 정기 배정 물량이라고 한다.",1));
             }
             else if(Stage==4)TheftReport();
             else if(Stage==7)ArrestDialogue();
@@ -62,15 +63,18 @@ namespace Plugin.AncientCivilization
         void TheftReport()
         {
             Talk(()=>SetStage(5),new Line("통신관","긴급 신고다. 상층 출신 용의자가 생산소의 에너지 코어를 트럭에 싣고 도주하고 있다.",1),
-                new Line("치안경찰","저 코어가 끊기면 이 구역이 멈춥니다. 주민부터 대피시켜 주세요. 제가 쫓겠습니다.",0));
+                new Line("치안경찰","저 코어가 끊기면 이 구역이 멈춥니다. 주민부터 대피시켜 주세요. 제가 쫓겠습니다.",0),
+                new Line("통신관","운송장을 보내겠다. 이상하군… 수량은 있는데 최종 수령처가 비어 있다. 우선 현장부터 확보해라.",1));
         }
         void ArrestDialogue()
         {
             Talk(()=>{SetStage(8);},new Line("치안경찰","당신을 에너지 코어 절도 혐의로 체포한다. 상층에 사는 사람이 왜 아래층의 코어를 훔친 거지?",0),
-                new Line("용의자","포인트가 사람의 값을 정해 준다고 믿어? 너희가 만든 코어가 어디로 가는지나 알아봐.",2),
+                new Line("용의자","그 코어, 여기서 쓸 물건이라고 들었지? 운송장 마지막 칸까지 봤어?",2),
                 new Line("치안경찰","그걸 대답이라고 하나. 위에서 살 포인트도 있었을 텐데… 이 코어 때문에 전부 걸었다고?",0),
                 new Line("통신관","검거 확인. 이번 보상으로 시민 포인트가 "+ResidencePoints+"점에 도달했다. 한 단계 위 도시의 거주·통행 자격이 승인됐다. 이동 엘리베이터에서 목적 층을 선택하면 된다.",1),
-                new Line("치안경찰","우리 동력을 되찾았더니 올라가도 된다는 건가. 저자가 왜 그걸 원했는지… 위에서 알아봐야겠군.",0));
+                new Line("치안경찰","잠깐, 수령처부터 확인하겠습니다. 용의자도 아직 할 말이 있는 것 같습니다.",0),
+                new Line("통신관","회수품과 용의자는 별도 이송으로 바뀌었다. 승인 코드 C-00… 원본 운송장은 내 권한으로도 열리지 않는다. 사본은 남겨 두겠다.",1),
+                new Line("치안경찰","점검에서도 빠지고, 수령처도 볼 수 없고… 일단 사본부터 보내 주세요.",0));
         }
         void EnsureTruck(bool atGate=false)
         {
@@ -160,7 +164,8 @@ namespace Plugin.AncientCivilization
             Persist();game.SnapCameraToHero();liftTravelling=false;game.BlockGameplayInput();
             game.Notice(InUpperCity?"상층 도시 도착 / 같은 엘리베이터로 하층에 돌아갈 수 있습니다.":"하층 도시 도착 / 상층 출입 권한은 유지됩니다.",4);
             if(firstArrival)Talk(null,new Line("통신관","상층 도착. 귀환할 때도 이동 엘리베이터를 이용해라. 하층 출입 권한도 유지된다.",1),
-                new Line("치안경찰","거리도, 불빛도 다르군. 이곳을 조사하고 아래로 돌아가 확인해 봐야겠어.",0));
+                new Line("치안경찰","엘리베이터 관제에도 C-00이 찍혀 있군. 생산소 배정 번호인 줄 알았는데.",0),
+                new Line("통신관","공용 설비 규격일 수도 있다. 사본은 보관했다. 이곳을 조사하고 아래에서도 확인해 보자.",1));
         }
         void DrawLift(float w,float h)
         {
@@ -175,7 +180,7 @@ namespace Plugin.AncientCivilization
                 AncientHUD.Panel(new Rect(x+28,y+212,464*progress,6),AncientGame.Cyan);
                 return;
             }
-            GUI.Label(new Rect(x+28,y+68,464,48),"현재 위치: "+(InUpperCity?"상층 도시":"하층 도시")+" / 시민 포인트 "+ResidencePoints,small);
+            GUI.Label(new Rect(x+28,y+68,464,48),"관제 C-00 / 현재: "+(InUpperCity?"상층":"하층")+" / 시민 포인트 "+ResidencePoints,small);
             for(int floor=1;floor>=0;floor--)
             {
                 bool current=(InUpperCity?1:0)==floor;
