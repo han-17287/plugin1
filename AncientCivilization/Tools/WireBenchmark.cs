@@ -12,12 +12,12 @@ class WireBenchmark
         for(int frame=0;frame<frames;frame++)for(int strand=0;strand<2;strand++)
         {
             for(int i=0;i<count;i++)AncientRules.WireHelixOffset(22,frame*.00005f,i/(count-1f),strand,out normal[i],out depth[i]);
-            checksum+=normal[count/2]+depth[count/2];
+            checksum+=normal[count/2]*(strand+1)+depth[count/2+3];
         }
         watch.Stop();double reference=watch.Elapsed.TotalMilliseconds;
         long before=GC.GetAllocatedBytesForCurrentThread();watch.Restart();
         for(int frame=0;frame<frames;frame++)for(int strand=0;strand<2;strand++)
-        {AncientWireMath.Fill(22,frame*.00005f,strand,count,normal,depth);checksum+=normal[count/2]+depth[count/2];}
+        {AncientWireMath.Fill(22,frame*.00005f,strand,count,normal,depth);checksum+=normal[count/2]*(strand+1)+depth[count/2+3];}
         watch.Stop();long allocated=GC.GetAllocatedBytesForCurrentThread()-before;
         Console.WriteLine("Pure .NET wire math only; not a Unity FPS or GPU benchmark.");
         Console.WriteLine("Frames: "+frames+", two strands, "+count+" samples each");

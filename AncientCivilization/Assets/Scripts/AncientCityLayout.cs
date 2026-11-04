@@ -5,6 +5,12 @@ namespace Plugin.AncientCivilization
         public const int LastFloor=4;
         public static string Name(int floor)
         {return floor==0?"하층 생산구":floor==1?"하부 생활구":floor==2?"중층 행정구":floor==3?"상층 거주구":"최상층 통제구";}
+        public static int VisualSector(float x)
+        {
+            if(x>=790)return 5;
+            for(int floor=LastFloor;floor>=1;floor--)if(x>=Left(floor)-3&&x<=Right(floor)+3)return floor;
+            return 0;
+        }
         public static float Left(int floor){return floor==0?-5:floor==1?128:floor==2?300:floor==3?460:620;}
         public static float Right(int floor){return floor==0?118:floor==1?282:Left(floor)+126;}
         public static float Entry(int floor){return floor==0?115:Left(floor)+4;}

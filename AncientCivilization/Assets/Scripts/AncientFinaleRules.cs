@@ -10,7 +10,7 @@ namespace Plugin.AncientCivilization
         public static float Checkpoint(int zone){return Start+Math.Max(0,Math.Min(4,zone))*Section+4;}
         public static float TruckSpeed(float playerX,float truckX)
         {return Math.Max(5,Math.Min(15,10+(playerX+12-truckX)*.35f));}
-        public static bool CanBoardEnd(float truckX,float playerX,float playerY)
-        {return truckX>=Finish-8&&Math.Abs(playerX-truckX)<3.5f&&playerY>Road(truckX)+2.8f&&playerY<Road(truckX)+5.2f;}
+        public static bool CanBoardEnd(float truckX,float playerX,float playerY,bool onRoof)
+        {return onRoof&&truckX>=Finish-8&&Math.Abs(playerX-truckX)<2.4f&&playerY>Road(truckX)+2.8f&&playerY<Road(truckX)+5.2f;}
     }
 }

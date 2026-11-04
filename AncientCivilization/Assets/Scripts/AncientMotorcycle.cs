@@ -11,6 +11,7 @@ namespace Plugin.AncientCivilization
         TrailRenderer exhaust,exhaustCore;TrailRenderer[] skidTrails;Material skidMaterial;float nextSkidAt;LineRenderer headlight;
         Sprite normalBody,damagedBody;Material effects;AudioSource engine;AudioClip engineClip;
         MaterialPropertyBlock armProperties;
+        static readonly int ArmCharge=Shader.PropertyToID("_ArmCharge"),ArmPulse=Shader.PropertyToID("_ArmPulse");
         float lastSpeed,wheelAngle,compression,sparkAt,flashUntil;bool previousGrounded;
         public void Initialize(AncientHero owner)
         {
@@ -65,9 +66,9 @@ namespace Plugin.AncientCivilization
         }
         public void SetArmPower(float charge,float activity)
         {
-            if(!rider)return;
+            if(!rider||!hero.bike)return;
             if(armProperties==null)armProperties=new MaterialPropertyBlock();
-            armProperties.SetFloat("_ArmCharge",charge);armProperties.SetFloat("_ArmPulse",activity);
+            armProperties.SetFloat(ArmCharge,charge);armProperties.SetFloat(ArmPulse,activity);
             rider.SetPropertyBlock(armProperties);
         }
         public void Mount()
@@ -105,14 +106,9 @@ namespace Plugin.AncientCivilization
             float speed=Mathf.Abs(hero.HorizontalSpeed);float skid=hero.BikeSkid;bool running=hero.bike&&!game.Paused&&!game.won;
             float volume=running&&audioSettings&&!audioSettings.Muted ? 0.065f : 0f;
             engine.volume=!running||!audioSettings||audioSettings.Muted?0:Mathf.MoveTowards(engine.volume,volume,Time.unscaledDeltaTime*.3f);
+            // Park/Detonate already clear the presentation; walking need not repeat native renderer setters.
+            if(!hero.bike){previousGrounded=false;return;}
             engine.pitch=Mathf.Lerp(engine.pitch,.75f+Mathf.Clamp01(speed/17)*1.15f+skid*.2f,1-Mathf.Exp(-6*Time.unscaledDeltaTime));
-            if(!hero.bike)
-            {
-                model.gameObject.SetActive(false);headlight.enabled=false;
-                foreach(var trace in skidTrails)trace.emitting=false;
-                exhaust.emitting=exhaustCore.emitting=false;previousGrounded=false;return;
-            }
-            model.gameObject.SetActive(true);
             float facing=speed>1.5f?Mathf.Sign(hero.HorizontalSpeed):hero.Facing;
             model.localScale=new Vector3(facing*(1-skid*.12f),1,1);
             float acceleration=(hero.HorizontalSpeed-lastSpeed)/Mathf.Max(.001f,Time.deltaTime);lastSpeed=hero.HorizontalSpeed;

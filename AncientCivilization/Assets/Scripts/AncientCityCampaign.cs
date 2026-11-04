@@ -69,6 +69,7 @@ namespace Plugin.AncientCivilization
         }
         public void OnEnterFloor()
         {
+            if(game.Traversal)game.Traversal.ResetForTravel();
             foreach(var enemy in game.enemies.ToArray())
                 if(enemy&&enemy.DistrictFloor>0){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}
             if(game.boss&&game.boss.DistrictFloor>0)game.boss=null;

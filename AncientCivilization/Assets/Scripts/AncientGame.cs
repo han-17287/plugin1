@@ -41,6 +41,7 @@ namespace Plugin.AncientCivilization
         const string SaveKey = "PLUGIN.Ancient.v2.";
         Camera view; Sprite square; Transform backdrop;
         GUIStyle small, title, centered;
+        readonly AncientHudText hud=new AncientHudText();
         string message; float messageUntil, shake, runTime;
         int checkpointStage;
         Material lineMaterial; AncientAudio audioCues;
@@ -117,7 +118,7 @@ namespace Plugin.AncientCivilization
             gameObject.AddComponent<AncientVisuals>();gameObject.AddComponent<AncientPointer>();gameObject.AddComponent<AncientMainMenu>();
             Time.timeScale=MainMenu?0:1;
             if(HasSession){SetSaved("started",1);PlayerPrefs.Save();inputReadyFrame=Time.frameCount+1;}
-            Notice(checkpointStage==0?"LOWER CITY / MORNING PATROL\nComplete the movement, chain and blade training quests.":"Checkpoint restored. The city remembers.",7);
+            Notice(checkpointStage==0?"하층 생산구 / 아침 순찰\n이동·와이어·블레이드 훈련을 완료하세요.":"저장한 순찰 지점에서 이어갑니다.",7);
         }
         void BuildWorld()
         {
@@ -267,7 +268,7 @@ namespace Plugin.AncientCivilization
             if(stage<=checkpointStage)return;
             checkpointStage=stage;checkpoint=stage==1?new Vector2(46,2.3f):stage==2?new Vector2(86,1.3f):new Vector2(132,1.3f);
             hero.hp=hero.MaxHP;hero.particles=Mathf.Max(hero.particles,60);Save();
-            Burst(checkpoint,Cyan,28);Notice("CHECKPOINT / Health restored. Progress saved.",4);
+            Burst(checkpoint,Cyan,28);Notice("체크포인트 / 체력을 회복하고 진행을 저장했습니다.",4);
         }
         public void SetLiftCheckpoint(int floor)
         {
@@ -326,9 +327,17 @@ namespace Plugin.AncientCivilization
             if(!hero)return;
             float speed=Mathf.Abs(hero.HorizontalSpeed);
             float zoom=hero.Wired?7.5f:hero.bike?6.8f:5.8f;
+            float arenaLeft=0,arenaRight=0;bool arena=ArenaActive&&!(Finale&&Finale.Active);
+            if(arena)
+            {
+                arenaLeft=boss.IsDistrictBoss?AncientCityLayout.ArenaLeft(boss.DistrictFloor):98;
+                arenaRight=boss.IsDistrictBoss?AncientCityLayout.ArenaRight(boss.DistrictFloor):117;
+                zoom=Mathf.Max(5.8f,(arenaRight-arenaLeft+3)/(2*Mathf.Max(.5f,view.aspect)));
+            }
             view.orthographicSize=Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
             float lead=hero.Facing*Mathf.Lerp(2.5f,4,Mathf.Clamp01(speed/25));
             Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Story&&Story.InUpperCity?AncientCityLayout.Left(Story.CurrentFloor)+5:5,Story&&Story.InUpperCity?AncientCityLayout.Right(Story.CurrentFloor)-6:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
+            if(arena)target=new Vector3((arenaLeft+arenaRight)*.5f,4.6f,-10);
             if(Finale&&Finale.Active)target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,AncientFinaleRules.Start+5,AncientFinaleRules.Finish+12),Mathf.Max(1.5f,hero.transform.position.y+2),-10);
             cameraFollow=Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
             var p=cameraFollow;if(shake>0&&!skills){p+=(Vector3)(Random.insideUnitCircle*shake);shake=Mathf.MoveTowards(shake,0,Time.unscaledDeltaTime);}
@@ -369,19 +378,20 @@ namespace Plugin.AncientCivilization
                 small=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,wordWrap=true};title=new GUIStyle(small){fontSize=22,fontStyle=FontStyle.Bold};
                 centered=new GUIStyle(title){alignment=TextAnchor.MiddleCenter};
             }
-            float scale=Mathf.Clamp(Screen.width/1280f,.65f,2);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);
+            hud.Refresh(this);
+            float scale=Mathf.Min(2,Mathf.Min(Screen.width/1280f,Screen.height/720f));GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);
             float w=Screen.width/scale,h=Screen.height/scale;
             Panel(new Rect(16,16,302,106),new Color(.025f,.045f,.065f,.88f));
             GUI.Label(new Rect(28,21,290,24),"PLUGIN / ANCIENT CIVILIZATION",small);
             Bar(new Rect(28,49,272,18),healthEcho/hero.MaxHP,new Color(.48f,.23f,.12f));
             Panel(new Rect(30,51,268*Mathf.Clamp01(hero.hp/hero.MaxHP),14),Orange);Bar(new Rect(28,73,272,13),hero.CaptureEnergy/100f,Cyan);
-            GUI.Label(new Rect(28,91,275,25),"HP "+Mathf.CeilToInt(hero.hp)+"   PARTICLES "+Mathf.RoundToInt(hero.CaptureEnergy)+"   TECH "+credits,small);
+            GUI.Label(new Rect(28,91,275,25),hud.Resources,small);
             Panel(new Rect(w-300,16,284,74),new Color(.025f,.045f,.065f,.88f));
-            GUI.Label(new Rect(w-286,24,260,55),"ENERGY CORES  "+Cores+" / 3\n"+(Story.Stage<4?"Complete patrol training":Story.Stage<=5?"Pursue the core theft truck":Story.Stage==6?"Secure the suspect":"Upper-city transit authorized"),small);
-            GUI.Label(new Rect(28,128,300,30),(hero.bike?"BIKE "+Mathf.CeilToInt(hero.bikeHP)+" / 80":hero.running?"RUN":"WALK")+"   "+(hero.Wired?"WIRE LINK "+hero.WireChain:hero.WireChain>1?"LINK "+hero.WireChain:"")+"   K / UPGRADES",small);
-            GUI.Label(new Rect(w-300,92,284,23),(AncientVisuals.HighQuality?"F6 고품질":"F6 가볍게")+" · "+Performance.Summary,small);
-            GUI.Label(new Rect(w-300,117,284,23),"WHEEL / "+hero.WireModeName+"   RMB PARTICLES",small);
-            GUI.Label(new Rect(w-300,141,284,24),"CAPTURE "+hero.CaptureStage+" / 3   "+Mathf.RoundToInt(hero.CaptureEnergy)+"%",small);
+            GUI.Label(new Rect(w-286,24,260,55),hud.Objective,small);
+            GUI.Label(new Rect(28,128,300,30),hud.Movement,small);
+            GUI.Label(new Rect(w-300,92,284,23),hud.Performance,small);
+            GUI.Label(new Rect(w-300,117,284,23),hud.Mode,small);
+            GUI.Label(new Rect(w-300,141,284,24),hud.Capture,small);
             Bar(new Rect(w-300,168,284,7),hero.CaptureEnergy/100f,Cyan);
             foreach(var enemy in enemies)
             {
@@ -412,7 +422,7 @@ namespace Plugin.AncientCivilization
             }
             if(boss)
             {
-                GUI.Label(new Rect(w/2-220,h-104,440,25),boss.Role+"  "+(boss.Enraged?"/ OVERDRIVE":""),centered);
+                GUI.Label(new Rect(w/2-220,h-104,440,25),hud.Boss,centered);
                 Bar(new Rect(w/2-240,h-72,480,16),boss.HealthRatio,Orange);
             }
             if(Time.unscaledTime<messageUntil&&!skills)
@@ -423,7 +433,7 @@ namespace Plugin.AncientCivilization
             if(showHelp&&!skills&&!boss&&!won)
             {
                 Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
-                GUI.Label(new Rect(28,h-87,w-56,70),"A/D MOVE   CTRL RUN   SPACE JUMP   E RIDE / LIFT   F ABSORB   S BRAKE\nWHEEL UP ATTACK / DOWN WIRE   ATTACK LMB TAP: YELLOW BLADE   HOLD: AIM LASER, RELEASE WHEN READY   RMB PARTICLES   MMB SWING",small);
+                GUI.Label(new Rect(28,h-87,w-56,70),"A/D 이동 · Ctrl 달리기 · Space 점프 · E 상호작용 · Tab 순찰 기록\n휠 위 공격 / 아래 와이어 · 좌클릭 베기/견인 · 길게 조준 후 놓아 레이저 · 우클릭 입자 수집 · 가운데 클릭 스윙",small);
             }
             if(skills)
             {
@@ -431,7 +441,7 @@ namespace Plugin.AncientCivilization
                 float x=w/2-260,y=Mathf.Max(20,h/2-240);
                 Panel(new Rect(x,y,520,515),new Color(.035f,.065f,.09f,.98f));
                 GUI.Label(new Rect(x+25,y+20,470,35),"입자 장비 정비",title);
-                GUI.Label(new Rect(x+25,y+57,470,52),"기술 재화: "+credits+"   /   Energy cores: "+Cores+"\n코어를 회수하고 기술 재화를 모아 장비를 강화합니다.",small);
+                GUI.Label(new Rect(x+25,y+57,470,52),"기술 재화: "+credits+"   /   에너지 코어: "+Cores+"\n코어를 회수하고 기술 재화를 모아 장비를 강화합니다.",small);
                 if(GUI.Button(new Rect(x+25,y+122,470,35),"F8 / 프레임 목표 "+Performance.TargetLabel+" · F9 성능 표시"))Performance.CycleTarget();
                 Upgrade(new Rect(x+25,y+174,470,42),"공중 스텝 / 2단 점프",10,1,hero.doubleJump,()=>hero.doubleJump=true);
                 Upgrade(new Rect(x+25,y+226,470,42),"입자 도관 / 수집량 +25%",12,2,hero.reservoir,()=>hero.reservoir=true);
@@ -444,13 +454,13 @@ namespace Plugin.AncientCivilization
             if(!skills&&!won)
             {
                 Bar(new Rect(28,156,74,4),(hero.Combat?hero.Combat.ChargeProgress:0),Cyan);
-                GUI.Label(new Rect(28,162,90,22),"LMB / AIM",small);
+                GUI.Label(new Rect(28,162,90,22),"좌클릭 / 조준",small);
                 Bar(new Rect(120,156,74,4),hero.CaptureEnergy/100f,Orange);
-                GUI.Label(new Rect(120,162,100,22),"ENERGY",small);
+                GUI.Label(new Rect(120,162,100,22),"입자",small);
                 if(hero.bike)
                 {
                     Bar(new Rect(220,156,84,4),hero.bikeHP/80,Cyan);
-                    GUI.Label(new Rect(220,162,120,22),Mathf.RoundToInt(Mathf.Abs(hero.HorizontalSpeed)*3.6f)+" km/h",small);
+                    GUI.Label(new Rect(220,162,120,22),hud.Speed,small);
                 }
                 AncientPickup nearest=null;float distance=float.MaxValue;
                 foreach(var item in pickups)if(item&&item.core>=0)
@@ -459,7 +469,7 @@ namespace Plugin.AncientCivilization
                 {
                     Vector3 point=view.WorldToScreenPoint(nearest.transform.position+Vector3.up*.65f);
                     float x=Mathf.Clamp(point.x/scale,60,w-100),y=Mathf.Clamp((Screen.height-point.y)/scale,185,h-125);
-                    GUI.color=Orange;GUI.Label(new Rect(x-30,y,145,24),"CORE "+Mathf.CeilToInt(distance)+"m",small);GUI.color=Color.white;
+                    hud.Distance(nearest,distance);GUI.color=Orange;GUI.Label(new Rect(x-30,y,145,24),hud.CoreDistance,small);GUI.color=Color.white;
                 }
             }
             if(won&&!skills)
@@ -500,12 +510,36 @@ namespace Plugin.AncientCivilization
         LineRenderer chargeRing;
                 Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;
         CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
-        DistanceJoint2D wireJoint;SpriteRenderer hook;SpriteRenderer[] wirePulses;
+        DistanceJoint2D wireJoint;SpriteRenderer hook;AncientWireParticleBatch wireParticles;
         LineRenderer wireCuff,wireLatch;
         readonly LineRenderer[] wireHelices=new LineRenderer[2];
         MaterialPropertyBlock armProperties;
+        static readonly int ArmCharge=Shader.PropertyToID("_ArmCharge"),ArmPulse=Shader.PropertyToID("_ArmPulse");
         Camera aimCamera;
         readonly Vector3[] cablePoints=new Vector3[2];
+        readonly Vector2[] reservoirShape=UnitCircle(32),cuffShape=UnitCircle(12),latchShape=UnitCircle(6),zipShape=UnitCircle(4),swingShape=UnitCircle(8);
+        readonly Vector3[] reservoirPoints=new Vector3[32],cuffPoints=new Vector3[12],latchPoints=new Vector3[6],zipPoints=new Vector3[4],swingPoints=new Vector3[8];
+        bool cableVisible,reservoirVisible,targetVisible,enemyReticle,lastArmBike;int lastHelixCount=192,lastReticleCount=8;
+        float lastArmCharge=-1,lastArmPulse=-1,lastReservoirEnergy=-1;
+        static Vector2[] UnitCircle(int count)
+        {
+            var result=new Vector2[count];
+            for(int i=0;i<count;i++){float angle=i*Mathf.PI*2/count;result[i]=new Vector2(Mathf.Cos(angle),Mathf.Sin(angle));}return result;
+        }
+        static void SetCircle(LineRenderer line,Vector2[] shape,Vector3[] points,Vector2 centre,float radius,float angle)
+        {
+            float cs=Mathf.Cos(angle),sn=Mathf.Sin(angle);
+            for(int i=0;i<shape.Length;i++)
+            {Vector2 p=shape[i];points[i]=centre+new Vector2(p.x*cs-p.y*sn,p.x*sn+p.y*cs)*radius;}
+            line.SetPositions(points);
+        }
+        void ShowCable(bool visible)
+        {
+            if(cableVisible==visible)return;cableVisible=visible;
+            wire.enabled=wireGlow.enabled=hook.enabled=wireCuff.enabled=wireLatch.enabled=visible;
+            foreach(var helix in wireHelices)helix.enabled=visible;
+            if(!visible)wireParticles.Hide();
+        }
         readonly Vector3[][] helixSmall={new Vector3[24],new Vector3[48],new Vector3[96],new Vector3[192]};
         readonly float[] helixNormal=new float[192],helixDepth=new float[192];
         AncientParkedBike mountedBike;
@@ -518,12 +552,16 @@ namespace Plugin.AncientCivilization
         Sprite[] frames,actions;
         float actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
         bool wasGrounded,cutJump;float strikeFacing;
+        void Awake()
+        {
+            // Story.Start may save immediately on a new-run reload; upgrades must already be loaded.
+            doubleJump=AncientGame.Saved("jump")!=0;
+            reservoir=AncientGame.Saved("capacity")!=0;armor=AncientGame.Saved("armor")!=0;hp=MaxHP;
+        }
         void Start()
         {
             var g=AncientGame.Instance;aimCamera=g.View;
             ZipMode=true;
-            doubleJump=AncientGame.Saved("jump")!=0;
-            reservoir=AncientGame.Saved("capacity")!=0;armor=AncientGame.Saved("armor")!=0;hp=MaxHP;
             body=gameObject.AddComponent<Rigidbody2D>();body.freezeRotation=true;body.collisionDetectionMode=CollisionDetectionMode2D.Continuous;body.interpolation=RigidbodyInterpolation2D.Interpolate;
             wireJoint=gameObject.AddComponent<DistanceJoint2D>();wireJoint.autoConfigureDistance=false;
             wireJoint.autoConfigureConnectedAnchor=false;wireJoint.maxDistanceOnly=true;wireJoint.enabled=false;
@@ -557,12 +595,8 @@ namespace Plugin.AncientCivilization
             absorb=g.Line("Absorption stream",AncientGame.Cyan,.04f);
             wire.enabled=wireGlow.enabled=wireTarget.enabled=absorb.enabled=false;
             hook=AncientArt.Display("Particle wire latch",AncientArt.WireParticle(),Vector2.zero,18);hook.transform.localScale=Vector3.one*.18f;hook.enabled=false;
-            wirePulses=new SpriteRenderer[48];
-            for(int i=0;i<wirePulses.Length;i++)
-            {
-                var link=AncientArt.Display("Flowing wire particle",AncientArt.WireParticle(),Vector2.zero,19);
-                wirePulses[i]=link;link.enabled=false;
-            }
+            var dots=new GameObject("Batched flowing wire particles");dots.transform.SetParent(transform,false);
+            wireParticles=dots.AddComponent<AncientWireParticleBatch>();wireParticles.Initialize(AncientArt.WireParticle());
             Combat=gameObject.AddComponent<AncientCombat>();Combat.Initialize(this);
             trail=gameObject.AddComponent<TrailRenderer>();trail.material=wire.sharedMaterial;
             trail.startColor=new Color(.2f,.9f,1,.55f);trail.endColor=new Color(.2f,.9f,1,0);
@@ -574,6 +608,7 @@ namespace Plugin.AncientCivilization
             AncientGame.SetSaved("capacity",reservoir?1:0);AncientGame.SetSaved("armor",armor?1:0);
         }
         public bool IsOnGround {get{return Grounded();}}
+        public bool StandingOn(Rigidbody2D surface){return surface&&Grounded()&&groundBody==surface;}
         float groundSampleTick=-1;Vector2 groundSamplePosition;bool groundSample;Rigidbody2D groundBody;
         bool Grounded()
         {
@@ -659,6 +694,11 @@ namespace Plugin.AncientCivilization
             if(!art||frames==null)return;art.sprite=frames[low?4:0];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
             art.transform.localPosition=new Vector3(0,-1.05f,0);
         }
+        public void CinematicMove(Vector2 point)
+        {
+            body.position=point;transform.position=point;body.linearVelocity=Vector2.zero;
+            if(art&&frames!=null)art.sprite=frames[3];
+        }
         public void AimWeaponAt(Vector2 target)
         {if(Mathf.Abs(target.x-transform.position.x)>.1f)direction=target.x<transform.position.x?-1:1;}
         public void VentLift()
@@ -694,7 +734,9 @@ namespace Plugin.AncientCivilization
                 mountedBike=null;motorcycle.Park();SetBike(false);BikeSkid=0;
             }
             StopWire(false);body.position=point;transform.position=point;body.linearVelocity=Vector2.zero;
-            momentumUntil=0;conveyorUntil=0;jumpBufferedUntil=-10;cutJump=false;lastGrounded=-100;groundSampleTick=-1;if(Combat)Combat.ResetCombat();
+            momentumUntil=0;conveyorUntil=0;jumpBufferedUntil=-10;cutJump=false;lastGrounded=-100;groundSampleTick=-1;
+            fallSpeed=0;wasGrounded=false;airJumpUsed=false;hurtUntil=actionUntil=landingUntil=0;
+            if(trail){trail.emitting=false;trail.Clear();}if(Combat)Combat.ResetCombat();
         }
         Vector2 anchor;
         void FixedUpdate()
@@ -858,7 +900,7 @@ namespace Plugin.AncientCivilization
             wireMovingLocal=Vector2.zero;
             if(!wireMovingAnchor)
             {
-                var moving=Physics2D.OverlapPoint(selected+Vector2.down*.04f,1<<8);
+                var moving=Physics2D.OverlapCircle(selected,.06f,1<<8);
                 if(moving&&moving.attachedRigidbody&&moving.attachedRigidbody.bodyType==RigidbodyType2D.Kinematic)
                 {wireMovingAnchor=moving.attachedRigidbody.transform;wireMovingLocal=wireMovingAnchor.InverseTransformPoint(selected);}
             }
@@ -909,24 +951,22 @@ namespace Plugin.AncientCivilization
             if(!body||!wire)return;var g=AncientGame.Instance;
             float armCharge=CaptureEnergy/100f;
             float armPulse=Capturing?1:wired?.65f:Combat?Combat.ArmActivity:0;
-            armProperties.SetFloat("_ArmCharge",armCharge);armProperties.SetFloat("_ArmPulse",armPulse);
-            art.SetPropertyBlock(armProperties);motorcycle.SetArmPower(armCharge,armPulse);
-            chargeRing.enabled=CaptureEnergy>0&&!g.won;
-            if(chargeRing.enabled)
+            if(lastArmCharge!=armCharge||lastArmPulse!=armPulse||lastArmBike!=bike)
+            {
+                lastArmCharge=armCharge;lastArmPulse=armPulse;lastArmBike=bike;
+                armProperties.SetFloat(ArmCharge,armCharge);armProperties.SetFloat(ArmPulse,armPulse);
+                art.SetPropertyBlock(armProperties);motorcycle.SetArmPower(armCharge,armPulse);
+            }
+            bool stored=CaptureEnergy>0&&!g.won;
+            if(stored!=reservoirVisible){reservoirVisible=stored;chargeRing.enabled=stored;}
+            if(stored)
             {
                 float radius=.45f+CaptureEnergy/100f*.85f;
-                chargeRing.startWidth=chargeRing.endWidth=.025f+CaptureEnergy*.0007f;
-                for(int i=0;i<chargeRing.positionCount;i++)
-                {
-                    float a=i*Mathf.PI*2/chargeRing.positionCount+Time.time*2;
-                    chargeRing.SetPosition(i,transform.position+new Vector3(Mathf.Cos(a),Mathf.Sin(a),0)*radius);
-                }
+                if(lastReservoirEnergy!=CaptureEnergy)
+                {lastReservoirEnergy=CaptureEnergy;chargeRing.startWidth=chargeRing.endWidth=.025f+CaptureEnergy*.0007f;}
+                SetCircle(chargeRing,reservoirShape,reservoirPoints,transform.position,radius,Time.time*2);
             }
-            bool visible=wired&&!g.won;
-            wire.enabled=wireGlow.enabled=hook.enabled=visible;
-            wireCuff.enabled=wireLatch.enabled=visible;
-            foreach(var helix in wireHelices)helix.enabled=visible;
-            if(!visible)foreach(var link in wirePulses)link.enabled=false;
+            bool visible=wired&&!g.won;ShowCable(visible);
             if(visible)
             {
                 Vector2 hand=WireOrigin;
@@ -938,6 +978,8 @@ namespace Plugin.AncientCivilization
                 int samples=AncientWireMath.Samples(length,AncientVisuals.HighQuality);
                 int buffer=samples==24?0:samples==48?1:samples==96?2:3;
                 Vector2 normal=Vector2.Perpendicular(end-hand).normalized;
+                if(lastHelixCount!=samples)
+                {lastHelixCount=samples;foreach(var helix in wireHelices)helix.positionCount=samples;}
                 for(int strand=0;strand<2;strand++)
                 {
                     var points=helixSmall[buffer];
@@ -947,32 +989,13 @@ namespace Plugin.AncientCivilization
                         Vector2 point=Vector2.Lerp(hand,end,i/(float)(samples-1))+normal*helixNormal[i];
                         points[i]=new Vector3(point.x,point.y,helixDepth[i]);
                     }
-                    wireHelices[strand].positionCount=samples;wireHelices[strand].SetPositions(points);
+                    wireHelices[strand].SetPositions(points);
                 }
                 hook.transform.position=end;hook.transform.rotation=Quaternion.Euler(0,0,age*90);
                 hook.transform.localScale=Vector3.one*(.18f+Mathf.Exp(-age*12)*.08f);
-                int particleCount=Mathf.Clamp(Mathf.CeilToInt(length*1.2f),6,AncientVisuals.HighQuality?24:12);
-                for(int i=0;i<wirePulses.Length;i++)
-                {
-                    var pulse=wirePulses[i];pulse.enabled=i<particleCount;if(i>=particleCount)continue;
-                    float t=Mathf.Repeat(age*1.6f+i/(float)particleCount,1);
-                    int strand=i%2;
-                    pulse.transform.position=HelixPoint(hand,end,age,t,strand);
-                    pulse.transform.rotation=Quaternion.Euler(0,0,0);
-                    float sparkle=.5f+.5f*Mathf.Sin(age*17+i*2);
-                    pulse.transform.localScale=Vector3.one*(.055f+sparkle*.035f);
-                    pulse.color=Color.Lerp(new Color(.2f,.65f,1),Color.white,sparkle*.7f);
-                }
-                for(int i=0;i<wireCuff.positionCount;i++)
-                {
-                    float a=i*Mathf.PI*2/wireCuff.positionCount-age*3;
-                    wireCuff.SetPosition(i,hand+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.16f);
-                }
-                for(int i=0;i<wireLatch.positionCount;i++)
-                {
-                    float a=i*Mathf.PI*2/wireLatch.positionCount+age;
-                    wireLatch.SetPosition(i,end+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*(.22f+Mathf.Exp(-age*9)*.2f));
-                }
+                wireParticles.Draw(hand,end,age,AncientVisuals.HighQuality);
+                SetCircle(wireCuff,cuffShape,cuffPoints,hand,.16f,-age*3);
+                SetCircle(wireLatch,latchShape,latchPoints,end,.22f+Mathf.Exp(-age*9)*.2f,age);
             }
             Vector2 target=Vector2.zero;AncientEnemy enemyTarget=null;
             bool hasTarget=false;
@@ -981,30 +1004,17 @@ namespace Plugin.AncientCivilization
                 if(PickWireEnemy(out enemyTarget)){target=enemyTarget.AimPoint;hasTarget=true;}
                 else hasTarget=PickAnchor(out target);
             }
-            wireTarget.startColor=wireTarget.endColor=enemyTarget?AncientGame.Orange:AncientGame.Cyan;
-            HasWireTarget=hasTarget;WireTarget=target;wireTarget.enabled=hasTarget;
+            if(hasTarget&&enemyReticle!=(enemyTarget!=null))
+            {enemyReticle=enemyTarget!=null;wireTarget.startColor=wireTarget.endColor=enemyReticle?AncientGame.Orange:AncientGame.Cyan;}
+            HasWireTarget=hasTarget;WireTarget=target;
+            if(targetVisible!=hasTarget){targetVisible=hasTarget;wireTarget.enabled=hasTarget;}
             if(hasTarget)
             {
-                wireTarget.positionCount=ZipMode?4:8;
+                int count=ZipMode?4:8;
+                if(lastReticleCount!=count){lastReticleCount=count;wireTarget.positionCount=count;}
                 float radius=.43f+Mathf.Sin(Time.time*7)*.045f;
-                for(int i=0;i<wireTarget.positionCount;i++)
-                {
-                    float a=Mathf.PI*2*i/wireTarget.positionCount;
-                    wireTarget.SetPosition(i,target+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius);
-                }
+                SetCircle(wireTarget,ZipMode?zipShape:swingShape,ZipMode?zipPoints:swingPoints,target,radius,0);
             }
-        }
-        Vector2 CablePoint(Vector2 hand,Vector2 end,float age,float t)
-        {
-            return Vector2.Lerp(hand,end,t);
-        }
-        Vector3 HelixPoint(Vector2 hand,Vector2 end,float age,float t,int strand)
-        {
-            Vector2 normal=Vector2.Perpendicular(end-hand).normalized;
-            float length=Vector2.Distance(hand,end);
-            float offset,depth;AncientRules.WireHelixOffset(length,age,t,strand,out offset,out depth);
-            Vector2 point=Vector2.Lerp(hand,end,t)+normal*offset;
-            return new Vector3(point.x,point.y,depth);
         }
         public void AbsorbShot(AncientProjectile shot)
         {
@@ -1012,7 +1022,7 @@ namespace Plugin.AncientCivilization
             particles=Mathf.Min(MaxParticles,particles+(shot.scrap?18:12)*(perfect?1.5f:1));
             Combat.EmitParticles(shot.transform.position,Mathf.Clamp(shot.damage,8,25));
             g.Sound(2);g.score+=perfect?30:10;g.Burst(shot.transform.position,AncientGame.Cyan,10);
-            if(perfect)g.Notice("PERFECT ABSORB / bonus particles",.75f);shot.Remove();
+            if(perfect)g.Notice("정밀 분해 / 추가 입자",.75f);shot.Remove();
         }
         public void HurtContact(AncientEnemy source,float damage)
         {
@@ -1056,7 +1066,7 @@ namespace Plugin.AncientCivilization
                 }
                 StopWire(false);mountedBike.Park(vehiclePosition,direction,bikeHP);mountedBike=null;
                 motorcycle.Park();SetBike(false);BikeSkid=0;momentumUntil=0;body.position=exit;body.linearVelocity=Vector2.zero;
-                g.Notice("MOTORCYCLE PARKED / E to ride again.",1.5f);return;
+                g.Notice("오토바이 주차 / E로 다시 탑승",1.5f);return;
             }
             AncientParkedBike nearest=null;float best=2.8f*2.8f;
             foreach(var vehicle in g.parkedBikes)
@@ -1065,10 +1075,10 @@ namespace Plugin.AncientCivilization
                 float distance=((Vector2)vehicle.transform.position-body.position).sqrMagnitude;
                 if(distance<best&&!Physics2D.Linecast(body.position,vehicle.transform.position,1<<8)){nearest=vehicle;best=distance;}
             }
-            if(!nearest){g.Notice("Find a parked motorcycle and press E.",1.5f);return;}
+            if(!nearest){g.Notice("주차된 오토바이 가까이에서 E를 누르세요.",1.5f);return;}
             Vector2 seat=nearest.transform.position;
             if(Physics2D.OverlapBox(seat+Vector2.up*.085f,new Vector2(2.87f,1.77f),0,1<<8))
-            {g.Notice("The motorcycle needs clear space before you can ride.");return;}
+            {g.Notice("주변 공간이 확보된 곳에서 탑승하세요.");return;}
             StopWire(false);mountedBike=nearest;bikeHP=nearest.Health;direction=nearest.Facing;
             nearest.Take();SetBike(true);body.position=seat;body.linearVelocity=Vector2.zero;BikeSkid=0;
             momentumUntil=0;motorcycle.Mount();g.Sound(3);
@@ -1086,7 +1096,7 @@ namespace Plugin.AncientCivilization
             foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<5)e.Hit(85,true);
             float launch=Mathf.Abs(body.linearVelocity.x)>1.5f?Mathf.Sign(body.linearVelocity.x):direction;
             body.linearVelocity=new Vector2(launch*Mathf.Clamp(Mathf.Abs(body.linearVelocity.x)*.85f,17,23),19);invulnerableUntil=Time.time+.7f;
-            g.Notice("EXPLOSION LAUNCH / connect the next anchor.",2);
+            g.Notice("폭발 도약 / 다음 와이어 지점을 연결하세요.",2);
         }
         public void RetryFromCheckpoint(){Respawn();}
         void Respawn()
@@ -1101,7 +1111,6 @@ namespace Plugin.AncientCivilization
             foreach(var helix in wireHelices)if(helix)Destroy(helix.gameObject);
             if(wireCuff)Destroy(wireCuff.gameObject);if(wireLatch)Destroy(wireLatch.gameObject);
             if(wireTarget)Destroy(wireTarget.gameObject);if(hook)Destroy(hook.gameObject);
-            if(wirePulses!=null)foreach(var pulse in wirePulses)if(pulse)Destroy(pulse.gameObject);
             if(absorb)Destroy(absorb.gameObject);if(chargeRing)Destroy(chargeRing.gameObject);
         }
     }
@@ -1116,13 +1125,13 @@ namespace Plugin.AncientCivilization
         {DistrictFloor=floor;IsDistrictBoss=boss;if(boss)maxHP=hp=floor==4?260:220+floor*50;}
         float hp=60,maxHP=60,nextAttack,resolveAt=-1,flashUntil,walkPhase,faceLockUntil,guardBrokenUntil,staggerUntil;
         int pattern,attackIndex,volleyRemaining;bool dead;
-        float volleyAt,windupStartedAt,attackPoseUntil,recoveryStarts,recoveryUntil,recoveryDuration;bool enragedAnnounced;
+        float volleyAt,volleyInterval=.14f,volleySpeed=12,windupStartedAt,attackPoseUntil,recoveryStarts,recoveryUntil,recoveryDuration;bool enragedAnnounced;
         public bool IsTelegraphing {get{return resolveAt>=0;}}
         public bool Recovering {get{return IsBoss&&Time.time>=recoveryStarts&&Time.time<recoveryUntil;}}
         public float RecoveryRemaining {get{return Recovering?Mathf.Clamp01((recoveryUntil-Time.time)/Mathf.Max(.1f,recoveryDuration)):0;}}
         public bool AttackIsPhysical {get{return pattern==0;}}
         public float WindupProgress {get{return resolveAt<0?0:Mathf.Clamp01((Time.time-windupStartedAt)/Mathf.Max(.01f,resolveAt-windupStartedAt));}}
-        SpriteRenderer art;LineRenderer warning;
+        SpriteRenderer art;LineRenderer warning;AncientFinalTruck carrier;
         Vector2 home,lockedAim;float facing=1;
         public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(kind==3?1.65f:kind==4?.65f:.95f);}}
         public bool IsAlive {get{return !dead;}}
@@ -1136,7 +1145,7 @@ namespace Plugin.AncientCivilization
         {kind=type;maxHP=hp=kind==3?560:kind==5?115:kind==4?42:kind==0?70:55;}
         void Start()
         {
-            var g=AncientGame.Instance;home=transform.position;
+            var g=AncientGame.Instance;home=transform.position;carrier=GetComponentInParent<AncientFinalTruck>();
             art=AncientArt.Display(Role,AncientArt.Enemy(kind),Vector2.zero,8,transform);art.flipX=facing<0;
             if(AncientVisuals.Instance)
             {
@@ -1148,6 +1157,14 @@ namespace Plugin.AncientCivilization
         }
         bool Step(float distance)
         {
+            // A wire impact on a moving guard stays on that truck's deck, never its old world-space home.
+            if(carrier)
+            {
+                Vector3 local=transform.localPosition;local.x=Mathf.Clamp(local.x+distance,-1.7f,1.7f);
+                Vector2 next=transform.parent.TransformPoint(local);
+                if(Physics2D.Linecast(AimPoint,next+Vector2.up*.95f,1<<8))return false;
+                transform.localPosition=local;return true;
+            }
             float x=Mathf.Clamp(transform.position.x+distance,IsDistrictBoss?AncientCityLayout.ArenaLeft(DistrictFloor)+1:kind==3?100:home.x-2,IsDistrictBoss?AncientCityLayout.ArenaRight(DistrictFloor)-1:kind==3?114:home.x+2);
             if(Physics2D.Linecast(AimPoint,new Vector2(x,AimPoint.y),1<<8))return false;
             if(kind!=3&&kind!=4&&!Physics2D.Raycast(new Vector2(x,home.y+.2f),Vector2.down,.5f,1<<8))return false;
@@ -1167,14 +1184,14 @@ namespace Plugin.AncientCivilization
             if(!Recovering&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
                 g.hero.HurtContact(this,kind==3?14:8);
             if(Enraged&&!enragedAnnounced)
-            {enragedAnnounced=true;g.Sound(8);g.Notice("WARDEN / OVERDRIVE",2);g.Impact(AimPoint,AncientGame.Orange,true);g.Shake(.12f);}
+            {enragedAnnounced=true;g.Sound(8);g.Notice("화물 수호 장치 / 과부하",2);g.Impact(AimPoint,AncientGame.Orange,true);g.Shake(.12f);}
             float anticipation=IsTelegraphing?WindupProgress:0;
             float recoil=Mathf.Clamp01((attackPoseUntil-Time.time)/.18f);
             art.transform.localScale=new Vector3(1-anticipation*.035f,1+anticipation*.035f,1);
             art.transform.localRotation=Quaternion.Euler(0,0,IsTelegraphing?-facing*anticipation*4:facing*recoil*4);
             if(kind==4)transform.position=home+new Vector2(Mathf.Sin(Time.time*.75f+home.x)*2.2f,Mathf.Sin(Time.time*1.8f)*.55f);
             if(volleyRemaining>0&&Time.time>=volleyAt)
-            {FireProjectile(lockedAim,12,false,0);volleyRemaining--;volleyAt=Time.time+.14f;}
+            {FireProjectile(lockedAim,volleySpeed,false,0);volleyRemaining--;volleyAt=Time.time+volleyInterval;}
             Vector2 delta=(Vector2)g.hero.transform.position-AimPoint;
             if(resolveAt<0&&Time.time>faceLockUntil){facing=delta.x<0?-1:1;art.flipX=facing<0;}
             if(Time.time<staggerUntil)
@@ -1191,7 +1208,7 @@ namespace Plugin.AncientCivilization
                     if(IsBoss)
                     {
                         recoveryDuration=AncientCombatRules.Recovery(DistrictFloor,pattern,Enraged);
-                        recoveryStarts=Time.time+volleyRemaining*(DistrictFloor==2?.2f:.14f);
+                        recoveryStarts=Time.time+volleyRemaining*volleyInterval;
                         recoveryUntil=recoveryStarts+recoveryDuration;nextAttack=Mathf.Max(nextAttack,recoveryUntil+.12f);
                     }
                 }
@@ -1268,9 +1285,10 @@ namespace Plugin.AncientCivilization
             }
             else if(kind==2)FireProjectile(lockedAim,9,true,14);
             else if(kind==1)
-            {FireProjectile(lockedAim,IsDistrictBoss?18:12,false,0);volleyRemaining=IsDistrictBoss?0:2;volleyAt=Time.time+.14f;}
+            {volleySpeed=IsDistrictBoss?18:12;volleyInterval=IsDistrictBoss?.24f:.14f;
+                FireProjectile(lockedAim,volleySpeed,false,0);volleyRemaining=2;volleyAt=Time.time+volleyInterval;}
             else if(IsDistrictBoss&&DistrictFloor==2)
-            {FireProjectile(lockedAim,14,false,0);volleyRemaining=2;volleyAt=Time.time+.2f;}
+            {volleySpeed=14;volleyInterval=.2f;FireProjectile(lockedAim,volleySpeed,false,0);volleyRemaining=2;volleyAt=Time.time+volleyInterval;}
             else if(IsDistrictBoss&&DistrictFloor==3)
             {FireProjectile(lockedAim,9,true,14);}
             else
@@ -1297,8 +1315,8 @@ namespace Plugin.AncientCivilization
             if(dead)return;var g=AncientGame.Instance;
             if(kind==5&&Time.time>=guardBrokenUntil&&((Vector2)g.hero.transform.position-AimPoint).x*facing>0)
             {
-                if(!breakGuard){damage*=.15f;g.Burst(AimPoint+Vector2.right*facing*.6f,AncientGame.Cyan,8);g.Notice("SHIELD / Flank, finish a combo, or charge a laser to break guard.",1.2f);}
-                else{guardBrokenUntil=Time.time+2;staggerUntil=Time.time+.8f;resolveAt=-1;g.Notice("GUARD BROKEN",.8f);}
+                if(!breakGuard){damage*=.15f;g.Burst(AimPoint+Vector2.right*facing*.6f,AncientGame.Cyan,8);g.Notice("방패 / 뒤로 돌아가거나 강한 공격으로 방어를 무너뜨리세요.",1.2f);}
+                else{guardBrokenUntil=Time.time+2;staggerUntil=Time.time+.8f;resolveAt=-1;g.Notice("방어 붕괴",.8f);}
             }
             if(breakGuard&&!IsBoss){resolveAt=-1;staggerUntil=Mathf.Max(staggerUntil,Time.time+.4f);nextAttack=Mathf.Max(nextAttack,Time.time+.65f);volleyRemaining=0;}
             bool punish=Recovering&&IsBoss;damage=AncientCombatRules.Damage(damage,IsBoss,punish);
@@ -1319,7 +1337,7 @@ namespace Plugin.AncientCivilization
             }
             g.SpawnPickup(drop,-1,true);g.Burst(AimPoint,AncientGame.Orange,kind==3?55:18);g.enemies.Remove(this);
             if(IsDistrictBoss){g.City.BossDefeated(DistrictFloor);}
-            else if(kind==3){g.bossDefeated=true;g.boss=null;g.Save();g.Notice("WARDEN DEFEATED\nThe eastern gate is open.",7);}
+            else if(kind==3){g.bossDefeated=true;g.boss=null;g.Save();g.Notice("화물 수호 장치 제압\n동쪽 통로가 열렸습니다.",7);}
             Destroy(gameObject);
         }
         void OnDestroy(){if(warning)Destroy(warning.gameObject);}
@@ -1381,7 +1399,7 @@ namespace Plugin.AncientCivilization
             if(core>=0)
             {
                 g.Sound(5);g.coreMask|=1<<core;g.credits+=8;g.score+=250;g.hero.hp=Mathf.Min(g.hero.MaxHP,g.hero.hp+25);
-                g.Notice("ENERGY CORE "+g.Cores+" / 3\nNew engineering tiers available. K to upgrade.",5);
+                g.Notice("에너지 코어 "+g.Cores+" / 3\n새 강화 단계 해금 / K로 정비",5);
             }
             else{g.credits+=2;g.hero.hp=Mathf.Min(g.hero.MaxHP,g.hero.hp+4);}
             g.hero.particles=Mathf.Min(g.hero.MaxParticles,g.hero.particles+(core>=0?30:20));

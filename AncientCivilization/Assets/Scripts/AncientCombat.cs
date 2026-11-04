@@ -147,7 +147,7 @@ namespace Plugin.AncientCivilization
             {
                 var enemy=game.enemies[i];if(!enemy)continue;
                 float t=delta.sqrMagnitude>.001f?Mathf.Clamp01(Vector2.Dot(enemy.AimPoint-beamStart,delta)/delta.sqrMagnitude):0;
-                if(Vector2.Distance(enemy.AimPoint,beamStart+delta*t)<radius+.6f)enemy.Hit(damage,true);
+                if(Vector2.Distance(enemy.AimPoint,beamStart+delta*t)<radius+.6f&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8))enemy.Hit(damage,true);
             }
             if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage);
             if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage);
@@ -189,7 +189,7 @@ namespace Plugin.AncientCivilization
         }
         void OnApplicationFocus(bool focus){if(!focus)CancelInput();}
         public void ResetCombat()
-        {heldAt=-1;bladeUntil=laserUntil=bladeBufferedUntil=0;bladeHitPending=false;slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;foreach(var mote in motes)mote.gameObject.SetActive(false);}
+        {heldAt=-1;bladeReady=comboUntil=laserUntil=0;combo=0;readySignal=false;CancelBlade();slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;foreach(var mote in motes)mote.gameObject.SetActive(false);}
         void OnDestroy()
         {
             foreach(var line in new[]{slashTrail,slashGlow,aim,beam,beamGlow,beamCore})if(line)Destroy(line.gameObject);

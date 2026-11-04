@@ -38,6 +38,10 @@ namespace Plugin.AncientCivilization
             foreach(var ledge in AncientTraversalLayout.MainRoute)
                 game.StaticBox("Main route cyan edge",new Vector2((ledge.left+ledge.right)/2,ledge.top+.025f),new Vector2(ledge.right-ledge.left,.05f),AncientGame.Cyan,4);
         }
+        public void ResetForTravel()
+        {
+            lowerRunning=lowerFinished=running=finished=false;lowerElapsed=elapsed=0;falls=0;recovery=new Vector2(136,1.3f);
+        }
         void Mark(float x,string name,Color color)
         {
             game.StaticBox(name,new Vector2(x,2),new Vector2(.08f,4),color,2);

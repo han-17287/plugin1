@@ -12,6 +12,7 @@ namespace Plugin.AncientCivilization
         readonly List<SpriteRenderer> lights=new List<SpriteRenderer>();
         readonly List<Color> colours=new List<Color>();
         readonly List<Vector2> lightPositions=new List<Vector2>();
+        readonly List<int> lightSectors=new List<int>();
         readonly List<bool> lightAttached=new List<bool>(),lightVisible=new List<bool>();
         const int RainCount=72;
         Mesh rainMesh;MeshRenderer rainRenderer;Material rainMaterial;
@@ -84,12 +85,24 @@ namespace Plugin.AncientCivilization
             var glow=AncientArt.Display("Local particle light",softSprite,p,order,parent);
             glow.transform.localScale=Vector3.one*size;glow.color=new Color(colour.r,colour.g,colour.b,.48f);
             if(glowMaterial)glow.sharedMaterial=glowMaterial;
-            lights.Add(glow);colours.Add(glow.color);lightPositions.Add(p);lightAttached.Add(parent!=null);lightVisible.Add(true);return glow;
+            int slot=-1;
+            for(int i=0;i<lights.Count;i++)if(!lights[i]){slot=i;break;}
+            if(slot>=0)
+            {
+                lights[slot]=glow;colours[slot]=glow.color;lightPositions[slot]=p;
+                lightAttached[slot]=parent!=null;lightVisible[slot]=true;lightSectors[slot]=AncientCityLayout.VisualSector(p.x);
+            }
+            else
+            {
+                lights.Add(glow);colours.Add(glow.color);lightPositions.Add(p);lightAttached.Add(parent!=null);
+                lightVisible.Add(true);lightSectors.Add(AncientCityLayout.VisualSector(p.x));
+            }
+            return glow;
         }
         void Update()
         {
             if(Input.GetKeyDown(KeyCode.F6))
-            {HighQuality=!HighQuality;AncientGame.SetSaved("graphics",HighQuality?1:0);PlayerPrefs.Save();game.Notice(HighQuality?"VISUALS / Enhanced":"VISUALS / Light");}
+            {HighQuality=!HighQuality;AncientGame.SetSaved("graphics",HighQuality?1:0);PlayerPrefs.Save();game.Notice(HighQuality?"효과 / 고품질":"효과 / 가볍게");}
         }
         void LateUpdate()
         {
@@ -98,8 +111,15 @@ namespace Plugin.AncientCivilization
             bool fullEffects=HighQuality&&!game.MainMenu;
             float halfHeight=view.orthographicSize+4,halfWidth=view.orthographicSize*view.aspect+4;
             if(armGlow)armGlow.transform.localPosition=new Vector2(game.hero.Facing*.4f,.15f);
-            for(int i=0;i<lights.Count;i++)if(lights[i])
+            int sector=game.Finale&&game.Finale.Active?5:game.Story.CurrentFloor;
+            for(int i=0;i<lights.Count;i++)
             {
+                if(!fullEffects||(!lightAttached[i]&&lightSectors[i]!=sector))
+                {
+                    if(lightVisible[i]){if(lights[i])lights[i].enabled=false;lightVisible[i]=false;}
+                    continue;
+                }
+                if(!lights[i])continue;
                 Vector2 delta=(lightAttached[i]?(Vector2)lights[i].transform.position:lightPositions[i])-camera;
                 bool visible=fullEffects&&Mathf.Abs(delta.x)<halfWidth&&Mathf.Abs(delta.y)<halfHeight;
                 if(lightVisible[i]!=visible){lights[i].enabled=visible;lightVisible[i]=visible;}if(!visible)continue;

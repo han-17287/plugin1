@@ -9,5 +9,6 @@ UserSettings/
 *.sln
 
 !Tools/RulesChecks.csproj
+!Tools/WireBenchmark.csproj
 Tools/bin/
 Tools/obj/

@@ -38,7 +38,7 @@ namespace Plugin.AncientCivilization
         {
             if(!Input.GetKeyDown(KeyCode.F7))return;
             muted=!muted;ApplyVolume();AncientGame.SetSaved("muted",muted?1:0);PlayerPrefs.Save();
-            if(AncientGame.Instance)AncientGame.Instance.Notice(muted?"AUDIO / MUTED":"AUDIO / ON");
+            if(AncientGame.Instance)AncientGame.Instance.Notice(muted?"소리 / 음소거":"소리 / 켜짐");
         }
         AudioClip Tone(int cue)
         {

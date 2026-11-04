@@ -9,7 +9,7 @@ namespace Plugin.AncientCivilization
     {
         static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
         static readonly Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
-        static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3];
+        static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3],metalCache=new Sprite[3];
         public static Texture2D Texture(string name)
         {
             Texture2D texture;
@@ -138,6 +138,7 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite MetalProjectile(int kind)
         {
+            kind=Mathf.Clamp(kind,0,metalCache.Length-1);if(metalCache[kind])return metalCache[kind];
             string key="metal-projectile-"+kind;Sprite sprite;
             if(sprites.TryGetValue(key,out sprite)&&sprite)return sprite;
             const int size=32;var texture=new Texture2D(size,size,TextureFormat.RGBA32,false);
@@ -160,7 +161,7 @@ namespace Plugin.AncientCivilization
             }
             texture.SetPixels(pixels);texture.Apply();textures[key]=texture;
             sprite=Sprite.Create(texture,new Rect(0,0,size,size),Vector2.one*.5f,32);
-            sprites[key]=sprite;return sprite;
+            sprites[key]=sprite;metalCache[kind]=sprite;return sprite;
         }
         public static Sprite Enemy(int kind)
         {

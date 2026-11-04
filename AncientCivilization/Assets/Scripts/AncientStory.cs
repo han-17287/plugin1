@@ -192,7 +192,8 @@ namespace Plugin.AncientCivilization
             if(GUI.Button(new Rect(x+28,y+431,544,42),"닫기 / Esc",nextButton)){liftMenu=false;game.BlockGameplayInput();}
         }
         public void FinaleBriefing(string first,string second)
-        {Talk(null,new Line("치안경찰",first,0),new Line("통신관",second,1));}
+        {Talk(null,new Line("치안경찰",first,0),
+            new Line("회수 계획 주석","기동 준비된 코어는 보호부를 분리하지 말 것. 외부 충격에 의한 보호부 파손은 연쇄 활성화를 유발한다.",1),new Line("통신관",second,1));}
         public void FieldDialogue(string speaker,string words)
         {Talk(null,new Line(speaker,words,1));}
         public void OnDistrictCleared(int floor)
@@ -219,6 +220,15 @@ namespace Plugin.AncientCivilization
             game.SetLiftCheckpoint(destination);game.City.OnEnterFloor();Persist();game.BlockGameplayInput();game.SnapCameraToHero();
             game.Notice(destination==4?"최상층 외벽 샛길 / 불법 침입":"상층 거주구 귀환",3);
         }
+        string cachedObjective="",cachedResidence="";int shownStage=-1,shownFlags=-1,shownFloor=-1,shownCores=-1,shownPoints=-1;
+        void RefreshHudLabels()
+        {
+            if(shownStage!=Stage||shownFlags!=flags||shownFloor!=CurrentFloor||shownCores!=game.Cores)
+            {shownStage=Stage;shownFlags=flags;shownFloor=CurrentFloor;shownCores=game.Cores;cachedObjective=Objective();}
+            if(shownPoints!=ResidencePoints||cachedResidenceFloor!=CurrentFloor)
+            {shownPoints=ResidencePoints;cachedResidenceFloor=CurrentFloor;cachedResidence="시민 포인트 "+ResidencePoints+" / "+AncientCityLayout.Name(CurrentFloor);}
+        }
+        int cachedResidenceFloor=-1;
         string Check(int bit,string label){return (Has(bit)?"[x] ":"[ ] ")+label;}
         string Objective()
         {
@@ -239,7 +249,8 @@ namespace Plugin.AncientCivilization
         void OnGUI()
         {
             if(!game||game.MainMenu||!game.HasSession||(game.Journal&&game.Journal.Open)||(game.Finale&&(game.Finale.Active||game.Finale.Finished)))return;
-            var old=GUI.matrix;var color=GUI.color;int depth=GUI.depth;
+            if(!LiftBusy&&!DialogueOpen&&Event.current.type!=EventType.Repaint)return;
+            RefreshHudLabels();var old=GUI.matrix;var color=GUI.color;int depth=GUI.depth;
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-50;
             float w=Screen.width/scale,h=Screen.height/scale;
             if(body==null){body=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=21,wordWrap=true};nameStyle=new GUIStyle(body){fontSize=22,fontStyle=FontStyle.Bold};small=new GUIStyle(body){fontSize=14};nextButton=new GUIStyle(AncientHUD.Button){font=body.font,fontSize=14};}
@@ -249,8 +260,8 @@ namespace Plugin.AncientCivilization
                 if(!game.skills)
                 {
                     AncientHUD.Panel(new Rect(w/2-250,16,500,64),new Color(.015f,.045f,.065f,.94f));
-                    GUI.Label(new Rect(w/2-236,24,472,52),Objective(),small);
-                    GUI.Label(new Rect(28,200,285,42),"시민 포인트 "+ResidencePoints+" / "+AncientCityLayout.Name(CurrentFloor),small);
+                    GUI.Label(new Rect(w/2-236,24,472,52),cachedObjective,small);
+                    GUI.Label(new Rect(28,200,285,42),cachedResidence,small);
                     if(CurrentFloor<4&&Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
                 }
             }

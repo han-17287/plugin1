@@ -31,21 +31,15 @@ namespace Plugin.AncientCivilization
         public int RendererCount {get{return entries.Count;}}
         public int ActiveRendererCount {get;private set;}
         public void Initialize(AncientGame owner,Sprite square){game=owner;white=square;}
-        int FloorAt(float x)
-        {
-            if(x>=790)return 5;
-            for(int i=4;i>=1;i--)if(x>=AncientCityLayout.Left(i)-3&&x<=AncientCityLayout.Right(i)+3)return i;
-            return 0;
-        }
         public void Box(Vector2 position,Vector2 size,Color color,int order)
         {
-            int floor=size.x>180?-1:FloorAt(position.x);
+            int floor=size.x>180?-1:AncientCityLayout.VisualSector(position.x);
             Add(white,position,size,color,order,floor);
         }
         public void Sprite(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order)
-        {Add(sprite,position,scale,color,order,FloorAt(position.x));}
+        {Add(sprite,position,scale,color,order,AncientCityLayout.VisualSector(position.x));}
         public void RotatedSprite(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order,float angle)
-        {Add(sprite,position,scale,color,order,FloorAt(position.x),angle);}
+        {Add(sprite,position,scale,color,order,AncientCityLayout.VisualSector(position.x),angle);}
         void Add(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order,int floor,float angle=0)
         {
             Key key=new Key{texture=sprite.texture.GetInstanceID(),order=order,floor=floor};Build build;

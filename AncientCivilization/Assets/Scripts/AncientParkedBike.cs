@@ -32,12 +32,12 @@ namespace Plugin.AncientCivilization
         void OnGUI()
         {
             var g=AncientGame.Instance;
-            if(!Available||!g||g.Paused||g.won||!g.hero||g.hero.bike||!g.View)return;
+            if(Event.current.type!=EventType.Repaint||!Available||!g||g.Paused||g.won||!g.hero||g.hero.bike||!g.View)return;
             if(((Vector2)g.hero.transform.position-(Vector2)transform.position).sqrMagnitude>2.8f*2.8f)return;
             Vector3 p=g.View.WorldToScreenPoint(transform.position+Vector3.up*1.25f);if(p.z<=0)return;
-            if(prompt==null)prompt=new GUIStyle(GUI.skin.label){fontSize=15,fontStyle=FontStyle.Bold,alignment=TextAnchor.MiddleCenter};
+            if(prompt==null)prompt=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,fontStyle=FontStyle.Bold,alignment=TextAnchor.MiddleCenter};
             var matrix=GUI.matrix;var color=GUI.color;GUI.matrix=Matrix4x4.identity;GUI.color=AncientGame.Cyan;
-            GUI.Label(new Rect(p.x-105,Screen.height-p.y-18,210,36),"E / RIDE   "+Mathf.CeilToInt(Health)+" HP",prompt);
+            GUI.Label(new Rect(p.x-105,Screen.height-p.y-18,210,36),"E / 탑승   "+Mathf.CeilToInt(Health)+" HP",prompt);
             GUI.color=color;GUI.matrix=matrix;
         }
     }

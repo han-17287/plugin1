@@ -60,7 +60,7 @@ namespace Plugin.AncientCivilization
             if(phase==0)
             {
                 phase=1;countdown=60;Persist();windowTruck.enabled=true;
-                game.Story.FinaleBriefing("회장은 없다. 연구 노트와 회수 계획만 남았군. C-00 물량은 이 작전에 묶여 있었어.",
+                game.Story.FinaleBriefing("회장은 없다. 노트에는 최하층 아래에 묻힌 고대 문명이 적혀 있어… 옆에는 회수 계획. C-00 코어는 이 작전에 묶인 물량이었군.",
                     "작전 개시까지 1분. 창밖이다! 회장과 특수부대가 코어 운송 트럭에 타고 있어. 화물 승강로로 내려가면 따라붙을 수 있다.");return true;
             }
             if(phase==1){BeginChase();return true;}return false;
@@ -116,7 +116,7 @@ namespace Plugin.AncientCivilization
                     fired=true;SetCaption("엎드려!");game.Sound(6);game.Shake(.18f);
                     Vector3 core=truck.transform.position+new Vector3(.5f,1.5f,0),weapon=truck.transform.position+new Vector3(1.6f,3.45f,0);
                     supportShot.enabled=true;supportShot.SetPosition(0,weapon+(weapon-core).normalized*16);supportShot.SetPosition(1,core);
-                    game.hero.CinematicPose(true,1);
+                    game.hero.CinematicPose(true,1);truck.ActivateCore();
                     foreach(var enemy in crew)if(enemy)enemy.Hit(999,true);
                 }
                 if(age>1.32f)supportShot.enabled=false;
@@ -132,7 +132,7 @@ namespace Plugin.AncientCivilization
                 for(int i=0;i<blast.positionCount;i++){float a=i*Mathf.PI*2/blast.positionCount;blast.SetPosition(i,centre+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius);}
                 blast.startColor=blast.endColor=new Color(.75f,.95f,1,Mathf.Clamp01(1-age/.9f));
                 if(age>.6f)SetCaption("떨어진다!");
-                Vector2 point=centre+new Vector2(.7f,3.65f-Mathf.Max(0,age-.5f)*8);game.hero.TravelTo(point);
+                Vector2 point=centre+new Vector2(.7f,3.65f-Mathf.Max(0,age-.5f)*8);game.hero.CinematicMove(point);
                 if(age>=2.2f){phase=5;game.won=true;AncientGame.SetSaved("firstRunCleared",1);blast.enabled=false;Persist();}
                 return;
             }
@@ -194,13 +194,17 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientFinalTruck : MonoBehaviour
     {
-        AncientGame game;AncientFinale finale;Rigidbody2D body;float nextThrow,suppressedUntil;
+        AncientGame game;AncientFinale finale;Rigidbody2D body;SpriteRenderer core,casing;bool coreActive;float nextThrow,suppressedUntil;
         public void Initialize(AncientGame owner,AncientFinale story,float x)
         {
             game=owner;finale=story;gameObject.layer=8;transform.position=new Vector2(x,AncientFinaleRules.Road(x));
             body=gameObject.AddComponent<Rigidbody2D>();body.bodyType=RigidbodyType2D.Kinematic;body.interpolation=RigidbodyInterpolation2D.Interpolate;
             var solid=gameObject.AddComponent<BoxCollider2D>();solid.size=new Vector2(4.8f,2.5f);solid.offset=new Vector2(0,1.25f);
             var art=AncientArt.Display("Chairman getaway transport",AncientArt.Truck(),Vector2.zero,7,transform);art.transform.localScale=Vector3.one*.75f;
+            var protection=game.Box("Core protective housing",Vector2.zero,new Vector2(.85f,1.05f),new Color(.06f,.16f,.2f),8);
+            protection.transform.SetParent(transform,false);protection.transform.localPosition=new Vector2(.5f,1.5f);casing=protection.GetComponent<SpriteRenderer>();
+            core=AncientArt.Display("Transported active energy core",AncientArt.WireParticle(),new Vector2(.5f,1.5f),9,transform);
+            core.transform.localScale=Vector3.one*.6f;core.color=new Color(.2f,.75f,.9f);
         }
         void FixedUpdate()
         {
@@ -208,10 +212,18 @@ namespace Plugin.AncientCivilization
             float speed=AncientFinaleRules.TruckSpeed(game.hero.transform.position.x,body.position.x);
             float x=Mathf.Min(AncientFinaleRules.Finish-7,body.position.x+speed*Time.fixedDeltaTime);
             body.MovePosition(new Vector2(x,AncientFinaleRules.Road(x)));
-            if(AncientFinaleRules.CanBoardEnd(x,game.hero.transform.position.x,game.hero.transform.position.y))finale.TruckArrived();
+            if(AncientFinaleRules.CanBoardEnd(x,game.hero.transform.position.x,game.hero.transform.position.y,game.hero.StandingOn(body)))finale.TruckArrived();
         }
+        public void ActivateCore()
+        {coreActive=true;game.Impact(core.transform.position,new Color(.7f,1,1),true);}
         void Update()
         {
+            if(coreActive)
+            {
+                float pulse=Mathf.PingPong(Time.unscaledTime*7,1);
+                core.color=Color.Lerp(new Color(.3f,.85f,1),Color.white,pulse);casing.color=Color.Lerp(new Color(.8f,.25f,.1f),Color.white,pulse*.7f);
+                core.transform.localScale=Vector3.one*(.6f+pulse*.2f);
+            }
             if(game.Paused||Time.time<nextThrow||Time.time<suppressedUntil||game.shots.Count>=14)return;
             if(((Vector2)game.hero.transform.position-(Vector2)transform.position).sqrMagnitude>24*24)return;
             nextThrow=Time.time+1.45f;

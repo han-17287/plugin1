@@ -11,6 +11,7 @@ namespace Plugin.AncientCivilization
     {
         static readonly int[] targets={60,120,144,240,-1};
         readonly float[] samples=new float[240],sorted=new float[240];
+        readonly int[] sampleFloor=new int[240],sampleTarget=new int[240],sampleQuality=new int[240],samplePhase=new int[240];
         AncientGame game;int cursor,count,targetIndex;float updateAt;bool details;
         float mean,p95,peak;string summary="",diagnostics="";GUIStyle style;
         ProfilerRecorder allocations;
@@ -39,15 +40,16 @@ namespace Plugin.AncientCivilization
             }
             if(details&&Input.GetKeyDown(KeyCode.F10))Export();
             if(!game.HasSession||game.Paused||!Application.isFocused)return;
-            float dt=Time.unscaledDeltaTime;if(dt<=0||dt>1)return;
-            samples[cursor]=dt*1000;cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
+            float dt=Time.unscaledDeltaTime;if(!AncientFrameRules.ValidSample(dt))return;
+            samples[cursor]=dt*1000;sampleFloor[cursor]=game.Story.CurrentFloor;sampleTarget[cursor]=Target;
+            sampleQuality[cursor]=AncientVisuals.HighQuality?1:0;samplePhase[cursor]=game.Finale?game.Finale.Phase:0;cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
             if(Time.unscaledTime<updateAt)return;updateAt=Time.unscaledTime+.5f;Refresh();
         }
         void Refresh()
         {
             float total=0;peak=0;
             for(int i=0;i<count;i++){float value=samples[i];total+=value;peak=Mathf.Max(peak,value);sorted[i]=value;}
-            mean=count>0?total/count:0;Array.Sort(sorted,0,count);p95=count>0?sorted[Mathf.Clamp(Mathf.CeilToInt(count*.95f)-1,0,count-1)]:0;
+            mean=count>0?total/count:0;Array.Sort(sorted,0,count);p95=count>0?sorted[AncientFrameRules.P95Index(count)]:0;
             summary="목표 "+TargetLabel+" / "+(mean>0?(1000/mean).ToString("F0"):"—")+" FPS";
             if(!details)return;
             long bytes=allocations.Valid?allocations.LastValue:-1;
@@ -56,14 +58,15 @@ namespace Plugin.AncientCivilization
         }
         void Export()
         {
+            if(count==0){game.Notice("플레이 중 프레임을 수집한 뒤 F10으로 저장하세요.",3);return;}
             try
             {
-                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced\n");
+                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase\n");
                 for(int i=0;i<count;i++)
                 {
                     int at=count==samples.Length?(cursor+i)%samples.Length:i;
                     text.Append(i).Append(',').Append(samples[at].ToString("F4",CultureInfo.InvariantCulture)).Append(',')
-                        .Append(game.Story.CurrentFloor).Append(',').Append(Target).Append(',').Append(AncientVisuals.HighQuality?1:0).Append('\n');
+                        .Append(sampleFloor[at]).Append(',').Append(sampleTarget[at]).Append(',').Append(sampleQuality[at]).Append(',').Append(samplePhase[at]).Append('\n');
                 }
                 string path=Path.Combine(Application.persistentDataPath,"performance-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv");
                 File.WriteAllText(path,text.ToString());game.Notice("성능 기록 저장: "+path,6);

@@ -258,6 +258,8 @@ class RulesChecks
             Check(AncientFinaleRules.Zone(x)==section,"Every chase checkpoint restores its matching section");
             Check(AncientFinaleRules.Road(x)>=0&&AncientFinaleRules.Road(x)<=60,"Checkpoint remains on the city descent");
         }
+        Check(!AncientFinaleRules.CanBoardEnd(1393,1393,4.25f,false),"Jumping near the last truck cannot skip physically boarding its roof");
+        Check(!AncientFinaleRules.CanBoardEnd(1393,1396,4.25f,true),"A neighbouring ledge cannot trigger the truck roof encounter");
         bool continuous=true,clearance=true;
         for(float x=800;x<1400;x+=12)
         {
@@ -269,9 +271,9 @@ class RulesChecks
         Check(clearance,"Stepped cargo ceiling leaves full character headroom");
         Check(AncientFinaleRules.TruckSpeed(800,900)==5,"Distant truck slows so the player can catch up");
         Check(AncientFinaleRules.TruckSpeed(1000,900)==15,"Leading player cannot accelerate the truck without bound");
-        Check(!AncientFinaleRules.CanBoardEnd(900,900,54),"Support-shot climax cannot start halfway down");
-        Check(!AncientFinaleRules.CanBoardEnd(1393,1393,1.75f),"Running beside the truck is not boarding it");
-        Check(AncientFinaleRules.CanBoardEnd(1393,1393,4.25f),"Standing on the final truck roof triggers the climax");
+        Check(!AncientFinaleRules.CanBoardEnd(900,900,54,true),"Support-shot climax cannot start halfway down");
+        Check(!AncientFinaleRules.CanBoardEnd(1393,1393,1.75f,true),"Running beside the truck is not boarding it");
+        Check(AncientFinaleRules.CanBoardEnd(1393,1393,4.25f,true),"Standing on the final truck roof triggers the climax");
         Check(!AncientProgressRules.KnowsEvidence(6,9,31,0),"Optional clinic evidence stays unknown until earned");
         Check(AncientProgressRules.KnowsEvidence(6,9,31,1),"Clinic job records its discovered evidence");
         Check(!AncientProgressRules.KnowsEvidence(7,9,31,1),"Clinic job cannot unlock the administrative evidence");
@@ -283,6 +285,24 @@ class RulesChecks
         Check(AncientFinaleRules.RestorePhase(3)==2,"Interrupted ambush restores to playable chase, not a frozen movie");
         Check(AncientFinaleRules.RestorePhase(4)==2,"Interrupted explosion restores to playable chase");
         Check(AncientFinaleRules.RestorePhase(5)==5,"Completed first-run end card stays completed");
+        for(int floor=0;floor<=4;floor++)
+        {
+            Check(AncientCityLayout.VisualSector(AncientCityLayout.Entry(floor))==floor,"Lift entry displays its own scenery and lights");
+            Check(AncientCityLayout.VisualSector(AncientCityLayout.ArenaRight(floor)-1)==floor,"Boss arena remains in its visible sector");
+        }
+        Check(AncientCityLayout.VisualSector(799)==5,"Final cargo road uses its separate render sector");
+        Check(AncientCityLayout.VisualSector(1400)==5,"Final truck and its ceiling stay visible at the lowest endpoint");
+        Check(AncientCityLayout.VisualSector(0)==0,"Patrol station keeps lower-city scenery");
+        Check(AncientFrameRules.ValidSample(1f/240),"Fast active frames are measured");
+        Check(AncientFrameRules.ValidSample(1.5f),"A severe active-play stall is included, never hidden from statistics");
+        Check(!AncientFrameRules.ValidSample(0),"Zero frame time cannot inflate FPS");
+        Check(!AncientFrameRules.ValidSample(-1),"Negative sample is invalid");
+        Check(!AncientFrameRules.ValidSample(float.NaN),"NaN cannot poison a performance report");
+        Check(!AncientFrameRules.ValidSample(float.PositiveInfinity),"Infinite frame time is invalid");
+        Check(AncientFrameRules.P95Index(0)==-1,"Empty performance window has no percentile");
+        Check(AncientFrameRules.P95Index(1)==0,"One-frame percentile is in bounds");
+        Check(AncientFrameRules.P95Index(20)==18,"P95 uses the nearest rank");
+        Check(AncientFrameRules.P95Index(240)==227,"Full sample window percentile remains in bounds");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }
