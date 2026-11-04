@@ -66,7 +66,7 @@ class RulesChecks
                 AncientRules.WireHelixOffset(length,1.7f,t,0,out n0,out z0);
                 AncientRules.WireHelixOffset(length,1.7f,t,1,out n1,out z1);
                 centred&=Math.Abs(n0+n1)<.00001&&Math.Abs(z0+z1)<.00001;
-                bounded&=n0*n0+z0*z0<=.10501f*.10501f;
+                bounded&=n0*n0+z0*z0<=.14001f*.14001f;
                 if(i==0||i==100)anchored&=Math.Abs(n0)+Math.Abs(z0)<.00001;
             }
             Check(centred,"Double helix remains centred on straight core at length "+length);
@@ -178,6 +178,28 @@ class RulesChecks
         Check(AncientCityLayout.VentLift(-15,.016f)>=6,"Updraft arrests a fall and launches upwards");
         Check(AncientCityLayout.VentLift(14,.016f)==14,"Updraft preserves faster existing ascent");
         Check(AncientCityLayout.VentLift(11,1)==12,"Updraft acceleration remains capped");
+        Check(AncientRules.BladeAnimationFrame(0)==0,"Slash starts with anticipation");
+        Check(AncientRules.BladeAnimationFrame(.149f)==2,"Windup ends before the damage frame");
+        Check(AncientRules.BladeAnimationFrame(AncientRules.BladeHitTime)==3,"Blade damage begins on the actual sweep");
+        Check(AncientRules.BladeAnimationFrame(.399f)==7,"Slash includes recovery rather than popping to idle");
+        bool ordered=true;int prior=0,seenFrames=0;
+        for(int i=0;i<400;i++)
+        {
+            int frame=AncientRules.BladeAnimationFrame(i*.001f);
+            ordered&=frame>=prior&&frame>=0&&frame<8;seenFrames|=1<<frame;prior=frame;
+        }
+        Check(ordered&&seenFrames==255,"Slash plays every frame once in forward order");
+        var islands=new uint[120*20];
+        for(int y=3;y<15;y++)for(int x=2;x<20;x++)islands[y*120+x]=0xFFFF00FF;
+        for(int y=3;y<15;y++)for(int x=80;x<100;x++)islands[y*120+x]=0x00FFFFFF;
+        var actor=AncientPixels.Isolate(islands,120,20,8,8);
+        Check(actor[8*120+8]==0xFFFF00FF&&actor[8*120+88]==0,"Sprite extraction keeps one actor without neighbouring art");
+        Check(islands[8*120+88]==0x00FFFFFF,"Sprite extraction leaves source atlas intact");
+        var diagonal=new uint[100];for(int i=0;i<10;i++)diagonal[i*10+i]=0xFFFF00FF;
+        var selected=AncientPixels.Isolate(diagonal,10,10,0,0);
+        Check(selected[99]!=0,"Diagonal sword pixels stay attached through eight-neighbour extraction");
+        var empty=AncientPixels.Isolate(new uint[100],10,10,5,5);
+        Check(Array.TrueForAll(empty,c=>c==0),"An empty sprite region stays transparent");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

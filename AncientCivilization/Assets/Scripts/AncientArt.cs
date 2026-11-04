@@ -15,7 +15,7 @@ namespace Plugin.AncientCivilization
             if (textures.TryGetValue(name, out texture) && texture) return texture;
             texture = Resources.Load<Texture2D>("Art/" + name);
             if (!texture) throw new System.InvalidOperationException("Missing Art/" + name + ".png");
-            if(name=="Hero"||name=="Actions"||name=="Dialogue")
+            if(name=="Hero"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue")
             {
                 var pixels=texture.GetPixels32();var packed=new uint[pixels.Length];
                 for(int i=0;i<pixels.Length;i++)packed[i]=((uint)pixels[i].r<<24)|((uint)pixels[i].g<<16)|((uint)pixels[i].b<<8)|pixels[i].a;
@@ -59,11 +59,14 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Hero(int frame)
         {
-            Rect cell = new Rect(frame % 4 * 384, frame / 4 * 512, 384, 512);
-            if(frame==1)cell=new Rect(384,0,384,480);
-            if(frame==5)cell=new Rect(384,480,384,544);
-            float root=215;
-            return Slice("Hero", "hero-" + frame, cell, 220, new Vector2(root/cell.width,0),true,true);
+            Rect[] cells={new Rect(0,0,384,512),new Rect(384,0,316,480),
+                new Rect(700,0,420,480),new Rect(1120,0,416,512),
+                new Rect(0,512,424,512),new Rect(424,480,312,544),
+                new Rect(736,512,450,512),new Rect(1186,512,350,512)};
+            Rect cell=cells[frame];float root=frame%4*384+215-cell.x;
+            // The downloadable sheet previews equipment; live wire/intake effects must not be baked into the actor.
+            string sheet=frame==5||frame==6?"HeroEmitterBody":"Hero";
+            return Slice(sheet, "hero-" + frame, cell, 220, new Vector2(root/cell.width,0),true,true);
         }
         public static Sprite World(int index)
         {
@@ -79,13 +82,36 @@ namespace Plugin.AncientCivilization
         }
         public static Sprite Action(int frame)
         {
-            // Measured gutters: the extended sword poses cross nominal grid columns.
-            Rect[] cells={new Rect(0,0,310,512),new Rect(310,0,478,512),
-                new Rect(788,0,312,512),new Rect(1100,0,436,512),
-                new Rect(0,512,345,512),new Rect(345,512,395,512),
-                new Rect(740,512,406,512),new Rect(1146,512,390,512)};
-            Rect cell=cells[frame];float root=frame%4*384+215-cell.x;
-            return Slice("Actions","action-"+frame,cell,220,new Vector2(root/cell.width,0),true,true);
+            string key="action-"+frame;Sprite found;
+            if(sprites.TryGetValue(key,out found)&&found)return found;
+            Rect[] cells={new Rect(0,0,384,512),new Rect(384,0,384,512),new Rect(768,0,384,512),new Rect(1152,0,384,512),
+                new Rect(0,512,440,512),new Rect(350,512,450,512),new Rect(740,512,440,512),new Rect(1152,512,384,512)};
+            Vector2[] seeds={new Vector2(190,250),new Vector2(600,250),new Vector2(980,245),new Vector2(1340,240),
+                new Vector2(175,780),new Vector2(530,780),new Vector2(920,790),new Vector2(1290,790)};
+            float[] roots={204,562,940,1360,166,540,921,1301};
+            // Put the horizontal pass before the low diagonal pass, so the swing never reverses mid-arc.
+            int sourceFrame=frame==3?4:frame==4?3:frame;
+            Rect cell=cells[sourceFrame];var source=Texture("Actions");var pixels=source.GetPixels32();
+            int x0=(int)cell.x,y0=source.height-(int)cell.yMax,w=(int)cell.width,h=(int)cell.height;
+            var packed=new uint[w*h];
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++)
+            {
+                Color32 c=pixels[(y0+y)*source.width+x0+x];
+                packed[y*w+x]=((uint)c.r<<24)|((uint)c.g<<16)|((uint)c.b<<8)|c.a;
+            }
+            packed=AncientPixels.Isolate(packed,w,h,(int)seeds[sourceFrame].x-x0,source.height-1-(int)seeds[sourceFrame].y-y0);
+            int left=w,right=-1,bottom=h,top=-1;
+            for(int y=0;y<h;y++)for(int x=0;x<w;x++)if((packed[y*w+x]&255)>=110)
+            {left=Mathf.Min(left,x);right=Mathf.Max(right,x);bottom=Mathf.Min(bottom,y);top=Mathf.Max(top,y);}
+            if(right<left)throw new System.InvalidOperationException("Empty blade animation frame "+frame);
+            left=Mathf.Max(0,left-3);right=Mathf.Min(w-1,right+3);bottom=Mathf.Max(0,bottom-3);top=Mathf.Min(h-1,top+3);
+            int tw=right-left+1,th=top-bottom+1;var cropped=new Color32[tw*th];
+            for(int y=0;y<th;y++)for(int x=0;x<tw;x++)
+            {uint c=packed[(y+bottom)*w+x+left];cropped[y*tw+x]=new Color32((byte)(c>>24),(byte)(c>>16),(byte)(c>>8),(byte)c);}
+            var texture=new Texture2D(tw,th,TextureFormat.RGBA32,false);texture.filterMode=FilterMode.Point;
+            texture.name="Long blade slash "+frame;texture.SetPixels32(cropped);texture.Apply();textures[key]=texture;
+            found=Sprite.Create(texture,new Rect(0,0,tw,th),new Vector2((roots[sourceFrame]-x0-left)/tw,0),190,0,SpriteMeshType.FullRect);
+            sprites[key]=found;return found;
         }
         public static Sprite Rooftop(float width,bool tall)
         {

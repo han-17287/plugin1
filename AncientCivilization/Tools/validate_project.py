@@ -18,6 +18,13 @@ def check(condition, description):
     results.append('PASS: ' + description)
 
 
+def rgba_pixels(image):
+    px=image.load()
+    for y in range(image.height):
+        for x in range(image.width):
+            yield px[x,y]
+
+
 def png_info(path):
     data = path.read_bytes()
     check(data[:8] == b'\x89PNG\r\n\x1a\n', path.name + ' PNG signature')
@@ -61,7 +68,7 @@ def main():
     scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text())[1]
     check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(), 'Main scene build GUID')
     dimensions = {}
-    for name in ('City', 'Hero', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions', 'Motorcycle', 'Truck', 'Dialogue'):
+    for name in ('City', 'Hero', 'HeroEmitterBody', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions', 'Motorcycle', 'Truck', 'Dialogue'):
         path = ROOT / ('Assets/Resources/Art/' + name + '.png')
         header = png_info(path)
         dimensions[name] = header[:2]
@@ -97,31 +104,67 @@ def main():
     try:
         from PIL import Image
         image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
-        for i in range(8):
-            x, y, w, h = i % 4 * 384, i // 4 * 512, 384, 512
-            if i == 1:
-                y, h = 0, 480
-            if i == 5:
-                y, h = 480, 544
+        hero_cells=[(0,0,384,512),(384,0,316,480),(700,0,420,480),(1120,0,416,512),
+                    (0,512,424,512),(424,480,312,544),(736,512,450,512),(1186,512,350,512)]
+        for i,(x,y,w,h) in enumerate(hero_cells):
             region = image.getchannel('A').crop((x, y, x + w, y + h))
             bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
             check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
                   'hero pose has opaque silhouette and clear gutters ' + str(i))
+        hero_image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
+        gold = sum(1 for r,g,b,a in rgba_pixels(hero_image.crop((0,0,384,480)))
+                   if a >= 110 and r > 180 and g > 130 and b < 100)
+        check(gold > 1500, 'idle hero visibly carries a broad golden blade')
+        pixels=hero_image.load()
+        gold_y=[y for y in range(230,480) for x in range(30,150)
+                if pixels[x,y][3]>=110 and pixels[x,y][0]>180 and pixels[x,y][1]>130 and pixels[x,y][2]<100]
+        check(gold_y and max(gold_y)-min(gold_y)>190,'idle blade has a long sword silhouette rather than a short stub')
+        helix = sum(1 for r,g,b,a in rgba_pixels(hero_image.crop((620,480,750,584)))
+                    if a >= 110 and g > 130 and b > 150 and r < 150)
+        check(helix > 1000, 'hero equipment sheet contains substantial double-helix wire preview')
+        core=hero_image.load()
+        continuous=all(any(core[x,y][3]>=110 and core[x,y][0]>160 and core[x,y][1]>200 and core[x,y][2]>200
+                           for y in range(628,640)) for x in range(1000,1160))
+        check(continuous,'laser preview is a continuous bright beam rather than detached particles')
+        body_image = Image.open(ROOT / 'Assets/Resources/Art/HeroEmitterBody.png')
+        projected = sum(1 for r,g,b,a in rgba_pixels(body_image.crop((640,480,750,565)))
+                        if a >= 110 and g > 130 and b > 150 and r < 150)
+        check(projected < 30, 'runtime emitter body has no baked wire to duplicate the live helix')
         image = Image.open(ROOT / 'Assets/Resources/Art/World.png')
         for i, (x, y, w, h) in enumerate(rects):
             region = image.getchannel('A').crop((x, y, x + w, y + h))
             check(region.point(lambda a: 255 if a >= 110 else 0).getbbox() is not None,
                   'world slice contains visible art ' + str(i))
         image = Image.open(ROOT / 'Assets/Resources/Art/Actions.png')
-        action_cells = [(0,0,310,512),(310,0,478,512),(788,0,312,512),(1100,0,436,512),
-                        (0,512,345,512),(345,512,395,512),(740,512,406,512),(1146,512,390,512)]
-        for i, (x,y,w,h) in enumerate(action_cells):
-            region = image.getchannel('A').crop((x, y, x + w, y + h))
-            bbox = region.point(lambda a: 255 if a >= 110 else 0).getbbox()
-            check(bbox and bbox[0] > 0 and bbox[1] > 0 and bbox[2] < w and bbox[3] < h,
-                  'action pose has clear transparent gutters ' + str(i))
-            root = i % 4 * 384 + 215 - x
-            check(bbox and bbox[0] <= root < bbox[2], 'action root lies inside silhouette width ' + str(i))
+        from collections import deque
+        action_cells = [(0,0,384,512),(384,0,384,512),(768,0,384,512),(1152,0,384,512),
+                        (0,512,440,512),(350,512,450,512),(740,512,440,512),(1152,512,384,512)]
+        seeds = [(190,250),(600,250),(980,245),(1340,240),(175,780),(530,780),(920,790),(1290,790)]
+        source_pixels = image.load()
+        silhouettes = []
+        for i, ((x0,y0,w,h),(sx,sy)) in enumerate(zip(action_cells,seeds)):
+            def color(x,y):
+                # Same global 8px grid as the runtime texture, expressed in top-left coordinates.
+                return source_pixels[(x+x0)//8*8+4,(y+y0)//8*8+3]
+            candidates = [(x,y) for y in range(max(0,sy-y0-40),min(h,sy-y0+41))
+                          for x in range(max(0,sx-x0-40),min(w,sx-x0+41)) if color(x,y)[3]>=110]
+            check(bool(candidates), 'slash frame has an opaque body seed ' + str(i))
+            seed = min(candidates,key=lambda p:(p[0]-(sx-x0))**2+(p[1]-(sy-y0))**2)
+            selected={seed}; queue=deque([seed])
+            while queue:
+                x,y=queue.popleft()
+                for dy in (-1,0,1):
+                    for dx in (-1,0,1):
+                        a,b=x+dx,y+dy
+                        if 0<=a<w and 0<=b<h and (a,b) not in selected and color(a,b)[3]>=110:
+                            selected.add((a,b));queue.append((a,b))
+            bbox=(min(x for x,y in selected),min(y for x,y in selected),max(x for x,y in selected)+1,max(y for x,y in selected)+1)
+            check(bbox[0]>0 and bbox[1]>0 and bbox[2]<w and bbox[3]<h,
+                  'isolated slash silhouette retains full blade with clear gutters ' + str(i))
+            gold=sum(1 for x,y in selected if color(x,y)[0]>180 and color(x,y)[1]>130 and color(x,y)[2]<100)
+            check(gold>1800,'slash pose retains a long broad yellow blade ' + str(i))
+            silhouettes.append(frozenset((x+x0-i%4*384,y) for x,y in selected))
+        check(len(set(silhouettes))==8, 'all eight new slash poses are distinct')
         image = Image.open(ROOT / 'Assets/Resources/Art/Enemies.png')
         for i, (x, y, w, h) in enumerate(enemy_rects):
             region = image.getchannel('A').crop((x, y, x + w, y + h))

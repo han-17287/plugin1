@@ -9,30 +9,27 @@ namespace Plugin.AncientCivilization
         public int BrokenObjects {get;private set;}
         public int CollectedParticles {get;private set;}
         public int LaserShots {get;private set;}
+        public bool Firing {get{return Time.time<laserUntil;}}
         public float ChargeProgress {get{return heldAt<0?0:Mathf.Clamp01((Time.time-heldAt-TapThreshold)/(ReadyDelay-TapThreshold));}}
         public bool Charging {get{return heldAt>=0&&Time.time-heldAt>=TapThreshold;}}
         public float ArmActivity {get{return Charging?ChargeProgress:Mathf.Clamp01((laserUntil-Time.time)/.18f);}}
         public bool CanCollect {get{return hero&&AncientRules.CanCollectParticles(Input.GetMouseButton(1),Application.isFocused,game.Paused,game.GameplayInputReady,hero.CaptureEnergy);}}
-        AncientHero hero;AncientGame game;LineRenderer blade,bladeGlow,bladeSpine,bladeEdge,aim,beam,beamGlow;
-        AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,laserUntil,bladeReady,comboUntil;
+        AncientHero hero;AncientGame game;LineRenderer slashTrail,slashGlow,aim,beam,beamGlow,beamCore;
+        AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,comboUntil,bladeBufferedUntil;bool bladeHitPending;
         Vector2 bladeDirection,beamStart,beamEnd;
         static readonly Color Yellow=new Color(1,.88f,.18f);
         public void Initialize(AncientHero owner)
         {
             hero=owner;game=AncientGame.Instance;
-            blade=game.Line("Yellow filament blade",new Color(1,.75f,.08f),.36f,22);
-            bladeGlow=game.Line("Yellow bulb blade glow",new Color(1,.8f,.05f,.28f),.6f,21);
-            bladeSpine=game.Line("Graphite sword spine",new Color(.13f,.16f,.19f),.1f,23);
-            bladeEdge=game.Line("Incandescent sword bevel",new Color(1,1,.65f),.045f,24);
-            foreach(var layer in new[]{blade,bladeGlow,bladeSpine,bladeEdge})
-            {
-                layer.positionCount=5;layer.numCapVertices=0;layer.numCornerVertices=0;
-                layer.widthCurve=new AnimationCurve(new Keyframe(0,.55f),new Keyframe(.12f,1),new Keyframe(.78f,.8f),new Keyframe(1,0));
-            }
-            aim=game.Line("Laser aiming guide",new Color(.4f,1,.8f,.4f),.025f,21);
-            beam=game.Line("Captured particle laser",new Color(.8f,1,.9f),.1f,22);
-            beamGlow=game.Line("Laser energy sheath",new Color(.15f,1,.7f,.35f),.4f,21);
-            blade.enabled=bladeGlow.enabled=bladeSpine.enabled=bladeEdge.enabled=aim.enabled=beam.enabled=beamGlow.enabled=false;
+            // The physical blade is in the eight animation frames; these lines only show its swept arc.
+            slashTrail=game.Line("Blade swept light",new Color(1,.9f,.25f,.45f),.07f,23);
+            slashGlow=game.Line("Blade swept light glow",new Color(1,.8f,.1f,.12f),.24f,22);
+            slashTrail.positionCount=slashGlow.positionCount=9;
+            aim=game.Line("Laser aiming guide",new Color(.4f,.9f,1,.35f),.02f,21);
+            beam=game.Line("Instant continuous laser beam",new Color(.55f,.9f,1,.95f),.18f,23);
+            beamGlow=game.Line("Continuous laser sheath",new Color(.1f,.6f,1,.4f),.6f,22);
+            beamCore=game.Line("White hot laser core",new Color(1,1,.95f),.07f,24);
+            slashTrail.enabled=slashGlow.enabled=aim.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=false;
             motes=new AncientEnergyMote[48];
             for(int i=0;i<motes.Length;i++)
             {
@@ -40,18 +37,21 @@ namespace Plugin.AncientCivilization
                 motes[i]=o.AddComponent<AncientEnergyMote>();motes[i].Initialize(this,hero);o.SetActive(false);
             }
         }
-        Vector2 Origin {get{return (Vector2)hero.transform.position+new Vector2(hero.Facing*.5f,.35f);}}
+        Vector2 Origin {get{return (Vector2)hero.transform.position+new Vector2(hero.Facing*.14f,.55f);}}
         Vector2 AimPoint()
         {
             if(!game.View)return Origin+Vector2.right*hero.Facing*10;
             return game.View.ScreenToWorldPoint(Input.mousePosition);
         }
         public void CancelInput(){heldAt=-1;if(aim)aim.enabled=false;}
+        public void CancelBlade(){bladeHitPending=false;bladeUntil=bladeBufferedUntil=0;if(hero)hero.CancelBladePose();}
         public void HandleInput()
         {
             if(!hero)return;
-            if(game.Paused||game.won||!game.GameplayInputReady||!hero.AttackMode)
+            if(game.Paused||game.won||!game.GameplayInputReady)
             {heldAt=-1;aim.enabled=false;return;}
+            if(!hero.AttackMode)
+            {heldAt=-1;aim.enabled=false;bladeHitPending=false;bladeUntil=bladeBufferedUntil=0;hero.CancelBladePose();return;}
             if(Input.GetMouseButtonDown(0)){heldAt=Time.time;}
             if(Input.GetMouseButtonUp(0)&&heldAt>=0)
             {
@@ -63,22 +63,36 @@ namespace Plugin.AncientCivilization
             }
             if(Charging)
             {
-                Vector2 start=Origin,end=ResolveBeam(start,AimPoint());aim.enabled=true;
+                hero.AimWeaponAt(AimPoint());Vector2 start=Origin,end=ResolveBeam(start,AimPoint());aim.enabled=true;
                 aim.startColor=aim.endColor=ChargeProgress>=1?Yellow:new Color(.25f,1,.7f,.45f);
                 aim.SetPosition(0,start);aim.SetPosition(1,end);
             }
         }
         public void StrikeBlade()
         {
-            if(Time.time<bladeReady)return;
-            bladeReady=Time.time+.28f;bladeUntil=Time.time+.2f;
+            if(Time.time<bladeReady){if(bladeReady-Time.time<.15f)bladeBufferedUntil=Time.time+.2f;return;}
+            bladeStarted=Time.time;bladeReady=Time.time+AncientRules.BladeDuration;bladeUntil=bladeReady;bladeHitPending=true;
             combo=Time.time>comboUntil?1:combo%3+1;comboUntil=Time.time+.8f;
             bladeDirection=(AimPoint()-Origin).normalized;if(bladeDirection.sqrMagnitude<.1f)bladeDirection=Vector2.right*hero.Facing;
             hero.BladePose(bladeDirection.x<0?-1:1,combo);BladeUses++;game.Sound(0);
+        }
+        void Update()
+        {
+            if(!hero||game.Paused||game.won)return;
+            if(bladeHitPending&&Time.time>=bladeStarted+AncientRules.BladeHitTime)
+            {
+                bladeHitPending=false;
+                if(hero.AttackMode&&!hero.Wired)ResolveBladeHit();
+            }
+            if(hero.AttackMode&&Time.time>=bladeReady&&Time.time<bladeBufferedUntil)
+            {bladeBufferedUntil=0;StrikeBlade();}
+        }
+        void ResolveBladeHit()
+        {
             Vector2 origin=Origin;bool rebound=(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
             for(int i=game.shots.Count-1;i>=0;i--)
             {
-                var shot=game.shots[i];if(!shot||shot.friendly)continue;
+                var shot=game.shots[i];if(!shot)continue;
                 Vector2 delta=(Vector2)shot.transform.position-origin;
                 if(delta.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,shot.transform.position,1<<8))
                 {rebound=true;EmitParticles(shot.transform.position,Mathf.Clamp(shot.damage,8,25));shot.Remove();BrokenObjects++;game.Story.OnTraining(5);}
@@ -120,7 +134,7 @@ namespace Plugin.AncientCivilization
         {
             if(hero.CaptureEnergy<=0){game.Notice("No captured particles. Break a thrown object with a tap, then collect its particles.",2);return;}
             float energy=hero.SpendCapturedEnergy(),power=energy/100f;
-            beamStart=Origin;beamEnd=ResolveBeam(beamStart,AimPoint());Vector2 delta=beamEnd-beamStart;
+            hero.AimWeaponAt(AimPoint());beamStart=Origin;beamEnd=ResolveBeam(beamStart,AimPoint());Vector2 delta=beamEnd-beamStart;
             float radius=.25f+power*.4f,damage=30+energy*1.6f;
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
@@ -129,35 +143,48 @@ namespace Plugin.AncientCivilization
                 if(Vector2.Distance(enemy.AimPoint,beamStart+delta*t)<radius+.6f)enemy.Hit(damage,true);
             }
             if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage);
-            laserUntil=Time.time+.18f;beam.startWidth=beam.endWidth=.08f+power*.3f;
-            beamGlow.startWidth=beamGlow.endWidth=.3f+power*.7f;
-            LaserShots++;game.Story.OnTraining(7);game.Sound(4);game.Shake(.08f+power*.1f);game.Burst(beamEnd,new Color(.3f,1,.65f),10+Mathf.RoundToInt(power*20));
+            laserUntil=Time.time+.32f;beam.startWidth=beam.endWidth=.16f+power*.32f;
+            beamCore.startWidth=beamCore.endWidth=.05f+power*.1f;
+            beamGlow.startWidth=beamGlow.endWidth=.45f+power*.8f;
+            LaserShots++;game.Story.OnTraining(7);game.Sound(4);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
         }
         void LateUpdate()
         {
-            if(!hero)return;bool slashing=Time.time<bladeUntil&&!game.won;
-            blade.enabled=bladeGlow.enabled=bladeSpine.enabled=bladeEdge.enabled=slashing;
-            if(slashing)
+            if(!hero)return;
+            float elapsed=Time.time-bladeStarted;
+            bool sweeping=Time.time<bladeUntil&&elapsed>=AncientRules.BladeHitTime&&elapsed<.275f&&!game.won;
+            slashTrail.enabled=slashGlow.enabled=sweeping;
+            if(sweeping)
             {
-                float phase=Mathf.Clamp01((bladeUntil-Time.time)/.2f),angle=Mathf.Atan2(bladeDirection.y,bladeDirection.x)+Mathf.Lerp(.8f,-.8f,phase);
-                Vector2 tip=Origin+new Vector2(Mathf.Cos(angle),Mathf.Sin(angle))*2.6f;
-                Vector2 normal=Vector2.Perpendicular(tip-Origin).normalized;
-                for(int i=0;i<5;i++)
+                float progress=Mathf.Clamp01((elapsed-AncientRules.BladeHitTime)/.125f);
+                float facing=bladeDirection.x<0?-1:1;
+                for(int i=0;i<9;i++)
                 {
-                    float t=i/4f;Vector2 point=Vector2.Lerp(Origin,tip,t);
-                    blade.SetPosition(i,point);bladeGlow.SetPosition(i,point);bladeSpine.SetPosition(i,point);
-                    bladeEdge.SetPosition(i,point+normal*(.12f*(1-t)));
+                    float t=Mathf.Lerp(Mathf.Max(0,progress-.45f),progress,i/8f);
+                    float angle=Mathf.Lerp(1.1f,-.95f,t);
+                    Vector2 point=Origin+new Vector2(Mathf.Cos(angle)*facing,Mathf.Sin(angle))*2.2f;
+                    slashTrail.SetPosition(i,point);slashGlow.SetPosition(i,point);
                 }
             }
-            bool firing=Time.time<laserUntil;beam.enabled=beamGlow.enabled=firing;
-            if(firing){beam.SetPosition(0,beamStart);beam.SetPosition(1,beamEnd);beamGlow.SetPosition(0,beamStart);beamGlow.SetPosition(1,beamEnd);}
+            bool firing=Firing&&!game.won;beam.enabled=beamGlow.enabled=beamCore.enabled=firing;
+            if(firing)
+            {
+                // All three beam layers span the entire ray immediately. No flying projectile or particle trail.
+                beam.SetPosition(0,beamStart);beam.SetPosition(1,beamEnd);
+                beamGlow.SetPosition(0,beamStart);beamGlow.SetPosition(1,beamEnd);
+                beamCore.SetPosition(0,beamStart);beamCore.SetPosition(1,beamEnd);
+                float fade=Mathf.Clamp01((laserUntil-Time.time)/.1f);
+                beam.startColor=beam.endColor=new Color(.55f,.9f,1,fade);
+                beamGlow.startColor=beamGlow.endColor=new Color(.1f,.6f,1,.4f*fade);
+                beamCore.startColor=beamCore.endColor=new Color(1,1,.95f,fade);
+            }
         }
         void OnApplicationFocus(bool focus){if(!focus)CancelInput();}
         public void ResetCombat()
-        {heldAt=-1;bladeUntil=laserUntil=0;blade.enabled=bladeGlow.enabled=bladeSpine.enabled=bladeEdge.enabled=beam.enabled=beamGlow.enabled=aim.enabled=false;foreach(var mote in motes)mote.gameObject.SetActive(false);}
+        {heldAt=-1;bladeUntil=laserUntil=bladeBufferedUntil=0;bladeHitPending=false;slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;foreach(var mote in motes)mote.gameObject.SetActive(false);}
         void OnDestroy()
         {
-            foreach(var line in new[]{blade,bladeGlow,bladeSpine,bladeEdge,aim,beam,beamGlow})if(line)Destroy(line.gameObject);
+            foreach(var line in new[]{slashTrail,slashGlow,aim,beam,beamGlow,beamCore})if(line)Destroy(line.gameObject);
             if(motes!=null)foreach(var mote in motes)if(mote)Destroy(mote.gameObject);
         }
     }

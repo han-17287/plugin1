@@ -25,6 +25,33 @@ namespace Plugin.AncientCivilization
             }
             return result;
         }
+        // Extract one connected actor from an atlas where a long sword overlaps a neighbour's columns.
+        // This runs once at load; it preserves weapon pixels rather than clipping to a nominal cell.
+        public static uint[] Isolate(uint[] source,int width,int height,int seedX,int seedY)
+        {
+            if(source==null||source.Length!=width*height)throw new ArgumentException("Invalid component buffer");
+            var result=new uint[source.Length];int seed=-1,best=int.MaxValue;
+            for(int y=System.Math.Max(0,seedY-40);y<System.Math.Min(height,seedY+41);y++)
+                for(int x=System.Math.Max(0,seedX-40);x<System.Math.Min(width,seedX+41);x++)
+                {
+                    if((source[y*width+x]&255)<110)continue;
+                    int d=(x-seedX)*(x-seedX)+(y-seedY)*(y-seedY);
+                    if(d<best){best=d;seed=y*width+x;}
+                }
+            if(seed<0)return result;
+            var queue=new int[source.Length];int read=0,write=0;queue[write++]=seed;result[seed]=source[seed];
+            while(read<write)
+            {
+                int at=queue[read++],px=at%width,py=at/width;
+                for(int dy=-1;dy<=1;dy++)for(int dx=-1;dx<=1;dx++)
+                {
+                    int x=px+dx,y=py+dy;if(x<0||y<0||x>=width||y>=height)continue;
+                    int next=y*width+x;if(result[next]!=0||(source[next]&255)<110)continue;
+                    result[next]=source[next];queue[write++]=next;
+                }
+            }
+            return result;
+        }
         public static uint[] Grid(uint[] source,int width,int height,int step,int regionWidth,int regionHeight)
         {
             if(source==null||source.Length!=width*height||width<1||height<1)throw new ArgumentException("Invalid pixel buffer");

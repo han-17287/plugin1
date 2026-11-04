@@ -4,6 +4,13 @@ namespace Plugin.AncientCivilization
     public enum LeftReleaseAction { Blade, Cancel, Laser, Empty }
     public static class AncientRules
     {
+        public const float BladeDuration=.4f,BladeHitTime=.15f;
+        public static int BladeAnimationFrame(float elapsed)
+        {
+            if(elapsed<.035f)return 0;if(elapsed<.09f)return 1;if(elapsed<.15f)return 2;
+            if(elapsed<.185f)return 3;if(elapsed<.22f)return 4;if(elapsed<.275f)return 5;
+            if(elapsed<.345f)return 6;return 7;
+        }
         public const float TapThreshold=.22f,ReadyDelay=.85f;
         public static LeftReleaseAction ResolveLeftRelease(float held,float energy)
         {
@@ -18,7 +25,7 @@ namespace Plugin.AncientCivilization
         public static void WireHelixOffset(float length,float age,float t,int strand,out float normal,out float depth)
         {
             t=System.Math.Max(0,System.Math.Min(1,t));
-            double radius=.105*System.Math.Max(0,System.Math.Min(1,t*length/.2))*System.Math.Max(0,System.Math.Min(1,(1-t)*length/.2));
+            double radius=.14*System.Math.Max(0,System.Math.Min(1,t*length/.2))*System.Math.Max(0,System.Math.Min(1,(1-t)*length/.2));
             double angle=t*length*System.Math.PI*2/1.15-age*7+strand*System.Math.PI;
             normal=(float)(System.Math.Sin(angle)*radius);depth=(float)(System.Math.Cos(angle)*radius);
         }

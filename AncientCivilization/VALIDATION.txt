@@ -92,12 +92,15 @@ PASS: 32-character GUID Dialogue.png.meta
 PASS: metadata coverage Dialogue.png
 PASS: metadata target Assets/Resources/Art/World.png.meta
 PASS: 32-character GUID World.png.meta
+PASS: metadata coverage HeroEmitterBody.png
 PASS: metadata target Assets/Resources/Art/Hero.png.meta
 PASS: 32-character GUID Hero.png.meta
 PASS: metadata target Assets/Resources/Art/Enemies.png.meta
 PASS: 32-character GUID Enemies.png.meta
 PASS: metadata coverage Scrap.png
 PASS: metadata coverage Rooftop.png
+PASS: metadata target Assets/Resources/Art/HeroEmitterBody.png.meta
+PASS: 32-character GUID HeroEmitterBody.png.meta
 PASS: metadata coverage City.png
 PASS: metadata target Assets/Resources/Art/Rooftop.png.meta
 PASS: 32-character GUID Rooftop.png.meta
@@ -137,6 +140,11 @@ PASS: Hero.png PNG chunk integrity
 PASS: Hero expected image dimensions
 PASS: Hero has RGBA channel
 PASS: Hero readable point-filtered uncompressed import
+PASS: HeroEmitterBody.png PNG signature
+PASS: HeroEmitterBody.png PNG chunk integrity
+PASS: HeroEmitterBody expected image dimensions
+PASS: HeroEmitterBody has RGBA channel
+PASS: HeroEmitterBody readable point-filtered uncompressed import
 PASS: World.png PNG signature
 PASS: World.png PNG chunk integrity
 PASS: World expected image dimensions
@@ -208,6 +216,11 @@ PASS: hero pose has opaque silhouette and clear gutters 4
 PASS: hero pose has opaque silhouette and clear gutters 5
 PASS: hero pose has opaque silhouette and clear gutters 6
 PASS: hero pose has opaque silhouette and clear gutters 7
+PASS: idle hero visibly carries a broad golden blade
+PASS: idle blade has a long sword silhouette rather than a short stub
+PASS: hero equipment sheet contains substantial double-helix wire preview
+PASS: laser preview is a continuous bright beam rather than detached particles
+PASS: runtime emitter body has no baked wire to duplicate the live helix
 PASS: world slice contains visible art 0
 PASS: world slice contains visible art 1
 PASS: world slice contains visible art 2
@@ -216,22 +229,31 @@ PASS: world slice contains visible art 4
 PASS: world slice contains visible art 5
 PASS: world slice contains visible art 6
 PASS: world slice contains visible art 7
-PASS: action pose has clear transparent gutters 0
-PASS: action root lies inside silhouette width 0
-PASS: action pose has clear transparent gutters 1
-PASS: action root lies inside silhouette width 1
-PASS: action pose has clear transparent gutters 2
-PASS: action root lies inside silhouette width 2
-PASS: action pose has clear transparent gutters 3
-PASS: action root lies inside silhouette width 3
-PASS: action pose has clear transparent gutters 4
-PASS: action root lies inside silhouette width 4
-PASS: action pose has clear transparent gutters 5
-PASS: action root lies inside silhouette width 5
-PASS: action pose has clear transparent gutters 6
-PASS: action root lies inside silhouette width 6
-PASS: action pose has clear transparent gutters 7
-PASS: action root lies inside silhouette width 7
+PASS: slash frame has an opaque body seed 0
+PASS: isolated slash silhouette retains full blade with clear gutters 0
+PASS: slash pose retains a long broad yellow blade 0
+PASS: slash frame has an opaque body seed 1
+PASS: isolated slash silhouette retains full blade with clear gutters 1
+PASS: slash pose retains a long broad yellow blade 1
+PASS: slash frame has an opaque body seed 2
+PASS: isolated slash silhouette retains full blade with clear gutters 2
+PASS: slash pose retains a long broad yellow blade 2
+PASS: slash frame has an opaque body seed 3
+PASS: isolated slash silhouette retains full blade with clear gutters 3
+PASS: slash pose retains a long broad yellow blade 3
+PASS: slash frame has an opaque body seed 4
+PASS: isolated slash silhouette retains full blade with clear gutters 4
+PASS: slash pose retains a long broad yellow blade 4
+PASS: slash frame has an opaque body seed 5
+PASS: isolated slash silhouette retains full blade with clear gutters 5
+PASS: slash pose retains a long broad yellow blade 5
+PASS: slash frame has an opaque body seed 6
+PASS: isolated slash silhouette retains full blade with clear gutters 6
+PASS: slash pose retains a long broad yellow blade 6
+PASS: slash frame has an opaque body seed 7
+PASS: isolated slash silhouette retains full blade with clear gutters 7
+PASS: slash pose retains a long broad yellow blade 7
+PASS: all eight new slash poses are distinct
 PASS: enemy silhouette and transparent gutters 0
 PASS: enemy silhouette and transparent gutters 1
 PASS: enemy silhouette and transparent gutters 2
@@ -267,7 +289,7 @@ PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: 394 combat and quest rule checks
+PASS: 403 combat and quest rule checks
 
-SUPPLEMENTAL TYPE CHECK: passed using UnityEngine.Modules 2021.3.33 reference DLLs, in a temporary copy only, with .linearVelocity renamed to .velocity for the older API. Original Unity 6000 project code was not renamed. This is not Unity 6000.6.7f1 type/API or Play validation.
+SUPPLEMENTAL TYPE CHECK passed with Unity 2021.3.33 reference DLLs on temporary source copies (.linearVelocity renamed to .velocity only for this check). This is not Unity 6000.6.7f1 compilation or Play validation.
 work/typecheck/AncientGame.cs(37,35): warning CS0169: The field 'AncientGame.endingShown' is never used

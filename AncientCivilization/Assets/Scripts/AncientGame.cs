@@ -434,6 +434,7 @@ namespace Plugin.AncientCivilization
         public bool Wired {get{return wired;}}
         public int WireChain {get{return wireChain;}}
         public float Facing {get{return direction;}}
+        public Vector2 WireOrigin {get{return (Vector2)transform.position+new Vector2(direction*(bike?.4f:.14f),bike?.45f:.78f);}}
         public float HorizontalSpeed {get{return body?body.linearVelocity.x:0;}}
         public float VerticalSpeed {get{return body?body.linearVelocity.y:0;}}
         public bool BikeGrounded {get;private set;}
@@ -466,7 +467,7 @@ namespace Plugin.AncientCivilization
         AncientEnemy wireEnemy,wireContactTarget;Transform wireMovingAnchor;float wireContactUntil;
         bool wired,airJumpUsed;float axis;int combo;
         Sprite[] frames,actions;
-        float strikeAt,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
+        float actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
         bool wasGrounded,cutJump;float strikeFacing;
         void Start()
         {
@@ -485,13 +486,13 @@ namespace Plugin.AncientCivilization
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
             motorcycle=gameObject.AddComponent<AncientMotorcycle>();motorcycle.Initialize(this);
             armProperties=new MaterialPropertyBlock();
-            wire=g.Line("Particle wire core",new Color(.45f,.85f,1,.9f),.018f,17);
+            wire=g.Line("Particle wire core",new Color(.8f,1,1,.95f),.022f,17);
             wireGlow=g.Line("Particle wire glow",new Color(.15f,.6f,1,.17f),.085f,16);
             wireTarget=g.Line("Wire targeting reticle",AncientGame.Cyan,.035f,18);wireTarget.loop=true;wireTarget.positionCount=8;
             wire.positionCount=wireGlow.positionCount=48;
             for(int strand=0;strand<2;strand++)
             {
-                var helix=g.Line("Particle wire / double helix "+strand,new Color(.15f,.8f,1,.75f),.022f,18);
+                var helix=g.Line("Particle wire / double helix "+strand,new Color(.15f,.8f,1,.9f),.028f,18);
                 helix.positionCount=192;helix.numCapVertices=0;helix.enabled=false;wireHelices[strand]=helix;
             }
             foreach(var cable in new[]{wire,wireGlow})
@@ -560,7 +561,7 @@ namespace Plugin.AncientCivilization
             {
                 // Absorption never lowers speed and never prevents physical melee damage.
                 float nearest=7;AncientProjectile target=null;
-                foreach(var shot in g.shots)if(shot&&!shot.friendly)
+                foreach(var shot in g.shots)if(shot)
                 {float d=Vector2.Distance(transform.position,shot.transform.position);if(d<nearest&&!Physics2D.Linecast(transform.position,shot.transform.position,1<<8)){nearest=d;target=shot;}}
                 absorb.enabled=true;absorb.SetPosition(0,transform.position+Vector3.right*direction*.5f);
                 if(target){absorb.SetPosition(1,target.transform.position);AbsorbShot(target);}
@@ -573,13 +574,14 @@ namespace Plugin.AncientCivilization
                 {absorb.enabled=true;absorb.SetPosition(0,transform.position+new Vector3(direction*.5f,.35f,0));absorb.SetPosition(1,point);}
             }
             art.flipX=(Time.time<actionUntil&&!wired?strikeFacing:direction)<0;
-            int frame=bike?7:wired?5:(Capturing||Input.GetKey(KeyCode.F))?6:Mathf.Abs(axis)>.1f?1+(int)(Time.time*(running?13:9))%4:0;
+            int frame=bike?7:wired?5:(Capturing||Input.GetKey(KeyCode.F)||(Combat&&(Combat.Charging||Combat.Firing)))?6:Mathf.Abs(axis)>.1f?1+(int)(Time.time*(running?13:9))%4:0;
             art.sprite=frames[frame];
             if(!bike&&!wired)
             {
-                if(Time.time<hurtUntil)art.sprite=actions[7];
-                else if(Time.time<actionUntil)art.sprite=actions[(combo-1)*2+(Time.time<strikeAt?0:1)];
-                else if(!onGround)art.sprite=actions[6];
+                if(Time.time<hurtUntil)art.sprite=frames[0];
+                else if(Time.time<actionUntil)art.sprite=actions[AncientRules.BladeAnimationFrame(Time.time-(actionUntil-AncientRules.BladeDuration))];
+                else if(Combat&&(Combat.Charging||Combat.Firing))art.sprite=frames[6];
+                else if(!onGround)art.sprite=frames[3];
             }
             float squash=Time.time<landingUntil?.08f:0;
             art.transform.localScale=new Vector3(1+squash,1-squash,1);
@@ -590,6 +592,8 @@ namespace Plugin.AncientCivilization
             art.enabled=!bike;
             trail.emitting=wired||bike;
         }
+        public void AimWeaponAt(Vector2 target)
+        {if(Mathf.Abs(target.x-transform.position.x)>.1f)direction=target.x<transform.position.x?-1:1;}
         public void VentLift()
         {
             if(!body||bike)return;
@@ -611,7 +615,8 @@ namespace Plugin.AncientCivilization
             AncientGame.Instance.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(1,.9f,.2f),7);
         }
         public void BladePose(float facing,int index)
-        {combo=index;strikeFacing=facing;strikeAt=Time.time+.08f;actionUntil=Time.time+.24f;}
+        {combo=index;strikeFacing=facing;actionUntil=Time.time+AncientRules.BladeDuration;}
+        public void CancelBladePose(){actionUntil=0;}
         public void AddCapturedEnergy(float amount){CaptureEnergy=Mathf.Min(100,CaptureEnergy+amount*(reservoir?1.25f:1));}
         public float SpendCapturedEnergy(){float value=CaptureEnergy;CaptureEnergy=0;return value;}
         public void TravelTo(Vector2 point)
@@ -844,7 +849,7 @@ namespace Plugin.AncientCivilization
             if(!visible)foreach(var link in wirePulses)link.enabled=false;
             if(visible)
             {
-                Vector2 hand=(Vector2)transform.position+new Vector2(direction*.4f,.45f);
+                Vector2 hand=WireOrigin;
                 float age=Time.time-wireAttachedAt;float shot=Mathf.Clamp01(age/.055f);
                 Vector2 end=Vector2.Lerp(hand,anchor,shot);
                 float length=Vector2.Distance(hand,end);
@@ -939,7 +944,7 @@ namespace Plugin.AncientCivilization
             var g=AncientGame.Instance;if(Time.time<invulnerableUntil||g.won)return;
             invulnerableUntil=Time.time+.65f;g.Shake(.14f);
             if(bike){bikeHP=Mathf.Max(0,bikeHP-damage);motorcycle.Damage();if(bikeHP<=0)ExplodeBike();return;}
-            actionUntil=0;hurtUntil=Time.time+.18f;
+            if(Combat)Combat.CancelBlade();actionUntil=0;hurtUntil=Time.time+.18f;
             hp-=damage;g.DamageEmphasis();g.Sound(1);g.Impact(transform.position,AncientGame.Orange,false);g.Burst(transform.position,AncientGame.Orange,9);
             if(hp<=0)Respawn();
         }
@@ -1227,43 +1232,25 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientProjectile : MonoBehaviour
     {
-        public bool scrap,friendly;public int metalKind;public float power;public Vector2 velocity;public float damage=15,gravity;
-        float age;bool removed;LineRenderer glow;Transform metalVisual;
+        public bool scrap;public int metalKind;public Vector2 velocity;public float damage=15,gravity;
+        float age;bool removed;Transform metalVisual;
         void Start()
         {
             var g=AncientGame.Instance;
-            if(friendly)
-            {
-                glow=g.Line("Captured energy streak",AncientGame.Cyan,.12f+power*.5f,12);
-            }
-            else
-            {
+
                 var metal=AncientArt.Display(scrap?"Thrown metal chunk":"Solid metal projectile",
                     scrap?AncientArt.Scrap():AncientArt.MetalProjectile(metalKind),Vector2.zero,12,transform);
                 metalVisual=metal.transform;
                 float size=scrap?.65f:metalKind==2?.65f:metalKind==1?.48f:.5f;
                 metalVisual.localScale=Vector3.one*size;
                 metalVisual.localRotation=Quaternion.Euler(0,0,Mathf.Atan2(velocity.y,velocity.x)*Mathf.Rad2Deg);
-            }
         }
         void Update()
         {
             if(removed)return;var g=AncientGame.Instance;if(g.won){Remove();return;}if(g.Paused)return;
             age+=Time.deltaTime;velocity+=Vector2.down*gravity*Time.deltaTime;Vector2 previous=transform.position;Vector2 next=previous+velocity*Time.deltaTime;
-            if(Physics2D.Linecast(previous,next,1<<8)){g.Burst(previous,friendly?AncientGame.Cyan:new Color(.65f,.48f,.3f),friendly?4:8);Remove();return;}
-            if(friendly)
-            {
-                for(int enemyIndex=g.enemies.Count-1;enemyIndex>=0;enemyIndex--)
-                {
-                    var enemy=g.enemies[enemyIndex];if(!enemy)continue;
-                    Vector2 segment=next-previous;
-                    float t=segment.sqrMagnitude>0?Mathf.Clamp01(Vector2.Dot(enemy.AimPoint-previous,segment)/segment.sqrMagnitude):0;
-                    if(Vector2.Distance(enemy.AimPoint,previous+segment*t)>.6f+power*.8f)continue;
-                    enemy.Hit(damage,power>=.8f);g.Burst(enemy.AimPoint,AncientGame.Cyan,10+Mathf.RoundToInt(power*35));
-                    g.Impact(enemy.AimPoint,AncientGame.Cyan,power>=.4f);Remove();return;
-                }
-            }
-            if(!friendly&&g.hero&&age>.05f)
+            if(Physics2D.Linecast(previous,next,1<<8)){g.Burst(previous,new Color(.65f,.48f,.3f),8);Remove();return;}
+            if(g.hero&&age>.05f)
             {
                 Vector2 h=g.hero.transform.position;Vector2 segment=next-previous;
                 float t=segment.sqrMagnitude>0?Mathf.Clamp01(Vector2.Dot(h-previous,segment)/segment.sqrMagnitude):0;
@@ -1274,7 +1261,6 @@ namespace Plugin.AncientCivilization
                 }
             }
             transform.position=next;
-            if(glow){glow.SetPosition(0,next);glow.SetPosition(1,next-velocity.normalized*(friendly?.8f+power*1.8f:.7f));}
             if(metalVisual)
             {
                 if(scrap||metalKind==1)metalVisual.Rotate(0,0,(scrap?260:480)*Time.deltaTime);
@@ -1284,7 +1270,6 @@ namespace Plugin.AncientCivilization
         }
         public void Remove()
         {if(removed)return;removed=true;AncientGame.Instance.shots.Remove(this);Destroy(gameObject);}
-        void OnDestroy(){if(glow)Destroy(glow.gameObject);}
     }
     public sealed class AncientPickup : MonoBehaviour
     {
