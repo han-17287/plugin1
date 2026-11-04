@@ -1,6 +1,8 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.11.0
+# PLUGIN — ANCIENT CIVILIZATION v0.11.1
 
 한국인 치안경찰 **백명**의 도시 수사를 플레이하는 Unity **6000.6.7f1**용 2D 도트 액션 소스 프로젝트입니다. 실행 EXE가 아닙니다.
+
+Unity 6000.6의 GetInstanceID 오류와 FindFirstObjectByType 경고를 수정했습니다. HOTFIX_0.11.1_KO.md에 원인과 변경을 기록했습니다.
 
 ## 실행
 

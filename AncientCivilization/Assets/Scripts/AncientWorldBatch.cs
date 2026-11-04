@@ -5,14 +5,15 @@ using UnityEngine.Rendering;
 namespace Plugin.AncientCivilization
 {
     // Static scenery only. Gameplay colliders and moving/interactive objects remain separate.
+    // Managed texture references avoid obsolete numeric instance IDs across Unity versions.
     public sealed class AncientWorldBatch : MonoBehaviour
     {
         struct Key : System.IEquatable<Key>
         {
-            public int texture,order,floor,room;
-            public bool Equals(Key other){return texture==other.texture&&order==other.order&&floor==other.floor&&room==other.room;}
+            public Texture texture;public int order,floor,room;
+            public bool Equals(Key other){return object.ReferenceEquals(texture,other.texture)&&order==other.order&&floor==other.floor&&room==other.room;}
             public override bool Equals(object value){return value is Key&&Equals((Key)value);}
-            public override int GetHashCode(){unchecked{return ((texture*397^order)*397^floor)*397^room;}}
+            public override int GetHashCode(){unchecked{return ((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(texture)*397^order)*397^floor)*397^room;}}
         }
         sealed class Build
         {
@@ -24,7 +25,7 @@ namespace Plugin.AncientCivilization
         }
         struct Entry {public Mesh mesh;public MeshRenderer renderer;public int floor,room;}
         readonly Dictionary<Key,Build> builders=new Dictionary<Key,Build>();
-        readonly Dictionary<int,Material> materials=new Dictionary<int,Material>();
+        readonly Dictionary<Texture,Material> materials=new Dictionary<Texture,Material>();
         readonly List<Entry> entries=new List<Entry>();
         AncientGame game;Sprite white;int shownFloor=-99,shownRoom=-99;
         public int QuadCount {get;private set;}
@@ -42,7 +43,7 @@ namespace Plugin.AncientCivilization
         {Add(sprite,position,scale,color,order,AncientCityLayout.VisualSector(position.x),angle);}
         void Add(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order,int floor,float angle=0)
         {
-            Key key=new Key{texture=sprite.texture.GetInstanceID(),order=order,floor=floor,room=AncientCampaignRules.RoomAt(position.x)};Build build;
+            Key key=new Key{texture=sprite.texture,order=order,floor=floor,room=AncientCampaignRules.RoomAt(position.x)};Build build;
             if(!builders.TryGetValue(key,out build)){build=new Build{texture=sprite.texture};builders.Add(key,build);}
             float ppu=sprite.pixelsPerUnit;
             Vector2 size=sprite.rect.size/ppu;

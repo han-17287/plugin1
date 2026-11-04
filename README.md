@@ -2,7 +2,7 @@
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**총 10시간 작업 진행 중 · v0.11.0 중간 확인본:** [Unity 소스 ZIP](https://github.com/han-17287/plugin1/raw/refs/heads/ancient-civilization-prototype/PLUGIN_v0.11.0_Campaign_Checkpoint_Unity_6000.6.7f1.zip)
+**총 10시간 작업 진행 중 · v0.11.1 중간 확인본:** [Unity 소스 ZIP](https://github.com/han-17287/plugin1/raw/refs/heads/ancient-civilization-prototype/PLUGIN_v0.11.1_API_Fix_Unity_6000.6.7f1.zip)
 
 백명 이름, 주민 25명과 상태별 대화/외형, 주요 사건·현장 구역 20개, 구조 대상 걷기와 실제 청취 기록을 추가했습니다. 조커 단서는 드문 주민 대화에 두고, 최상층은 저격수와 같은 처지만 확인합니다. **친구 공개는 2회차입니다.**
 
@@ -18,3 +18,5 @@
 - [실기 확인표](AncientCivilization/PLAYTEST_KO.md) · [검증 결과](AncientCivilization/VALIDATION.txt)
 - [성능 측정 방법](AncientCivilization/PERFORMANCE_KO.md) · [변경 내역](AncientCivilization/CHANGELOG.md)
 - [보관한 고그래픽 무기 시안](ArtReferences)
+
+[Unity 6000.6 Console 오류 수정 내역](AncientCivilization/HOTFIX_0.11.1_KO.md)

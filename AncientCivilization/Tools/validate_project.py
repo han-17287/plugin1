@@ -236,6 +236,8 @@ def main():
     except ImportError:
         results.append('SKIP: C# syntax parser (tree-sitter packages unavailable)')
     runtime = '\n'.join(p.read_text() for p in (ROOT / 'Assets/Scripts').glob('*.cs'))
+    check('.GetInstanceID(' not in runtime, 'active project avoids obsolete numeric Unity instance IDs')
+    check('FindFirstObjectByType' not in runtime, 'bootstrap uses unsorted supported Unity object lookup')
     for spoiler in ('옛 친구', '옛 동료', '명아', '너였어?', '이제야 알아보네'):
         check(spoiler not in runtime, 'first-run script withholds friendship reveal: ' + spoiler)
     campaign = (ROOT / 'Assets/Scripts/AncientCampaignData.cs').read_text()

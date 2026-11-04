@@ -60,7 +60,7 @@ namespace Plugin.AncientCivilization
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
         {
-            if(!Object.FindFirstObjectByType<AncientGame>())new GameObject("Ancient Civilization").AddComponent<AncientGame>();
+            if(!Object.FindAnyObjectByType<AncientGame>())new GameObject("Ancient Civilization").AddComponent<AncientGame>();
         }
         public static int Saved(string key,int fallback=0){return PlayerPrefs.GetInt(SaveKey+key,fallback);}
         public static void SetSaved(string key,int value){PlayerPrefs.SetInt(SaveKey+key,value);}
@@ -314,7 +314,7 @@ namespace Plugin.AncientCivilization
             smoothFrameTime=Mathf.Lerp(smoothFrameTime,Mathf.Max(.001f,Time.unscaledDeltaTime),.05f);
             if(MainMenu){Time.timeScale=0;return;}
             if(Story&&(Story.DialogueOpen||Story.LiftBusy)||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic)){Time.timeScale=0;return;}
-            if(Input.GetKeyDown(KeyCode.K)||Input.GetKeyDown(KeyCode.Escape))ToggleSkills();
+            if(GameplayInputReady&&(Input.GetKeyDown(KeyCode.K)||Input.GetKeyDown(KeyCode.Escape)))ToggleSkills();
             if(Input.GetKeyDown(KeyCode.H))showHelp=!showHelp;
             Time.timeScale=Paused?0:Time.unscaledTime<hitPauseUntil?.12f:1;
             if(Paused)return;

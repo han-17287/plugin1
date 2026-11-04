@@ -1,4 +1,4 @@
-PLUGIN v0.11.0 / Campaign work-in-progress checkpoint
+PLUGIN v0.11.1 / Unity 6000.6 API hotfix checkpoint
 Validation UTC: 2026-11-04 14:00 (KST 23:00)
 
 PASS: 888 independent C# rule checks.
@@ -512,3 +512,5 @@ NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, g
 PASS: 888 combat and quest rule checks
 
 SUPPLEMENTAL TYPE CHECK: PASS (no warnings/errors).
+
+HOTFIX: removed GetInstanceID calls; bootstrap uses FindAnyObjectByType. Active-source static guards added.
