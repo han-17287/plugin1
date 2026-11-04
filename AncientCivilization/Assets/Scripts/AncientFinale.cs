@@ -67,6 +67,7 @@ namespace Plugin.AncientCivilization
             if(game.Story.CurrentFloor!=4||(game.City.Cleared&(1<<4))==0||Mathf.Abs(game.hero.transform.position.x-742)>3)return false;
             if(phase==0)
             {
+                if(!game.City.SecretaryCleared){game.Notice("회장실을 지키는 비서실장을 먼저 제압하세요.",3);return true;}
                 if(!game.Campaign.ReadyForFinale){game.Notice("회장실 자료 대조를 먼저 마치세요. 회장실 앞 보관실 관리인 유담에게 현장을 확인하세요.",4);return true;}
                 phase=1;countdown=60;Persist();ShowBoarding(true);
                 game.Story.FinaleBriefing("회장은 없다. 노트에는 최하층 아래에 묻힌 고대 문명이 적혀 있어… 옆에는 회수 계획. C-00 코어는 이 작전에 묶인 물량이었군.",

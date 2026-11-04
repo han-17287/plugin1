@@ -7,10 +7,11 @@ namespace Plugin.AncientCivilization
     public sealed class AncientStory : MonoBehaviour
     {
         public int Stage {get;private set;}
-        public bool DialogueOpen {get{return lines.Count>0;}}
+        public bool DialogueOpen {get{return lines.Count>0||choiceOpen;}}
         public int CurrentFloor {get;private set;}
         public bool InUpperCity {get{return CurrentFloor>0;}}
         public bool LiftBusy {get{return liftMenu||liftTravelling;}}
+        bool choiceOpen;string choicePrompt;string[] choiceEvidence,choiceOptions;Action<int> choiceAction;
         bool liftMenu,liftTravelling;int liftDestination;float liftStarted;
         float LiftX {get{return AncientCityLayout.Entry(CurrentFloor);}}
         public AncientTruck Truck {get;private set;}
@@ -43,12 +44,12 @@ namespace Plugin.AncientCivilization
         }
         int citizenPortrait=3;
         void Talk(Action done,params Line[] script)
-        {lines.Clear();lines.AddRange(script);lineIndex=0;ResetTyping();afterDialogue=done;game.BlockGameplayInput();}
+        {choiceOpen=false;choiceAction=null;lines.Clear();lines.AddRange(script);lineIndex=0;ResetTyping();afterDialogue=done;game.BlockGameplayInput();}
         void ResetTyping()
         {revealedChars=0;nextLetterAt=Time.unscaledTime+.08f;showFull=false;visibleChars=-1;shownText="";}
         void TickTyping()
         {
-            if(showFull||!DialogueOpen||Time.unscaledTime<nextLetterAt)return;
+            if(choiceOpen||showFull||!DialogueOpen||Time.unscaledTime<nextLetterAt)return;
             string text=lines[lineIndex].text;if(revealedChars>=text.Length)return;
             char letter=text[revealedChars++];
             float pause=letter=='.'||letter=='?'||letter=='!'||letter=='…'?.16f:letter==','?.08f:0;
@@ -56,7 +57,7 @@ namespace Plugin.AncientCivilization
         }
         void Advance()
         {
-            if(!DialogueOpen)return;
+            if(choiceOpen||!DialogueOpen)return;
             if(!showFull&&revealedChars<lines[lineIndex].text.Length){showFull=true;return;}
             lineIndex++;ResetTyping();
             if(lineIndex>=lines.Count)
@@ -91,6 +92,15 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
+            if(choiceOpen)
+            {
+                if(!game.MainMenu&&game.GameplayInputReady)
+                {
+                    if(Input.GetKeyDown(KeyCode.Escape))CloseChoice();
+                    else for(int i=0;i<choiceOptions.Length;i++)if(Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1+i))){Choose(i);break;}
+                }
+                return;
+            }
             if(liftTravelling)
             {
                 if(!game.MainMenu&&Time.unscaledTime-liftStarted>=1.6f)FinishLiftTravel();
@@ -195,6 +205,31 @@ namespace Plugin.AncientCivilization
         public void FinaleBriefing(string first,string second)
         {Talk(null,new Line("백명",first,0),
             new Line("회수 계획 주석","기동 준비된 코어는 보호부를 분리하지 말 것. 외부 충격에 의한 보호부 파손은 연쇄 활성화를 유발한다.",1),new Line("통신관",second,1));}
+        public void AskEvidence(string prompt,string[] evidence,string[] options,Action<int> answer)
+        {
+            if(options==null||options.Length<2||options.Length>3||answer==null)return;
+            choicePrompt=prompt;choiceEvidence=evidence;choiceOptions=options;choiceAction=answer;choiceOpen=true;game.BlockGameplayInput();
+        }
+        void CloseChoice(){choiceOpen=false;choiceAction=null;game.BlockGameplayInput();}
+        void Choose(int index)
+        {
+            if(!choiceOpen||!game.GameplayInputReady||index<0||index>=choiceOptions.Length)return;
+            var action=choiceAction;CloseChoice();action?.Invoke(index);
+        }
+        void DrawChoice(float w,float h)
+        {
+            AncientHUD.Panel(new Rect(0,0,w,h),new Color(.005f,.015f,.025f,.92f));float x=w/2-410,y=h/2-280;
+            AncientHUD.Panel(new Rect(x,y,820,560),new Color(.02f,.045f,.065f,.99f));
+            GUI.Label(new Rect(x+28,y+18,764,62),"증거 대조 / "+choicePrompt,nameStyle);
+            if(choiceEvidence!=null)for(int i=0;i<Mathf.Min(2,choiceEvidence.Length);i++)
+            {
+                AncientHUD.Panel(new Rect(x+28,y+92+i*80,764,72),new Color(.035f,.075f,.095f));
+                GUI.Label(new Rect(x+42,y+100+i*80,736,60),choiceEvidence[i],small);
+            }
+            GUI.enabled=game.GameplayInputReady;
+            for(int i=0;i<choiceOptions.Length;i++)if(GUI.Button(new Rect(x+28,y+270+i*62,764,50),(i+1)+" / "+choiceOptions[i],nextButton))Choose(i);
+            if(GUI.Button(new Rect(x+28,y+510,764,32),"돌아가서 다시 확인 / Esc",nextButton))CloseChoice();GUI.enabled=true;
+        }
         public void Conversation(Action done,int role,string[] speakers,string[] words)
         {
             if(speakers==null||words==null||speakers.Length!=words.Length||words.Length==0)return;
@@ -205,6 +240,7 @@ namespace Plugin.AncientCivilization
                 foreach(var npc in AncientCampaignData.Citizens)
                     if(npc.Name==speakers[i]||speakers[i].EndsWith(" "+npc.Name.Substring(npc.Name.LastIndexOf(' ')+1)))
                     {portrait=-100-npc.Id;break;}
+                if(speakers[i]=="비서실장")portrait=-3;
                 if(speakers[i].Contains("작업반장")||speakers[i].Contains("재하"))portrait=-104;
                 script[i]=new Line(speakers[i],words[i],speakers[i]=="백명"?0:speakers[i]=="통신관"?1:portrait);
             }
@@ -260,7 +296,7 @@ namespace Plugin.AncientCivilization
         }
         void Portrait(int index,Rect rect)
         {
-            var sprite=index<=-100?AncientCitizenArt.ForCitizen(-index-100):index==-2?AncientArt.Enemy(1):index<0?AncientCitizenArt.Sprite(index<=-10?-index-10:citizenPortrait):AncientArt.DialoguePortrait(index);var r=sprite.textureRect;var t=sprite.texture;
+            var sprite=index<=-100?AncientCitizenArt.ForCitizen(-index-100):index==-3?AncientArt.Boss(5,0):index==-2?AncientArt.Boss(4,0):index<0?AncientCitizenArt.Sprite(index<=-10?-index-10:citizenPortrait):AncientArt.DialoguePortrait(index);var r=sprite.textureRect;var t=sprite.texture;
             if(index<0){float width=rect.height*r.width/r.height;rect=new Rect(rect.center.x-width/2,rect.y,width,rect.height);}
             GUI.DrawTextureWithTexCoords(rect,t,new Rect(r.x/t.width,r.y/t.height,r.width/t.width,r.height/t.height));
         }
@@ -272,7 +308,8 @@ namespace Plugin.AncientCivilization
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-50;
             float w=Screen.width/scale,h=Screen.height/scale;
             if(body==null){body=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=21,wordWrap=true};nameStyle=new GUIStyle(body){fontSize=22,fontStyle=FontStyle.Bold};small=new GUIStyle(body){fontSize=14};nextButton=new GUIStyle(AncientHUD.Button){font=body.font,fontSize=14};}
-            if(LiftBusy)DrawLift(w,h);
+            if(choiceOpen)DrawChoice(w,h);
+            else if(LiftBusy)DrawLift(w,h);
             else if(!DialogueOpen)
             {
                 if(!game.skills)

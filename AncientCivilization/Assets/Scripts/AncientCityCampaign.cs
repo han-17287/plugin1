@@ -8,10 +8,11 @@ namespace Plugin.AncientCivilization
         AncientGame game;int activeFloor=-1;AncientEnemy activeBoss;GUIStyle label;Vector2 safeRecovery;
         readonly List<AncientAirTarget> targets=new List<AncientAirTarget>();
         public int Cleared {get;private set;}
+        public bool SecretaryCleared {get;private set;}
         public bool ArenaActive {get{return activeBoss&&activeBoss.IsAlive;}}
         public void Initialize(AncientGame owner)
         {
-            game=owner;Cleared=AncientGame.Saved("cityCleared");
+            game=owner;Cleared=AncientGame.Saved("cityCleared");SecretaryCleared=AncientGame.Saved("secretaryCleared")!=0||AncientGame.Saved("finalePhase")>0;
             game.Platform(264,282,0);
             for(int floor=2;floor<=4;floor++)BuildFloor(floor);
         }
@@ -111,6 +112,12 @@ namespace Plugin.AncientCivilization
                 Spawn(AncientCityLayout.ArenaRight(floor)-4,0,floor==4?1:3,floor,true);
                 game.Notice(floor==4?"저격수 / 조준 전조를 보고 엄폐·접근하세요.":"구역 보스 / 전조를 피하고 공격 후 빈틈을 노리세요.",3);
             }
+            if(floor==4&&!activeBoss&&(Cleared&(1<<4))!=0&&!SecretaryCleared&&game.Campaign.ReadyForFinale&&p.x>=739&&p.y<4)
+            {
+                game.CombatCheckpoint(4,new Vector2(738.5f,1.3f));
+                var secretary=Spawn(AncientCityLayout.ArenaLeft(4)+3,0,3,4,true);secretary.ConfigureSecretary();
+                game.Story.Conversation(null,3,new[]{"비서실장","백명","비서실장"},new[]{"이 문 너머의 기록은 허가된 시간에만 열립니다. 당신의 이의 신청도, 그자의 동결 기록도 예외는 아니지요.","회장은 어디 있지? 기록을 막을 권한까지 받은 건가.","회수 작전의 준비는 끝났습니다. 여기서 시간을 더 쓰시겠습니까?"});
+            }
             if(floor>=2&&game.hero.IsOnGround)
             {
                 var route=AncientCityLayout.Route(floor);
@@ -134,6 +141,11 @@ namespace Plugin.AncientCivilization
             Cleared|=1<<floor;AncientGame.SetSaved("cityCleared",Cleared);
             game.Story.OnDistrictCleared(floor);game.Save();
         }
+        public void SecretaryDefeated()
+        {
+            activeBoss=null;game.boss=null;SecretaryCleared=true;AncientGame.SetSaved("secretaryCleared",1);game.Save();
+            game.Story.Conversation(null,3,new[]{"비서실장","백명"},new[]{"정해진 순서를 벗어났군요. 하지만 회장님은 이미 다음 절차로 가셨습니다.","도시의 시간을 정해 온 게 너희였나. 이제 기록을 확인하겠다."});
+        }
         public bool TryInteract()
         {
             if(!game.Story||!game.hero)return false;int floor=game.Story.CurrentFloor;float x=game.hero.transform.position.x;
@@ -151,6 +163,8 @@ namespace Plugin.AncientCivilization
         }
         public bool TryBladeTarget(Vector2 origin,Vector2 direction)
         {
+            if(activeBoss&&activeBoss.IsSecretary)
+            {var clock=activeBoss.GetComponent<AncientClockBoss>();if(clock&&clock.TryBlade(origin,direction))return true;}
             foreach(var target in targets)
             {
                 if(!target||!target.Ready)continue;Vector2 delta=(Vector2)target.transform.position-origin;
@@ -165,7 +179,7 @@ namespace Plugin.AncientCivilization
             int floor=game.Story.CurrentFloor;if(floor==0)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             string hint=floor==1?"생활구 / 부유체 반동 → 와이어 재연결":floor==2?"행정구 / 붉은 예고 뒤 셔터 폐쇄 · 낮은 경로로 우회":floor==3?"거주구 / 환기 상승류로 금색 지름길 진입":"최상층 / 발판 점멸 후 붕괴 · 안정된 아래 경로는 유지";
-            if((Cleared&(1<<floor))!=0)hint+=floor==3?"\n동쪽 샛길에서 E / 최상층 불법 침입":floor==4?"\n저격수와의 대치 종료 / 서쪽 샛길로 귀환 가능":"\n다음 층 권한 해금 / 입구 엘리베이터에서 목적 층 선택";
+            if((Cleared&(1<<floor))!=0)hint+=floor==3?"\n동쪽 샛길에서 E / 최상층 불법 침입":floor==4?(SecretaryCleared?"\n비서실장 제압 / 회장실 기록 확인":"\n저격수와의 대치 종료 / 마지막 자료 대조 후 회장실 진입"):"\n다음 층 권한 해금 / 입구 엘리베이터에서 목적 층 선택";
             GUI.Label(new Rect(Screen.width/2-300,95,600,65),hint,label);
             string marker=AncientCityLayout.Name(floor)+" / E: 엘리베이터";
             Vector2 point=new Vector2(AncientCityLayout.Entry(floor),4.2f);

@@ -165,6 +165,22 @@ def main():
                 check(rect==walk_rects[row*4+frame],'walking crop matches native-grid alpha '+str(row*4+frame))
                 poses.append(shape)
             check(len(set(poses))==4,'escort has four distinct walk phases '+str(row))
+        boss_atlas=(ROOT / 'Assets/Scripts/AncientBossAtlas.cs').read_text()
+        boss_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',boss_atlas)]
+        check(len(boss_rects)==36,'six bosses each have six measured poses')
+        for boss in range(6):
+            path=ROOT / ('Assets/Resources/Art/Boss'+str(boss)+'.png');info=png_info(path)
+            check(info[:2]==(1536,1024) and info[3]==6,'boss source atlas RGBA and PNG integrity '+str(boss))
+            image=Image.open(path);poses=[]
+            for pose in range(6):
+                rect,shape=measured_grid(image,pose%3*512,pose//3*512,512,512,8)
+                x,y,w,h=boss_rects[boss*6+pose]
+                check(w>80 and h>250 and x>=0 and y>=0 and x+w<=1536 and y+h<=1024,'boss silhouette crop within texture '+str(boss*6+pose))
+                if boss<5:check((x,y,w,h)==rect,'boss crop matches exact native-grid alpha '+str(boss*6+pose))
+                poses.append(shape)
+            check(len(set(poses))==6,'boss has six distinct silhouettes '+str(boss))
+        info=png_info(ROOT / 'Assets/Resources/Art/StudioLogos.png')
+        check(info[:2]==(1536,1024),'boot logo sheet PNG integrity and dimensions')
         image = Image.open(ROOT / 'Assets/Resources/Art/World.png')
         for i, (x, y, w, h) in enumerate(rects):
             region = image.getchannel('A').crop((x, y, x + w, y + h))

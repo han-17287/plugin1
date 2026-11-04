@@ -368,6 +368,53 @@ class RulesChecks
             Check(AncientCampaignRules.WalkRow(person)>=0,"Protected witness has a dedicated walk cycle");
         }
         Check(AncientCampaignRules.WalkRow(0)==-1,"Static residents cannot accidentally use another character's walk row");
+        Check(AncientEvidenceQuestions.All.Length==7,"Seven pivotal cases require actual evidence comparison");
+        foreach(var question in AncientEvidenceQuestions.All)
+        {
+            Check(AncientCampaignData.Missions[question.Mission].Kind==0,"Evidence choice belongs to an investigation case");
+            Check(question.Options.Length==3&&question.Answer>=0&&question.Answer<3,"Every comparison has a valid three-way answer");
+            Check(!AncientEvidenceQuestions.CanCompare(question.Mission,1,2),"Comparison waits for both source records");
+            Check(AncientEvidenceQuestions.CanCompare(question.Mission,3,2),"Both source records permit the final comparison");
+            Check(!AncientEvidenceQuestions.CanCompare(question.Mission,3,0),"Reading an early record does not open the final comparison");
+        }
+        Check(AncientEvidenceQuestions.Find(4)==null,"Power restoration remains physical gameplay rather than a trivia prompt");
+        Check(AncientBossRules.Choose(0,0,false,5)==AncientBossMove.Slam,"Intro teaches close-range slam");
+        Check(AncientBossRules.Choose(0,0,false,10)==AncientBossMove.ArcCrate,"Intro does not slam an unreachable target");
+        Check(AncientBossRules.Choose(1,0,false,5)==AncientBossMove.Rush,"Smuggler opens with readable rush");
+        Check(AncientBossRules.Choose(2,0,false,5)==AncientBossMove.StampBurst,"Executor uses physical stamp burst");
+        Check(AncientBossRules.Choose(3,2,false,5)==AncientBossMove.CeilingDebris,"Core machine has marked ceiling attack");
+        Check(AncientBossRules.Choose(4,1,false,5)==AncientBossMove.BankShot,"Sniper alternates aimed burst and bank shot");
+        for(int floor=0;floor<5;floor++)for(int turn=0;turn<12;turn++)foreach(bool phaseTwo in new[]{false,true})
+        {
+            var move=AncientBossRules.Choose(floor,turn,phaseTwo,5);
+            Check(AncientBossRules.Windup(move)>=.65f,"Every boss attack has a visible warning");
+            Check(AncientBossRules.Opening(move)>=1.2f,"Every boss pattern preserves a punish window");
+            Check(AncientBossRules.Count(move,phaseTwo)<=7,"Boss attacks stay within projectile budget");
+            if(floor==4)Check(!AncientBossRules.Physical(move),"Sniper retains ranged identity");
+        }
+        foreach(float wall in new[]{-10f,10f})foreach(float target in new[]{-6f,0f,6f})
+        {
+            float height=AncientBossRules.BankHeight(0,2,target,1,wall);
+            float incoming=(height-2)/wall,outgoing=(1-height)/(target-wall);
+            Check(Math.Abs(incoming+outgoing)<.0001f,"Bank telegraph follows actual reflection geometry");
+            Check(height>=1&&height<=2,"Bank contact stays on the reflective panel");
+        }
+        for(int step=0;step<=60;step++)for(int direction=0;direction<16;direction++)
+        {
+            float target=direction*(float)Math.PI/8;
+            AncientClockRules.Angles(target,step/60f,out float hour,out float minute);
+            double x=Math.Cos(hour)*AncientClockRules.HourForce+Math.Cos(minute)*AncientClockRules.MinuteForce;
+            double y=Math.Sin(hour)*AncientClockRules.HourForce+Math.Sin(minute)*AncientClockRules.MinuteForce;
+            double cross=x*Math.Sin(target)-y*Math.Cos(target),dot=x*Math.Cos(target)+y*Math.Sin(target);
+            Check(Math.Abs(cross)<.0001&&dot>0,"Visible hand forces add toward tracked target without a displayed resultant");
+        }
+        Check(AncientClockRules.SpinSeconds==3,"Clock force cast lasts exactly three seconds");
+        Check(!AncientClockRules.ThirdVectorShot(0)&&!AncientClockRules.ThirdVectorShot(1)&&AncientClockRules.ThirdVectorShot(2),"Only third vector cast adds both hand directions");
+        Check(!AncientClockRules.BroadHit(0,-5,11),"Directly beneath secretary is safe during broad clock sweep");
+        Check(!AncientClockRules.BroadHit(1.1f,-5,11),"Safe lane includes character-width ground margin");
+        Check(AncientClockRules.BroadHit(2,-5,11),"Moving outside underfoot safe lane enters broad attack");
+        Check(AncientClockRules.BroadHit(0,0,11),"Boss centre is not an accidental safe spot");
+        Check(!AncientClockRules.BroadHit(12,0,11),"Broad attack does not damage outside its displayed radius");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

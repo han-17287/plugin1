@@ -28,7 +28,7 @@ namespace Plugin.AncientCivilization
             if(performance!=game.Performance.Summary||quality!=AncientVisuals.HighQuality||Performance.Length==0)
             {performance=game.Performance.Summary;quality=AncientVisuals.HighQuality;Performance=(quality?"F6 고품질":"F6 가볍게")+" · "+performance;}
             if(boss!=game.boss||(game.boss&&enraged!=game.boss.Enraged))
-            {boss=game.boss;enraged=boss&&boss.Enraged;Boss=boss?boss.Role+(enraged?" / 격노":""):"";}
+            {boss=game.boss;enraged=boss&&boss.Enraged;Boss=boss?boss.Role+(enraged?" / 2단계":""):"";}
             int velocity=Mathf.RoundToInt(Mathf.Abs(hero.HorizontalSpeed)*3.6f);
             if(velocity!=speed){speed=velocity;Speed=velocity+" km/h";}
         }

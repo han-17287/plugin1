@@ -234,11 +234,30 @@ namespace Plugin.AncientCivilization
                 if((tasks&(1<<i))!=0||UsesBlade(m.Kind,i)||m.Kind==3&&i==2||m.Kind==2&&i==2)continue;
                 if((hero-NodePoint(active,i)).sqrMagnitude>2*2)continue;
                 if(m.Kind==2&&i==1&&(tasks&1)==0){game.Notice("봉인 장치를 먼저 베어 통로를 여세요.");return true;}
+                if(i==2&&AncientEvidenceQuestions.Find(active)!=null)
+                {
+                    if(!AncientEvidenceQuestions.CanCompare(active,tasks,i)){game.Notice("앞의 두 기록을 확보한 뒤 대조하세요.");return true;}
+                    CompareEvidence();return true;
+                }
                 Mark(i);
                 if(m.Kind==2&&i==1){escort.transform.position=NodePoint(active,1)-Vector2.up*1.2f;following=true;Refresh();}
                 game.Story.Conversation(null,m.Kind==2?2:3,new string[]{m.Speaker,"백명"},new string[]{AncientCampaignData.Details[active][i],"확인했습니다. 사본을 남기겠습니다."});return true;
             }
             return true;
+        }
+        void CompareEvidence()
+        {
+            int mission=active;var question=AncientEvidenceQuestions.Find(mission);if(question==null)return;
+            game.Story.AskEvidence(question.Prompt,new[]{AncientCampaignData.Details[mission][0],AncientCampaignData.Details[mission][1]},question.Options,
+                answer=>
+                {
+                    if(active!=mission)return;
+                    if(answer==question.Answer)
+                    {
+                        Mark(2);game.Story.Conversation(null,3,new[]{"통신관"},new[]{AncientCampaignData.Details[mission][2]});
+                    }
+                    else game.Story.Conversation(CompareEvidence,3,new[]{"통신관"},new[]{question.Feedback});
+                });
         }
         int NearestCitizen()
         {

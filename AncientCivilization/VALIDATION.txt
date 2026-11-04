@@ -1,16 +1,4 @@
-PLUGIN v0.11.1 / Unity 6000.6 API hotfix checkpoint
-Validation UTC: 2026-11-04 14:00 (KST 23:00)
-
-PASS: 888 independent C# rule checks.
-PASS: PNG/metadata/native-grid crop/walk-phase/Korean story spoiler checks below.
-PASS: supplemental Unity 2021.3.33 reference DLL type check, warnings treated as errors.
-Only temporary validation copies rename .linearVelocity to .velocity for the older reference API.
-Actual shipping Unity 6 source is unchanged.
-
-NOT RUN: Unity 6000.6.7f1 compilation/import/shaders/Play/full completion/player build/actual FPS.
-This is an intermediate checkpoint during the requested ten-hour work, not a 90% or perfect release.
-The nine-hour first-run target has not been implemented or measured as completed content.
-
+PASS: 2310 combat and quest rule checks
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
 PASS: metadata coverage Scenes
@@ -27,6 +15,8 @@ PASS: metadata target Assets/Scenes/Main.unity.meta
 PASS: 32-character GUID Main.unity.meta
 PASS: metadata target Assets/Scripts/AncientCitizenArt.cs.meta
 PASS: 32-character GUID AncientCitizenArt.cs.meta
+PASS: metadata target Assets/Scripts/AncientBootIntro.cs.meta
+PASS: 32-character GUID AncientBootIntro.cs.meta
 PASS: metadata coverage AncientTraversalLayout.cs
 PASS: metadata target Assets/Scripts/AncientCampaign.cs.meta
 PASS: 32-character GUID AncientCampaign.cs.meta
@@ -37,8 +27,13 @@ PASS: metadata target Assets/Scripts/AncientDistrict.cs.meta
 PASS: 32-character GUID AncientDistrict.cs.meta
 PASS: metadata target Assets/Scripts/AncientPointer.cs.meta
 PASS: 32-character GUID AncientPointer.cs.meta
+PASS: metadata target Assets/Scripts/AncientBossController.cs.meta
+PASS: 32-character GUID AncientBossController.cs.meta
+PASS: metadata target Assets/Scripts/AncientEvidenceQuestions.cs.meta
+PASS: 32-character GUID AncientEvidenceQuestions.cs.meta
 PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
 PASS: 32-character GUID AncientCameraFX.cs.meta
+PASS: metadata coverage AncientBossRules.cs
 PASS: metadata target Assets/Scripts/AncientWireParticleBatch.cs.meta
 PASS: 32-character GUID AncientWireParticleBatch.cs.meta
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
@@ -70,6 +65,8 @@ PASS: 32-character GUID AncientCombat.cs.meta
 PASS: metadata coverage AncientCitizenAtlas.cs
 PASS: metadata target Assets/Scripts/AncientFieldScenery.cs.meta
 PASS: 32-character GUID AncientFieldScenery.cs.meta
+PASS: metadata target Assets/Scripts/AncientBossRules.cs.meta
+PASS: 32-character GUID AncientBossRules.cs.meta
 PASS: metadata coverage AncientCombatRules.cs
 PASS: metadata coverage AncientFinaleRules.cs
 PASS: metadata coverage AncientJournal.cs
@@ -83,17 +80,22 @@ PASS: metadata target Assets/Scripts/AncientTraversal.cs.meta
 PASS: 32-character GUID AncientTraversal.cs.meta
 PASS: metadata target Assets/Scripts/AncientTraversalLayout.cs.meta
 PASS: 32-character GUID AncientTraversalLayout.cs.meta
+PASS: metadata target Assets/Scripts/AncientBossAtlas.cs.meta
+PASS: 32-character GUID AncientBossAtlas.cs.meta
 PASS: metadata target Assets/Scripts/AncientRules.cs.meta
 PASS: 32-character GUID AncientRules.cs.meta
 PASS: metadata coverage AncientFieldCases.cs
 PASS: metadata coverage AncientProjectilePool.cs
 PASS: metadata target Assets/Scripts/AncientWireMath.cs.meta
 PASS: 32-character GUID AncientWireMath.cs.meta
+PASS: metadata coverage AncientClockBoss.cs
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
 PASS: 32-character GUID AncientGame.cs.meta
+PASS: metadata coverage AncientClockRules.cs
 PASS: metadata target Assets/Scripts/AncientCityCampaign.cs.meta
 PASS: 32-character GUID AncientCityCampaign.cs.meta
 PASS: metadata coverage AncientCameraFX.cs
+PASS: metadata coverage AncientBossController.cs
 PASS: metadata target Assets/Scripts/AncientHUD.cs.meta
 PASS: 32-character GUID AncientHUD.cs.meta
 PASS: metadata coverage AncientMainMenu.cs
@@ -102,7 +104,10 @@ PASS: 32-character GUID AncientHudText.cs.meta
 PASS: metadata target Assets/Scripts/AncientCityLayout.cs.meta
 PASS: 32-character GUID AncientCityLayout.cs.meta
 PASS: metadata coverage AncientProgressRules.cs
+PASS: metadata coverage AncientBossAtlas.cs
 PASS: metadata coverage AncientAudio.cs
+PASS: metadata target Assets/Scripts/AncientClockBoss.cs.meta
+PASS: 32-character GUID AncientClockBoss.cs.meta
 PASS: metadata target Assets/Scripts/AncientFinaleRules.cs.meta
 PASS: 32-character GUID AncientFinaleRules.cs.meta
 PASS: metadata coverage AncientPixels.cs
@@ -114,12 +119,16 @@ PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
 PASS: 32-character GUID AncientMotorcycle.cs.meta
 PASS: metadata target Assets/Scripts/AncientFinale.cs.meta
 PASS: 32-character GUID AncientFinale.cs.meta
+PASS: metadata coverage AncientBootIntro.cs
 PASS: metadata coverage AncientVisuals.cs
 PASS: metadata coverage AncientKoreanUI.cs
+PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
+PASS: 32-character GUID AncientClockRules.cs.meta
 PASS: metadata coverage AncientDistrict.cs
 PASS: metadata target Assets/Scripts/AncientProgressRules.cs.meta
 PASS: 32-character GUID AncientProgressRules.cs.meta
 PASS: metadata coverage AncientPerformance.cs
+PASS: metadata coverage AncientEvidenceQuestions.cs
 PASS: metadata target Assets/Scripts/AncientCitizenAtlas.cs.meta
 PASS: 32-character GUID AncientCitizenAtlas.cs.meta
 PASS: metadata coverage AncientGameFeel.cs
@@ -161,13 +170,18 @@ PASS: metadata target Assets/Resources/Art/Citizens3.png.meta
 PASS: 32-character GUID Citizens3.png.meta
 PASS: metadata target Assets/Resources/Art/Scrap.png.meta
 PASS: 32-character GUID Scrap.png.meta
+PASS: metadata target Assets/Resources/Art/StudioLogos.png.meta
+PASS: 32-character GUID StudioLogos.png.meta
 PASS: metadata coverage Citizens1.png
+PASS: metadata coverage StudioLogos.png
 PASS: metadata coverage Citizens0.png
+PASS: metadata coverage Boss0.png
 PASS: metadata target Assets/Resources/Art/Citizens1.png.meta
 PASS: 32-character GUID Citizens1.png.meta
 PASS: metadata target Assets/Resources/Art/City.png.meta
 PASS: 32-character GUID City.png.meta
 PASS: metadata coverage Citizens3.png
+PASS: metadata coverage Boss2.png
 PASS: metadata target Assets/Resources/Art/Citizens4.png.meta
 PASS: 32-character GUID Citizens4.png.meta
 PASS: metadata coverage CitizensWalk.png
@@ -185,10 +199,15 @@ PASS: 32-character GUID Hero.png.meta
 PASS: metadata target Assets/Resources/Art/Enemies.png.meta
 PASS: 32-character GUID Enemies.png.meta
 PASS: metadata coverage Scrap.png
+PASS: metadata coverage Boss4.png
 PASS: metadata coverage Rooftop.png
 PASS: metadata target Assets/Resources/Art/HeroEmitterBody.png.meta
 PASS: 32-character GUID HeroEmitterBody.png.meta
 PASS: metadata coverage City.png
+PASS: metadata target Assets/Resources/Art/Boss2.png.meta
+PASS: 32-character GUID Boss2.png.meta
+PASS: metadata target Assets/Resources/Art/Boss4.png.meta
+PASS: 32-character GUID Boss4.png.meta
 PASS: metadata coverage Citizens2.png
 PASS: metadata target Assets/Resources/Art/CitizensWalk.png.meta
 PASS: 32-character GUID CitizensWalk.png.meta
@@ -198,10 +217,21 @@ PASS: metadata coverage Hero.png
 PASS: metadata coverage Actions.png
 PASS: metadata coverage Enemies.png
 PASS: metadata coverage Motorcycle.png
+PASS: metadata target Assets/Resources/Art/Boss1.png.meta
+PASS: 32-character GUID Boss1.png.meta
 PASS: metadata target Assets/Resources/Art/Citizens2.png.meta
 PASS: 32-character GUID Citizens2.png.meta
+PASS: metadata target Assets/Resources/Art/Boss5.png.meta
+PASS: 32-character GUID Boss5.png.meta
 PASS: metadata target Assets/Resources/Art/Motorcycle.png.meta
 PASS: 32-character GUID Motorcycle.png.meta
+PASS: metadata coverage Boss5.png
+PASS: metadata coverage Boss3.png
+PASS: metadata coverage Boss1.png
+PASS: metadata target Assets/Resources/Art/Boss3.png.meta
+PASS: 32-character GUID Boss3.png.meta
+PASS: metadata target Assets/Resources/Art/Boss0.png.meta
+PASS: 32-character GUID Boss0.png.meta
 PASS: metadata target Assets/Resources/Art/Citizens0.png.meta
 PASS: 32-character GUID Citizens0.png.meta
 PASS: metadata coverage World.png
@@ -413,6 +443,100 @@ PASS: walking crop matches native-grid alpha 13
 PASS: walking crop matches native-grid alpha 14
 PASS: walking crop matches native-grid alpha 15
 PASS: escort has four distinct walk phases 3
+PASS: six bosses each have six measured poses
+PASS: Boss0.png PNG signature
+PASS: Boss0.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 0
+PASS: boss silhouette crop within texture 0
+PASS: boss crop matches exact native-grid alpha 0
+PASS: boss silhouette crop within texture 1
+PASS: boss crop matches exact native-grid alpha 1
+PASS: boss silhouette crop within texture 2
+PASS: boss crop matches exact native-grid alpha 2
+PASS: boss silhouette crop within texture 3
+PASS: boss crop matches exact native-grid alpha 3
+PASS: boss silhouette crop within texture 4
+PASS: boss crop matches exact native-grid alpha 4
+PASS: boss silhouette crop within texture 5
+PASS: boss crop matches exact native-grid alpha 5
+PASS: boss has six distinct silhouettes 0
+PASS: Boss1.png PNG signature
+PASS: Boss1.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 1
+PASS: boss silhouette crop within texture 6
+PASS: boss crop matches exact native-grid alpha 6
+PASS: boss silhouette crop within texture 7
+PASS: boss crop matches exact native-grid alpha 7
+PASS: boss silhouette crop within texture 8
+PASS: boss crop matches exact native-grid alpha 8
+PASS: boss silhouette crop within texture 9
+PASS: boss crop matches exact native-grid alpha 9
+PASS: boss silhouette crop within texture 10
+PASS: boss crop matches exact native-grid alpha 10
+PASS: boss silhouette crop within texture 11
+PASS: boss crop matches exact native-grid alpha 11
+PASS: boss has six distinct silhouettes 1
+PASS: Boss2.png PNG signature
+PASS: Boss2.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 2
+PASS: boss silhouette crop within texture 12
+PASS: boss crop matches exact native-grid alpha 12
+PASS: boss silhouette crop within texture 13
+PASS: boss crop matches exact native-grid alpha 13
+PASS: boss silhouette crop within texture 14
+PASS: boss crop matches exact native-grid alpha 14
+PASS: boss silhouette crop within texture 15
+PASS: boss crop matches exact native-grid alpha 15
+PASS: boss silhouette crop within texture 16
+PASS: boss crop matches exact native-grid alpha 16
+PASS: boss silhouette crop within texture 17
+PASS: boss crop matches exact native-grid alpha 17
+PASS: boss has six distinct silhouettes 2
+PASS: Boss3.png PNG signature
+PASS: Boss3.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 3
+PASS: boss silhouette crop within texture 18
+PASS: boss crop matches exact native-grid alpha 18
+PASS: boss silhouette crop within texture 19
+PASS: boss crop matches exact native-grid alpha 19
+PASS: boss silhouette crop within texture 20
+PASS: boss crop matches exact native-grid alpha 20
+PASS: boss silhouette crop within texture 21
+PASS: boss crop matches exact native-grid alpha 21
+PASS: boss silhouette crop within texture 22
+PASS: boss crop matches exact native-grid alpha 22
+PASS: boss silhouette crop within texture 23
+PASS: boss crop matches exact native-grid alpha 23
+PASS: boss has six distinct silhouettes 3
+PASS: Boss4.png PNG signature
+PASS: Boss4.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 4
+PASS: boss silhouette crop within texture 24
+PASS: boss crop matches exact native-grid alpha 24
+PASS: boss silhouette crop within texture 25
+PASS: boss crop matches exact native-grid alpha 25
+PASS: boss silhouette crop within texture 26
+PASS: boss crop matches exact native-grid alpha 26
+PASS: boss silhouette crop within texture 27
+PASS: boss crop matches exact native-grid alpha 27
+PASS: boss silhouette crop within texture 28
+PASS: boss crop matches exact native-grid alpha 28
+PASS: boss silhouette crop within texture 29
+PASS: boss crop matches exact native-grid alpha 29
+PASS: boss has six distinct silhouettes 4
+PASS: Boss5.png PNG signature
+PASS: Boss5.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 5
+PASS: boss silhouette crop within texture 30
+PASS: boss silhouette crop within texture 31
+PASS: boss silhouette crop within texture 32
+PASS: boss silhouette crop within texture 33
+PASS: boss silhouette crop within texture 34
+PASS: boss silhouette crop within texture 35
+PASS: boss has six distinct silhouettes 5
+PASS: StudioLogos.png PNG signature
+PASS: StudioLogos.png PNG chunk integrity
+PASS: boot logo sheet PNG integrity and dimensions
 PASS: world slice contains visible art 0
 PASS: world slice contains visible art 1
 PASS: world slice contains visible art 2
@@ -461,6 +585,7 @@ PASS: healthy and damaged chassis display widths agree
 PASS: scrap projectile silhouette and transparent gutters
 PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientWireParticleBatch.cs
+PASS: C# syntax AncientBossRules.cs
 PASS: C# syntax AncientCityLayout.cs
 PASS: C# syntax AncientFrameRules.cs
 PASS: C# syntax AncientCampaignRules.cs
@@ -477,17 +602,23 @@ PASS: C# syntax AncientCampaignData.cs
 PASS: C# syntax AncientWireMath.cs
 PASS: C# syntax AncientFieldCases.cs
 PASS: C# syntax AncientProjectilePool.cs
+PASS: C# syntax AncientClockBoss.cs
+PASS: C# syntax AncientClockRules.cs
 PASS: C# syntax AncientCameraFX.cs
+PASS: C# syntax AncientBossController.cs
 PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientProgressRules.cs
+PASS: C# syntax AncientBossAtlas.cs
 PASS: C# syntax AncientAudio.cs
 PASS: C# syntax AncientPixels.cs
 PASS: C# syntax AncientCitizenArt.cs
 PASS: C# syntax AncientExploration.cs
+PASS: C# syntax AncientBootIntro.cs
 PASS: C# syntax AncientVisuals.cs
 PASS: C# syntax AncientKoreanUI.cs
 PASS: C# syntax AncientDistrict.cs
 PASS: C# syntax AncientPerformance.cs
+PASS: C# syntax AncientEvidenceQuestions.cs
 PASS: C# syntax AncientGameFeel.cs
 PASS: C# syntax AncientParkedBike.cs
 PASS: C# syntax AncientCampaign.cs
@@ -500,6 +631,8 @@ PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 PASS: C# syntax AncientHudText.cs
 PASS: C# syntax AncientWorldBatch.cs
+PASS: active project avoids obsolete numeric Unity instance IDs
+PASS: bootstrap uses unsorted supported Unity object lookup
 PASS: first-run script withholds friendship reveal: 옛 친구
 PASS: first-run script withholds friendship reveal: 옛 동료
 PASS: first-run script withholds friendship reveal: 명아
@@ -509,8 +642,5 @@ PASS: five sparse Joker mentions across city resident dialogue
 PASS: protagonist dialogue consistently uses Baek Myeong
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: 888 combat and quest rule checks
-
-SUPPLEMENTAL TYPE CHECK: PASS (no warnings/errors).
-
-HOTFIX: removed GetInstanceID calls; bootstrap uses FindAnyObjectByType. Active-source static guards added.
+PASS: Supplemental C# type check using Unity 2021.3 reference modules; temporary linearVelocity-to-velocity compatibility copies only. Shipped Unity 6 source unchanged. This does not establish Unity 6000.6 API compatibility or runtime behavior.
+NOT RUN: actual Unity 6000.6.7f1 import, Play Mode, physics/telegraph timing, shader rendering, player build, measured FPS, first-run duration.

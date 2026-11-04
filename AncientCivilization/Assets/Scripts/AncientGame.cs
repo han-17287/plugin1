@@ -116,7 +116,7 @@ namespace Plugin.AncientCivilization
             Exploration=gameObject.AddComponent<AncientExploration>();Exploration.Initialize(this);
             Journal=gameObject.AddComponent<AncientJournal>();Journal.Initialize(this);
             Cases=gameObject.AddComponent<AncientFieldCases>();Cases.Initialize(this);
-            gameObject.AddComponent<AncientVisuals>();gameObject.AddComponent<AncientPointer>();gameObject.AddComponent<AncientMainMenu>();
+            gameObject.AddComponent<AncientVisuals>();gameObject.AddComponent<AncientPointer>();gameObject.AddComponent<AncientBootIntro>();gameObject.AddComponent<AncientMainMenu>();
             Time.timeScale=MainMenu?0:1;
             if(HasSession){SetSaved("started",1);PlayerPrefs.Save();inputReadyFrame=Time.frameCount+1;}
             Notice(checkpointStage==0?"하층 생산구 / 아침 순찰\n이동·와이어·블레이드 훈련을 완료하세요.":"저장한 순찰 지점에서 이어갑니다.",7);
@@ -362,7 +362,7 @@ namespace Plugin.AncientCivilization
         }
         public void NewRun()
         {
-            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks"})PlayerPrefs.DeleteKey(SaveKey+key);
+            foreach(string key in new[]{"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","secretaryCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks"})PlayerPrefs.DeleteKey(SaveKey+key);
             PlayerPrefs.Save();startAfterReload=true;Time.timeScale=1;SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
         void Upgrade(Rect rect,string text,int price,int required,bool owned,System.Action unlock)
@@ -1125,25 +1125,28 @@ namespace Plugin.AncientCivilization
         public int kind;
         public int DistrictFloor {get;private set;}
         public bool IsDistrictBoss {get;private set;}
+        public bool IsSecretary {get;private set;}
+        public void ConfigureSecretary(){IsSecretary=true;maxHP=hp=480;}
         public bool IsBoss {get{return kind==3||IsDistrictBoss;}}
         public void ConfigureDistrict(int floor,bool boss)
         {DistrictFloor=floor;IsDistrictBoss=boss;if(boss)maxHP=hp=floor==4?260:220+floor*50;}
         float hp=60,maxHP=60,nextAttack,resolveAt=-1,flashUntil,walkPhase,faceLockUntil,guardBrokenUntil,staggerUntil;
         int pattern,attackIndex,volleyRemaining;bool dead;
         float volleyAt,volleyInterval=.14f,volleySpeed=12,windupStartedAt,attackPoseUntil,recoveryStarts,recoveryUntil,recoveryDuration;bool enragedAnnounced;
-        public bool IsTelegraphing {get{return resolveAt>=0;}}
-        public bool Recovering {get{return IsBoss&&Time.time>=recoveryStarts&&Time.time<recoveryUntil;}}
-        public float RecoveryRemaining {get{return Recovering?Mathf.Clamp01((recoveryUntil-Time.time)/Mathf.Max(.1f,recoveryDuration)):0;}}
-        public bool AttackIsPhysical {get{return pattern==0;}}
-        public float WindupProgress {get{return resolveAt<0?0:Mathf.Clamp01((Time.time-windupStartedAt)/Mathf.Max(.01f,resolveAt-windupStartedAt));}}
+        AncientBossController bossBrain;
+        public bool IsTelegraphing {get{return bossBrain?bossBrain.Telegraphing:resolveAt>=0;}}
+        public bool Recovering {get{return bossBrain?bossBrain.Recovering:IsBoss&&Time.time>=recoveryStarts&&Time.time<recoveryUntil;}}
+        public float RecoveryRemaining {get{return bossBrain?bossBrain.RecoveryRemaining:Recovering?Mathf.Clamp01((recoveryUntil-Time.time)/Mathf.Max(.1f,recoveryDuration)):0;}}
+        public bool AttackIsPhysical {get{return bossBrain?bossBrain.Physical:pattern==0;}}
+        public float WindupProgress {get{return bossBrain?bossBrain.WindupProgress:resolveAt<0?0:Mathf.Clamp01((Time.time-windupStartedAt)/Mathf.Max(.01f,resolveAt-windupStartedAt));}}
         SpriteRenderer art;LineRenderer warning;AncientFinalTruck carrier;
         Vector2 home,lockedAim;float facing=1;
         public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(kind==3?1.65f:kind==4?.65f:.95f);}}
         public bool IsAlive {get{return !dead;}}
         float wirePushRemaining;
         public float HealthRatio {get{return maxHP>0?hp/maxHP:1;}}
-        public bool Enraged {get{return kind==3&&hp<maxHP*.5f;}}
-        public string Role {get{if(IsDistrictBoss)return DistrictFloor==1?"밀매 조직 경비장":DistrictFloor==2?"기록 집행관":DistrictFloor==3?"코어 보안 병기":"저격수";return kind==0?"LANCER":kind==1?"GUNNER":kind==2?"BOMBER":kind==3?"CARGO ENFORCER":kind==4?"DRONE":"SHIELD WARDEN";}}
+        public bool Enraged {get{return IsBoss&&!IsSecretary&&hp<maxHP*.5f;}}
+        public string Role {get{if(IsSecretary)return "중앙행정정보처리기관 비서실장";if(IsDistrictBoss)return DistrictFloor==1?"밀매 조직 경비장":DistrictFloor==2?"기록 집행관":DistrictFloor==3?"코어 보안 병기":"저격수";return kind==0?"LANCER":kind==1?"GUNNER":kind==2?"BOMBER":kind==3?"CARGO ENFORCER":kind==4?"DRONE":"SHIELD WARDEN";}}
         public void FaceToward(float x){facing=x<transform.position.x?-1:1;if(art)art.flipX=facing<0;}
         public void PrepareMiniBoss(){maxHP=hp=240;}
         public void Initialize(int type)
@@ -1159,10 +1162,13 @@ namespace Plugin.AncientCivilization
             }
             warning=g.Line("Attack telegraph",AncientGame.Orange,.045f,6);warning.enabled=false;
             nextAttack=Time.time+(IsDistrictBoss&&DistrictFloor==4?1.6f:kind==3?1.3f:1+kind*.2f);
+            if(IsBoss){bossBrain=gameObject.AddComponent<AncientBossController>();bossBrain.Initialize(this,g,warning);}
         }
         bool Step(float distance)
         {
             // A wire impact on a moving guard stays on that truck's deck, never its old world-space home.
+            if(IsSecretary)
+            {transform.position=new Vector2(Mathf.Clamp(transform.position.x+distance,AncientCityLayout.ArenaLeft(4)+1,AncientCityLayout.ArenaRight(4)-1),transform.position.y);return true;}
             if(carrier)
             {
                 Vector3 local=transform.localPosition;local.x=Mathf.Clamp(local.x+distance,-1.7f,1.7f);
@@ -1184,6 +1190,7 @@ namespace Plugin.AncientCivilization
                 float step=Mathf.MoveTowards(0,wirePushRemaining,4*Time.deltaTime);
                 if(Step(step))wirePushRemaining-=step;else wirePushRemaining=0;
             }
+            if(bossBrain){bossBrain.Tick();return;}
             // Body contact is separate from telegraphed attacks and projectiles.
             Vector2 contact=(Vector2)g.hero.transform.position-AimPoint;
             if(!Recovering&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
@@ -1308,6 +1315,20 @@ namespace Plugin.AncientCivilization
                 }
             }
         }
+        internal bool BossStep(float distance){return Step(distance);}
+        internal void BossContact()
+        {
+            Vector2 contact=(Vector2)AncientGame.Instance.hero.transform.position-AimPoint;
+            if(!Recovering&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
+                AncientGame.Instance.hero.HurtContact(this,kind==3?14:8);
+        }
+        internal void BossVisual(int pose,float direction,float anticipation,bool telegraph,bool recovery)
+        {
+            facing=direction;art.flipX=facing<0;art.sprite=AncientArt.Boss(IsSecretary?5:IsDistrictBoss?DistrictFloor:0,pose);
+            art.transform.localScale=new Vector3(1-anticipation*.025f,1+anticipation*.025f,1);
+            art.transform.localRotation=Quaternion.identity;
+            art.color=Time.time<flashUntil?AncientGame.Cyan:recovery?new Color(1,.87f,.5f):telegraph?Color.Lerp(Color.white,AttackIsPhysical?AncientGame.Orange:AncientGame.Cyan,(.5f+Mathf.Sin(Time.time*20)*.5f)*.45f):Color.white;
+        }
         public void WireImpact(float direction)
         {
             if(dead)return;
@@ -1331,7 +1352,7 @@ namespace Plugin.AncientCivilization
             if(hp>0)return;
             if(IsDistrictBoss&&DistrictFloor==4)
             {
-                dead=true;g.enemies.Remove(this);g.City.BossDefeated(DistrictFloor);Destroy(gameObject);return;
+                dead=true;g.enemies.Remove(this);if(IsSecretary)g.City.SecretaryDefeated();else g.City.BossDefeated(DistrictFloor);Destroy(gameObject);return;
             }
             dead=true;g.kills++;g.credits+=kind==3?20:kind==5?6:kind==4?5:4;g.score+=kind==3?1000:100;
             Vector2 drop=AimPoint;
@@ -1350,13 +1371,13 @@ namespace Plugin.AncientCivilization
     public sealed class AncientProjectile : MonoBehaviour
     {
         public bool scrap;public int metalKind;public Vector2 velocity;public float damage=15,gravity;
-        float age;bool removed=true;SpriteRenderer art;AncientGame game;
+        float age;int ricochets;bool removed=true;SpriteRenderer art;AncientGame game;
         public bool Available {get{return removed;}}
         public void Initialize(AncientProjectilePool pool)
         {game=pool.Game;art=AncientArt.Display("Reusable metal object",AncientArt.MetalProjectile(0),Vector2.zero,12,transform);}
-        public void Play(Vector2 position,Vector2 speed,float amount,bool isScrap,int kind,float acceleration)
+        public void Play(Vector2 position,Vector2 speed,float amount,bool isScrap,int kind,float acceleration,int bounces=0)
         {
-            scrap=isScrap;metalKind=Mathf.Clamp(kind,0,2);velocity=speed;damage=amount;gravity=acceleration;age=0;removed=false;
+            scrap=isScrap;metalKind=Mathf.Clamp(kind,0,2);velocity=speed;damage=amount;gravity=acceleration;ricochets=Mathf.Clamp(bounces,0,1);age=0;removed=false;
             transform.position=position;transform.rotation=Quaternion.identity;transform.localScale=Vector3.one;
             art.sprite=scrap?AncientArt.Scrap():AncientArt.MetalProjectile(metalKind);
             art.transform.localRotation=Quaternion.Euler(0,0,Mathf.Atan2(speed.y,speed.x)*Mathf.Rad2Deg);
@@ -1367,7 +1388,13 @@ namespace Plugin.AncientCivilization
         {
             if(removed)return;if(game.won){Remove();return;}if(game.Paused)return;
             age+=Time.deltaTime;velocity+=Vector2.down*gravity*Time.deltaTime;Vector2 previous=transform.position,next=previous+velocity*Time.deltaTime;
-            if(Physics2D.Linecast(previous,next,1<<8)){game.Burst(previous,new Color(.65f,.48f,.3f),8);Remove();return;}
+            var terrain=Physics2D.Linecast(previous,next,1<<8);
+            if(terrain)
+            {
+                if(ricochets>0&&Mathf.Abs(terrain.normal.x)>.5f)
+                {ricochets--;velocity=Vector2.Reflect(velocity,terrain.normal);transform.position=terrain.point+terrain.normal*.06f;game.Burst(terrain.point,AncientGame.Cyan,5);return;}
+                game.Burst(previous,new Color(.65f,.48f,.3f),8);Remove();return;
+            }
             if(game.hero&&age>.05f)
             {
                 Vector2 h=game.hero.transform.position,segment=next-previous;
