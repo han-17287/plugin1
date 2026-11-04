@@ -9,6 +9,9 @@ namespace Plugin.AncientCivilization
         public int Stage {get;private set;}
         public bool DialogueOpen {get{return lines.Count>0;}}
         public bool InUpperCity {get;private set;}
+        public bool LiftBusy {get{return liftMenu||liftTravelling;}}
+        bool liftMenu,liftTravelling;int liftDestination;float liftStarted;
+        float LiftX {get{return InUpperCity?132:115;}}
         public AncientTruck Truck {get;private set;}
         public int ResidencePoints {get;private set;}
         AncientGame game;int flags,lineIndex;float nextTrainingShot,nextLetterAt;int revealedChars;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
@@ -66,7 +69,7 @@ namespace Plugin.AncientCivilization
             Talk(()=>{SetStage(8);},new Line("치안경찰","당신을 에너지 코어 절도 혐의로 체포한다. 상층에 사는 사람이 왜 아래층의 코어를 훔친 거지?",0),
                 new Line("용의자","포인트가 사람의 값을 정해 준다고 믿어? 너희가 만든 코어가 어디로 가는지나 알아봐.",2),
                 new Line("치안경찰","그걸 대답이라고 하나. 위에서 살 포인트도 있었을 텐데… 이 코어 때문에 전부 걸었다고?",0),
-                new Line("통신관","검거 확인. 이번 보상으로 시민 포인트가 "+ResidencePoints+"점에 도달했다. 한 단계 위 도시의 거주·통행 자격이 승인됐다.",1),
+                new Line("통신관","검거 확인. 이번 보상으로 시민 포인트가 "+ResidencePoints+"점에 도달했다. 한 단계 위 도시의 거주·통행 자격이 승인됐다. 이동 엘리베이터에서 목적 층을 선택하면 된다.",1),
                 new Line("치안경찰","우리 동력을 되찾았더니 올라가도 된다는 건가. 저자가 왜 그걸 원했는지… 위에서 알아봐야겠군.",0));
         }
         void EnsureTruck(bool atGate=false)
@@ -82,6 +85,16 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
+            if(liftTravelling)
+            {
+                if(!game.MainMenu&&Time.unscaledTime-liftStarted>=1.6f)FinishLiftTravel();
+                return;
+            }
+            if(liftMenu)
+            {
+                if(Input.GetKeyDown(KeyCode.Escape)){liftMenu=false;game.BlockGameplayInput();}
+                return;
+            }
             if(DialogueOpen)
             {if(!game.MainMenu){TickTyping();if(Input.GetKeyDown(KeyCode.Space)||Input.GetKeyDown(KeyCode.Return))Advance();}return;}
             if(game.Paused||!game.HasSession||!game.GameplayInputReady||!game.hero)return;
@@ -127,12 +140,53 @@ namespace Plugin.AncientCivilization
         }
         public bool TryUseLift()
         {
-            if(!AncientRules.CanEnterUpperCity(Stage,ResidencePoints,InUpperCity)||!game.hero||Mathf.Abs(game.hero.transform.position.x-115)>4)return false;
-            if(DialogueOpen)return true;
-            if(game.hero.bike)return false;
-            if(!game.hero.IsOnGround){game.Notice("지면에 착지한 뒤 승강기를 이용하세요.");return true;}
-            InUpperCity=true;SetStage(9);game.hero.TravelTo(new Vector2(132,1.3f));game.Checkpoint(3);game.SnapCameraToHero();game.Save();
-            Talk(null,new Line("통신관","통행 허가 확인. 다음 층 도시로 진입한다.",1),new Line("치안경찰","거리도, 불빛도 다르군. 그런데 이곳의 누군가는 우리가 아래에서 만든 것이 필요했다….",0));return true;
+            if(!game.hero||Mathf.Abs(game.hero.transform.position.x-LiftX)>2.5f)return false;
+            if(DialogueOpen||LiftBusy)return true;
+            if(game.hero.bike){game.Notice("오토바이를 주차한 뒤 이동 엘리베이터에 탑승하세요.");return false;}
+            if(!game.hero.IsOnGround){game.Notice("지면에 착지한 뒤 엘리베이터를 이용하세요.");return true;}
+            liftMenu=true;game.BlockGameplayInput();return true;
+        }
+        void StartLiftTravel(int destination)
+        {
+            if(!AncientRules.CanSelectLiftFloor(Stage,ResidencePoints,InUpperCity?1:0,destination))return;
+            liftMenu=false;liftTravelling=true;liftDestination=destination;liftStarted=Time.unscaledTime;
+            game.hero.TravelTo(new Vector2(LiftX,1.3f));game.BlockGameplayInput();game.Sound(2);
+        }
+        void FinishLiftTravel()
+        {
+            bool firstArrival=liftDestination==1&&Stage==8;
+            InUpperCity=liftDestination==1;if(firstArrival)Stage=9;
+            game.hero.TravelTo(new Vector2(LiftX,1.3f));game.SetLiftCheckpoint(InUpperCity);
+            Persist();game.SnapCameraToHero();liftTravelling=false;game.BlockGameplayInput();
+            game.Notice(InUpperCity?"상층 도시 도착 / 같은 엘리베이터로 하층에 돌아갈 수 있습니다.":"하층 도시 도착 / 상층 출입 권한은 유지됩니다.",4);
+            if(firstArrival)Talk(null,new Line("통신관","상층 도착. 귀환할 때도 이동 엘리베이터를 이용해라. 하층 출입 권한도 유지된다.",1),
+                new Line("치안경찰","거리도, 불빛도 다르군. 이곳을 조사하고 아래로 돌아가 확인해 봐야겠어.",0));
+        }
+        void DrawLift(float w,float h)
+        {
+            AncientHUD.Panel(new Rect(0,0,w,h),new Color(.005f,.015f,.025f,.93f));
+            float x=w/2-260,y=h/2-170;
+            AncientHUD.Panel(new Rect(x,y,520,340),new Color(.025f,.055f,.08f,.99f));
+            GUI.Label(new Rect(x+28,y+22,464,38),"도시 간 이동 엘리베이터",nameStyle);
+            if(liftTravelling)
+            {
+                GUI.Label(new Rect(x+28,y+98,464,80),(liftDestination==1?"상층으로 상승 중…":"하층으로 하강 중…"),body);
+                float progress=Mathf.Clamp01((Time.unscaledTime-liftStarted)/1.6f);
+                AncientHUD.Panel(new Rect(x+28,y+212,464*progress,6),AncientGame.Cyan);
+                return;
+            }
+            GUI.Label(new Rect(x+28,y+68,464,48),"현재 위치: "+(InUpperCity?"상층 도시":"하층 도시")+" / 시민 포인트 "+ResidencePoints,small);
+            for(int floor=1;floor>=0;floor--)
+            {
+                bool current=(InUpperCity?1:0)==floor;
+                bool allowed=AncientRules.CanSelectLiftFloor(Stage,ResidencePoints,InUpperCity?1:0,floor);
+                string text=floor==0?"하층 도시 / 순찰 구역":"상층 도시 / 다음 층";
+                if(current)text+="  [현재 층]";else if(!allowed)text+="  [잠김: 검거 보상·통행 허가 필요]";
+                GUI.enabled=allowed;
+                if(GUI.Button(new Rect(x+28,y+123+(1-floor)*58,464,48),text,nextButton))StartLiftTravel(floor);
+                GUI.enabled=true;
+            }
+            if(GUI.Button(new Rect(x+28,y+267,464,42),"닫기 / Esc",nextButton)){liftMenu=false;game.BlockGameplayInput();}
         }
         string Check(int bit,string label){return (Has(bit)?"[x] ":"[ ] ")+label;}
         string Objective()
@@ -143,8 +197,8 @@ namespace Plugin.AncientCivilization
             if(Stage<=5)return "코어 도난 / 트럭 추격 · 에너지 코어 회수 "+game.Cores+" / 3";
             if(Stage==6)return "미니 보스 / 화물 수호기 제압 · 용의자 검거";
             if(Stage==7)return "검거 / 상층 주민이 코어를 훔친 이유를 물어보자";
-            if(Stage==8)return "통행 허가 / "+ResidencePoints+"점 · 동쪽 승강기에서 E";
-            return "상층 도시 / 진입 허가 · 절도의 동기는 아직 알 수 없다";
+            if(Stage==8)return "상층 출입 권한 해금 / 동쪽 이동 엘리베이터에서 E · 목적 층 선택";
+            return InUpperCity?"상층 도시 조사 / 이동 엘리베이터로 하층 귀환 가능":"하층 도시 / 상층 출입 권한 유지 · 엘리베이터로 왕복";
         }
         void Portrait(int index,Rect rect)
         {
@@ -158,14 +212,15 @@ namespace Plugin.AncientCivilization
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-50;
             float w=Screen.width/scale,h=Screen.height/scale;
             if(body==null){body=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=21,wordWrap=true};nameStyle=new GUIStyle(body){fontSize=22,fontStyle=FontStyle.Bold};small=new GUIStyle(body){fontSize=14};nextButton=new GUIStyle(AncientHUD.Button){font=body.font,fontSize=14};}
-            if(!DialogueOpen)
+            if(LiftBusy)DrawLift(w,h);
+            else if(!DialogueOpen)
             {
                 if(!game.skills)
                 {
                     AncientHUD.Panel(new Rect(w/2-250,16,500,64),new Color(.015f,.045f,.065f,.94f));
                     GUI.Label(new Rect(w/2-236,24,472,52),Objective(),small);
                     GUI.Label(new Rect(28,200,285,42),"시민 포인트 "+ResidencePoints+" / "+(InUpperCity?"상층 도시":"하층 도시"),small);
-                    if(Stage==8&&Mathf.Abs(game.hero.transform.position.x-115)<4)GUI.Label(new Rect(w/2-220,h-145,440,35),(game.hero.bike?"E / 먼저 오토바이 주차":"E / 다음 층 도시로 이동"),nameStyle);
+                    if(Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
                 }
             }
             else

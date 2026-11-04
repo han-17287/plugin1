@@ -19,7 +19,7 @@ namespace Plugin.AncientCivilization
         public bool MainMenu {get;private set;}
         public bool HasSession {get;private set;}
         public bool HasSavedProgress {get{return Saved("questStage")!=0||Saved("started")!=0||Saved("checkpoint")!=0||Saved("cores")!=0||Saved("credits")!=0||Saved("kills")!=0||Saved("score")!=0||Saved("bike")!=0||Saved("jump")!=0||Saved("capacity")!=0||Saved("armor")!=0||Saved("boss")!=0;}}
-        public bool Paused {get {return MainMenu||skills||(Story&&Story.DialogueOpen);}}
+        public bool Paused {get {return MainMenu||skills||(Story&&(Story.DialogueOpen||Story.LiftBusy));}}
         public bool GameplayInputReady {get{return Time.frameCount>inputReadyFrame;}}
         static bool startAfterReload;int inputReadyFrame;
         public int coreMask, credits, kills, score;
@@ -58,6 +58,7 @@ namespace Plugin.AncientCivilization
             if(checkpointStage==1)checkpoint=new Vector2(46,2.3f);
             if(checkpointStage==2)checkpoint=new Vector2(86,1.3f);
             if(checkpointStage==3)checkpoint=new Vector2(132,1.3f);
+            if(checkpointStage==4)checkpoint=new Vector2(115,1.3f);
             square=Sprite.Create(Texture2D.whiteTexture,new Rect(0,0,1,1),Vector2.one*.5f,1);
             lineMaterial=new Material(Shader.Find("Sprites/Default"));
             view=new GameObject("Pixel Camera").AddComponent<Camera>();view.tag="MainCamera";view.gameObject.AddComponent<AudioListener>();
@@ -97,6 +98,10 @@ namespace Plugin.AncientCivilization
             Platform(128,174,0);Platform(139,144,4);Platform(159,165,4);
             AncientArt.Display("Upper city entry",AncientArt.World(3),new Vector2(132,0),-1);
             AncientArt.Display("Eastern gate",AncientArt.World(3),new Vector2(115,0),-1);
+            BuildLiftTerminal(115);BuildLiftTerminal(132);
+            // Separate city exits; floors are connected only by the elevator.
+            foreach(float x in new[]{119f,127f})
+            {var boundary=Box("Elevator shaft boundary",new Vector2(x,5),new Vector2(.4f,10),new Color(.05f,.1f,.13f),-2);boundary.layer=8;boundary.AddComponent<BoxCollider2D>();}
             // Story gates hostile encounters until patrol and equipment tutorials are complete.
             var district=gameObject.AddComponent<AncientDistrict>();district.Initialize(this);
             for(int i=0;i<8;i++)SpawnPickup(new Vector2(7+i*12,1.6f),-1);
@@ -106,6 +111,15 @@ namespace Plugin.AncientCivilization
                 var vehicle=new GameObject("Placed patrol motorcycle").AddComponent<AncientParkedBike>();
                 vehicle.Initialize(p);parkedBikes.Add(vehicle);
             }
+        }
+        void BuildLiftTerminal(float x)
+        {
+            Box("Lift doorway",new Vector2(x,1.7f),new Vector2(2.6f,3.4f),new Color(.025f,.06f,.09f),0);
+            foreach(float side in new[]{-1f,1f})
+                Box("Lift frame",new Vector2(x+side*1.4f,1.9f),new Vector2(.18f,3.8f),Cyan,1);
+            Box("Lift floor",new Vector2(x,.08f),new Vector2(3,.12f),Cyan,2);
+            Box("Lift header",new Vector2(x,3.8f),new Vector2(3,.18f),Cyan,2);
+            Box("Lift control panel",new Vector2(x+1.7f,1.3f),new Vector2(.3f,.5f),Cyan,2);
         }
         void Beacon(Vector2 p)
         {
@@ -217,6 +231,10 @@ namespace Plugin.AncientCivilization
             hero.hp=hero.MaxHP;hero.particles=Mathf.Max(hero.particles,60);Save();
             Burst(checkpoint,Cyan,28);Notice("CHECKPOINT / Health restored. Progress saved.",4);
         }
+        public void SetLiftCheckpoint(bool upper)
+        {
+            checkpointStage=upper?3:4;checkpoint=new Vector2(upper?132:115,1.3f);Save();
+        }
         public void HeroDied()
         {
             if(boss){enemies.Remove(boss);Destroy(boss.gameObject);boss=null;}
@@ -245,7 +263,7 @@ namespace Plugin.AncientCivilization
         {
             smoothFrameTime=Mathf.Lerp(smoothFrameTime,Mathf.Max(.001f,Time.unscaledDeltaTime),.05f);
             if(MainMenu){Time.timeScale=0;return;}
-            if(Story&&Story.DialogueOpen){Time.timeScale=0;return;}
+            if(Story&&(Story.DialogueOpen||Story.LiftBusy)){Time.timeScale=0;return;}
             if(Input.GetKeyDown(KeyCode.K)||Input.GetKeyDown(KeyCode.Escape))ToggleSkills();
             if(Input.GetKeyDown(KeyCode.H))showHelp=!showHelp;
             Time.timeScale=Paused?0:Time.unscaledTime<hitPauseUntil?.12f:1;
@@ -264,7 +282,7 @@ namespace Plugin.AncientCivilization
             float zoom=hero.Wired?7.5f:hero.bike?6.8f:5.8f;
             view.orthographicSize=Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
             float lead=hero.Facing*Mathf.Lerp(2.5f,4,Mathf.Clamp01(speed/25));
-            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,5,Story&&Story.InUpperCity?166:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
+            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Story&&Story.InUpperCity?133:5,Story&&Story.InUpperCity?166:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
             cameraFollow=Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
             var p=cameraFollow;if(shake>0&&!skills){p+=(Vector3)(Random.insideUnitCircle*shake);shake=Mathf.MoveTowards(shake,0,Time.deltaTime);}
             float displayPPU=Mathf.Max(1,Screen.height/(view.orthographicSize*2));
@@ -294,7 +312,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!hero||MainMenu||(Story&&Story.DialogueOpen))return;
+            if(!hero||MainMenu||(Story&&(Story.DialogueOpen||Story.LiftBusy)))return;
             GUIStyle oldButton=GUI.skin.button;GUI.skin.button=AncientHUD.Button;
             if(small==null)
             {

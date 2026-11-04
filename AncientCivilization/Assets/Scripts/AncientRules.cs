@@ -31,6 +31,11 @@ namespace Plugin.AncientCivilization
         {return stage==5&&truckStopped&&cores>=3&&x>98;}
         public static int PointsAfterArrest(int current,int stage)
         {return stage==6?current+1000:current;}
+        public static bool CanSelectLiftFloor(int stage,int points,int currentFloor,int targetFloor)
+        {
+            if(currentFloor<0||currentFloor>1||targetFloor<0||targetFloor>1||currentFloor==targetFloor)return false;
+            return targetFloor==0||stage>=8&&points>=1000;
+        }
         public static bool CanEnterUpperCity(int stage,int points,bool alreadyUpper)
         {return stage>=8&&points>=1000&&!alreadyUpper;}
     }

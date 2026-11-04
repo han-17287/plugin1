@@ -73,6 +73,16 @@ class RulesChecks
             Check(bounded,"Helix stays within wire envelope at length "+length);
             Check(anchored,"Helix converges at emitter and anchor at length "+length);
         }
+        Check(!AncientRules.CanSelectLiftFloor(7,1000,0,1),"Promotion dialogue must finish before upper floor unlocks");
+        Check(!AncientRules.CanSelectLiftFloor(8,999,0,1),"Upper floor requires civic points");
+        Check(AncientRules.CanSelectLiftFloor(8,1000,0,1),"Promotion unlocks elevator destination without moving player");
+        Check(AncientRules.CanSelectLiftFloor(9,1000,1,0),"Upper city can return to lower city");
+        Check(AncientRules.CanSelectLiftFloor(9,1000,0,1),"Return trip does not revoke upper city authorization");
+        Check(AncientRules.CanSelectLiftFloor(9,0,1,0),"Returning home does not require spending points");
+        Check(!AncientRules.CanSelectLiftFloor(9,1000,1,1),"Cannot travel to current floor");
+        Check(!AncientRules.CanSelectLiftFloor(9,1000,0,0),"Lower city is marked as current floor");
+        Check(!AncientRules.CanSelectLiftFloor(9,1000,0,2),"Unimplemented destination stays unavailable");
+        Check(!AncientRules.CanSelectLiftFloor(9,1000,-1,0),"Invalid source floor is rejected");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

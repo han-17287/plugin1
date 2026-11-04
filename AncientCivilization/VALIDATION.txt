@@ -251,6 +251,4 @@ PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: 94 combat and quest rule checks
-
-No Unity Editor executable is installed; no claim of Play Mode or player build validation.
+PASS: 104 combat and quest rule checks
