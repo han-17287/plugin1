@@ -8,22 +8,23 @@ namespace Plugin.AncientCivilization
     {
         public int Stage {get;private set;}
         public bool DialogueOpen {get{return lines.Count>0;}}
-        public bool InUpperCity {get;private set;}
+        public int CurrentFloor {get;private set;}
+        public bool InUpperCity {get{return CurrentFloor>0;}}
         public bool LiftBusy {get{return liftMenu||liftTravelling;}}
         bool liftMenu,liftTravelling;int liftDestination;float liftStarted;
-        float LiftX {get{return InUpperCity?132:115;}}
+        float LiftX {get{return AncientCityLayout.Entry(CurrentFloor);}}
         public AncientTruck Truck {get;private set;}
         public int ResidencePoints {get;private set;}
         AncientGame game;int flags,lineIndex;float nextTrainingShot,nextLetterAt;int revealedChars;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
         struct Line {public string speaker,text;public int portrait;public Line(string who,string words,int face){speaker=who;text=words;portrait=face;}}
         readonly List<Line> lines=new List<Line>();GUIStyle body,nameStyle,small,nextButton;int spawnedEncounters;
         public void Initialize(AncientGame owner)
-        {game=owner;Stage=AncientGame.Saved("questStage");flags=AncientGame.Saved("questFlags");ResidencePoints=AncientGame.Saved("residencePoints");InUpperCity=AncientGame.Saved("upperCity")!=0;}
+        {game=owner;Stage=AncientGame.Saved("questStage");flags=AncientGame.Saved("questFlags");ResidencePoints=AncientGame.Saved("residencePoints");CurrentFloor=Mathf.Clamp(AncientGame.Saved("cityFloor",AncientGame.Saved("upperCity")!=0?1:0),0,4);}
         void Start(){if(game.HasSession)Begin();}
         void Persist()
         {
             AncientGame.SetSaved("questStage",Stage);AncientGame.SetSaved("questFlags",flags);
-            AncientGame.SetSaved("residencePoints",ResidencePoints);AncientGame.SetSaved("upperCity",InUpperCity?1:0);game.Save();
+            AncientGame.SetSaved("residencePoints",ResidencePoints);AncientGame.SetSaved("upperCity",InUpperCity?1:0);AncientGame.SetSaved("cityFloor",CurrentFloor);game.Save();
         }
         void SetStage(int value){Stage=value;Persist();}
         bool Has(int bit){return (flags&(1<<bit))!=0;}
@@ -144,7 +145,7 @@ namespace Plugin.AncientCivilization
         }
         public bool TryUseLift()
         {
-            if(!game.hero||Mathf.Abs(game.hero.transform.position.x-LiftX)>2.5f)return false;
+            if(CurrentFloor==4||!game.hero||Mathf.Abs(game.hero.transform.position.x-LiftX)>2.5f)return false;
             if(DialogueOpen||LiftBusy)return true;
             if(game.hero.bike){game.Notice("오토바이를 주차한 뒤 이동 엘리베이터에 탑승하세요.");return false;}
             if(!game.hero.IsOnGround){game.Notice("지면에 착지한 뒤 엘리베이터를 이용하세요.");return true;}
@@ -152,15 +153,15 @@ namespace Plugin.AncientCivilization
         }
         void StartLiftTravel(int destination)
         {
-            if(!AncientRules.CanSelectLiftFloor(Stage,ResidencePoints,InUpperCity?1:0,destination))return;
+            if(!AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,destination))return;
             liftMenu=false;liftTravelling=true;liftDestination=destination;liftStarted=Time.unscaledTime;
             game.hero.TravelTo(new Vector2(LiftX,1.3f));game.BlockGameplayInput();game.Sound(2);
         }
         void FinishLiftTravel()
         {
             bool firstArrival=liftDestination==1&&Stage==8;
-            InUpperCity=liftDestination==1;if(firstArrival)Stage=9;
-            game.hero.TravelTo(new Vector2(LiftX,1.3f));game.SetLiftCheckpoint(InUpperCity);
+            CurrentFloor=liftDestination;if(firstArrival)Stage=9;
+            game.hero.TravelTo(new Vector2(LiftX,1.3f));game.SetLiftCheckpoint(CurrentFloor);game.City.OnEnterFloor();
             Persist();game.SnapCameraToHero();liftTravelling=false;game.BlockGameplayInput();
             game.Notice(InUpperCity?"상층 도시 도착 / 같은 엘리베이터로 하층에 돌아갈 수 있습니다.":"하층 도시 도착 / 상층 출입 권한은 유지됩니다.",4);
             if(firstArrival)Talk(null,new Line("통신관","상층 도착. 귀환할 때도 이동 엘리베이터를 이용해라. 하층 출입 권한도 유지된다.",1),
@@ -170,28 +171,51 @@ namespace Plugin.AncientCivilization
         void DrawLift(float w,float h)
         {
             AncientHUD.Panel(new Rect(0,0,w,h),new Color(.005f,.015f,.025f,.93f));
-            float x=w/2-260,y=h/2-170;
-            AncientHUD.Panel(new Rect(x,y,520,340),new Color(.025f,.055f,.08f,.99f));
-            GUI.Label(new Rect(x+28,y+22,464,38),"도시 간 이동 엘리베이터",nameStyle);
+            float x=w/2-300,y=h/2-255;
+            AncientHUD.Panel(new Rect(x,y,600,510),new Color(.025f,.055f,.08f,.99f));
+            GUI.Label(new Rect(x+28,y+22,544,38),"도시 간 이동 엘리베이터",nameStyle);
             if(liftTravelling)
             {
-                GUI.Label(new Rect(x+28,y+98,464,80),(liftDestination==1?"상층으로 상승 중…":"하층으로 하강 중…"),body);
+                GUI.Label(new Rect(x+28,y+98,544,80),(liftDestination>CurrentFloor?"상승 중…":"하강 중…")+" / "+AncientCityLayout.Name(liftDestination),body);
                 float progress=Mathf.Clamp01((Time.unscaledTime-liftStarted)/1.6f);
-                AncientHUD.Panel(new Rect(x+28,y+212,464*progress,6),AncientGame.Cyan);
-                return;
+                AncientHUD.Panel(new Rect(x+28,y+212,544*progress,6),AncientGame.Cyan);return;
             }
-            GUI.Label(new Rect(x+28,y+68,464,48),"관제 C-00 / 현재: "+(InUpperCity?"상층":"하층")+" / 시민 포인트 "+ResidencePoints,small);
-            for(int floor=1;floor>=0;floor--)
+            GUI.Label(new Rect(x+28,y+68,544,48),"관제 C-00 / "+AncientCityLayout.Name(CurrentFloor)+" / "+ResidencePoints+"점",small);
+            for(int floor=0;floor<=4;floor++)
             {
-                bool current=(InUpperCity?1:0)==floor;
-                bool allowed=AncientRules.CanSelectLiftFloor(Stage,ResidencePoints,InUpperCity?1:0,floor);
-                string text=floor==0?"하층 도시 / 순찰 구역":"상층 도시 / 다음 층";
-                if(current)text+="  [현재 층]";else if(!allowed)text+="  [잠김: 검거 보상·통행 허가 필요]";
+                bool current=CurrentFloor==floor;
+                bool allowed=AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,floor);
+                string text=AncientCityLayout.Name(floor);
+                if(current)text+="  [현재 층]";else if(floor==4)text+="  [특별 승인: 승진으로 진입 불가]";else if(!allowed)text+="  [잠김: 이전 구역 사건 해결 필요]";
                 GUI.enabled=allowed;
-                if(GUI.Button(new Rect(x+28,y+123+(1-floor)*58,464,48),text,nextButton))StartLiftTravel(floor);
+                if(GUI.Button(new Rect(x+28,y+120+floor*57,544,48),text,nextButton))StartLiftTravel(floor);
                 GUI.enabled=true;
             }
-            if(GUI.Button(new Rect(x+28,y+267,464,42),"닫기 / Esc",nextButton)){liftMenu=false;game.BlockGameplayInput();}
+            if(GUI.Button(new Rect(x+28,y+431,544,42),"닫기 / Esc",nextButton)){liftMenu=false;game.BlockGameplayInput();}
+        }
+        public void OnDistrictCleared(int floor)
+        {
+            if(floor<3)ResidencePoints=Mathf.Max(ResidencePoints,(floor+1)*1000);
+            Persist();
+            if(floor==4)
+                Talk(null,new Line("치안경찰","그 사격 자세… 너였어? 그때 같은 구역에서 근무하던….",0),
+                    new Line("저격수","이제야 알아보네. 너도 정문으로는 못 올라왔나 보군.",0),
+                    new Line("치안경찰","너와 싸울 이유는 없어. 나는 C-00 기록을 확인하러 왔다.",0),
+                    new Line("저격수","그럼 각자 할 일을 하자. 살아서 내려가.",0));
+            else if(floor==3)
+                Talk(null,new Line("통신관","구역은 확보했다. 하지만 최상층은 승진 대상이 아니다. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
+                    new Line("치안경찰","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
+            else Talk(null,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 입구 엘리베이터에서 목적지를 선택해라.",1));
+        }
+        public void TravelBySidePassage(int destination)
+        {
+            if(game.Paused||game.hero.bike||!game.hero.IsOnGround)return;
+            if(destination==4&&!AncientCityLayout.CanInfiltrate(game.City.Cleared,CurrentFloor))return;
+            if(destination==3&&CurrentFloor!=4)return;
+            CurrentFloor=destination;
+            game.hero.TravelTo(new Vector2(destination==4?AncientCityLayout.Entry(4):AncientCityLayout.ArenaRight(3)-2,1.3f));
+            game.SetLiftCheckpoint(destination);game.City.OnEnterFloor();Persist();game.BlockGameplayInput();game.SnapCameraToHero();
+            game.Notice(destination==4?"최상층 외벽 샛길 / 불법 침입":"상층 거주구 귀환",3);
         }
         string Check(int bit,string label){return (Has(bit)?"[x] ":"[ ] ")+label;}
         string Objective()
@@ -203,7 +227,7 @@ namespace Plugin.AncientCivilization
             if(Stage==6)return "미니 보스 / 화물 수호기 제압 · 용의자 검거";
             if(Stage==7)return "검거 / 상층 주민이 코어를 훔친 이유를 물어보자";
             if(Stage==8)return "상층 출입 권한 해금 / 동쪽 이동 엘리베이터에서 E · 목적 층 선택";
-            return InUpperCity?"상층 도시 조사 / 이동 엘리베이터로 하층 귀환 가능":"하층 도시 / 상층 출입 권한 유지 · 엘리베이터로 왕복";
+            return CurrentFloor==0?"하층 생산구 / 엘리베이터로 해금 층 왕복":AncientCityLayout.Name(CurrentFloor)+" / 이동 구간 돌파 · 구역 사건 해결";
         }
         void Portrait(int index,Rect rect)
         {
@@ -224,8 +248,8 @@ namespace Plugin.AncientCivilization
                 {
                     AncientHUD.Panel(new Rect(w/2-250,16,500,64),new Color(.015f,.045f,.065f,.94f));
                     GUI.Label(new Rect(w/2-236,24,472,52),Objective(),small);
-                    GUI.Label(new Rect(28,200,285,42),"시민 포인트 "+ResidencePoints+" / "+(InUpperCity?"상층 도시":"하층 도시"),small);
-                    if(Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
+                    GUI.Label(new Rect(28,200,285,42),"시민 포인트 "+ResidencePoints+" / "+AncientCityLayout.Name(CurrentFloor),small);
+                    if(CurrentFloor<4&&Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
                 }
             }
             else

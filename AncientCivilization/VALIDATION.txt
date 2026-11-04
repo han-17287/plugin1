@@ -23,10 +23,12 @@ PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
 PASS: 32-character GUID AncientCameraFX.cs.meta
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
+PASS: metadata coverage AncientCityLayout.cs
 PASS: metadata coverage AncientPointer.cs
 PASS: metadata coverage AncientArt.cs
 PASS: metadata target Assets/Scripts/AncientParkedBike.cs.meta
 PASS: 32-character GUID AncientParkedBike.cs.meta
+PASS: metadata coverage AncientCityCampaign.cs
 PASS: metadata coverage AncientRules.cs
 PASS: metadata coverage AncientTraversal.cs
 PASS: metadata target Assets/Scripts/AncientCombat.cs.meta
@@ -41,10 +43,14 @@ PASS: metadata target Assets/Scripts/AncientRules.cs.meta
 PASS: 32-character GUID AncientRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
 PASS: 32-character GUID AncientGame.cs.meta
+PASS: metadata target Assets/Scripts/AncientCityCampaign.cs.meta
+PASS: 32-character GUID AncientCityCampaign.cs.meta
 PASS: metadata coverage AncientCameraFX.cs
 PASS: metadata target Assets/Scripts/AncientHUD.cs.meta
 PASS: 32-character GUID AncientHUD.cs.meta
 PASS: metadata coverage AncientMainMenu.cs
+PASS: metadata target Assets/Scripts/AncientCityLayout.cs.meta
+PASS: 32-character GUID AncientCityLayout.cs.meta
 PASS: metadata coverage AncientAudio.cs
 PASS: metadata coverage AncientPixels.cs
 PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
@@ -240,8 +246,10 @@ PASS: rotating wheel silhouette is circular
 PASS: healthy and damaged chassis display widths agree
 PASS: scrap projectile silhouette and transparent gutters
 PASS: C# syntax AncientTraversalLayout.cs
+PASS: C# syntax AncientCityLayout.cs
 PASS: C# syntax AncientPointer.cs
 PASS: C# syntax AncientArt.cs
+PASS: C# syntax AncientCityCampaign.cs
 PASS: C# syntax AncientRules.cs
 PASS: C# syntax AncientTraversal.cs
 PASS: C# syntax AncientCameraFX.cs
@@ -259,4 +267,7 @@ PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: 224 combat and quest rule checks
+PASS: 394 combat and quest rule checks
+
+SUPPLEMENTAL TYPE CHECK: passed using UnityEngine.Modules 2021.3.33 reference DLLs, in a temporary copy only, with .linearVelocity renamed to .velocity for the older API. Original Unity 6000 project code was not renamed. This is not Unity 6000.6.7f1 type/API or Play validation.
+work/typecheck/AncientGame.cs(37,35): warning CS0169: The field 'AncientGame.endingShown' is never used

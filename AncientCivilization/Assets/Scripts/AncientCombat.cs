@@ -75,7 +75,7 @@ namespace Plugin.AncientCivilization
             combo=Time.time>comboUntil?1:combo%3+1;comboUntil=Time.time+.8f;
             bladeDirection=(AimPoint()-Origin).normalized;if(bladeDirection.sqrMagnitude<.1f)bladeDirection=Vector2.right*hero.Facing;
             hero.BladePose(bladeDirection.x<0?-1:1,combo);BladeUses++;game.Sound(0);
-            Vector2 origin=Origin;bool rebound=game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection);
+            Vector2 origin=Origin;bool rebound=(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
             for(int i=game.shots.Count-1;i>=0;i--)
             {
                 var shot=game.shots[i];if(!shot||shot.friendly)continue;

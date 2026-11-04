@@ -141,6 +141,43 @@ class RulesChecks
             }
             Check(bounded,"Crane stays inside its rail span");Check(moving,"Crane anchor changes position over time");
         }
+        Check(AncientCityLayout.LastFloor==4,"Campaign stops at the top city; no ancient-civilization map exists");
+        Check(!AncientCityLayout.CanLift(7,1000,0,0,1),"Initial promotion dialogue still gates first upper floor");
+        Check(AncientCityLayout.CanLift(8,1000,0,0,1),"Existing saves can enter the living district");
+        Check(!AncientCityLayout.CanLift(9,100000,0,1,2),"Points cannot skip the living-district boss");
+        Check(AncientCityLayout.CanLift(9,2000,2,1,2),"Clearing living district unlocks administrative district");
+        Check(!AncientCityLayout.CanLift(9,2000,2,1,3),"Administrative boss cannot be skipped");
+        Check(AncientCityLayout.CanLift(9,3000,6,2,3),"Administrative case unlocks residential district");
+        for(int mask=0;mask<32;mask++)
+        {
+            Check(!AncientCityLayout.CanLift(99,999999,mask,3,4),"Top floor is never unlocked by promotion");
+            Check(!AncientCityLayout.CanLift(99,999999,mask,4,5),"There is no ancient destination in first campaign");
+        }
+        Check(AncientCityLayout.CanInfiltrate(14,3),"Residential boss opens illegal side passage");
+        Check(!AncientCityLayout.CanInfiltrate(6,3),"Side passage waits for residential encounter completion");
+        Check(!AncientCityLayout.CanInfiltrate(14,2),"Side passage is physically in residential district");
+        Check(AncientCityLayout.CanLift(9,3000,14,3,0),"Unlocked city floors can return home");
+        Check(!AncientCityLayout.CanLift(9,3000,14,2,2),"Current destination remains disabled");
+        Check(!AncientCityLayout.CanLift(9,3000,14,-1,0),"Invalid floor save is rejected by travel rules");
+        for(int floor=2;floor<=4;floor++)
+        {
+            var route=AncientCityLayout.Route(floor);
+            Check(route[0].left<=AncientCityLayout.Entry(floor)&&route[0].right>=AncientCityLayout.Entry(floor),"New district entry rests on safe ground");
+            Check(route[route.Length-1].left<=AncientCityLayout.ArenaLeft(floor),"Boss approach joins final stable floor");
+            Check(route[route.Length-1].right>=AncientCityLayout.ArenaRight(floor),"Boss arena has full solid floor");
+            for(int i=0;i<route.Length;i++)
+            {
+                Check(route[i].right-route[i].left>=7,"New district basic route has broad landings");
+                Check(route[i].top+2.1f<10,"New district platforms fit under continuous ceiling");
+                if(i>0)Check(route[i].left-route[i-1].right<=5,"New district basic route uses short wire gaps");
+            }
+        }
+        Check(!AncientCityLayout.ShutterClosed(1.8f,0)&&AncientCityLayout.ShutterWarning(1.8f,0),"Shutter warns before becoming solid");
+        Check(AncientCityLayout.ShutterClosed(2.1f,0),"Shutter closes after warning");
+        Check(!AncientCityLayout.ShutterClosed(3.7f,0),"Shutter reopens every cycle");
+        Check(AncientCityLayout.VentLift(-15,.016f)>=6,"Updraft arrests a fall and launches upwards");
+        Check(AncientCityLayout.VentLift(14,.016f)==14,"Updraft preserves faster existing ascent");
+        Check(AncientCityLayout.VentLift(11,1)==12,"Updraft acceleration remains capped");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }

@@ -61,6 +61,7 @@ namespace Plugin.AncientCivilization
         {
             if(!game||!game.hero||!game.Story||game.Paused)return;
             if(!game.Story.InUpperCity){UpdateLower();return;}
+            if(game.Story.CurrentFloor!=1)return;
             var hero=game.hero;Vector2 p=hero.transform.position;
             if(running)elapsed+=Time.deltaTime;
             if(!running&&!finished&&p.x>=AncientTraversalLayout.Start&&p.x<AncientTraversalLayout.Finish)
@@ -118,7 +119,8 @@ namespace Plugin.AncientCivilization
         }
         public bool TryInteract()
         {
-            if(!game||!game.hero)return false;
+            if(!game||!game.hero||game.Story.CurrentFloor>1)return false;
+            if(game.City&&game.City.ArenaActive)return false;
             float x=game.hero.transform.position.x;
             if(!game.Story.InUpperCity)
             {
@@ -138,7 +140,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||!game.Story||game.Paused||game.MainMenu)return;
+            if(!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;GUI.depth=-10;
             if(!game.Story.InUpperCity)
@@ -151,7 +153,7 @@ namespace Plugin.AncientCivilization
                     GUI.Label(new Rect(Screen.width-350,90,330,70),"공장 옥상 "+lowerElapsed.ToString("F2")+"초\n최고 "+(lowerBest>0?lowerBest.ToString("F2")+"초":"—"),label);
                 GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;return;
             }
-            Sign(new Vector2(136,4.5f),"상층 정비 통로\n청록: 기본 경로 / 금색: 숙련 지름길");
+            Sign(new Vector2(136,4.5f),"생활구 정비 통로\n청록: 기본 경로 / 금색: 숙련 지름길");
             Sign(new Vector2(145,5),"좌클릭 견인 → 가운데 클릭 스윙\n다른 앵커로 연결해 속도를 유지하세요");
             Sign(new Vector2(158,7.7f),"공중 부유체: 공격 모드 좌클릭으로 반동\n휠 아래로 와이어 전환 → 다음 앵커");
             Sign(new Vector2(196,4.2f),"금색 상단 경로는 착지 없이 연결 가능\n실패하면 마지막 안전 발판으로 회수");
