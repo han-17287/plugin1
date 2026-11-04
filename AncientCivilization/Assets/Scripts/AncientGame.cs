@@ -451,6 +451,7 @@ namespace Plugin.AncientCivilization
         float absorbAt=-10,jumpBufferedUntil=-10;
         float wireAttachedAt,wireLength,wireMinLength,swingDirection,arcTravel,momentumUntil,lastWireRelease=-10;
         Vector2 previousRadial;int wireChain;bool wireZip;
+        AncientEnemy wireEnemy,wireContactTarget;float wireContactUntil;
         bool wired,airJumpUsed;float axis;int combo;
         Sprite[] frames,actions;
         float strikeAt,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
@@ -592,6 +593,11 @@ namespace Plugin.AncientCivilization
             var g=AncientGame.Instance;if(g.won||g.Paused)return;
             Vector2 velocity=body.linearVelocity;
             if(!bike||wired)BikeSkid=0;
+            if(wired&&wireEnemy)
+            {
+                if(!wireEnemy.IsAlive){StopWire(false);velocity=body.linearVelocity;}
+                else anchor=wireEnemy.AimPoint;
+            }
             if(wired)
             {
                 Vector2 delta=anchor-body.position;Vector2 radial=delta.normalized;
@@ -601,7 +607,15 @@ namespace Plugin.AncientCivilization
                     float speed=Mathf.Clamp(12+delta.magnitude*1.2f,16,30);
                     velocity=Vector2.MoveTowards(velocity,radial*speed,95*Time.fixedDeltaTime);
                     bool blocked=!VisibleAnchor(anchor);
-                    if(blocked||delta.magnitude<1.8f||age>1.25f)
+                    Vector2 travel=velocity*Time.fixedDeltaTime;
+                    bool enemyImpact=wireEnemy&&AncientRules.WireImpactOnStep(delta.x,delta.y,travel.x,travel.y,blocked);
+                    if(enemyImpact)
+                    {
+                        var enemy=wireEnemy;wireContactTarget=enemy;wireContactUntil=Time.time+.3f;
+                        enemy.WireImpact(radial.x<0?-1:1);StopWire(false);
+                        velocity=new Vector2(-radial.x*2,Mathf.Max(3,velocity.y*.15f));body.linearVelocity=velocity;
+                    }
+                    else if(blocked||delta.magnitude<(wireEnemy?1.05f:1.8f)||age>1.25f)
                     {body.linearVelocity=velocity;StopWire(!blocked);velocity=body.linearVelocity;}
                 }
                 else
@@ -699,17 +713,41 @@ namespace Plugin.AncientCivilization
             }
             return found;
         }
+        bool PickWireEnemy(out AncientEnemy selected)
+        {
+            selected=null;if(!ZipMode||!aimCamera)return false;
+            Vector2 pixel=Input.mousePosition;
+            if(pixel.x<0||pixel.y<0||pixel.x>=Screen.width||pixel.y>=Screen.height)return false;
+            float best=58*Mathf.Clamp(Screen.height/900f,.8f,1.4f);
+            Vector2 hand=(Vector2)transform.position+Vector2.up*.35f;
+            foreach(var enemy in AncientGame.Instance.enemies)
+            {
+                if(!enemy||!enemy.IsAlive)continue;
+                Vector2 point=enemy.AimPoint;float distance=(point-hand).sqrMagnitude;
+                if(distance>22*22||!VisibleAnchor(point))continue;
+                Vector3 screen=aimCamera.WorldToScreenPoint(point);if(screen.z<=0)continue;
+                float score=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
+                if(score>=best)continue;best=score;selected=enemy;
+            }
+            return selected!=null;
+        }
         void FireWire()
         {
             if(Time.time<wireReady)return;
-            Vector2 selected;var g=AncientGame.Instance;
-            if(!PickAnchor(out selected)){g.Notice("Point at a cyan node or a high rooftop edge within 22m, then click LMB for pull or MMB for swing. RMB captures in either mode.");return;}
+            Vector2 selected;var g=AncientGame.Instance;AncientEnemy target;
+            if(PickWireEnemy(out target))selected=target.AimPoint;
+            else if(!PickAnchor(out selected)){g.Notice("적 또는 지형을 겨냥해 좌클릭으로 견인 / 가운데 클릭으로 지형 스윙 / 우클릭은 입자 수집");return;}
             bool different=Vector2.Distance(selected,anchor)>.5f;
             if(wired&&!different&&wireZip==ZipMode)return;
             bool chain=(wired||Time.time-lastWireRelease<1.2f)&&different;
             if(wired)StopWire(false);
             wireChain=chain?Mathf.Min(wireChain+1,5):1;
-            anchor=selected;wired=true;wireZip=ZipMode;wireAttachedAt=Time.time;wireReady=Time.time+.18f;
+            anchor=selected;wireEnemy=target;wired=true;wireZip=ZipMode;wireAttachedAt=Time.time;wireReady=Time.time+(target?.45f:.18f);
+            if(wireEnemy)
+            {
+                wireContactTarget=wireEnemy;wireContactUntil=Time.time+.3f;
+                wireEnemy.Hit(AncientRules.WireHitDamage(wireEnemy.kind==3));
+            }
             Vector2 delta=anchor-body.position;Vector2 radial=delta.normalized;
             swingDirection=Mathf.Abs(body.linearVelocity.x)>2?Mathf.Sign(body.linearVelocity.x):direction;
             previousRadial=-radial;arcTravel=0;
@@ -724,7 +762,9 @@ namespace Plugin.AncientCivilization
         }
         void StopWire(bool launch)
         {
-            bool wasWired=wired;wired=false;if(wireJoint)wireJoint.enabled=false;
+            bool wasWired=wired;
+            if(wireEnemy){wireContactTarget=wireEnemy;wireContactUntil=Time.time+.3f;}
+            wireEnemy=null;wired=false;if(wireJoint)wireJoint.enabled=false;
             if(!wasWired)return;
             lastWireRelease=Time.time;momentumUntil=Time.time+.7f;
             if(launch&&body)
@@ -814,7 +854,14 @@ namespace Plugin.AncientCivilization
                     wireLatch.SetPosition(i,end+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*(.22f+Mathf.Exp(-age*9)*.2f));
                 }
             }
-            Vector2 target=Vector2.zero;bool hasTarget=!AttackMode&&!g.Paused&&!g.won&&PickAnchor(out target);
+            Vector2 target=Vector2.zero;AncientEnemy enemyTarget=null;
+            bool hasTarget=false;
+            if(!AttackMode&&!g.Paused&&!g.won)
+            {
+                if(PickWireEnemy(out enemyTarget)){target=enemyTarget.AimPoint;hasTarget=true;}
+                else hasTarget=PickAnchor(out target);
+            }
+            wireTarget.startColor=wireTarget.endColor=enemyTarget?AncientGame.Orange:AncientGame.Cyan;
             HasWireTarget=hasTarget;WireTarget=target;wireTarget.enabled=hasTarget;
             if(hasTarget)
             {
@@ -846,6 +893,11 @@ namespace Plugin.AncientCivilization
             Combat.EmitParticles(shot.transform.position,Mathf.Clamp(shot.damage,8,25));
             g.Sound(2);g.score+=perfect?30:10;g.Burst(shot.transform.position,AncientGame.Cyan,10);
             if(perfect)g.Notice("PERFECT ABSORB / bonus particles",.75f);shot.Remove();
+        }
+        public void HurtContact(AncientEnemy source,float damage)
+        {
+            if(AncientRules.IgnoreWireContact(source&&source==wireContactTarget,wired&&wireZip&&wireEnemy==source,wireContactUntil,Time.time))return;
+            Hurt(damage);
         }
         public void Hurt(float damage)
         {
@@ -943,6 +995,8 @@ namespace Plugin.AncientCivilization
         SpriteRenderer art;LineRenderer warning;
         Vector2 home,lockedAim;float facing=1;
         public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(kind==3?1.65f:kind==4?.65f:.95f);}}
+        public bool IsAlive {get{return !dead;}}
+        float wirePushRemaining;
         public float HealthRatio {get{return maxHP>0?hp/maxHP:1;}}
         public bool Enraged {get{return kind==3&&hp<maxHP*.5f;}}
         public string Role {get{return kind==0?"LANCER":kind==1?"GUNNER":kind==2?"BOMBER":kind==3?"CARGO ENFORCER":kind==4?"DRONE":"SHIELD WARDEN";}}
@@ -964,12 +1018,22 @@ namespace Plugin.AncientCivilization
         bool Step(float distance)
         {
             float x=Mathf.Clamp(transform.position.x+distance,kind==3?100:home.x-2,kind==3?114:home.x+2);
-            if(kind!=3&&!Physics2D.Raycast(new Vector2(x,home.y+.2f),Vector2.down,.5f,1<<8))return false;
-            transform.position=new Vector2(x,home.y);return true;
+            if(Physics2D.Linecast(AimPoint,new Vector2(x,AimPoint.y),1<<8))return false;
+            if(kind!=3&&kind!=4&&!Physics2D.Raycast(new Vector2(x,home.y+.2f),Vector2.down,.5f,1<<8))return false;
+            if(kind==4)home.x=x;else transform.position=new Vector2(x,home.y);return true;
         }
         void Update()
         {
             var g=AncientGame.Instance;if(dead||!g.hero||g.won||g.Paused)return;
+            if(Mathf.Abs(wirePushRemaining)>.001f)
+            {
+                float step=Mathf.MoveTowards(0,wirePushRemaining,4*Time.deltaTime);
+                if(Step(step))wirePushRemaining-=step;else wirePushRemaining=0;
+            }
+            // Body contact is separate from telegraphed attacks and projectiles.
+            Vector2 contact=(Vector2)g.hero.transform.position-AimPoint;
+            if(Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
+                g.hero.HurtContact(this,kind==3?14:8);
             if(Enraged&&!enragedAnnounced)
             {enragedAnnounced=true;g.Sound(8);g.Notice("WARDEN / OVERDRIVE",2);g.Impact(AimPoint,AncientGame.Orange,true);g.Shake(.12f);}
             float anticipation=IsTelegraphing?WindupProgress:0;
@@ -1071,6 +1135,13 @@ namespace Plugin.AncientCivilization
                     FireProjectile(AimPoint+direction*10,kind==3?11:9,false,0);
                 }
             }
+        }
+        public void WireImpact(float direction)
+        {
+            if(dead)return;
+            wirePushRemaining=direction*AncientRules.WirePushDistance(kind==3);
+            // Boss windups continue; a wire cannot repeatedly stun-lock a boss.
+            Hit(AncientRules.WireImpactDamage(kind==3),kind!=3&&kind!=5);
         }
         public void Hit(float damage,bool breakGuard=false)
         {

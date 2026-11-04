@@ -31,6 +31,18 @@ namespace Plugin.AncientCivilization
         {return stage==5&&truckStopped&&cores>=3&&x>98;}
         public static int PointsAfterArrest(int current,int stage)
         {return stage==6?current+1000:current;}
+        public static bool WireImpactOnStep(float dx,float dy,float stepX,float stepY,bool blocked)
+        {
+            if(blocked)return false;
+            float square=stepX*stepX+stepY*stepY;
+            float t=square>.0001f?System.Math.Max(0,System.Math.Min(1,(dx*stepX+dy*stepY)/square)):0;
+            float x=dx-stepX*t,y=dy-stepY*t;return x*x+y*y<1.1f*1.1f;
+        }
+        public static float WireHitDamage(bool boss){return boss?3:12;}
+        public static float WireImpactDamage(bool boss){return boss?4:18;}
+        public static float WirePushDistance(bool boss){return boss?.18f:.65f;}
+        public static bool IgnoreWireContact(bool sameTarget,bool pulling,float protectedUntil,float now)
+        {return sameTarget&&(pulling||now<protectedUntil);}
         public static bool CanSelectLiftFloor(int stage,int points,int currentFloor,int targetFloor)
         {
             if(currentFloor<0||currentFloor>1||targetFloor<0||targetFloor>1||currentFloor==targetFloor)return false;

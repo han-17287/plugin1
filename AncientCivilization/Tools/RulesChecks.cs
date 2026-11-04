@@ -83,6 +83,20 @@ class RulesChecks
         Check(!AncientRules.CanSelectLiftFloor(9,1000,0,0),"Lower city is marked as current floor");
         Check(!AncientRules.CanSelectLiftFloor(9,1000,0,2),"Unimplemented destination stays unavailable");
         Check(!AncientRules.CanSelectLiftFloor(9,1000,-1,0),"Invalid source floor is rejected");
+        Check(AncientRules.WireHitDamage(false)==12,"Wire hit deals normal enemy damage");
+        Check(AncientRules.WireHitDamage(true)==3,"Boss resists wire hit damage");
+        Check(AncientRules.WireImpactDamage(false)==18,"Enemy collision has impact damage");
+        Check(AncientRules.WireImpactDamage(true)==4,"Boss resists collision damage");
+        Check(AncientRules.WirePushDistance(false)>AncientRules.WirePushDistance(true),"Boss knockback is smaller");
+        Check(AncientRules.IgnoreWireContact(true,true,0,5),"Pulling into target prevents its body-contact damage");
+        Check(AncientRules.IgnoreWireContact(true,false,5.3f,5.1f),"Impact gives brief target-contact protection");
+        Check(!AncientRules.IgnoreWireContact(true,false,5.3f,5.3f),"Contact protection expires");
+        Check(!AncientRules.IgnoreWireContact(false,true,6,5),"Other enemies are not covered by wire protection");
+        Check(AncientRules.WireImpactOnStep(2,0,4,0,false),"Fast wire pull hits a target crossed within a physics step");
+        Check(!AncientRules.WireImpactOnStep(2,0,4,0,true),"Wall blocks wire impact");
+        Check(!AncientRules.WireImpactOnStep(2,2,4,0,false),"Wire near miss does not deal collision damage");
+        Check(!AncientRules.WireImpactOnStep(4,0,1,0,false),"Distant target is not hit before arrival");
+        Check(AncientRules.WireImpactOnStep(.5f,0,0,0,false),"Close-range wire hit resolves without division by zero");
         Console.WriteLine("PASS: "+checks+" combat and quest rule checks");
     }
 }
