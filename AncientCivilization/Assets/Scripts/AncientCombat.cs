@@ -14,6 +14,7 @@ namespace Plugin.AncientCivilization
         public bool Charging {get{return heldAt>=0&&Time.time-heldAt>=TapThreshold;}}
         public float ArmActivity {get{return Charging?ChargeProgress:Mathf.Clamp01((laserUntil-Time.time)/.18f);}}
         public bool CanCollect {get{return hero&&AncientRules.CanCollectParticles(Input.GetMouseButton(1),Application.isFocused,game.Paused,game.GameplayInputReady,hero.CaptureEnergy);}}
+        AncientBeamVisuals beamProfile;
         AncientHero hero;AncientGame game;LineRenderer slashTrail,slashGlow,aim,beam,beamGlow,beamCore;
         AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,comboUntil,bladeBufferedUntil;bool bladeHitPending,readySignal;
         Vector2 bladeDirection,beamStart,beamEnd;
@@ -27,7 +28,8 @@ namespace Plugin.AncientCivilization
             slashTrail.positionCount=slashGlow.positionCount=9;
             aim=game.Line("Laser aiming guide",new Color(.4f,.9f,1,.35f),.02f,21);
             beam=game.Line("Instant continuous laser beam",new Color(.55f,.9f,1,.95f),.18f,23);
-            beamGlow=game.Line("Continuous laser sheath",new Color(.1f,.6f,1,.4f),.6f,22);
+            beamGlow=game.Line("Continuous laser sheath",new Color(.1f,.6f,1,.45f),.8f,22);
+            beamProfile=new AncientBeamVisuals(beamGlow);
             beamCore=game.Line("White hot laser core",new Color(1,1,.95f),.07f,24);
             slashTrail.enabled=slashGlow.enabled=aim.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=false;
             motes=new AncientEnergyMote[48];
@@ -153,9 +155,9 @@ namespace Plugin.AncientCivilization
             if(game.Campaign)game.Campaign.OnLaser(beamStart,beamEnd);
             if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage);
             if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage);
-            laserUntil=Time.time+.32f;beam.startWidth=beam.endWidth=.16f+power*.32f;
-            beamCore.startWidth=beamCore.endWidth=.05f+power*.1f;
-            beamGlow.startWidth=beamGlow.endWidth=.45f+power*.8f;
+            laserUntil=Time.time+.32f;beam.startWidth=beam.endWidth=.30f+power*.55f;
+            beamCore.startWidth=beamCore.endWidth=.10f+power*.20f;
+            beamGlow.startWidth=beamGlow.endWidth=.80f+power*.90f;
             LaserShots++;game.Story.OnTraining(7);game.Sound(4);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
         }
         void LateUpdate()
@@ -184,9 +186,9 @@ namespace Plugin.AncientCivilization
                 beamGlow.SetPosition(0,beamStart);beamGlow.SetPosition(1,beamEnd);
                 beamCore.SetPosition(0,beamStart);beamCore.SetPosition(1,beamEnd);
                 float fade=Mathf.Clamp01((laserUntil-Time.time)/.1f);
-                beam.startColor=beam.endColor=new Color(.55f,.9f,1,fade);
-                beamGlow.startColor=beamGlow.endColor=new Color(.1f,.6f,1,.4f*fade);
-                beamCore.startColor=beamCore.endColor=new Color(1,1,.95f,fade);
+                beam.startColor=beam.endColor=new Color(.45f,.92f,1,fade);
+                beamGlow.startColor=beamGlow.endColor=new Color(.1f,.65f,1,.55f*fade);
+                beamCore.startColor=beamCore.endColor=new Color(1,1,1,fade);
             }
         }
         void OnApplicationFocus(bool focus){if(!focus)CancelInput();}
@@ -194,6 +196,7 @@ namespace Plugin.AncientCivilization
         {heldAt=-1;bladeReady=comboUntil=laserUntil=0;combo=0;readySignal=false;CancelBlade();slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;foreach(var mote in motes)mote.gameObject.SetActive(false);}
         void OnDestroy()
         {
+            if(beamProfile!=null)beamProfile.Dispose();
             foreach(var line in new[]{slashTrail,slashGlow,aim,beam,beamGlow,beamCore})if(line)Destroy(line.gameObject);
             if(motes!=null)foreach(var mote in motes)if(mote)Destroy(mote.gameObject);
         }

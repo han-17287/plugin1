@@ -165,6 +165,25 @@ def main():
                 check(rect==walk_rects[row*4+frame],'walking crop matches native-grid alpha '+str(row*4+frame))
                 poses.append(shape)
             check(len(set(poses))==4,'escort has four distinct walk phases '+str(row))
+        swing_path=ROOT / 'Assets/Resources/Art/HeroSwing.png'
+        check(png_info(swing_path)[:2]==(1536,1024),'swing PNG integrity and dimensions')
+        swing_image=Image.open(swing_path)
+        swing_atlas=(ROOT / 'Assets/Scripts/AncientSwingAtlas.cs').read_text()
+        swing_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',swing_atlas)]
+        check(len(swing_rects)==8,'eight distinct swing/release sprite crops')
+        shapes=[]
+        for i,(x,y,w,h) in enumerate(swing_rects):
+            check(x>=0 and y>=0 and x+w<=1536 and y+h<=1024,'swing crop within atlas '+str(i))
+            region=swing_image.getchannel('A').crop((x,y,x+w,y+h))
+            check(region.getbbox() is not None,'swing crop has opaque actor '+str(i))
+            shapes.append(region.resize((64,64)).tobytes())
+        check(len(set(shapes))==8,'all swing poses have distinct silhouettes')
+        for field in ('PivotPixels','EmitterPixels'):
+            block=swing_atlas.split(field)[1].split('};')[0]
+            points=[tuple(float(v.rstrip('f')) for v in pair) for pair in re.findall(r'new Vector2\(([0-9.]+f?),([0-9.]+f?)\)',block)]
+            check(len(points)==8,'swing '+field+' metadata coverage')
+            for i,(px,py) in enumerate(points):
+                x,y,w,h=swing_rects[i];check(x<=px<x+w and y<=py<y+h,'swing '+field+' stays in its pose '+str(i))
         boss_atlas=(ROOT / 'Assets/Scripts/AncientBossAtlas.cs').read_text()
         boss_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',boss_atlas)]
         check(len(boss_rects)==36,'six bosses each have six measured poses')

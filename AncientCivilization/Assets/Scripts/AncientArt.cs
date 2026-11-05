@@ -9,7 +9,7 @@ namespace Plugin.AncientCivilization
     {
         static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
         static readonly Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
-        static readonly Sprite[] bossCache=new Sprite[36];
+        static readonly Sprite[] bossCache=new Sprite[36],swingCache=new Sprite[8];
         static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3],metalCache=new Sprite[3],citizenCache=new Sprite[25],citizenWalkCache=new Sprite[16];
         public static Texture2D Texture(string name)
         {
@@ -17,7 +17,7 @@ namespace Plugin.AncientCivilization
             if (textures.TryGetValue(name, out texture) && texture) return texture;
             texture = Resources.Load<Texture2D>("Art/" + name);
             if (!texture) throw new System.InvalidOperationException("Missing Art/" + name + ".png");
-            if(name=="Hero"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name=="SniperEquipment"||name.StartsWith("Citizens")||name.StartsWith("Boss"))
+            if(name=="Hero"||name=="HeroSwing"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name=="SniperEquipment"||name.StartsWith("Citizens")||name.StartsWith("Boss"))
             {
                 var pixels=texture.GetPixels32();var packed=new uint[pixels.Length];
                 for(int i=0;i<pixels.Length;i++)packed[i]=((uint)pixels[i].r<<24)|((uint)pixels[i].g<<16)|((uint)pixels[i].b<<8)|pixels[i].a;
@@ -71,6 +71,14 @@ namespace Plugin.AncientCivilization
             // The downloadable sheet previews equipment; live wire/intake effects must not be baked into the actor.
             string sheet=frame==5||frame==6?"HeroEmitterBody":"Hero";
             heroCache[frame]=Slice(sheet, "hero-" + frame, cell, 220, new Vector2(root/cell.width,0),true,true);return heroCache[frame];
+        }
+        public static Sprite Swing(int frame)
+        {
+            frame=Mathf.Clamp(frame,0,7);if(swingCache[frame])return swingCache[frame];
+            Rect rect=AncientSwingAtlas.Bounds[frame];Vector2 hip=AncientSwingAtlas.PivotPixels[frame];
+            Vector2 pivot=new Vector2((hip.x-rect.x)/rect.width,(rect.yMax-hip.y)/rect.height);
+            swingCache[frame]=Slice("HeroSwing","hero-swing-"+frame,rect,AncientSwingAtlas.PixelsPerUnit,pivot,false);
+            return swingCache[frame];
         }
         public static Sprite Boss(int floor,int pose)
         {

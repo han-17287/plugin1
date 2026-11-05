@@ -509,7 +509,7 @@ namespace Plugin.AncientCivilization
         public bool Wired {get{return wired;}}
         public int WireChain {get{return wireChain;}}
         public float Facing {get{return direction;}}
-        public Vector2 WireOrigin {get{return (Vector2)transform.position+new Vector2(direction*(bike?.4f:.14f),bike?.45f:.78f);}}
+        public Vector2 WireOrigin {get{if(swingMotion!=null&&swingMotion.Presenting&&wired&&!wireZip&&!bike)return swingMotion.EmitterWorld;return (Vector2)transform.position+new Vector2(direction*(bike?.4f:.14f),bike?.45f:.78f);}}
         public float HorizontalSpeed {get{return body?body.linearVelocity.x:0;}}
         public float VerticalSpeed {get{return body?body.linearVelocity.y:0;}}
         public bool BikeGrounded {get;private set;}
@@ -525,7 +525,7 @@ namespace Plugin.AncientCivilization
         public float BikeSkid {get;private set;}
         public AncientCombat Combat {get;private set;}
         LineRenderer chargeRing;
-                Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;
+                Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;AncientSwingMotion swingMotion;
         CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
         DistanceJoint2D wireJoint;SpriteRenderer hook;AncientWireParticleBatch wireParticles;
         LineRenderer wireCuff,wireLatch;
@@ -587,6 +587,7 @@ namespace Plugin.AncientCivilization
             bikeCollider=gameObject.AddComponent<BoxCollider2D>();bikeCollider.size=new Vector2(2.85f,1.8f);bikeCollider.offset=new Vector2(0,.085f);bikeCollider.edgeRadius=.01f;bikeCollider.sharedMaterial=frictionless;bikeCollider.enabled=false;
             frames=new Sprite[8];actions=new Sprite[8];for(int i=0;i<frames.Length;i++){frames[i]=AncientArt.Hero(i);actions[i]=AncientArt.Action(i);}
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-1.05f),10,transform);
+            swingMotion=new AncientSwingMotion(art);
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
             motorcycle=gameObject.AddComponent<AncientMotorcycle>();motorcycle.Initialize(this);
             armProperties=new MaterialPropertyBlock();
@@ -699,26 +700,31 @@ namespace Plugin.AncientCivilization
             }
             float squash=Time.time<landingUntil?.08f:0;
             art.transform.localScale=new Vector3(1+squash,1-squash,1);
-            if(wired&&Time.time>=ghostAt){g.Afterimage(art);ghostAt=Time.time+.065f;}
             if(onGround&&Mathf.Abs(body.linearVelocity.x)>7&&Time.time>=dustAt){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.35f,.48f,.55f),2);dustAt=Time.time+.18f;}
             art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);
+            bool recoverSwing=!bike&&!wired&&!onGround&&Time.time>=hurtUntil&&Time.time>=actionUntil&&!Capturing&&!Input.GetKey(KeyCode.F)&&!(Combat&&(Combat.Charging||Combat.Firing));
+            if(swingMotion!=null)swingMotion.Apply(wired&&!wireZip&&!bike,recoverSwing,anchor-(Vector2)transform.position,body.linearVelocity,
+                Time.time-wireAttachedAt,arcTravel,swingDirection,Time.time,Time.deltaTime);
+            if(wired&&Time.time>=ghostAt){g.Afterimage(art);ghostAt=Time.time+.065f;}
             art.color=Time.time<invulnerableUntil&&(int)(Time.time*14)%2==0?new Color(1,1,1,.45f):Color.white;
             art.enabled=!bike;
             trail.emitting=wired||bike;
         }
         public void HoldForEncounter(bool held)
         {
-            if(!body)return;if(held){StopWire(false);body.linearVelocity=Vector2.zero;if(Combat){Combat.CancelInput();Combat.CancelBlade();}}
+            if(!body)return;if(held){ResetSwingPresentation();StopWire(false);body.linearVelocity=Vector2.zero;if(Combat){Combat.CancelInput();Combat.CancelBlade();}}
             body.simulated=!held;
         }
+        void ResetSwingPresentation()
+        {if(swingMotion!=null)swingMotion.Clear();if(art){art.transform.localRotation=Quaternion.identity;art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);art.transform.localScale=Vector3.one;}}
         public void CinematicPose(bool low,float facing)
         {
-            if(!art||frames==null)return;art.sprite=frames[low?4:0];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
+            if(!art||frames==null)return;ResetSwingPresentation();art.sprite=frames[low?4:0];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
             art.transform.localPosition=new Vector3(0,-1.05f,0);
         }
         public void CinematicLaserPose(float facing)
         {
-            if(!art||frames==null)return;art.sprite=frames[6];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
+            if(!art||frames==null)return;ResetSwingPresentation();art.sprite=frames[6];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
             art.transform.localPosition=new Vector3(0,-1.05f,0);
         }
         public void CinematicMove(Vector2 point)
@@ -755,7 +761,7 @@ namespace Plugin.AncientCivilization
         public float SpendCapturedEnergy(){float value=CaptureEnergy;CaptureEnergy=0;return value;}
         public void TravelTo(Vector2 point)
         {
-            HoldForEncounter(false);
+            HoldForEncounter(false);ResetSwingPresentation();
             if(bike)
             {
                 if(mountedBike)mountedBike.Park(body.position,direction,bikeHP);

@@ -1,5 +1,6 @@
 PASS: 3211 combat and quest rule checks
 PASS: 76 sniper rule checks
+PASS: 596 swing presentation rule checks
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
 PASS: metadata coverage Editor
@@ -45,12 +46,16 @@ PASS: 32-character GUID AncientCameraFX.cs.meta
 PASS: metadata coverage AncientBossRules.cs
 PASS: metadata target Assets/Scripts/AncientWireParticleBatch.cs.meta
 PASS: 32-character GUID AncientWireParticleBatch.cs.meta
+PASS: metadata target Assets/Scripts/AncientSwingMotion.cs.meta
+PASS: 32-character GUID AncientSwingMotion.cs.meta
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
 PASS: metadata coverage AncientCityLayout.cs
 PASS: metadata target Assets/Scripts/AncientCampaignRules.cs.meta
 PASS: 32-character GUID AncientCampaignRules.cs.meta
+PASS: metadata coverage AncientSwingAtlas.cs
 PASS: metadata coverage AncientFrameRules.cs
+PASS: metadata coverage AncientSwingMotion.cs
 PASS: metadata target Assets/Scripts/AncientPerformance.cs.meta
 PASS: 32-character GUID AncientPerformance.cs.meta
 PASS: metadata coverage AncientCampaignRules.cs
@@ -120,6 +125,8 @@ PASS: metadata target Assets/Scripts/AncientHudText.cs.meta
 PASS: 32-character GUID AncientHudText.cs.meta
 PASS: metadata target Assets/Scripts/AncientCityLayout.cs.meta
 PASS: 32-character GUID AncientCityLayout.cs.meta
+PASS: metadata target Assets/Scripts/AncientBeamVisuals.cs.meta
+PASS: 32-character GUID AncientBeamVisuals.cs.meta
 PASS: metadata coverage AncientProgressRules.cs
 PASS: metadata coverage AncientBossAtlas.cs
 PASS: metadata coverage AncientAudio.cs
@@ -127,17 +134,21 @@ PASS: metadata target Assets/Scripts/AncientClockBoss.cs.meta
 PASS: 32-character GUID AncientClockBoss.cs.meta
 PASS: metadata target Assets/Scripts/AncientFinaleRules.cs.meta
 PASS: 32-character GUID AncientFinaleRules.cs.meta
+PASS: metadata coverage AncientBeamVisuals.cs
 PASS: metadata coverage AncientPixels.cs
 PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
 PASS: 32-character GUID AncientPixels.cs.meta
 PASS: metadata coverage AncientCitizenArt.cs
 PASS: metadata coverage AncientExploration.cs
+PASS: metadata target Assets/Scripts/AncientSwingRules.cs.meta
+PASS: 32-character GUID AncientSwingRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
 PASS: 32-character GUID AncientMotorcycle.cs.meta
 PASS: metadata target Assets/Scripts/AncientFinale.cs.meta
 PASS: 32-character GUID AncientFinale.cs.meta
 PASS: metadata coverage AncientBootIntro.cs
 PASS: metadata coverage AncientVisuals.cs
+PASS: metadata coverage AncientSwingRules.cs
 PASS: metadata target Assets/Scripts/AncientSniperEncounter.cs.meta
 PASS: 32-character GUID AncientSniperEncounter.cs.meta
 PASS: metadata coverage AncientKoreanUI.cs
@@ -162,6 +173,8 @@ PASS: 32-character GUID AncientStory.cs.meta
 PASS: metadata coverage AncientFinale.cs
 PASS: metadata coverage AncientCombat.cs
 PASS: metadata coverage AncientSniperEncounter.cs
+PASS: metadata target Assets/Scripts/AncientSwingAtlas.cs.meta
+PASS: 32-character GUID AncientSwingAtlas.cs.meta
 PASS: metadata coverage AncientFieldScenery.cs
 PASS: metadata target Assets/Scripts/AncientKoreanUI.cs.meta
 PASS: 32-character GUID AncientKoreanUI.cs.meta
@@ -198,6 +211,7 @@ PASS: metadata coverage Citizens1.png
 PASS: metadata coverage StudioLogos.png
 PASS: metadata coverage Citizens0.png
 PASS: metadata coverage Boss0.png
+PASS: metadata coverage HeroSwing.png
 PASS: metadata target Assets/Resources/Art/Citizens1.png.meta
 PASS: 32-character GUID Citizens1.png.meta
 PASS: metadata target Assets/Resources/Art/City.png.meta
@@ -259,6 +273,8 @@ PASS: metadata target Assets/Resources/Art/Boss0.png.meta
 PASS: 32-character GUID Boss0.png.meta
 PASS: metadata target Assets/Resources/Art/Citizens0.png.meta
 PASS: 32-character GUID Citizens0.png.meta
+PASS: metadata target Assets/Resources/Art/HeroSwing.png.meta
+PASS: 32-character GUID HeroSwing.png.meta
 PASS: metadata coverage World.png
 PASS: metadata target Assets/Resources/Art/Actions.png.meta
 PASS: 32-character GUID Actions.png.meta
@@ -471,6 +487,45 @@ PASS: walking crop matches native-grid alpha 13
 PASS: walking crop matches native-grid alpha 14
 PASS: walking crop matches native-grid alpha 15
 PASS: escort has four distinct walk phases 3
+PASS: HeroSwing.png PNG signature
+PASS: HeroSwing.png PNG chunk integrity
+PASS: swing PNG integrity and dimensions
+PASS: eight distinct swing/release sprite crops
+PASS: swing crop within atlas 0
+PASS: swing crop has opaque actor 0
+PASS: swing crop within atlas 1
+PASS: swing crop has opaque actor 1
+PASS: swing crop within atlas 2
+PASS: swing crop has opaque actor 2
+PASS: swing crop within atlas 3
+PASS: swing crop has opaque actor 3
+PASS: swing crop within atlas 4
+PASS: swing crop has opaque actor 4
+PASS: swing crop within atlas 5
+PASS: swing crop has opaque actor 5
+PASS: swing crop within atlas 6
+PASS: swing crop has opaque actor 6
+PASS: swing crop within atlas 7
+PASS: swing crop has opaque actor 7
+PASS: all swing poses have distinct silhouettes
+PASS: swing PivotPixels metadata coverage
+PASS: swing PivotPixels stays in its pose 0
+PASS: swing PivotPixels stays in its pose 1
+PASS: swing PivotPixels stays in its pose 2
+PASS: swing PivotPixels stays in its pose 3
+PASS: swing PivotPixels stays in its pose 4
+PASS: swing PivotPixels stays in its pose 5
+PASS: swing PivotPixels stays in its pose 6
+PASS: swing PivotPixels stays in its pose 7
+PASS: swing EmitterPixels metadata coverage
+PASS: swing EmitterPixels stays in its pose 0
+PASS: swing EmitterPixels stays in its pose 1
+PASS: swing EmitterPixels stays in its pose 2
+PASS: swing EmitterPixels stays in its pose 3
+PASS: swing EmitterPixels stays in its pose 4
+PASS: swing EmitterPixels stays in its pose 5
+PASS: swing EmitterPixels stays in its pose 6
+PASS: swing EmitterPixels stays in its pose 7
 PASS: six bosses each have six measured poses
 PASS: Boss0.png PNG signature
 PASS: Boss0.png PNG chunk integrity
@@ -631,7 +686,9 @@ PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientWireParticleBatch.cs
 PASS: C# syntax AncientBossRules.cs
 PASS: C# syntax AncientCityLayout.cs
+PASS: C# syntax AncientSwingAtlas.cs
 PASS: C# syntax AncientFrameRules.cs
+PASS: C# syntax AncientSwingMotion.cs
 PASS: C# syntax AncientCampaignRules.cs
 PASS: C# syntax AncientSniperGround.cs
 PASS: C# syntax AncientPointer.cs
@@ -656,11 +713,13 @@ PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientProgressRules.cs
 PASS: C# syntax AncientBossAtlas.cs
 PASS: C# syntax AncientAudio.cs
+PASS: C# syntax AncientBeamVisuals.cs
 PASS: C# syntax AncientPixels.cs
 PASS: C# syntax AncientCitizenArt.cs
 PASS: C# syntax AncientExploration.cs
 PASS: C# syntax AncientBootIntro.cs
 PASS: C# syntax AncientVisuals.cs
+PASS: C# syntax AncientSwingRules.cs
 PASS: C# syntax AncientKoreanUI.cs
 PASS: C# syntax AncientDistrict.cs
 PASS: C# syntax AncientPerformance.cs
@@ -691,5 +750,5 @@ PASS: five sparse Joker mentions across city resident dialogue
 PASS: protagonist dialogue consistently uses Baek Myeong
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: Supplemental runtime C# type check with Unity 2021.3 reference DLLs and temporary linearVelocity-to-velocity copies; shipped Unity6 source unchanged.
-NOT RUN: actual Unity6000.6 runtime or Editor C# compilation, new energy shader compilation/rendering, physics, Editor smoke menu execution, user input timing, player build, FPS and full playthrough duration.
+PASS: supplemental runtime C# type check using Unity2021.3 reference modules with temporary linearVelocity compatibility copies. Shipped Unity6 source unchanged.
+NOT RUN: actual Unity6000.6 import/PlayMode, rendering/glow texture UV, swing physics/animation feel, Editor smoke execution, player build, measured FPS or full playthrough.

@@ -20,7 +20,7 @@ namespace Plugin.AncientCivilization
         readonly Actor[] actors=new Actor[4];readonly Turret[] turrets=new Turret[2];
         readonly ObjectShot[] objects=new ObjectShot[24];int cursor,phase=1,mounted=-1,droppedSpawns;
         float left,right,refillAt,impactAt,winningAt=-1;bool clashing,finished;Vector2 heroAnchor;
-        LineRenderer heroBeam,bossBeam,heroCore,bossCore;AncientSniperClash clash;
+        LineRenderer heroBeam,bossBeam,heroCore,bossCore,heroGlow,bossGlow;AncientBeamVisuals heroBeamProfile,bossBeamProfile;AncientSniperClash clash;
         Material cloneMaterial;GUIStyle label,title;
         public AncientEnemy Owner {get{return owner;}}
         public int Phase {get{return phase;}}
@@ -54,10 +54,13 @@ namespace Plugin.AncientCivilization
                 objects[i]=new ObjectShot();objects[i].art=AncientArt.Display("Pooled grenade / compressed plate",AncientSniperEquipmentArt.Sprite(3),Vector2.zero,14);
                 objects[i].art.enabled=false;
             }
-            heroBeam=game.Line("Automatic player particle laser",new Color(.3f,.9f,1),.45f,23);
-            bossBeam=game.Line("Charged sniper laser",new Color(1,.25f,.4f),.5f,23);
-            heroCore=game.Line("Player laser core",Color.white,.12f,24);bossCore=game.Line("Sniper laser core",new Color(1,.9f,.9f),.12f,24);
-            heroBeam.positionCount=bossBeam.positionCount=heroCore.positionCount=bossCore.positionCount=2;ShowBeams(false);
+            heroBeam=game.Line("Automatic player particle laser",new Color(.3f,.9f,1),.80f,23);
+            bossBeam=game.Line("Charged sniper laser",new Color(1,.25f,.4f),.90f,23);
+            heroCore=game.Line("Player laser core",Color.white,.26f,24);bossCore=game.Line("Sniper laser core",new Color(1,.95f,.95f),.30f,24);
+            heroGlow=game.Line("Player clash laser soft light",new Color(.15f,.65f,1,.5f),1.7f,22);
+            bossGlow=game.Line("Sniper clash laser soft light",new Color(1,.15f,.3f,.5f),1.8f,22);
+            heroBeamProfile=new AncientBeamVisuals(heroGlow);bossBeamProfile=new AncientBeamVisuals(bossGlow);
+            heroBeam.positionCount=bossBeam.positionCount=heroCore.positionCount=bossCore.positionCount=heroGlow.positionCount=bossGlow.positionCount=2;ShowBeams(false);
             game.Notice("저격수 / 조준 2초 · 5발 뒤 재장전 · 수류탄에 파괴된 지면은 복구됩니다.",4);
         }
         void BuildTurret(int i)
@@ -277,7 +280,7 @@ namespace Plugin.AncientCivilization
         }
         void RestoreTurrets()
         {foreach(var t in turrets){t.broken=false;t.hp=65;t.charging=false;t.root.SetActive(true);t.root.transform.position=t.position;t.riseAt=Time.time-.8f;t.tell.enabled=false;t.body.color=new Color(.18f,.28f,.36f);}}
-        void ShowBeams(bool shown){heroBeam.enabled=bossBeam.enabled=heroCore.enabled=bossCore.enabled=shown;}
+        void ShowBeams(bool shown){heroBeam.enabled=bossBeam.enabled=heroCore.enabled=bossCore.enabled=heroGlow.enabled=bossGlow.enabled=shown;}
         void TickFinal()
         {
             owner.BossVisual(winningAt>=0?5:clashing?4:3,game.hero.transform.position.x<owner.transform.position.x?-1:1,.9f,!clashing,false);
@@ -292,13 +295,13 @@ namespace Plugin.AncientCivilization
             game.hero.CinematicMove(heroAnchor);game.hero.CinematicLaserPose(1);game.hero.AimWeaponAt(owner.AimPoint);
             Vector2 begin=heroAnchor+new Vector2(.3f,.55f),enemy=owner.SniperMuzzle;
             Vector2 meet=Vector2.Lerp(begin,enemy,Mathf.Lerp(.12f,.88f,clash.Progress));
-            heroBeam.SetPosition(0,begin);heroBeam.SetPosition(1,meet);heroCore.SetPosition(0,begin);heroCore.SetPosition(1,meet);
-            bossBeam.SetPosition(0,enemy);bossBeam.SetPosition(1,meet);bossCore.SetPosition(0,enemy);bossCore.SetPosition(1,meet);
+            heroGlow.SetPosition(0,begin);heroGlow.SetPosition(1,meet);heroBeam.SetPosition(0,begin);heroBeam.SetPosition(1,meet);heroCore.SetPosition(0,begin);heroCore.SetPosition(1,meet);
+            bossGlow.SetPosition(0,enemy);bossGlow.SetPosition(1,meet);bossBeam.SetPosition(0,enemy);bossBeam.SetPosition(1,meet);bossCore.SetPosition(0,enemy);bossCore.SetPosition(1,meet);
             if(Time.time>=impactAt){impactAt=Time.time+.1f;game.Impact(meet,AncientGame.Cyan,true);game.Shake(.035f);}
             if(clash.Result==AncientSniperClashResult.Won)
             {
                 if(winningAt<0){winningAt=Time.time;game.Sound(4);game.Burst(owner.AimPoint,AncientGame.Cyan,32);game.Shake(.2f);}
-                heroBeam.SetPosition(1,enemy);heroCore.SetPosition(1,enemy);bossBeam.enabled=bossCore.enabled=false;
+                heroBeam.SetPosition(1,enemy);heroCore.SetPosition(1,enemy);heroGlow.SetPosition(1,enemy);bossBeam.enabled=bossCore.enabled=bossGlow.enabled=false;
                 if(Time.time-winningAt<.65f)return;
                 finished=true;clashing=false;ShowBeams(false);game.hero.HoldForEncounter(false);game.BlockGameplayInput();
                 owner.CompleteSniperDuel();
@@ -345,6 +348,8 @@ namespace Plugin.AncientCivilization
             foreach(var a in actors)if(a!=null&&a.tell)Destroy(a.tell.gameObject);
             foreach(var t in turrets)if(t!=null){if(t.root)Destroy(t.root);if(t.tell)Destroy(t.tell.gameObject);}
             foreach(var s in objects)if(s!=null&&s.art)Destroy(s.art.gameObject);
+            if(heroBeamProfile!=null)heroBeamProfile.Dispose();if(bossBeamProfile!=null)bossBeamProfile.Dispose();
+            if(heroGlow)Destroy(heroGlow.gameObject);if(bossGlow)Destroy(bossGlow.gameObject);
             if(heroBeam)Destroy(heroBeam.gameObject);if(bossBeam)Destroy(bossBeam.gameObject);if(heroCore)Destroy(heroCore.gameObject);if(bossCore)Destroy(bossCore.gameObject);
         }
     }
