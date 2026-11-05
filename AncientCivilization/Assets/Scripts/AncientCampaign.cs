@@ -26,6 +26,32 @@ namespace Plugin.AncientCivilization
         public int CompletedMask {get{return completed;}}
         public bool Legacy {get{return legacy;}}
         public string ObjectiveText {get{return objective;}}
+        public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
+        {
+            actor=null;headOffset=1.9f;
+            if(string.IsNullOrEmpty(speaker)||!game||!game.Story)return false;
+            if(Active&&following&&escort&&escort.enabled)
+            {
+                string witness=AncientCampaignData.Citizens[AncientCampaignRules.Witness(active)].Name;
+                if(speaker==AncientCampaignData.Missions[active].Speaker||MatchesDialogueName(speaker,witness))
+                {actor=escort.transform;headOffset=DialogueHeadOffset(escort);return true;}
+            }
+            foreach(var citizen in AncientCampaignData.Citizens)
+            {
+                if(citizen.Floor!=game.Story.CurrentFloor||!MatchesDialogueName(speaker,citizen.Name))continue;
+                var view=citizens[citizen.Id];if(!view||!view.enabled||!view.gameObject.activeInHierarchy)continue;
+                actor=view.transform;headOffset=DialogueHeadOffset(view);return true;
+            }
+            return false;
+        }
+        static bool MatchesDialogueName(string speaker,string name)
+        {
+            if(speaker==name)return true;int space=name.LastIndexOf(' ');
+            if(space<0)return false;int length=name.Length-space;
+            return speaker.Length>=length&&string.Compare(speaker,speaker.Length-length,name,space,length,System.StringComparison.Ordinal)==0;
+        }
+        static float DialogueHeadOffset(SpriteRenderer view)
+        {return Mathf.Clamp(view.bounds.max.y-view.transform.position.y,.9f,2.4f);}
         public float CameraLeft {get{return AncientCampaignRules.Left(active)+5;}}
         public float CameraRight {get{return AncientCampaignRules.Left(active)+AncientCampaignRules.RoomWidth-6;}}
         static readonly int[] givers={3,5,10,15,20};
@@ -58,19 +84,21 @@ namespace Plugin.AncientCivilization
             game.Ceiling(left,right,10);game.Platform(left,right,-4.5f);
             Color tint=mission.Floor==0?new Color(.12f,.17f,.2f):mission.Floor==1?new Color(.13f,.21f,.2f):mission.Floor==2?new Color(.12f,.18f,.28f):mission.Floor==3?new Color(.24f,.23f,.19f):new Color(.19f,.13f,.24f);
             Color facade=tint;facade.a=.68f;Color window=tint*1.55f;window.a=.30f;
-            if(mission.Kind==2)game.Platform(left,right,0);
             for(int sector=0;sector<AncientFieldExpansion.SectorCount;sector++)
             {
                 float sectorLeft=left+AncientFieldExpansion.SectorStart(sector);
-                AncientFieldScenery.Build(game,mission.Floor,sectorLeft,(mission.Id+sector)%4);
-                for(int i=0;i<12;i++)
+                bool jumping=AncientFieldExpansion.IsJumpSector(mission.Id,sector);
+                AncientFieldScenery.Build(game,mission.Floor,sectorLeft,(mission.Id+sector)%4,AncientFieldExpansion.SectorSpan);
+                int facades=Mathf.CeilToInt(AncientFieldExpansion.SectorSpan/12f);float facadeStep=AncientFieldExpansion.SectorSpan/(float)facades;
+                for(int i=0;i<facades;i++)
                 {
-                    float x=sectorLeft+6+i*12;
-                    game.StaticBox("Investigation facade",new Vector2(x,4.5f),new Vector2(11,9),facade,-8);
+                    float x=sectorLeft+(i+.5f)*facadeStep;
+                    game.StaticBox("Investigation facade",new Vector2(x,4.5f),new Vector2(facadeStep-.6f,9),facade,-8);
                     game.StaticBox("Investigation window",new Vector2(x,6.6f),new Vector2(5,1.4f),window,-7);
                     game.StaticBox("District floor stripe",new Vector2(x,9.88f),new Vector2(8,.06f),new Color(.2f,.65f,.7f),3);
                 }
-                if(mission.Kind!=2)
+                if(!jumping){var road=AncientFieldExpansion.GroundRoad(sector);game.Platform(left+road.left,left+road.right,road.top);}
+                else
                 {
                     var entry=AncientFieldExpansion.EntrancePlatform(sector);var end=AncientFieldExpansion.TerminalPlatform(sector);
                     game.Platform(left+entry.left,left+entry.right,entry.top);game.Platform(left+end.left,left+end.right,end.top);
@@ -78,9 +106,9 @@ namespace Plugin.AncientCivilization
                 for(int i=0;i<9;i++)
                 {
                     var segment=AncientFieldExpansion.Segment(mission.Id,sector,i);float x=left+segment.left,top=segment.top;
-                    if(mission.Kind!=2)game.Platform(x,left+segment.right,top);
+                    if(jumping)game.Platform(x,left+segment.right,top);
                     game.StaticBox("Field route edge",new Vector2(left+(segment.left+segment.right)*.5f,(mission.Kind==2?0:top)+.025f),new Vector2(segment.right-segment.left,.05f),AncientGame.Cyan,3);
-                    if(i%3==1)
+                    if(jumping&&i%3==1)
                     {float fastTop=Mathf.Max(6.2f,top+2.2f);game.Platform(x+1,x+3.2f,fastTop);game.StaticBox("Expert field shortcut",new Vector2(x+2.1f,fastTop+.03f),new Vector2(2.2f,.05f),new Color(1,.82f,.2f),4);}
                 }
                 if(mission.Floor==0)for(int index=3;index<=6;index+=3)
@@ -102,9 +130,9 @@ namespace Plugin.AncientCivilization
                     gate.layer=8;fieldGates[mission.Id,sector-1]=gate.GetComponent<SpriteRenderer>();fieldGateSolids[mission.Id,sector-1]=gate.AddComponent<BoxCollider2D>();
                     fieldGates[mission.Id,sector-1].enabled=fieldGateSolids[mission.Id,sector-1].enabled=false;
                 }
-                for(int i=0;i<2;i++)
+                if(jumping)for(int i=0;i<2;i++)
                 {
-                    float x=sectorLeft+43+i*44;
+                    float x=sectorLeft+63+i*68;
                     if(mission.Floor==0)
                     {var crane=new GameObject("Field moving crane").AddComponent<AncientMovingAnchor>();crane.Initialize(game,new Vector2(x,7.6f),mission.Id+sector*2+i);cranes.Add(crane);}
                     if(mission.Floor==2)new GameObject("Field security shutter").AddComponent<AncientSecurityShutter>().Initialize(game,new Vector2(x,6.4f),mission.Id+sector*2+i);
@@ -134,7 +162,7 @@ namespace Plugin.AncientCivilization
         {
             var mission=AncientCampaignData.Missions[id];float left=AncientCampaignRules.Left(id);
             var segment=AncientFieldExpansion.Segment(id,index,5);float x=left+(segment.left+segment.right)*.5f;
-            if(mission.Kind==2)return new Vector2(index==2?left+416:x,1.2f);
+            if(mission.Kind==2)return new Vector2(index==2?left+AncientCampaignRules.RoomWidth-16:x,1.2f);
             return new Vector2(x,segment.top+1.3f);
         }
         static Vector2 PowerPoint(int id,int sector)
@@ -389,7 +417,7 @@ namespace Plugin.AncientCivilization
                 if(frame!=escortFrame)
                 {escortFrame=frame;int person=AncientCampaignRules.Witness(active);escort.sprite=frame<0?AncientCitizenArt.ForCitizen(person):AncientArt.CitizenWalk(person,frame);}
                 escort.transform.position=witness;
-                if(witness.x>=left+416){following=false;Mark(2);}
+                if(witness.x>=left+AncientCampaignRules.RoomWidth-16){following=false;Mark(2);}
                 else if(blocked&&Time.time>=guardNoticeAt){guardNoticeAt=Time.time+5;game.Notice("위협을 먼저 제압하세요. 주민은 안전이 확인되면 따라옵니다.",2);}
             }
         }
@@ -435,7 +463,7 @@ namespace Plugin.AncientCivilization
             if(uiMission!=active)for(int i=0;i<3;i++)
                 fieldNodeLabels[i]=(UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
             uiMission=active;uiSector=sector;uiNext=next;uiGuideKind=kind;uiGuideId=id;uiFollowing=following;edgeMetres=-1;
-            fieldTitle=(sector+1)+" / 3 · "+AncientFieldExpansion.Names[active][sector];
+            fieldTitle=(sector+1)+" / 3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 와이어 구간":" · 지상 통로");
             guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"E · 조사 보고":
                 mission.Kind==2&&next==2?"보호 대상과 출구로":fieldNodeLabels[next];
             fieldNext="다음 / "+guideCaption;

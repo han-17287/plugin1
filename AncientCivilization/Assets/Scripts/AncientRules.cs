@@ -31,7 +31,7 @@ namespace Plugin.AncientCivilization
         }
         public static bool TutorialReady(int stage,int flags)
         {
-            int mask=stage==1?7:stage==2?24:stage==3?224:0;
+            int mask=stage==1?7:stage==2?8:stage==3?224:0;
             return mask!=0&&(flags&mask)==mask;
         }
         public static bool CanStartMiniBoss(int stage,bool truckStopped,int cores,float x)

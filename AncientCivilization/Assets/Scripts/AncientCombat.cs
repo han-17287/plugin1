@@ -54,6 +54,8 @@ namespace Plugin.AncientCivilization
         }
         bool ControlsReady {get{return hero&&game&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted;}}
         public void CancelInput(){heldAt=-1;readySignal=false;bladeBufferedUntil=0;if(aim)aim.enabled=false;}
+        public void CancelAttacks()
+        {CancelInput();CancelBlade();laserUntil=0;if(beam)beam.enabled=false;if(beamGlow)beamGlow.enabled=false;if(beamCore)beamCore.enabled=false;}
         public void CancelBlade()
         {
             bladeHitPending=bladeRebounded=false;bladeUntil=bladeBufferedUntil=bladeReady=0;combo=0;

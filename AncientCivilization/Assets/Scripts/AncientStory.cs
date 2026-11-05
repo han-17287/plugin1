@@ -17,8 +17,13 @@ namespace Plugin.AncientCivilization
         public AncientTruck Truck {get;private set;}
         public int ResidencePoints {get;private set;}
         AncientGame game;int flags,lineIndex;float nextTrainingShot,nextLetterAt;int revealedChars;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
-        struct Line {public string speaker,text;public int portrait;public Line(string who,string words,int face){speaker=who;text=words;portrait=face;}}
+        struct Line {public string speaker,text;public int portrait;public Line(string who,string words,int face){speaker=who;text=words.Replace("백명 경위","백 경위").Replace("백명","백 경위");portrait=face;}}
         readonly List<Line> lines=new List<Line>();GUIStyle body,nameStyle,small,nextButton;int spawnedEncounters;
+        AncientSpeechBubble speech;
+        int pageStart,pageEnd;bool pageReady;float pageWidth,pageHeight;
+        string bubbleName="";int bubbleNameLine=-1,bubbleNameKind=-1;
+        bool dialogueFocusReady;Vector2 dialogueFocus;float dialogueWidth,dialogueHeight;
+        AncientParkedBike chaseBike;
         public void Initialize(AncientGame owner)
         {game=owner;Stage=AncientGame.Saved("questStage");flags=AncientGame.Saved("questFlags");ResidencePoints=AncientGame.Saved("residencePoints");CurrentFloor=Mathf.Clamp(AncientGame.Saved("cityFloor",AncientGame.Saved("upperCity")!=0?1:0),0,4);}
         void Start(){if(game.HasSession)Begin();}
@@ -36,7 +41,7 @@ namespace Plugin.AncientCivilization
             {
                 SetStage(1);
                 Talk(null,new Line("통신관","백명 경위, 아침 순찰 시작이다. 포인트를 모으면 위로 올라갈 수 있겠지만, 아래 구역의 안전은 우리가 지킨다.",1),
-                    new Line("백명","알겠습니다. 기계팔과 입자 와이어, 순찰 오토바이부터 점검하겠습니다.",0),
+                    new Line("백명","알겠습니다. 기계팔과 입자 와이어부터 점검하겠습니다.",0),
                     new Line("통신관","생산소의 C-00 예비분은 점검 대상에서 빼라. 정기 배정 물량이라고 한다.",1));
             }
             else if(Stage==4)TheftReport();
@@ -44,17 +49,21 @@ namespace Plugin.AncientCivilization
         }
         int citizenPortrait=3;
         void Talk(Action done,params Line[] script)
-        {choiceOpen=false;choiceAction=null;lines.Clear();lines.AddRange(script);lineIndex=0;ResetTyping();afterDialogue=done;game.BlockGameplayInput();}
+        {
+            choiceOpen=false;choiceAction=null;lines.Clear();lines.AddRange(script);lineIndex=0;ResetTyping();afterDialogue=done;dialogueFocusReady=false;game.BlockGameplayInput();
+            if(game.hero&&game.hero.Combat)game.hero.Combat.CancelAttacks();
+            if(game.hero&&!game.hero.bike&&game.hero.IsOnGround)game.hero.CinematicPose(false,game.hero.Facing);
+        }
         void ResetTyping()
-        {revealedChars=0;nextLetterAt=Time.unscaledTime+.08f;showFull=false;visibleChars=-1;shownText="";}
+        {revealedChars=pageStart=pageEnd=0;pageReady=false;pageWidth=pageHeight=0;nextLetterAt=Time.unscaledTime+.08f;showFull=false;visibleChars=-1;shownText="";bubbleNameLine=-1;}
         void TickTyping()
         {
-            if(choiceOpen||showFull||!DialogueOpen||Time.unscaledTime<nextLetterAt)return;
-            string text=lines[lineIndex].text;if(revealedChars>=text.Length)return;
+            if(choiceOpen||showFull||!DialogueOpen||!pageReady||Time.unscaledTime<nextLetterAt)return;
+            string text=lines[lineIndex].text;if(revealedChars>=pageEnd)return;
             float now=Time.unscaledTime;
             // Keep the same reading pace at 30/60/120 Hz, without flooding a line after a long stall.
             if(now-nextLetterAt>.3f)nextLetterAt=now-.1f;
-            for(int catchup=0;catchup<4&&revealedChars<text.Length&&now>=nextLetterAt;catchup++)
+            for(int catchup=0;catchup<4&&revealedChars<pageEnd&&now>=nextLetterAt;catchup++)
             {
                 char letter=text[revealedChars++];
                 float pause=letter=='.'||letter=='?'||letter=='!'||letter=='…'?.16f:letter==','?.08f:0;
@@ -64,8 +73,12 @@ namespace Plugin.AncientCivilization
         void Advance()
         {
             // Opening a dialogue consumes its triggering input; the same jump/click must not reveal a line.
-            if(choiceOpen||!DialogueOpen||!game.GameplayInputReady)return;
-            if(!showFull&&revealedChars<lines[lineIndex].text.Length){showFull=true;return;}
+            if(choiceOpen||!DialogueOpen||!pageReady||!game.GameplayInputReady)return;
+            if(!showFull&&revealedChars<pageEnd){showFull=true;return;}
+            if(pageEnd<lines[lineIndex].text.Length)
+            {
+                pageStart=pageEnd;revealedChars=pageStart;pageReady=false;showFull=false;visibleChars=-1;shownText="";nextLetterAt=Time.unscaledTime+.045f;return;
+            }
             lineIndex++;ResetTyping();
             if(lineIndex>=lines.Count)
             {lines.Clear();var action=afterDialogue;afterDialogue=null;game.BlockGameplayInput();action?.Invoke();}
@@ -92,6 +105,21 @@ namespace Plugin.AncientCivilization
             Truck=new GameObject("Energy core getaway truck").AddComponent<AncientTruck>();
             Truck.Initialize(game,atGate?106:Mathf.Clamp(game.hero.transform.position.x+8,24,102));
         }
+        void EnsureChaseBike()
+        {
+            if(chaseBike)return;float x=Mathf.Clamp(game.hero.transform.position.x+2.4f,8,94);
+            chaseBike=new GameObject("Pursuit-only patrol motorcycle").AddComponent<AncientParkedBike>();
+            chaseBike.Initialize(new Vector2(x,AncientDistrict.RoadHeight(x)+.84f));game.parkedBikes.Add(chaseBike);
+        }
+        void ClearChaseBike(bool dismount=true)
+        {
+            if(!chaseBike)return;
+            if(dismount&&game.hero&&game.hero.bike)
+            {float x=game.hero.transform.position.x;game.hero.TravelTo(new Vector2(x,AncientDistrict.RoadHeight(x)+1.3f));}
+            if(game)game.parkedBikes.Remove(chaseBike);Destroy(chaseBike.gameObject);chaseBike=null;
+        }
+        public void ResetChaseBikeForRetry()
+        {if(Stage==5){ClearChaseBike(false);EnsureChaseBike();}}
         void SpawnEncounters()
         {
             if(spawnedEncounters!=0)return;spawnedEncounters=1;
@@ -99,6 +127,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
+            if(Stage!=5&&chaseBike)ClearChaseBike();
             if(choiceOpen)
             {
                 if(!game.MainMenu&&game.GameplayInputReady)
@@ -130,9 +159,9 @@ namespace Plugin.AncientCivilization
                 if(hero.Wired)OnTraining(3);
                 if(hero.bike)OnTraining(4);
             }
-            if(Stage==1&&AncientRules.TutorialReady(Stage,flags))
-            {SetStage(2);Talk(null,new Line("통신관","천장에 입자 와이어를 연결해 봐라. 정비소의 오토바이는 E로 타고 내린다. 확인했으면 블레이드 훈련으로 넘어가자.",1));}
-            else if(Stage==2&&AncientRules.TutorialReady(Stage,flags))
+            if(Stage==1&&AncientRules.TutorialReady(Stage,flags)&&hero.IsOnGround)
+            {SetStage(2);Talk(null,new Line("통신관","천장에 입자 와이어를 연결해 봐라. 좌클릭은 곧바로 견인하고 가운데 클릭은 스윙이다. 오토바이는 추격이 필요할 때 준비한다.",1));}
+            else if(Stage==2&&AncientRules.TutorialReady(Stage,flags)&&!hero.Wired&&hero.IsOnGround)
             {SetStage(3);Talk(null,new Line("통신관","훈련용 물체를 보낸다. 휠을 위로 돌려 공격 모드로. 좌클릭을 짧게 이어 누르면 세로·가로·사선으로 벤다.",1),
                 new Line("통신관","파란 입자는 우클릭으로 모아라. 좌클릭을 길게 눌러 조준하고, 금색 준비 표시가 뜨면 놓아서 레이저를 쏴라.",1));}
             else if(Stage==3)
@@ -147,9 +176,9 @@ namespace Plugin.AncientCivilization
             else if(Stage==4)TheftReport();
             else if(Stage==5)
             {
-                EnsureTruck();SpawnEncounters();
+                EnsureChaseBike();EnsureTruck();SpawnEncounters();
                 if(AncientRules.CanStartMiniBoss(Stage,Truck.Stopped,game.Cores,hero.transform.position.x))
-                {SetStage(6);Talk(null,new Line("용의자","다가오지 마! 화물 수호기는 아직 내 통행 권한으로 움직인다고!",2),new Line("백명","코어는 확보했다. 장치를 끄고 트럭에서 내려.",0));}
+                {SetStage(6);ClearChaseBike();Talk(null,new Line("용의자","다가오지 마! 화물 수호기는 아직 내 통행 권한으로 움직인다고!",2),new Line("백명","코어는 확보했다. 장치를 끄고 트럭에서 내려.",0));}
             }
             else if(Stage==6)
             {
@@ -256,20 +285,20 @@ namespace Plugin.AncientCivilization
         }
         public void FieldDialogue(string speaker,string words)
         {Talk(null,new Line(speaker,words,1));}
-        public void OnDistrictCleared(int floor)
+        public void OnDistrictCleared(int floor,Action done=null)
         {
             if(floor<3)ResidencePoints=Mathf.Max(ResidencePoints,(floor+1)*1000);
             Persist();
             if(floor==4)
-                Talk(null,new Line("백명","정문을 피해서 들어왔군. 나를 쫓아온 건가?",0),
+                Talk(done,new Line("백명","정문을 피해서 들어왔군. 나를 쫓아온 건가?",0),
                     new Line("저격수","쫓기는 쪽이야. 포인트는 동결됐고 이의 신청은 사라졌지. 너도 정식 출입 기록이 없군.",-2),
                     new Line("백명","기록을 조회하자 내 심사도 멈췄다. 여기 오기 위해 승진한 건 아니었는데.",0),
                     new Line("저격수","그럼 길을 막을 이유는 없겠네. 난 내 기록을 찾겠다.",-2),
                     new Line("백명","나는 코어 회수 계획을 확인한다. 각자 움직이자.",0));
             else if(floor==3)
-                Talk(null,new Line("통신관","구역은 확보했다. 하지만 네 포인트 심사가 보류됐다. 최상층은 승진 대상도 아니야. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
+                Talk(done,new Line("통신관","구역은 확보했다. 하지만 네 포인트 심사가 보류됐다. 최상층은 승진 대상도 아니야. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
                     new Line("백명","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
-            else Talk(null,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 입구 엘리베이터에서 목적지를 선택해라.",1));
+            else Talk(done,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 입구 엘리베이터에서 목적지를 선택해라.",1));
         }
         public void TravelBySidePassage(int destination)
         {
@@ -294,7 +323,7 @@ namespace Plugin.AncientCivilization
         string Objective()
         {
             if(Stage<=1)return "순찰 / "+Check(0,"이동")+"  "+Check(1,"점프")+"  "+Check(2,"Ctrl 달리기");
-            if(Stage==2)return "장비 점검 / "+Check(3,"입자 와이어")+"  "+Check(4,"E 오토바이 탑승");
+            if(Stage==2)return "장비 점검 / "+Check(3,"천장에 와이어 연결");
             if(Stage==3)return "블레이드 훈련 / "+Check(5,"물체 파괴")+"  "+Check(6,"우클릭 입자 수집")+"  "+Check(7,"눌러 조준 / 놓아 발사");
             if(Stage<=5)return "코어 도난 / 트럭 추격 · 에너지 코어 회수 "+game.Cores+" / 3";
             if(Stage==6)return "미니 보스 / 화물 수호기 제압 · 용의자 검거";
@@ -302,16 +331,65 @@ namespace Plugin.AncientCivilization
             if(Stage==8)return "상층 출입 권한 해금 / 동쪽 이동 엘리베이터에서 E · 목적 층 선택";
             return CurrentFloor==0?"하층 생산구 / 엘리베이터로 해금 층 왕복":AncientCityLayout.Name(CurrentFloor)+" / 이동 구간 돌파 · 구역 사건 해결";
         }
-        void Portrait(int index,Rect rect)
+        static bool IsHero(string speaker){return speaker=="백명"||speaker=="백 경위"||speaker=="백명 경위";}
+        static string DisplaySpeaker(string speaker){return IsHero(speaker)?"백 경위":speaker=="통신관"?"사령관":speaker;}
+        void SpeakerAnchor(string speaker,out Vector2 head,out Vector2 feet,out float width,out int kind)
         {
-            var sprite=index<=-100?AncientCitizenArt.ForCitizen(-index-100):index==-3?AncientArt.Boss(5,0):index==-2?AncientArt.Boss(4,0):index<0?AncientCitizenArt.Sprite(index<=-10?-index-10:citizenPortrait):AncientArt.DialoguePortrait(index);var r=sprite.textureRect;var t=sprite.texture;
-            if(index<0){float width=rect.height*r.width/r.height;rect=new Rect(rect.center.x-width/2,rect.y,width,rect.height);}
-            GUI.DrawTextureWithTexCoords(rect,t,new Rect(r.x/t.width,r.y/t.height,r.width/t.width,r.height/t.height));
+            Vector2 player=game.hero.transform.position;head=player+Vector2.up*1.15f;feet=player-Vector2.up*1.05f;width=.9f;kind=0;
+            if(IsHero(speaker))return;
+            if(speaker=="통신관"||speaker=="사령관"){kind=1;return;}
+            Transform actor=null;float offset=2;
+            bool found=(game.City&&game.City.TryDialogueActor(speaker,out actor,out offset));
+            if(!found)found=game.Campaign&&game.Campaign.TryDialogueActor(speaker,out actor,out offset);
+            if(found&&actor)
+            {
+                if(Vector2.Distance(player,actor.position)<26){feet=actor.position;head=feet+Vector2.up*offset;width=offset>2.2f?1.2f:.9f;return;}
+                kind=1;return;
+            }
+            if(speaker=="용의자")
+            {
+                EnsureTruck(true);Vector2 cab=(Vector2)Truck.transform.position+new Vector2(1.4f,1.15f);
+                feet=cab;head=cab+Vector2.up*1.25f;width=1;return;
+            }
+            kind=speaker=="진료소 기록"||speaker=="보관된 녹음"||speaker=="회수 계획 주석"||speaker=="현장 기록"?2:1;
         }
+        public bool TryDialogueFrame(out Vector2 focus,out float zoom)
+        {
+            focus=Vector2.zero;zoom=5.8f;if(!game.hero||!DialogueOpen||choiceOpen||LiftBusy)return false;
+            if(!dialogueFocusReady)
+            {
+                Vector2 player=game.hero.transform.position;float left=player.x-.5f,right=player.x+.5f,bottom=player.y-1.05f,top=player.y+1.2f;
+                foreach(var line in lines)
+                {
+                    Vector2 head,feet;float width;int kind;SpeakerAnchor(line.speaker,out head,out feet,out width,out kind);
+                    if(kind!=0)continue;
+                    left=Mathf.Min(left,feet.x-width*.5f);right=Mathf.Max(right,feet.x+width*.5f);bottom=Mathf.Min(bottom,feet.y);top=Mathf.Max(top,head.y);
+                }
+                dialogueFocus=new Vector2((left+right)*.5f,Mathf.Max(4.6f,(bottom+top+2.5f)*.5f));dialogueWidth=right-left+6;dialogueHeight=top-bottom+3;
+                dialogueFocusReady=true;
+            }
+            focus=dialogueFocus;zoom=Mathf.Max(5.8f,Mathf.Max(dialogueWidth/(2*Mathf.Max(.3f,game.View.aspect)),dialogueHeight*.5f));return true;
+        }
+        void DrawSpeech()
+        {
+            if(speech==null)speech=new AncientSpeechBubble();
+            var line=lines[lineIndex];Vector2 head,feet;float width;int kind;SpeakerAnchor(line.speaker,out head,out feet,out width,out kind);
+            if(bubbleNameLine!=lineIndex||bubbleNameKind!=kind)
+            {bubbleNameLine=lineIndex;bubbleNameKind=kind;bubbleName=DisplaySpeaker(line.speaker)+(kind==1?" · 무전":kind==2?" · 기록":"");}
+            var frame=speech.Measure(game,bubbleName,line.text,pageStart,head,feet,width,true,kind==1);
+            if(!pageReady||Mathf.Abs(pageWidth-frame.Body.width)>.5f||Mathf.Abs(pageHeight-frame.Body.height)>.5f)
+            {pageEnd=speech.PageEnd(line.text,pageStart,frame);pageWidth=frame.Body.width;pageHeight=frame.Body.height;pageReady=true;visibleChars=-1;}
+            int chars=Mathf.Clamp(showFull?pageEnd:revealedChars,pageStart,pageEnd);
+            if(chars!=visibleChars){visibleChars=chars;shownText=line.text.Substring(pageStart,chars-pageStart);}
+            Color accent=IsHero(line.speaker)?new Color(.08f,.5f,.65f):kind==1?new Color(.1f,.4f,.5f):new Color(.7f,.44f,.12f);
+            if(speech.Draw(frame,bubbleName,shownText,accent,showFull||revealedChars>=pageEnd,game.GameplayInputReady))Advance();
+        }
+        void OnDestroy(){if(speech!=null)speech.Dispose();ClearChaseBike(false);}
         void OnGUI()
         {
-            if(!game||game.MainMenu||!game.HasSession||(game.Journal&&game.Journal.Open)||(game.Finale&&(game.Finale.Active||game.Finale.Finished)))return;
+            if(!game||!game.hero||!game.View||game.MainMenu||!game.HasSession||(game.Journal&&game.Journal.Open)||(game.Finale&&(game.Finale.Active||game.Finale.Finished)))return;
             if(!LiftBusy&&!DialogueOpen&&Event.current.type!=EventType.Repaint)return;
+            if(DialogueOpen&&!choiceOpen){DrawSpeech();return;}
             RefreshHudLabels();var old=GUI.matrix;var color=GUI.color;int depth=GUI.depth;
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-50;
             float w=Screen.width/scale,h=Screen.height/scale;
@@ -327,18 +405,6 @@ namespace Plugin.AncientCivilization
                     GUI.Label(new Rect(28,200,285,42),cachedResidence,small);
                     if(CurrentFloor<4&&Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
                 }
-            }
-            else
-            {
-                AncientHUD.Panel(new Rect(0,0,w,h),new Color(.005f,.015f,.025f,.35f));
-                float y=h-232;AncientHUD.Panel(new Rect(28,y,w-56,210),new Color(.015f,.025f,.045f,.98f));
-                var line=lines[lineIndex];Portrait(line.portrait,new Rect(38,y-72,180,268));
-                GUI.color=new Color(1,.8f,.16f);GUI.DrawTexture(new Rect(232,y+22,3,154),Texture2D.whiteTexture);GUI.color=Color.white;
-                GUI.Label(new Rect(255,y+18,w-320,38),line.speaker,nameStyle);
-                int chars=showFull?line.text.Length:revealedChars;
-                if(chars!=visibleChars){visibleChars=chars;shownText=line.text.Substring(0,chars);}
-                GUI.Label(new Rect(255,y+65,w-320,112),shownText,body);
-                if(GUI.Button(new Rect(w-250,y+170,205,28),"Space / 다음",nextButton))Advance();
             }
             GUI.matrix=old;GUI.color=color;GUI.depth=depth;
         }

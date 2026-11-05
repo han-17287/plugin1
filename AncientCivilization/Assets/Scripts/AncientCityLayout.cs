@@ -17,6 +17,8 @@ namespace Plugin.AncientCivilization
         public static float Entry(int floor){return floor==0?115:Left(floor)+4;}
         public static float ArenaLeft(int floor){return floor==1?258:Left(floor)+106;}
         public static float ArenaRight(int floor){return floor==1?280:Left(floor)+124;}
+        public static AncientTraversalLayout.Ledge StreetRoad(int floor)
+        {floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));return new AncientTraversalLayout.Ledge(Left(floor),Right(floor),0);}
         public static AncientTraversalLayout.Ledge[] Route(int floor)
         {
             float x=Left(floor);

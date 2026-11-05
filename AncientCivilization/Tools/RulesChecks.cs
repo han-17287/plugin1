@@ -19,9 +19,9 @@ class RulesChecks
         Check(!AncientRules.TutorialReady(1,3),"Patrol requires Ctrl running");
         Check(AncientRules.TutorialReady(1,7),"All patrol tasks complete");
         Check(!AncientRules.TutorialReady(2,7),"Patrol tasks cannot skip equipment tutorial");
-        Check(!AncientRules.TutorialReady(2,8),"Wire alone cannot skip motorcycle task");
+        Check(AncientRules.TutorialReady(2,8),"Wire completes equipment tutorial without a pre-chase motorcycle");
         Check(!AncientRules.TutorialReady(2,16),"Motorcycle alone cannot skip wire task");
-        Check(AncientRules.TutorialReady(2,24),"Equipment tasks complete");
+        Check(AncientRules.TutorialReady(2,24),"Older equipment flags still complete the wire tutorial");
         Check(!AncientRules.TutorialReady(3,192),"Blade drill requires destroying a projectile");
         Check(!AncientRules.TutorialReady(3,160),"Blade drill requires collecting particles");
         Check(!AncientRules.TutorialReady(3,96),"Blade drill requires firing a laser");
@@ -159,6 +159,11 @@ class RulesChecks
         Check(AncientCityLayout.CanLift(9,3000,14,3,0),"Unlocked city floors can return home");
         Check(!AncientCityLayout.CanLift(9,3000,14,2,2),"Current destination remains disabled");
         Check(!AncientCityLayout.CanLift(9,3000,14,-1,0),"Invalid floor save is rejected by travel rules");
+        for(int floor=1;floor<=4;floor++)
+        {
+            var street=AncientCityLayout.StreetRoad(floor);
+            Check(street.left<=AncientCityLayout.Entry(floor)&&street.right>=AncientCityLayout.ArenaRight(floor)&&street.top==0,"Ordinary city streets provide continuous ground from the entrance through the boss approach");
+        }
         for(int floor=2;floor<=4;floor++)
         {
             var route=AncientCityLayout.Route(floor);
@@ -345,8 +350,8 @@ class RulesChecks
             if(citizen.Floor==0)supported=Math.Abs(citizen.Y-(citizen.X>=43&&citizen.X<=58?1:0))<.01f;
             else
             {
-                var route=citizen.Floor==1?AncientTraversalLayout.MainRoute:AncientCityLayout.Route(citizen.Floor);
-                foreach(var ledge in route)if(citizen.X>=ledge.left&&citizen.X<=ledge.right&&Math.Abs(citizen.Y-ledge.top)<.01f)supported=true;
+                var street=AncientCityLayout.StreetRoad(citizen.Floor);
+                supported=citizen.X>=street.left&&citizen.X<=street.right&&Math.Abs(citizen.Y-street.top)<.01f;
             }
             Check(supported,"Every resident stands on an actual safe city ledge");
         }

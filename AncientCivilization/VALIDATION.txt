@@ -1,8 +1,21 @@
-PASS: 3211 combat and quest rule checks
+v0.15.0 source validation checkpoint — 2026-11-05 UTC
+PASS: 3215 combat and quest rule checks
 PASS: 76 sniper rule checks
 PASS: 596 swing presentation rule checks
 PASS: 432 blade timing, sequence and trail checks
-PASS: 23010 expanded-field layout checks
+PASS: 23397 expanded-field layout checks
+PASS: 3997 speech-bubble geometry checks
+PASS: 3179 straight-wire movement and collision-budget checks
+TOTAL: 34892 standalone checks; these are not Unity Play Mode tests.
+PASS: supplemental runtime compatibility compilation with warnings as errors
+PASS: supplemental Editor fixture compatibility compilation with warnings as errors
+LIMIT: supplemental compilation uses Unity 2021 reference DLLs and temporary linearVelocity-to-velocity aliases. Minimal Editor stubs check fixture signatures only. This does not verify Unity 6000.6.7f1 API, import, rendering or execution.
+PASS: unchanged saved blade/wire reference hashes and byte-identical MenuBlade copy
+PASS: separate Video/Officer_Blade_Concept.mp4 full FFmpeg decode, H.264/AAC 1920x1080 30fps 12.000 seconds. Published MP4 HTTP200 and SHA256 match.
+NOT RUN: actual Unity 6000.6.7f1 compilation/import/shaders/Play Mode, physics collisions, visual speech pagination, full playthrough, FPS or player build.
+No claim of nine-hour measured playtime, completion percentage or commercial-release quality.
+
+Source/asset checks follow:
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
 PASS: metadata coverage Editor
@@ -45,6 +58,8 @@ PASS: metadata target Assets/Scripts/AncientPointer.cs.meta
 PASS: 32-character GUID AncientPointer.cs.meta
 PASS: metadata target Assets/Scripts/AncientBossController.cs.meta
 PASS: 32-character GUID AncientBossController.cs.meta
+PASS: metadata target Assets/Scripts/AncientZipRules.cs.meta
+PASS: 32-character GUID AncientZipRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientEvidenceQuestions.cs.meta
 PASS: 32-character GUID AncientEvidenceQuestions.cs.meta
 PASS: metadata target Assets/Scripts/SniperEquipmentArt.cs.meta
@@ -59,11 +74,13 @@ PASS: 32-character GUID AncientSwingMotion.cs.meta
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
 PASS: metadata coverage AncientCityLayout.cs
+PASS: metadata coverage AncientSpeechLayout.cs
 PASS: metadata target Assets/Scripts/AncientCampaignRules.cs.meta
 PASS: 32-character GUID AncientCampaignRules.cs.meta
 PASS: metadata coverage AncientSwingAtlas.cs
 PASS: metadata coverage AncientFrameRules.cs
 PASS: metadata coverage AncientSwingMotion.cs
+PASS: metadata coverage AncientRadioAtlas.cs
 PASS: metadata target Assets/Scripts/AncientPerformance.cs.meta
 PASS: 32-character GUID AncientPerformance.cs.meta
 PASS: metadata coverage AncientFieldExpansion.cs
@@ -152,6 +169,7 @@ PASS: 32-character GUID AncientFinaleRules.cs.meta
 PASS: metadata coverage AncientMoteVisuals.cs
 PASS: metadata coverage AncientBeamVisuals.cs
 PASS: metadata coverage AncientPixels.cs
+PASS: metadata coverage AncientSpeechBubble.cs
 PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
 PASS: 32-character GUID AncientPixels.cs.meta
 PASS: metadata coverage AncientCitizenArt.cs
@@ -178,6 +196,8 @@ PASS: metadata target Assets/Scripts/AncientProgressRules.cs.meta
 PASS: 32-character GUID AncientProgressRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientBackdropAtlas.cs.meta
 PASS: 32-character GUID AncientBackdropAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientSpeechBubble.cs.meta
+PASS: 32-character GUID AncientSpeechBubble.cs.meta
 PASS: metadata coverage AncientPerformance.cs
 PASS: metadata coverage AncientBackdropAtlas.cs
 PASS: metadata coverage AncientEvidenceQuestions.cs
@@ -206,6 +226,10 @@ PASS: metadata coverage AncientHUD.cs
 PASS: metadata coverage SniperEquipmentArt.cs
 PASS: metadata coverage AncientFieldLayout.cs
 PASS: metadata coverage AncientStory.cs
+PASS: metadata target Assets/Scripts/AncientRadioAtlas.cs.meta
+PASS: 32-character GUID AncientRadioAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientSpeechLayout.cs.meta
+PASS: 32-character GUID AncientSpeechLayout.cs.meta
 PASS: metadata coverage AncientBladeRules.cs
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
 PASS: 32-character GUID AncientArt.cs.meta
@@ -213,6 +237,7 @@ PASS: metadata coverage AncientMotorcycle.cs
 PASS: metadata target Assets/Scripts/AncientJournal.cs.meta
 PASS: 32-character GUID AncientJournal.cs.meta
 PASS: metadata coverage AncientGame.cs
+PASS: metadata coverage AncientZipRules.cs
 PASS: metadata coverage AncientHudText.cs
 PASS: metadata target Assets/Scripts/AncientGameFeel.cs.meta
 PASS: 32-character GUID AncientGameFeel.cs.meta
@@ -231,6 +256,7 @@ PASS: metadata target Assets/Resources/Art/BladeHorizontal.png.meta
 PASS: 32-character GUID BladeHorizontal.png.meta
 PASS: metadata target Assets/Resources/Art/Citizens3.png.meta
 PASS: 32-character GUID Citizens3.png.meta
+PASS: metadata coverage MenuBlade.png
 PASS: metadata coverage BladeVertical.png
 PASS: metadata target Assets/Resources/Art/Scrap.png.meta
 PASS: 32-character GUID Scrap.png.meta
@@ -266,6 +292,7 @@ PASS: 32-character GUID Hero.png.meta
 PASS: metadata target Assets/Resources/Art/Enemies.png.meta
 PASS: 32-character GUID Enemies.png.meta
 PASS: metadata coverage Scrap.png
+PASS: metadata coverage DialogueRadio.png
 PASS: metadata coverage Boss4.png
 PASS: metadata coverage Rooftop.png
 PASS: metadata target Assets/Resources/Art/HeroEmitterBody.png.meta
@@ -282,12 +309,16 @@ PASS: metadata target Assets/Resources/Art/CitizensWalk.png.meta
 PASS: 32-character GUID CitizensWalk.png.meta
 PASS: metadata target Assets/Resources/Art/Rooftop.png.meta
 PASS: 32-character GUID Rooftop.png.meta
+PASS: metadata target Assets/Resources/Art/MenuBlade.png.meta
+PASS: 32-character GUID MenuBlade.png.meta
 PASS: metadata target Assets/Resources/Art/SniperEquipment.png.meta
 PASS: 32-character GUID SniperEquipment.png.meta
 PASS: metadata coverage Hero.png
 PASS: metadata target Assets/Resources/Art/BladeVertical.png.meta
 PASS: 32-character GUID BladeVertical.png.meta
 PASS: metadata coverage Actions.png
+PASS: metadata target Assets/Resources/Art/DialogueRadio.png.meta
+PASS: 32-character GUID DialogueRadio.png.meta
 PASS: metadata coverage Enemies.png
 PASS: metadata coverage Motorcycle.png
 PASS: metadata target Assets/Resources/Art/Boss1.png.meta
@@ -1195,9 +1226,11 @@ PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientWireParticleBatch.cs
 PASS: C# syntax AncientBossRules.cs
 PASS: C# syntax AncientCityLayout.cs
+PASS: C# syntax AncientSpeechLayout.cs
 PASS: C# syntax AncientSwingAtlas.cs
 PASS: C# syntax AncientFrameRules.cs
 PASS: C# syntax AncientSwingMotion.cs
+PASS: C# syntax AncientRadioAtlas.cs
 PASS: C# syntax AncientFieldExpansion.cs
 PASS: C# syntax AncientCampaignRules.cs
 PASS: C# syntax AncientSniperGround.cs
@@ -1226,6 +1259,7 @@ PASS: C# syntax AncientAudio.cs
 PASS: C# syntax AncientMoteVisuals.cs
 PASS: C# syntax AncientBeamVisuals.cs
 PASS: C# syntax AncientPixels.cs
+PASS: C# syntax AncientSpeechBubble.cs
 PASS: C# syntax AncientCitizenArt.cs
 PASS: C# syntax AncientExploration.cs
 PASS: C# syntax AncientBootIntro.cs
@@ -1251,6 +1285,7 @@ PASS: C# syntax AncientStory.cs
 PASS: C# syntax AncientBladeRules.cs
 PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
+PASS: C# syntax AncientZipRules.cs
 PASS: C# syntax AncientHudText.cs
 PASS: C# syntax AncientBladeAtlas.cs
 PASS: C# syntax AncientWorldBatch.cs
@@ -1262,12 +1297,5 @@ PASS: first-run script withholds friendship reveal: 명아
 PASS: first-run script withholds friendship reveal: 너였어?
 PASS: first-run script withholds friendship reveal: 이제야 알아보네
 PASS: five sparse Joker mentions across city resident dialogue
-PASS: protagonist dialogue consistently uses Baek Myeong
+PASS: protagonist script retains a consistent canonical speaker
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
-PASS: supplemental runtime C# type check with Unity 2021 references and temporary linearVelocity-to-velocity alias
-PASS: supplemental combined runtime + Editor smoke compile using minimal Editor API stubs (not actual Editor API verification)
-PASS: field HUD numerical rectangle bounds and guide priorities at 58 viewport sizes; no native font/render verification
-PASS: backdrop horizontal/vertical overscan checks in 28 camera cases including square and portrait arenas
-PASS: Canvas atlas/palette review; original PNG sources preserved, five sealed urban backdrops and forty-eight blade poses
-PASS: preserved high-resolution weapon reference hashes
-NOT RUN: actual Unity 6000.6.7f1 Editor/API/Play/player build, shader import, physical input, FPS, complete gameplay or nine-hour playtime

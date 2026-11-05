@@ -6,10 +6,10 @@ namespace Plugin.AncientCivilization
     {
         static void B(AncientGame game,float x,float y,float w,float h,Color c,int order=-5)
         {game.StaticBox("District field furnishing",new Vector2(x,y),new Vector2(w,h),c,order);}
-        public static void Build(AncientGame game,int floor,float left,int variant)
+        public static void Build(AncientGame game,int floor,float left,int variant,float span=144)
         {
             Color dark=new Color(.04f,.08f,.11f),steel=new Color(.2f,.3f,.34f),white=new Color(.7f,.77f,.76f);
-            for(int i=0;i<7;i++)
+            for(int i=0;i<Mathf.Max(1,Mathf.FloorToInt((span-24)/17)+1);i++)
             {
                 float x=left+12+i*17;
                 if(floor==0)

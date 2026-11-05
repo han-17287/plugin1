@@ -10,6 +10,8 @@ namespace Plugin.AncientCivilization
         readonly SpriteRenderer[] boardingCrew=new SpriteRenderer[3];LineRenderer supportShot,blast;
         GUIStyle label,title,button;string caption="";float captionAt;string visibleCaption="";int visibleLetters=-1;
         readonly List<AncientEnemy> crew=new List<AncientEnemy>();
+        readonly List<AncientParkedBike> chaseBikes=new List<AncientParkedBike>();
+        AncientSpeechBubble speechBubble;
         bool fired;
         public bool Active {get{return phase>=2&&phase<=4;}}
         public bool Cinematic {get{return phase>=3;}}
@@ -38,12 +40,6 @@ namespace Plugin.AncientCivilization
                 game.StaticBox("Cargo shaft district wall",new Vector2((x+end)/2,(y+last)/2+4.8f),new Vector2(end-x,10),tint,-9);
             }
             game.Platform(AncientFinaleRules.Finish,AncientFinaleRules.Finish+22,0);
-            for(int i=0;i<5;i++)
-            {
-                float x=AncientFinaleRules.Checkpoint(i);
-                var bike=new GameObject("Cargo-road parked motorcycle").AddComponent<AncientParkedBike>();
-                bike.Initialize(new Vector2(x+1,AncientFinaleRules.Road(x+1)+.84f));game.parkedBikes.Add(bike);
-            }
             var desk=game.Box("Empty chairman desk",new Vector2(742,1),new Vector2(2.8f,1.1f),new Color(.22f,.15f,.1f),3);
             desk.transform.SetParent(transform,true);
             notebook=game.Box("Chairman recovery notebook",new Vector2(742,1.68f),new Vector2(.48f,.15f),new Color(.9f,.8f,.5f),5).GetComponent<SpriteRenderer>();notebook.transform.SetParent(transform,true);
@@ -83,11 +79,33 @@ namespace Plugin.AncientCivilization
             if(truck)Destroy(truck.gameObject);truck=null;
             foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();
         }
+        void PrepareChaseBikes()
+        {
+            // TravelTo has already released the currently mounted bike before any reset.
+            for(int i=0;i<5;i++)
+            {
+                if(i<chaseBikes.Count&&chaseBikes[i]){chaseBikes[i].ResetAtSpawn();continue;}
+                float x=AncientFinaleRules.Checkpoint(i);
+                var bike=new GameObject("Cargo-road parked motorcycle").AddComponent<AncientParkedBike>();
+                bike.Initialize(new Vector2(x+1,AncientFinaleRules.Road(x+1)+.84f));
+                if(i<chaseBikes.Count)chaseBikes[i]=bike;else chaseBikes.Add(bike);
+                game.parkedBikes.Add(bike);
+            }
+        }
+        void ClearChaseBikes()
+        {
+            foreach(var bike in chaseBikes)
+            {
+                if(game)game.parkedBikes.Remove(bike);
+                if(bike){bike.gameObject.SetActive(false);Destroy(bike.gameObject);}
+            }
+            chaseBikes.Clear();
+        }
         void BeginChase()
         {
             phase=2;game.won=false;fired=false;ShowBoarding(false);supportShot.enabled=blast.enabled=false;ClearTruck();
             float start=AncientFinaleRules.Checkpoint(zone);
-            game.hero.TravelTo(new Vector2(start,AncientFinaleRules.Road(start)+1.3f));game.City.OnEnterFloor();
+            game.hero.TravelTo(new Vector2(start,AncientFinaleRules.Road(start)+1.3f));PrepareChaseBikes();game.City.OnEnterFloor();
             truck=new GameObject("Chairman core transport truck").AddComponent<AncientFinalTruck>();truck.Initialize(game,this,start+13);
             var enemy=new GameObject("Truck special-operations guard").AddComponent<AncientEnemy>();enemy.Initialize(1);
             enemy.ConfigureDistrict(4,false);enemy.transform.SetParent(truck.transform,false);enemy.transform.localPosition=new Vector2(.7f,2.5f);
@@ -95,12 +113,12 @@ namespace Plugin.AncientCivilization
             game.Notice("최상층 → 최하층 추격 / 배치된 오토바이는 E · 점프와 와이어로 트럭 지붕에 접근",5);
         }
         public bool Retry()
-        {if(phase!=2)return false;foreach(var bike in game.parkedBikes)if(bike)bike.ResetAtSpawn();BeginChase();return true;}
+        {if(phase!=2)return false;BeginChase();return true;}
         public void HitTruck(Vector2 start,Vector2 end,float damage)
         {if(truck&&phase==2)truck.HitBeam(start,end,damage);}
         public void TruckArrived()
         {
-            phase=3;phaseAt=Time.unscaledTime;game.hero.TravelTo((Vector2)truck.transform.position+new Vector2(.7f,3.65f));
+            phase=3;phaseAt=Time.unscaledTime;game.hero.TravelTo((Vector2)truck.transform.position+new Vector2(.7f,3.65f));ClearChaseBikes();
             game.hero.AimWeaponAt(truck.transform.position+Vector3.right*2);game.hero.CinematicPose(false,1);
             var threat=new GameObject("Cab special-operations ambush").AddComponent<AncientEnemy>();threat.Initialize(1);threat.ConfigureDistrict(4,false);
             threat.transform.SetParent(truck.transform,false);threat.transform.localPosition=new Vector2(1.6f,2.5f);threat.FaceToward(game.hero.transform.position.x);
@@ -167,10 +185,30 @@ namespace Plugin.AncientCivilization
         }
         void ReturnToCity()
         {
-            ClearTruck();foreach(var bike in game.parkedBikes)if(bike)bike.ResetAtSpawn();
+            ClearTruck();
             phase=0;countdown=60;zone=0;game.won=false;game.hero.hp=game.hero.MaxHP;
-            game.hero.TravelTo(new Vector2(AncientCityLayout.Entry(4),1.3f));game.SetLiftCheckpoint(4);game.City.OnEnterFloor();
+            game.hero.TravelTo(new Vector2(AncientCityLayout.Entry(4),1.3f));ClearChaseBikes();
+            foreach(var bike in game.parkedBikes)if(bike)bike.ResetAtSpawn();
+            game.SetLiftCheckpoint(4);game.City.OnEnterFloor();
             Persist();game.BlockGameplayInput();game.SnapCameraToHero();Time.timeScale=1;
+        }
+        void DrawCaptionBubble()
+        {
+            if(speechBubble==null)speechBubble=new AncientSpeechBubble();
+            bool threat=caption=="움직이지 마."&&truck,radio=caption=="엎드려!";
+            Vector2 head,feet;string speaker;Color accent;
+            if(threat)
+            {
+                head=(Vector2)truck.transform.position+new Vector2(1.6f,4.6f);feet=(Vector2)truck.transform.position+new Vector2(1.6f,2.5f);
+                speaker="특수부대원";accent=AncientGame.Orange;
+            }
+            else
+            {
+                head=(Vector2)game.hero.transform.position+Vector2.up*1.15f;feet=(Vector2)game.hero.transform.position-Vector2.up*1.05f;
+                speaker=radio?"저격수 · 무전":"백 경위";accent=AncientGame.Cyan;
+            }
+            var frame=speechBubble.Measure(game,speaker,caption,0,head,feet,threat?1:.9f,interactive:false,radio:radio);
+            speechBubble.Draw(frame,speaker,visibleCaption,accent,complete:true,ready:false,displayDepth:-70);
         }
         void OnGUI()
         {
@@ -195,8 +233,7 @@ namespace Plugin.AncientCivilization
                 if(phase==4){GUI.color=new Color(1,1,1,Mathf.Clamp01(1-age*2));GUI.DrawTexture(new Rect(0,0,w,h),Texture2D.whiteTexture);}
                 int chars=Mathf.Min(caption.Length,Mathf.FloorToInt((Time.unscaledTime-captionAt)/.045f));
                 if(chars!=visibleLetters){visibleLetters=chars;visibleCaption=caption.Substring(0,chars);}
-                GUI.color=Color.white;AncientHUD.Panel(new Rect(0,h-105,w,105),new Color(.01f,.02f,.035f,.92f));
-                GUI.Label(new Rect(40,h-83,w-80,60),visibleCaption,title);
+                GUI.color=Color.white;DrawCaptionBubble();
                 if(phase==4){GUI.color=new Color(0,0,0,Mathf.Clamp01((age-.8f)/1.1f));GUI.DrawTexture(new Rect(0,0,w,h),Texture2D.whiteTexture);}
             }
             if(phase==5)
@@ -209,7 +246,8 @@ namespace Plugin.AncientCivilization
             }
             GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;
         }
-        void OnDestroy(){if(supportShot)Destroy(supportShot.gameObject);if(blast)Destroy(blast.gameObject);}
+        void OnDestroy()
+        {ClearChaseBikes();if(speechBubble!=null)speechBubble.Dispose();if(supportShot)Destroy(supportShot.gameObject);if(blast)Destroy(blast.gameObject);}
     }
     public sealed class AncientFinalTruck : MonoBehaviour
     {

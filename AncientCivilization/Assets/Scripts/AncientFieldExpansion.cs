@@ -6,7 +6,7 @@ namespace Plugin.AncientCivilization
     // Coordinates are local to the full field room; existing city/boss coordinates stay unchanged.
     public static class AncientFieldExpansion
     {
-        public const int SectorCount=3,SectorSpan=144,Width=432,Stride=464,RouteCount=27;
+        public const int SectorCount=3,SectorSpan=208,Width=SectorCount*SectorSpan,Stride=Width+32,RouteCount=27;
         public const int EnemiesPerSector=2,EnemyMask=(1<<(SectorCount*EnemiesPerSector))-1;
         public static readonly string[][] Names={
             new[]{"야간 하역장","분리 계량실","밀봉 출고로"},
@@ -40,17 +40,23 @@ namespace Plugin.AncientCivilization
             return Sector((int)(localX/SectorSpan));
         }
         public static float EntranceOf(int sector){return SectorStart(sector)+6;}
-        public static float ExitOf(int sector){return SectorStart(sector)+132;}
+        public static float ExitOf(int sector){return SectorStart(sector)+SectorSpan-12;}
+        public static bool IsJumpSector(int mission,int sector)
+        {return sector==1&&(mission==3||mission==6||mission==9||mission==15||mission==18);}
+        public static AncientTraversalLayout.Ledge GroundRoad(int sector)
+        {float start=SectorStart(sector);return new AncientTraversalLayout.Ledge(start,start+SectorSpan,0);}
         public static AncientTraversalLayout.Ledge EntrancePlatform(int sector)
         {float start=SectorStart(sector);return new AncientTraversalLayout.Ledge(start,start+14,0);}
         public static AncientTraversalLayout.Ledge TerminalPlatform(int sector)
-        {float start=SectorStart(sector);return new AncientTraversalLayout.Ledge(start+114,start+SectorSpan,0);}
+        {float start=SectorStart(sector);return new AncientTraversalLayout.Ledge(start+SectorSpan-28,start+SectorSpan,0);}
         public static AncientTraversalLayout.Ledge Segment(int mission,int sector,int index)
         {
             int section=Sector(sector),row=(Math.Max(0,Math.Min(19,mission))+section*7)%20;
             var ledge=AncientFieldLayout.Segment(row,index);
-            float offset=SectorStart(section),rise=section*.15f;
-            return new AncientTraversalLayout.Ledge(offset+ledge.left,offset+ledge.right,ledge.top+rise);
+            int slot=Math.Max(0,Math.Min(8,index));float offset=SectorStart(section);
+            float variation=ledge.left-(16+slot*11.1f),left=offset+16+slot*18.4f+variation*.35f;
+            float width=15+(ledge.right-ledge.left-8)*.8f;
+            return new AncientTraversalLayout.Ledge(left,left+width,IsJumpSector(mission,section)?ledge.top+section*.15f:0);
         }
         // Checkpoint 1 needs the first section objective; checkpoint 2 needs both earlier objectives.
         // A saved location can move a retry backward, but cannot grant unearned progress.

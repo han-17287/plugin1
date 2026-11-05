@@ -6,9 +6,9 @@ namespace Plugin.AncientCivilization
     {
         AncientGame game;int started;bool relayOpen,recordTaken;GUIStyle label;
         public int CompleteMask {get;private set;}
-        readonly Vector2[] terminals={Vector2.zero,new Vector2(154.5f,2.2f),new Vector2(344,1.2f),new Vector2(548.5f,3.2f)};
+        readonly Vector2[] terminals={Vector2.zero,new Vector2(154.5f,0),new Vector2(344,0),new Vector2(548.5f,0)};
         readonly SpriteRenderer[] displays=new SpriteRenderer[4];
-        SpriteRenderer relay,record;readonly Vector2 relayPoint=new Vector2(185,6),recordPoint=new Vector2(333.5f,6.9f);
+        SpriteRenderer relay,record;readonly Vector2 relayPoint=new Vector2(185,1.4f),recordPoint=new Vector2(333.5f,1.3f);
         public void Initialize(AncientGame owner)
         {
             game=owner;started=AncientGame.Saved("caseStarted");CompleteMask=AncientGame.Saved("caseComplete");
@@ -65,12 +65,12 @@ namespace Plugin.AncientCivilization
             if(floor==1)
             {
                 if(relayOpen){Complete(1);game.Story.FieldDialogue("진료소 기록","예비 전력 복구 확인. 정기 배정 물량은 이미 줄어 있었다. 도난 사건 이전에도 코어가 도착하지 않았다.");}
-                else game.Story.FieldDialogue("통신관","진료소 주배전망과 별개인 예비선이 끊겨 있다. 동쪽 공중 배전함의 파손된 절연판을 블레이드로 제거해 봐라. 복구되면 배정 기록을 받을 수 있다.");
+                else game.Story.FieldDialogue("통신관","진료소 주배전망과 별개인 예비선이 끊겨 있다. 동쪽 배전함의 파손된 절연판을 블레이드로 제거해 봐라. 복구되면 배정 기록을 받을 수 있다.");
             }
             else if(floor==2)
             {
                 if(recordTaken){Complete(2);game.Story.FieldDialogue("통신관","회수한 기록을 사본과 대조했다. 수량은 같지만 수령처 항목만 나중에 비워졌다. C-00 승인 뒤의 수정이다.");}
-                else game.Story.FieldDialogue("통신관","서쪽 보안 셔터 위 정비 선반에 운송장 원본 캐시가 남아 있다. 회수해 오면 내가 보관한 사본과 대조하겠다.");
+                else game.Story.FieldDialogue("통신관","서쪽 정비 보관함에 운송장 원본 캐시가 남아 있다. 회수해 오면 내가 보관한 사본과 대조하겠다.");
             }
             else
             {Complete(3);game.Story.FieldDialogue("보관된 녹음","재배치 명단의 코어 일련번호와 하층 배정 번호가 같다. 이건 상층 주민에게 배급된 물량이 아니다. 최상층 직할 운송으로 묶여 있다.");}
@@ -89,8 +89,8 @@ namespace Plugin.AncientCivilization
         {
             if(Done(floor))return "현장 기록 보관 완료 / E: 확인";
             if(!Started(floor))return "E: 현장 단말 조사 (선택)";
-            if(floor==1)return relayOpen?"E: 배정 기록 확인":"동쪽 공중 절연판을 블레이드로 제거";
-            if(floor==2)return recordTaken?"E: 원본과 사본 대조":"서쪽 셔터 위 원본 기록 회수";
+            if(floor==1)return relayOpen?"E: 배정 기록 확인":"동쪽 절연판을 블레이드로 제거";
+            if(floor==2)return recordTaken?"E: 원본과 사본 대조":"서쪽 보관함의 원본 기록 회수";
             return "단말 주변 경비 제압 → E: 기록 확보";
         }
         void OnGUI()

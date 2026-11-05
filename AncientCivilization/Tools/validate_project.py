@@ -302,7 +302,7 @@ def main():
         check(spoiler not in runtime, 'first-run script withholds friendship reveal: ' + spoiler)
     campaign = (ROOT / 'Assets/Scripts/AncientCampaignData.cs').read_text()
     check(campaign.count('조커') == 5, 'five sparse Joker mentions across city resident dialogue')
-    check('new Line("치안경찰"' not in runtime, 'protagonist dialogue consistently uses Baek Myeong')
+    check('new Line("치안경찰"' not in runtime, 'protagonist script retains a consistent canonical speaker')
     results.append('NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build')
     print('\n'.join(results))
 

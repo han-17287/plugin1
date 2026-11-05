@@ -99,10 +99,22 @@ namespace Plugin.AncientCivilization.EditorChecks
         {
             var advance=typeof(AncientStory).GetMethod("Advance",PrivateInstance);
             var guard=typeof(AncientGame).GetField("inputReadyFrame",PrivateInstance);
+            var script=(System.Collections.IList)typeof(AncientStory).GetField("lines",PrivateInstance).GetValue(story);
+            var lineIndex=typeof(AncientStory).GetField("lineIndex",PrivateInstance);
+            var pageReady=typeof(AncientStory).GetField("pageReady",PrivateInstance);
+            var pageStart=typeof(AncientStory).GetField("pageStart",PrivateInstance);
+            var pageEnd=typeof(AncientStory).GetField("pageEnd",PrivateInstance);
             // This fixture deliberately skips dialogue to test the report callback, not physical input.
-            // Production Advance now rejects the same-frame input that opened a conversation.
+            // Pagination normally becomes ready in OnGUI. Prepare the complete current line here;
+            // production Advance still owns reveal/advance and rejects the opening input frame.
             for(int i=0;i<32&&story.DialogueOpen;i++)
-            {guard.SetValue(AncientGame.Instance,Time.frameCount-1);advance.Invoke(story,null);}
+            {
+                if(script.Count==0)throw new InvalidOperationException("Report smoke encountered a choice instead of a scripted dialogue.");
+                object line=script[(int)lineIndex.GetValue(story)];
+                string text=(string)line.GetType().GetField("text").GetValue(line);
+                pageStart.SetValue(story,0);pageEnd.SetValue(story,text.Length);pageReady.SetValue(story,true);
+                guard.SetValue(AncientGame.Instance,Time.frameCount-1);advance.Invoke(story,null);
+            }
             Assert(!story.DialogueOpen,"QA dialogue callback can finish without ordinary player input");
         }
         static void MoveToSector(AncientGame game,int sector)
@@ -131,13 +143,13 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==1)
                 {
                     Assert(campaign.CurrentRoom==0&&campaign.CurrentSector==0,"Case 0 begins in sector 1");
-                    Assert(campaign.CameraRight-campaign.CameraLeft>400,"Field camera spans the complete expanded room");
+                    Assert(campaign.CameraRight-campaign.CameraLeft>AncientCampaignRules.RoomWidth-20,"Field camera spans the complete expanded room");
                     Assert(LiveEnemies(game)==2,"Exactly two criminals are active in the first sector");
                     Physics2D.SyncTransforms();
                     for(int sector=0;sector<3;sector++)
                     {
                         float left=AncientCampaignRules.Left(0)+AncientFieldExpansion.SectorStart(sector);
-                        Assert(Physics2D.OverlapPoint(new Vector2(left+132,-.1f),1<<8),"Sector "+sector+" has its broad terminal collision platform");
+                        Assert(Physics2D.OverlapPoint(new Vector2(left+AncientFieldExpansion.SectorSpan-12,-.1f),1<<8),"Sector "+sector+" has its broad terminal collision platform");
                         Assert(Physics2D.Raycast(new Vector2(left+75,9),Vector2.up,2,1<<8),"Sector "+sector+" has a wire-capable solid ceiling");
                     }
                     Call(campaign,"Mark",2);Assert(Tasks(campaign)==0,"A future objective cannot be granted before its prerequisites");
@@ -181,7 +193,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(campaign.CurrentSector==2&&game.hero.transform.position.y>0,"A field fall recovers to the earned final entrance");
                     Assert(campaign.DefeatedMask==15&&LiveEnemies(game)==2,"Fall recovery does not clear or duplicate living threats");
                     DefeatCurrent(game);Call(campaign,"Mark",2);
-                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(0)+426,1.3f));
+                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(0)+AncientCampaignRules.RoomWidth-6,1.3f));
                     Assert(campaign.TryInteract()&&(campaign.CompletedMask&1)!=0,"All three objectives and all six defeats allow the exit report");
                     CloseDialogue(game.Story);SetStage(8);return;
                 }
@@ -203,7 +215,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(Tasks(campaign)==3,"Refill does not grant the laser objective");
                     Vector2 receiver=Point("NodePoint",1,2);campaign.OnLaser(receiver-Vector2.right*3,receiver+Vector2.right*3);
                     Assert(Tasks(campaign)==7,"A visible ray through the final receiver completes the power objective");
-                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(1)+426,1.3f));campaign.TryInteract();
+                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(1)+AncientCampaignRules.RoomWidth-6,1.3f));campaign.TryInteract();
                     Assert(campaign.Active&&(campaign.CompletedMask&2)==0,"The exit still refuses a live final encounter");
                     DefeatCurrent(game);campaign.TryInteract();CloseDialogue(game.Story);Call(campaign,"Begin",2);SetStage(12);return;
                 }
@@ -211,7 +223,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     Assert(campaign.CurrentRoom==2,"The escort case starts after the power case");Physics2D.SyncTransforms();
                     float left=AncientCampaignRules.Left(2);
-                    for(int i=1;i<43;i++)Assert(Physics2D.OverlapPoint(new Vector2(left+i*10,-.1f),1<<8),"Escort ground remains continuous at local x="+(i*10));
+                    for(int i=1;i<AncientCampaignRules.RoomWidth/10;i++)Assert(Physics2D.OverlapPoint(new Vector2(left+i*10,-.1f),1<<8),"Escort ground remains continuous at local x="+(i*10));
                     DefeatCurrent(game);Call(campaign,"Mark",0);MoveToSector(game,1);SetStage(14);return;
                 }
                 if(stage==14)

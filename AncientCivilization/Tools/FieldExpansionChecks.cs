@@ -11,50 +11,64 @@ class FieldExpansionChecks
     static void Main()
     {
         Check(AncientFieldExpansion.SectorCount==3&&AncientFieldExpansion.RouteCount==27,"Each expanded field contains three nine-ledge sections");
-        Check(AncientFieldExpansion.Width==432&&AncientFieldExpansion.Stride>AncientFieldExpansion.Width,"Full field boundaries leave a gap before the next field");
+        Check(AncientFieldExpansion.Width>=600&&AncientFieldExpansion.Width==AncientFieldExpansion.SectorCount*AncientFieldExpansion.SectorSpan,"Fields are longer than the former432-unit interiors and cover all three complete sectors");
+        Check(AncientFieldExpansion.Stride>AncientFieldExpansion.Width,"Full field boundaries leave a gap before the next field");
         Check(AncientFieldExpansion.Names.Length==20,"All twenty existing cases retain section names");
-        var names=new HashSet<string>();
+        var names=new HashSet<string>();var jumpSignatures=new HashSet<string>();int jumpSectors=0;var floorsWithJump=new HashSet<int>();
         for(int mission=0;mission<20;mission++)
         {
             Check(AncientFieldExpansion.Names[mission].Length==3,"Every case has three named sections");
-            var signatures=new HashSet<string>();
+            int missionJumps=0;
             for(int sector=0;sector<3;sector++)
             {
                 string name=AncientFieldExpansion.Names[mission][sector];
                 Check(!string.IsNullOrWhiteSpace(name)&&names.Add(name),"Each section has a distinct readable landmark name");
+                bool jump=AncientFieldExpansion.IsJumpSector(mission,sector);
+                if(jump){jumpSectors++;missionJumps++;floorsWithJump.Add(mission/4);}
+                Check(!jump||sector==1,"Dedicated traversal is separated into the labelled middle sector");
+                Check(!jump||mission!=2&&mission!=5&&mission!=11&&mission!=14,"Required escort paths never become a jump course");
                 float offset=AncientFieldExpansion.SectorStart(sector);
                 var entrance=AncientFieldExpansion.EntrancePlatform(sector);
                 var terminal=AncientFieldExpansion.TerminalPlatform(sector);
+                var road=AncientFieldExpansion.GroundRoad(sector);
+                Check(Near(road.left,offset)&&Near(road.right,offset+AncientFieldExpansion.SectorSpan)&&Near(road.top,0),"Ordinary sector road geometry covers its entire span without a hidden jump gap");
                 Check(Near(entrance.left,offset)&&Near(entrance.right,offset+14)&&Near(entrance.top,0),"Each section has a broad safe entrance at ground height");
-                Check(Near(terminal.left,offset+114)&&Near(terminal.right,offset+144)&&Near(terminal.top,0),"Each section has a broad terminal landing at ground height");
+                Check(terminal.left>offset+AncientFieldExpansion.SectorSpan-32&&Near(terminal.right,offset+AncientFieldExpansion.SectorSpan)&&Near(terminal.top,0),"Each section ends on a broad ground landing");
                 if(sector<2)
                 {
                     var nextEntrance=AncientFieldExpansion.EntrancePlatform(sector+1);
                     Check(Near(terminal.right,nextEntrance.left),"Required section transitions leave no gap between terminal and entrance platforms");
                 }
-                Check(AncientFieldExpansion.EntranceOf(sector)>offset&&AncientFieldExpansion.EntranceOf(sector)<offset+14,"Checkpoint rests within the safe entrance platform");
-                Check(AncientFieldExpansion.ExitOf(sector)>offset+114&&AncientFieldExpansion.ExitOf(sector)<offset+144,"Section exit rests within the safe terminal platform");
-                string signature="";
+                Check(AncientFieldExpansion.EntranceOf(sector)>entrance.left&&AncientFieldExpansion.EntranceOf(sector)<entrance.right,"Checkpoint rests within the safe entrance platform");
+                Check(AncientFieldExpansion.ExitOf(sector)>terminal.left&&AncientFieldExpansion.ExitOf(sector)<terminal.right,"Section exit rests within the safe terminal platform");
+                bool hasRaisedLanding=false;string jumpSignature="";
                 for(int i=0;i<9;i++)
                 {
                     var ledge=AncientFieldExpansion.Segment(mission,sector,i);
-                    Check(ledge.left>=offset+14&&ledge.right<=offset+114,"Every field ledge stays between safe entry and terminal platforms");
-                    Check(ledge.right-ledge.left>=7,"Ordinary landing widths do not shrink into expert-only jumps");
-                    Check(ledge.top>=0&&ledge.top+2.2f<9,"Main route preserves full character clearance beneath the ceiling");
+                    Check(ledge.left>=entrance.right&&ledge.right<=terminal.left,"Every field encounter and objective landing stays between safe ends");
+                    Check(ledge.right-ledge.left>=7,"Landing widths remain readable and do not shrink into needle platforms");
+                    Check(ledge.top>=0&&ledge.top+2.2f<9,"Required landings preserve full character clearance beneath the solid ceiling");
+                    Check(jump||Near(ledge.top,0),"Ordinary investigation, power and escort targets stay on the fast ground route");
+                    hasRaisedLanding|=ledge.top>1;
+                    if(jump)jumpSignature+=(ledge.left-offset).ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+":"+ledge.top.ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+";";
                     if(i>0)
                     {
                         var previous=AncientFieldExpansion.Segment(mission,sector,i-1);
-                        Check(ledge.left>previous.right&&ledge.left-previous.right<4.6f,"Main route gaps remain within the running-jump budget");
-                        Check(Math.Abs(ledge.top-previous.top)<=2.2f,"Adjacent required landings do not require expert wire recovery");
+                        Check(ledge.left>previous.right,"Encounter landing order never reverses or overlaps");
+                        if(jump)
+                        {
+                            Check(ledge.left-previous.right<=8,"Dedicated wire traversal retains visible reachable gaps");
+                            Check(Math.Abs(ledge.top-previous.top)<=2.2f,"Dedicated jumps preserve ordinary height changes instead of requiring a frame-perfect launch");
+                        }
                     }
-                    signature+=(ledge.left-offset).ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+":"+ledge.top.ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+";";
                 }
-                signatures.Add(signature);
+                Check(!jump||hasRaisedLanding,"Each dedicated wire course actually contains raised traversal geometry");
+                if(jump)Check(jumpSignatures.Add(jumpSignature),"Each floor has a distinct authored wire course shape");
                 var first=AncientFieldExpansion.Segment(mission,sector,0);
                 var last=AncientFieldExpansion.Segment(mission,sector,8);
-                Check(first.top<1.5f&&last.top<2.5f,"Normal route remains accessible from and to flat safe platforms");
-                Check(first.left-entrance.right>0&&first.left-entrance.right<3,"First required jump stays close to the safe entrance");
-                Check(terminal.left-last.right>0&&terminal.left-last.right<3,"Last required jump reaches the terminal instead of creating a twenty-unit hole");
+                Check(first.top<1.5f&&last.top<2.5f,"Dedicated routes remain accessible from and to flat safe platforms");
+                Check(first.left-entrance.right>=0&&first.left-entrance.right<8,"The first landing remains close to the safe entrance");
+                Check(terminal.left-last.right>=0&&terminal.left-last.right<8,"The final landing reaches the safe terminal instead of an empty extension");
                 int node=AncientFieldExpansion.NodeSegment(sector);
                 Check(node/9==sector&&node%9>=0&&node%9<9,"Each required objective maps to a landing in its own section");
                 for(int enemy=0;enemy<2;enemy++)
@@ -63,15 +77,17 @@ class FieldExpansionChecks
                     Check(index/9==sector&&index!=node,"Encounter positions stay in their section and off the objective landing");
                 }
             }
-            Check(signatures.Count==3,"The three section routes use distinct authored shapes");
+            Check(missionJumps<=1,"Most of each investigation remains continuous fast travel");
         }
+        Check(jumpSectors==5&&floorsWithJump.Count==5,"Every city floor retains one dedicated course while the other fifty-five sectors stay grounded");
         Check(names.Count==60,"All sixty section landmark names are unique");
         Check(AncientFieldExpansion.SectorAt(-1)==0&&AncientFieldExpansion.SectorAt(0)==0,"Left boundary and negative recovery position stay in first section");
-        Check(AncientFieldExpansion.SectorAt(143.99f)==0&&AncientFieldExpansion.SectorAt(144)==1,"First section boundary changes at the actual next section start");
-        Check(AncientFieldExpansion.SectorAt(287.99f)==1&&AncientFieldExpansion.SectorAt(288)==2,"Second section boundary changes at the actual next section start");
-        Check(AncientFieldExpansion.SectorAt(432)==2&&AncientFieldExpansion.SectorAt(float.MaxValue)==2,"Right edge and finite overshoot stay in last section");
+        Check(AncientFieldExpansion.SectorAt(AncientFieldExpansion.SectorSpan-.01f)==0&&AncientFieldExpansion.SectorAt(AncientFieldExpansion.SectorSpan)==1,"First section boundary follows the longer actual next section start");
+        Check(AncientFieldExpansion.SectorAt(AncientFieldExpansion.SectorSpan*2-.01f)==1&&AncientFieldExpansion.SectorAt(AncientFieldExpansion.SectorSpan*2)==2,"Second section boundary follows the longer actual next section start");
+        Check(AncientFieldExpansion.SectorAt(AncientFieldExpansion.Width)==2&&AncientFieldExpansion.SectorAt(float.MaxValue)==2,"Right edge and finite overshoot stay in last section");
         Check(AncientFieldExpansion.SectorAt(float.NaN)==0&&AncientFieldExpansion.SectorAt(float.PositiveInfinity)==0&&AncientFieldExpansion.SectorAt(float.NegativeInfinity)==0,"Invalid coordinates return a safe initial section");
-        Check(Near(AncientFieldExpansion.EntranceOf(-5),6)&&Near(AncientFieldExpansion.ExitOf(50),420),"Invalid section identifiers clamp to safe entrance or final exit");
+        var safeLast=AncientFieldExpansion.TerminalPlatform(2);
+        Check(Near(AncientFieldExpansion.EntranceOf(-5),6)&&AncientFieldExpansion.ExitOf(50)>safeLast.left&&AncientFieldExpansion.ExitOf(50)<safeLast.right,"Invalid section identifiers clamp to a safe entrance or final exit");
         var clamped=AncientFieldExpansion.Segment(-10,-2,-1);var valid=AncientFieldExpansion.Segment(0,0,0);
         Check(Near(clamped.left,valid.left)&&Near(clamped.right,valid.right)&&Near(clamped.top,valid.top),"Invalid mission, section and ledge identifiers clamp safely");
         Check(AncientFieldExpansion.NodeSegment(-1)==5&&AncientFieldExpansion.NodeSegment(9)==23,"Required-objective route indices cannot escape section bounds");

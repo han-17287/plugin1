@@ -5,11 +5,32 @@ namespace Plugin.AncientCivilization
 {
     public sealed class AncientCityCampaign : MonoBehaviour
     {
-        AncientGame game;int activeFloor=-1;AncientEnemy activeBoss;GUIStyle label;Vector2 safeRecovery;
+        AncientGame game;int activeFloor=-1;AncientEnemy activeBoss,retiringSniper,retiringSecretary;GUIStyle label;Vector2 safeRecovery;
         readonly List<AncientAirTarget> targets=new List<AncientAirTarget>();
         public int Cleared {get;private set;}
         public bool SecretaryCleared {get;private set;}
         public bool ArenaActive {get{return activeBoss&&activeBoss.IsAlive;}}
+        public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
+        {
+            actor=null;headOffset=2.3f;
+            if(!game||!game.Story||game.Story.CurrentFloor!=4)return false;
+            AncientEnemy candidate=null;
+            if(speaker=="저격수")candidate=retiringSniper?retiringSniper:activeBoss&&!activeBoss.IsSecretary?activeBoss:null;
+            else if(speaker=="비서실장"||speaker=="중앙행정정보처리기관 비서실장")candidate=retiringSecretary?retiringSecretary:activeBoss&&activeBoss.IsSecretary?activeBoss:null;
+            if(!candidate||!candidate.gameObject.activeInHierarchy)return false;
+            actor=candidate.transform;headOffset=candidate.IsSecretary?2.55f:2.15f;return true;
+        }
+        void ClearDialogueActors()
+        {
+            if(retiringSniper)Destroy(retiringSniper.gameObject);if(retiringSecretary)Destroy(retiringSecretary.gameObject);
+            retiringSniper=retiringSecretary=null;
+        }
+        void FinishRetirement(AncientEnemy actor,bool secretary)
+        {
+            if(actor)actor.DepartAlive();
+            if(secretary){if(retiringSecretary==actor)retiringSecretary=null;}
+            else if(retiringSniper==actor)retiringSniper=null;
+        }
         public void Initialize(AncientGame owner)
         {
             game=owner;Cleared=AncientGame.Saved("cityCleared");SecretaryCleared=AncientGame.Saved("secretaryCleared")!=0||AncientGame.Saved("finalePhase")>0;
@@ -19,14 +40,8 @@ namespace Plugin.AncientCivilization
         void BuildFloor(int floor)
         {
             float x=AncientCityLayout.Left(floor),right=AncientCityLayout.Right(floor);
-            foreach(var ledge in AncientCityLayout.Route(floor))game.Platform(ledge.left,ledge.right,ledge.top);
-            game.Platform(x,right,-4.5f);game.Ceiling(x-2,right+2,10);
-            // Fast routes have smaller landings but share the same continuous wire ceiling.
-            for(int i=0;i<4;i++)
-            {
-                float a=x+21+i*23;game.Platform(a,a+2.5f,6.2f);
-                game.StaticBox("Expert route edge",new Vector2(a+1.25f,6.23f),new Vector2(2.5f,.045f),new Color(1,.8f,.2f),4);
-            }
+            var street=AncientCityLayout.StreetRoad(floor);game.Platform(street.left,street.right,street.top);game.Ceiling(x-2,right+2,10);
+            // Ordinary city streets stay continuous; wire challenges live in marked field sectors.
             var tint=floor==2?new Color(.1f,.22f,.3f):floor==3?new Color(.2f,.24f,.21f):new Color(.19f,.12f,.21f);
             for(int i=0;i<12;i++)
             {
@@ -46,30 +61,11 @@ namespace Plugin.AncientCivilization
                 game.StaticBox("Illegal maintenance hatch",new Vector2(x+4,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
                 game.StaticBox("Sealed chairman office",new Vector2(right-2,2),new Vector2(2,4),new Color(.23f,.13f,.18f),1);
             }
-            for(int i=0;i<3;i++)
-            {
-                float gx=x+32+i*27;
-                if(floor==2)
-                {
-                    var o=new GameObject("Administrative security shutter");o.transform.SetParent(transform,false);
-                    o.AddComponent<AncientSecurityShutter>().Initialize(game,new Vector2(gx,6.4f),i);
-                }
-                else if(floor==3)
-                {
-                    var o=new GameObject("Residential ventilation updraft");o.transform.SetParent(transform,false);
-                    o.AddComponent<AncientCityVent>().Initialize(game,new Vector2(x+18+i*24,1.5f),floor);
-                    var target=new GameObject("Upper-city blade buoy").AddComponent<AncientAirTarget>();
-                    target.transform.SetParent(transform,false);target.Initialize(game,new Vector2(x+29+i*25,6));targets.Add(target);
-                }
-                else
-                {
-                    var o=new GameObject("Top-floor collapsing scaffold");o.transform.SetParent(transform,false);
-                    o.AddComponent<AncientCrumbleLedge>().Initialize(game,new Vector2(x+31+i*25,4.7f));
-                }
-            }
+
         }
         public void OnEnterFloor()
         {
+            ClearDialogueActors();
             if(game.Traversal)game.Traversal.ResetForTravel();
             foreach(var enemy in game.enemies.ToArray())
                 if(enemy&&(enemy.DistrictFloor>0||(game.Story&&game.Story.Stage>=8&&enemy.DistrictFloor==0&&!enemy.IsBoss))){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}
@@ -97,12 +93,12 @@ namespace Plugin.AncientCivilization
                 activeFloor=floor;safeRecovery=new Vector2(AncientCityLayout.Entry(floor),1.3f);
                 if((Cleared&(1<<floor))==0)
                 {
-                    if(floor==1){Spawn(195,2.5f,0,floor,false);Spawn(240,2,1,floor,false);}
+                    if(floor==1){Spawn(195,0,0,floor,false);Spawn(240,0,1,floor,false);}
                     else
                     {
                         var route=AncientCityLayout.Route(floor);
-                        Spawn((route[2].left+route[2].right)/2,route[2].top,0,floor,false);
-                        Spawn((route[6].left+route[6].right)/2,route[6].top,1,floor,false);
+                        Spawn((route[2].left+route[2].right)/2,0,0,floor,false);
+                        Spawn((route[6].left+route[6].right)/2,0,1,floor,false);
                     }
                 }
             }
@@ -124,8 +120,8 @@ namespace Plugin.AncientCivilization
                 for(int index=4;index<=7;index+=3)
                 {
                     var ledge=route[index];
-                    if(p.x>=ledge.left&&p.x<=ledge.right&&Mathf.Abs(p.y-(ledge.top+1.05f))<.3f)
-                        safeRecovery=new Vector2((ledge.left+ledge.right)/2,ledge.top+1.3f);
+                    if(p.x>=ledge.left&&p.x<=ledge.right&&Mathf.Abs(p.y-1.05f)<.3f)
+                        safeRecovery=new Vector2((ledge.left+ledge.right)/2,1.3f);
                 }
             }
             if(floor>=2&&p.y<-2.5f)
@@ -137,15 +133,23 @@ namespace Plugin.AncientCivilization
         }
         public void BossDefeated(int floor)
         {
+            var speaker=activeBoss;
             activeBoss=null;game.boss=null;
             if((Cleared&(1<<floor))!=0)return;
             Cleared|=1<<floor;AncientGame.SetSaved("cityCleared",Cleared);
-            game.Story.OnDistrictCleared(floor);game.Save();
+            if(floor==4)
+            {
+                retiringSniper=speaker;if(speaker&&game.hero)speaker.FaceToward(game.hero.transform.position.x);
+                game.Story.OnDistrictCleared(floor,()=>FinishRetirement(speaker,false));
+            }
+            else game.Story.OnDistrictCleared(floor);
+            game.Save();
         }
         public void SecretaryRetreated(AncientEnemy secretary)
         {
+            retiringSecretary=secretary;if(secretary&&game.hero)secretary.FaceToward(game.hero.transform.position.x);
             activeBoss=null;game.boss=null;SecretaryCleared=true;AncientGame.SetSaved("secretaryCleared",1);game.Save();
-            game.Story.Conversation(()=>{if(secretary)secretary.DepartAlive();},3,new[]{"비서실장","백명","비서실장"},new[]{"시계를 멈추셨군요. 오늘은 여기까지 하지요. 회장님은 이곳에 계시지 않습니다.","도망치겠다는 건가. 기록을 확인한 뒤 네가 막아 온 일도 묻겠다.","살아 계신다면 다시 뵙겠지요. 그때는 제 시간도 달라져 있을 겁니다."});
+            game.Story.Conversation(()=>FinishRetirement(secretary,true),3,new[]{"비서실장","백명","비서실장"},new[]{"시계를 멈추셨군요. 오늘은 여기까지 하지요. 회장님은 이곳에 계시지 않습니다.","도망치겠다는 건가. 기록을 확인한 뒤 네가 막아 온 일도 묻겠다.","살아 계신다면 다시 뵙겠지요. 그때는 제 시간도 달라져 있을 겁니다."});
         }
         public bool TryInteract()
         {
@@ -178,12 +182,13 @@ namespace Plugin.AncientCivilization
             if(!activeBoss||!activeBoss.IsSecretary)return false;
             var clock=activeBoss.GetComponent<AncientClockBoss>();return clock&&clock.TryBlade(origin,direction);
         }
+        void OnDestroy(){ClearDialogueActors();}
         void OnGUI()
         {
             if(!game||!game.Story||game.Paused||game.MainMenu||(game.Campaign&&game.Campaign.Active)||(game.Finale&&game.Finale.Active)||Event.current.type!=EventType.Repaint)return;
             int floor=game.Story.CurrentFloor;if(floor==0)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
-            string hint=floor==1?"생활구 / 부유체 반동 → 와이어 재연결":floor==2?"행정구 / 붉은 예고 뒤 셔터 폐쇄 · 낮은 경로로 우회":floor==3?"거주구 / 환기 상승류로 금색 지름길 진입":"최상층 / 발판 점멸 후 붕괴 · 안정된 아래 경로는 유지";
+            string hint=AncientCityLayout.Name(floor)+" / 지상 이동로 · 와이어 정비 구간은 현장 안에 표시됩니다";
             if((Cleared&(1<<floor))!=0)hint+=floor==3?"\n동쪽 샛길에서 E / 최상층 불법 침입":floor==4?(SecretaryCleared?"\n비서실장 제압 / 회장실 기록 확인":"\n저격수와의 대치 종료 / 마지막 자료 대조 후 회장실 진입"):"\n다음 층 권한 해금 / 입구 엘리베이터에서 목적 층 선택";
             GUI.Label(new Rect(Screen.width/2-300,95,600,65),hint,label);
             string marker=AncientCityLayout.Name(floor)+" / E: 엘리베이터";
