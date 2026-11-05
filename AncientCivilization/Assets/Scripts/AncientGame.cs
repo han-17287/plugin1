@@ -366,7 +366,13 @@ namespace Plugin.AncientCivilization
             if(Finale&&Finale.Active)target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,AncientFinaleRules.Start+5,AncientFinaleRules.Finish+12),Mathf.Max(1.5f,hero.transform.position.y+2),-10);
             if(dialogue)target=new Vector3(dialogueFocus.x,dialogueFocus.y,-10);
             cameraFollow=Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
-            var p=cameraFollow;if(shake>0&&!skills){p+=(Vector3)(Random.insideUnitCircle*shake);shake=Mathf.MoveTowards(shake,0,Time.unscaledDeltaTime);}
+            var p=cameraFollow;
+            if(shake>0&&!skills)
+            {
+                float phase=Time.unscaledTime*22;
+                p+=new Vector3((Mathf.PerlinNoise(phase,17.1f)-.5f)*2,(Mathf.PerlinNoise(43.7f,phase)-.5f)*1.5f,0)*shake;
+                shake=Mathf.MoveTowards(shake,0,Time.unscaledDeltaTime);
+            }
             float displayPPU=Mathf.Max(1,Screen.height/(view.orthographicSize*2));
             p.x=Mathf.Round(p.x*displayPPU)/displayPPU;p.y=Mathf.Round(p.y*displayPPU)/displayPPU;view.transform.position=p;
         }
@@ -378,6 +384,11 @@ namespace Plugin.AncientCivilization
             float pad=r.height<=6?1:2;
             Panel(r,new Color(.04f,.07f,.10f,.95f));
             Panel(new Rect(r.x+pad,r.y+pad,(r.width-pad*2)*Mathf.Clamp01(value),r.height-pad*2),c);
+        }
+        void CaptureBar(Rect r)
+        {
+            Bar(r,hero.CaptureEnergy/100f,hero.CaptureEnergy>=100?new Color(.65f,.95f,1):Cyan);
+            for(int stage=1;stage<=2;stage++)Panel(new Rect(r.x+2+(r.width-4)*stage*.4f,r.y+1,1,r.height-2),new Color(.8f,.96f,1,.8f));
         }
         public void NewRun()
         {
@@ -410,7 +421,7 @@ namespace Plugin.AncientCivilization
                 Panel(new Rect(16,16,302,106),new Color(.025f,.045f,.065f,.88f));
                 GUI.Label(new Rect(28,21,290,24),"PLUGIN / ANCIENT CIVILIZATION",small);
                 Bar(new Rect(28,49,272,18),healthEcho/hero.MaxHP,new Color(.48f,.23f,.12f));
-                Panel(new Rect(30,51,268*Mathf.Clamp01(hero.hp/hero.MaxHP),14),Orange);Bar(new Rect(28,73,272,13),hero.CaptureEnergy/100f,Cyan);
+                Panel(new Rect(30,51,268*Mathf.Clamp01(hero.hp/hero.MaxHP),14),Orange);CaptureBar(new Rect(28,73,272,13));
                 GUI.Label(new Rect(28,91,275,25),hud.Resources,small);
                 Panel(new Rect(w-300,16,284,74),new Color(.025f,.045f,.065f,.88f));
                 GUI.Label(new Rect(w-286,24,260,55),hud.Objective,small);
@@ -418,7 +429,7 @@ namespace Plugin.AncientCivilization
                 GUI.Label(new Rect(w-300,92,284,23),hud.Performance,small);
                 GUI.Label(new Rect(w-300,117,284,23),hud.Mode,small);
                 GUI.Label(new Rect(w-300,141,284,24),hud.Capture,small);
-                Bar(new Rect(w-300,168,284,7),hero.CaptureEnergy/100f,Cyan);
+                CaptureBar(new Rect(w-300,168,284,7));
                 if(hero.AttackMode&&!hero.bike&&hero.Combat&&!hero.Combat.Charging)
                 {GUI.color=new Color(1,.88f,.3f);GUI.Label(new Rect(w-300,179,284,24),hud.Blade,small);GUI.color=Color.white;}
                 foreach(var enemy in enemies)
@@ -442,6 +453,12 @@ namespace Plugin.AncientCivilization
                             GUI.color=new Color(1,.85f,.2f);GUI.Label(new Rect(opening.x/scale-35,(Screen.height-opening.y)/scale-22,110,24),"빈틈 · 공격",small);GUI.color=Color.white;
                             Bar(new Rect(opening.x/scale-28,(Screen.height-opening.y)/scale,56,5),enemy.RecoveryRemaining,new Color(1,.85f,.2f));
                         }
+                    }
+                    if(enemy.Staggered)
+                    {
+                        Vector3 stagger=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
+                        if(stagger.z>0&&stagger.x>0&&stagger.x<Screen.width)
+                        {GUI.color=Cyan;GUI.Label(new Rect(stagger.x/scale-45,(Screen.height-stagger.y)/scale-20,120,24),"경직 · 공격",small);GUI.color=Color.white;}
                     }
                     if(enemy==boss || enemy.HealthRatio>=1)continue;
                     Vector3 screen=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.1f);
@@ -1243,6 +1260,7 @@ namespace Plugin.AncientCivilization
         AncientBossController bossBrain;
         public bool IsTelegraphing {get{return bossBrain?bossBrain.Telegraphing:resolveAt>=0;}}
         public bool Recovering {get{return bossBrain?bossBrain.Recovering:IsBoss&&Time.time>=recoveryStarts&&Time.time<recoveryUntil;}}
+        public bool Staggered {get{return !IsBoss&&Time.time<staggerUntil;}}
         public float RecoveryRemaining {get{return bossBrain?bossBrain.RecoveryRemaining:Recovering?Mathf.Clamp01((recoveryUntil-Time.time)/Mathf.Max(.1f,recoveryDuration)):0;}}
         public bool AttackIsPhysical {get{return bossBrain?bossBrain.Physical:pattern==0;}}
         public float WindupProgress {get{return bossBrain?bossBrain.WindupProgress:resolveAt<0?0:Mathf.Clamp01((Time.time-windupStartedAt)/Mathf.Max(.01f,resolveAt-windupStartedAt));}}
@@ -1303,7 +1321,7 @@ namespace Plugin.AncientCivilization
             if(bossBrain){bossBrain.Tick();return;}
             // Body contact is separate from telegraphed attacks and projectiles.
             Vector2 contact=(Vector2)g.hero.transform.position-AimPoint;
-            if(!Recovering&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
+            if(AncientThreatRules.BodyContactAllowed(IsBoss,Recovering,Time.time<staggerUntil)&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
                 g.hero.HurtContact(this,kind==3?14:8);
             if(Enraged&&!enragedAnnounced)
             {enragedAnnounced=true;g.Sound(8);g.Notice("화물 수호 장치 / 과부하",2);g.Impact(AimPoint,AncientGame.Orange,true);g.Shake(.12f);}
@@ -1350,6 +1368,11 @@ namespace Plugin.AncientCivilization
                 }
             }
             if(Time.time<nextAttack)return;
+            // Finish an existing attack even when the camera moves, but never begin an
+            // ordinary ranged tell from the unseen half of a long investigation room.
+            var threatCamera=g.View;
+            Vector3 viewport=threatCamera?threatCamera.WorldToViewportPoint(AimPoint):Vector3.zero;
+            if(!AncientThreatRules.CanStartAttack(IsBoss,threatCamera,viewport.x,viewport.y,viewport.z))return;
             if(IsDistrictBoss&&DistrictFloor==4)
             {
                 // Long visible aim, then a short burst; reload is the punish window.
@@ -1429,7 +1452,7 @@ namespace Plugin.AncientCivilization
         internal void BossContact()
         {
             Vector2 contact=(Vector2)AncientGame.Instance.hero.transform.position-AimPoint;
-            if(!Recovering&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
+            if(AncientThreatRules.BodyContactAllowed(IsBoss,Recovering,Time.time<staggerUntil)&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
                 AncientGame.Instance.hero.HurtContact(this,kind==3?14:8);
         }
         internal void BossVisual(int pose,float direction,float anticipation,bool telegraph,bool recovery)

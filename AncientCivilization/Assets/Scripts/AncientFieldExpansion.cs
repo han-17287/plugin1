@@ -90,6 +90,55 @@ namespace Plugin.AncientCivilization
         {return Math.Min(Sector(saved),MaximumCheckpoint(tasks,defeated));}
         public static bool ExitReady(int tasks,int defeated)
         {return tasks>=0&&(tasks&7)==7&&AllEnemiesClear(defeated);}
+        // Different jobs use the same two-enemy budget for different decisions:
+        // records are guarded, seals follow a breach, witnesses need an escape lane,
+        // and power panels supply projectiles before the receiver's close guard.
+        static readonly float[,] EncounterOffsets={
+            {88,112,104,128,128,152},
+            {72,96,100,124,126,150},
+            {88,132,100,146,118,158},
+            {106,84,116,94,130,104}
+        };
+        public static void EncounterPosition(int mission,int kind,int sector,int enemy,out float x,out float y)
+        {
+            int section=Sector(sector),slot=enemy<=0?0:1;
+            if(IsJumpSector(mission,section))
+            {
+                var landing=Segment(mission,section,slot==0?2:6);
+                x=(landing.left+landing.right)*.5f;y=landing.top;return;
+            }
+            x=SectorStart(section)+EncounterOffsets[Math.Max(0,Math.Min(3,kind)),section*2+slot];y=0;
+        }
+        public static int EncounterType(int floor,int kind,int sector,int enemy)
+        {
+            int section=Sector(sector),district=Math.Max(0,Math.Min(4,floor));
+            if(enemy<=0)return district==2||district>2&&kind==0&&section==2?5:0;
+            if(district==3)return kind==3&&section==1?2:4;
+            if(district==4&&section==2)return 4;
+            return section==2||district==2&&section==1?2:1;
+        }
+        public static bool NeedsPowerRefill(int kind,int tasks,float energy)
+        {return kind==3&&(tasks&3)==3&&(tasks&4)==0&&!(energy>0);}
+        // A fast wire move must not abandon a rescued resident. Distant catch-up
+        // only crosses cleared ground sectors, and never crosses an unearned gate.
+        public static float EscortStep(float witness,float player,float playerSpeed,float deltaTime,int tasks,int defeated,bool danger)
+        {
+            if(danger||!Finite(witness)||!Finite(player)||!Finite(playerSpeed)||!Finite(deltaTime)||deltaTime<=0||player<=witness+1.2f)return witness;
+            float distance=player-witness,target=Math.Min(Width-16,player-1.2f);
+            int checkpoint=MaximumCheckpoint(tasks,defeated);
+            target=Math.Min(target,checkpoint>=SectorCount-1?Width-16:SectorStart(checkpoint+1)-1.4f);
+            bool far=distance>=12;
+            if(far)
+            {
+                int section=SectorAt(witness);if(!SectorClear(defeated,section))return witness;
+                for(int next=section+1;next<SectorCount;next++)if(!SectorClear(defeated,next))
+                {target=Math.Min(target,SectorStart(next)-1.4f);break;}
+            }
+            if(target<=witness)return witness;
+            float speed=far?Math.Min(18,Math.Max(12,Math.Abs(playerSpeed)+3)):Math.Min(12,Math.Max(4.3f,Math.Abs(playerSpeed)+1));
+            return Math.Min(target,witness+speed*Math.Min(.25f,deltaTime));
+        }
+        static bool Finite(float value){return !float.IsNaN(value)&&!float.IsInfinity(value);}
         // Global route indices, normalized by /9 and %9 before calling Segment.
         public static int NodeSegment(int index){return Sector(index)*9+5;}
         public static int EnemySegment(int sector,int enemyIndex){return Sector(sector)*9+(enemyIndex<=0?2:6);}

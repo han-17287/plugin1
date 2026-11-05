@@ -1,18 +1,19 @@
-v0.15.0 source validation checkpoint — 2026-11-05 UTC
-PASS: 3215 combat and quest rule checks
+v0.15.1 gameplay-flow source checkpoint — 2026-11-05 UTC
+PASS: 3417 combat and quest rule checks, including low-frame-rate particle collection
 PASS: 76 sniper rule checks
 PASS: 596 swing presentation rule checks
 PASS: 432 blade timing, sequence and trail checks
-PASS: 23397 expanded-field layout checks
+PASS: 24635 expanded-field layout, encounter and safe escort-flow checks
 PASS: 3997 speech-bubble geometry checks
 PASS: 3179 straight-wire movement and collision-budget checks
-TOTAL: 34892 standalone checks; these are not Unity Play Mode tests.
+PASS: 359 enemy threat visibility and stagger-contact safety checks
+TOTAL: 36691 standalone checks; these are not Unity Play Mode tests.
 PASS: supplemental runtime compatibility compilation with warnings as errors
 PASS: supplemental Editor fixture compatibility compilation with warnings as errors
 LIMIT: supplemental compilation uses Unity 2021 reference DLLs and temporary linearVelocity-to-velocity aliases. Minimal Editor stubs check fixture signatures only. This does not verify Unity 6000.6.7f1 API, import, rendering or execution.
-PASS: unchanged saved blade/wire reference hashes and byte-identical MenuBlade copy
-PASS: separate Video/Officer_Blade_Concept.mp4 full FFmpeg decode, H.264/AAC 1920x1080 30fps 12.000 seconds. Published MP4 HTTP200 and SHA256 match.
-NOT RUN: actual Unity 6000.6.7f1 compilation/import/shaders/Play Mode, physics collisions, visual speech pagination, full playthrough, FPS or player build.
+PASS: source and metadata validation below; saved weapon reference originals unchanged
+SEPARATE VIDEO: corrected-arm native60 concept MP4 passed full decode; 1920x1080,720frames,uniform1/60s timestamps,AAC48kHzstereo,12sAVtimeline,no duplicated decoded thumbnails. Public MP4 HTTP200/SHA256 verified. Video is an image-based animatic, not continuous rigged 3D character motion.
+NOT RUN: actual Unity 6000.6.7f1 compilation/import/shaders/Play Mode, physics collisions, visual feedback, full playthrough, FPS or player build.
 No claim of nine-hour measured playtime, completion percentage or commercial-release quality.
 
 Source/asset checks follow:
@@ -113,6 +114,8 @@ PASS: 32-character GUID AncientFieldScenery.cs.meta
 PASS: metadata target Assets/Scripts/AncientBossRules.cs.meta
 PASS: 32-character GUID AncientBossRules.cs.meta
 PASS: metadata coverage AncientCombatRules.cs
+PASS: metadata target Assets/Scripts/AncientThreatRules.cs.meta
+PASS: 32-character GUID AncientThreatRules.cs.meta
 PASS: metadata target Assets/Scripts/AncientSniperRules.cs.meta
 PASS: 32-character GUID AncientSniperRules.cs.meta
 PASS: metadata coverage AncientFinaleRules.cs
@@ -200,6 +203,7 @@ PASS: metadata target Assets/Scripts/AncientSpeechBubble.cs.meta
 PASS: 32-character GUID AncientSpeechBubble.cs.meta
 PASS: metadata coverage AncientPerformance.cs
 PASS: metadata coverage AncientBackdropAtlas.cs
+PASS: metadata coverage AncientThreatRules.cs
 PASS: metadata coverage AncientEvidenceQuestions.cs
 PASS: metadata target Assets/Scripts/AncientCitizenAtlas.cs.meta
 PASS: 32-character GUID AncientCitizenAtlas.cs.meta
@@ -1270,6 +1274,7 @@ PASS: C# syntax AncientDistrict.cs
 PASS: C# syntax AncientDistrictBackdrop.cs
 PASS: C# syntax AncientPerformance.cs
 PASS: C# syntax AncientBackdropAtlas.cs
+PASS: C# syntax AncientThreatRules.cs
 PASS: C# syntax AncientEvidenceQuestions.cs
 PASS: C# syntax AncientGameFeel.cs
 PASS: C# syntax AncientParkedBike.cs

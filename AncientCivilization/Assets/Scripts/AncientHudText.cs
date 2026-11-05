@@ -12,7 +12,7 @@ namespace Plugin.AncientCivilization
         string performance;
         public void Refresh(AncientGame game)
         {
-            var hero=game.hero;int h=Mathf.CeilToInt(hero.hp),e=Mathf.RoundToInt(hero.CaptureEnergy);
+            var hero=game.hero;int h=Mathf.CeilToInt(hero.hp),e=Mathf.FloorToInt(hero.CaptureEnergy);
             if(h!=hp||e!=energy||game.credits!=credits)
             {hp=h;energy=e;credits=game.credits;Resources="체력 "+h+"   입자 "+e+"   재화 "+credits;}
             bool chase=game.Finale&&game.Finale.Active;
@@ -32,7 +32,7 @@ namespace Plugin.AncientCivilization
                 {bladeStep=cut;bladeActive=active;bladeQueued=queued;Blade=(active?"":"다음 · ")+cuts[Mathf.Clamp(cut-1,0,2)]+(queued?" · 입력 연결됨":"");}
             }
             if(capture!=hero.CaptureStage||Capture.Length==0||e!=lastCaptureEnergy)
-            {capture=hero.CaptureStage;lastCaptureEnergy=e;Capture="축적 "+capture+" / 3단계 · "+e+"%";}
+            {capture=hero.CaptureStage;lastCaptureEnergy=e;Capture=e>=100?"완충 · 최대 출력 · 100%":"축적 "+capture+" / 3단계 · "+e+"%";}
             if(performance!=game.Performance.Summary||quality!=AncientVisuals.HighQuality||Performance.Length==0)
             {performance=game.Performance.Summary;quality=AncientVisuals.HighQuality;Performance=(quality?"F6 고품질":"F6 가볍게")+" · "+performance;}
             if(boss!=game.boss||(game.boss&&enraged!=game.boss.Enraged)||(game.Sniper&&lastSniperPhase!=game.Sniper.Phase))

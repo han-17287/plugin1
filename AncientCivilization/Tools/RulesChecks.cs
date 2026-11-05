@@ -231,6 +231,22 @@ class RulesChecks
         Check(AncientCombatRules.PerfectBreak(1,-1),"Close incoming object can earn a precise-break reward");
         Check(!AncientCombatRules.PerfectBreak(4,-1),"Distant object break is ordinary");
         Check(!AncientCombatRules.PerfectBreak(1,1),"A departing object does not award a precise parry");
+        foreach(int hz in new[]{10,15,30,60,120,240})foreach(float start in new[]{.68f,.74f,1.4f,6.99f})
+        {
+            float remaining=start,dt=1f/hz;int frames=0;
+            while(remaining*remaining>=AncientCombatRules.CollectionRadiusSquared&&frames++<hz)
+            {
+                float step=AncientCombatRules.CollectionStep(remaining,dt);
+                Check(step>=0&&step<=remaining,"Collecting particles cannot overshoot or reverse at a low frame rate");
+                remaining-=step;
+            }
+            Check(remaining*remaining<AncientCombatRules.CollectionRadiusSquared,"Loose particles reach collection range at all tested frame rates");
+        }
+        foreach(float bad in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity,-1,0})
+        {
+            Check(AncientCombatRules.CollectionStep(1,bad)==0,"Invalid collection delta time cannot move particles");
+            Check(AncientCombatRules.CollectionStep(bad,.1f)==0,"Invalid collection distance cannot move particles");
+        }
         for(int floor=0;floor<=4;floor++)
         {
             Check(AncientCityLayout.SafeResume(floor,AncientCityLayout.Entry(floor),1.3f),"Saved floor entry is a valid retry position");

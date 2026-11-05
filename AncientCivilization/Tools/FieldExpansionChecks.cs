@@ -159,6 +159,51 @@ class FieldExpansionChecks
             Check(!exit||(tasks==7&&enemyMask==63),"Exhaustive save-state scan rejects every incomplete exit state");
         }
         Check(!AncientFieldExpansion.ObjectiveAvailable(7,-1)&&!AncientFieldExpansion.ObjectiveAvailable(7,3)&&!AncientFieldExpansion.ObjectiveAvailable(-1,2),"Invalid objective identifiers or state do not authorize progress");
+        var encounterStyles=new HashSet<string>();
+        for(int mission=0;mission<20;mission++)for(int kind=0;kind<4;kind++)for(int sector=0;sector<3;sector++)
+        {
+            float guardX,guardY,supportX,supportY;
+            AncientFieldExpansion.EncounterPosition(mission,kind,sector,0,out guardX,out guardY);
+            AncientFieldExpansion.EncounterPosition(mission,kind,sector,1,out supportX,out supportY);
+            float left=AncientFieldExpansion.SectorStart(sector);
+            Check(guardX>left+16&&guardX<left+AncientFieldExpansion.SectorSpan-28,"Close guards leave clear entry and exit areas");
+            Check(supportX>left+16&&supportX<left+AncientFieldExpansion.SectorSpan-28,"Projectile support remains inside the active encounter sector");
+            Check(Math.Abs(guardX-supportX)>=18,"The two criminals have distinct readable combat positions");
+            int guard=AncientFieldExpansion.EncounterType(mission/4,kind,sector,0),support=AncientFieldExpansion.EncounterType(mission/4,kind,sector,1);
+            Check((guard==0||guard==5)&&(support==1||support==2||support==4),"Every pair combines a close guard and a destructible-object thrower");
+            if(AncientFieldExpansion.IsJumpSector(mission,sector))
+            {
+                var a=AncientFieldExpansion.Segment(mission,sector,2);var b=AncientFieldExpansion.Segment(mission,sector,6);
+                Check(guardX>a.left&&guardX<a.right&&Near(guardY,a.top),"Jump-course guards retain an actual authored landing");
+                Check(supportX>b.left&&supportX<b.right&&Near(supportY,b.top),"Jump-course support retains an actual authored landing");
+            }
+            else
+            {
+                Check(Near(guardY,0)&&Near(supportY,0),"Ordinary encounter variety adds no floating required route");
+                encounterStyles.Add(kind+":"+(guardX-left)+":"+(supportX-left));
+            }
+        }
+        Check(encounterStyles.Count==12,"The four job mechanics use three distinct encounter positions rather than one repeated field layout");
+        Check(AncientFieldExpansion.EncounterType(2,0,0,0)==5&&AncientFieldExpansion.EncounterType(2,0,0,1)==1,"Administrative shields are paired with an object source for blade-capture-laser counterplay");
+        float caught=AncientFieldExpansion.EscortStep(330,370,30,.1f,3,15,false);
+        Check(caught>330&&caught<=331.81f,"A wire move beyond twelve metres cannot permanently strand a witness on cleared ground");
+        Check(Near(AncientFieldExpansion.EscortStep(330,370,30,.1f,3,3,false),330),"Distant catch-up never runs through an uncleared witness sector");
+        Check(AncientFieldExpansion.EscortStep(414.5f,500,30,.1f,3,15,false)<=414.601f,"Distant residents wait before the next live encounter");
+        Check(Near(AncientFieldExpansion.EscortStep(330,370,30,.1f,3,63,true),330),"A nearby criminal still stops escort movement");
+        Check(Near(AncientFieldExpansion.EscortStep(330,320,9,.1f,3,63,false),330),"A resident never moves backward or overtakes a player behind them");
+        Check(AncientFieldExpansion.EscortStep(414.5f,500,30,.1f,1,63,false)<=414.601f,"Defeated enemies cannot move a resident through an unearned objective gate");
+        Check(AncientFieldExpansion.EscortStep(607.9f,623,30,.1f,3,63,false)<=AncientFieldExpansion.Width-16,"An escort physically reaches but never overshoots the protected exit");
+        float nearby=AncientFieldExpansion.EscortStep(330,336,0,.1f,3,63,false)-330;
+        float distant=AncientFieldExpansion.EscortStep(330,370,0,.1f,3,63,false)-330;
+        Check(distant>nearby&&nearby>0,"Catch-up runs quicker while nearby escort walking keeps its existing pace");
+        foreach(int hz in new[]{30,50,60,120,240})
+        {
+            float witness=330;for(int frame=0;frame<hz*8;frame++)witness=AncientFieldExpansion.EscortStep(witness,620,0,1f/hz,3,63,false);
+            Check(Math.Abs(witness-426)<.04f,"Cleared-ground escort catch-up covers the same distance at every physics/frame rate within float integration precision");
+        }
+        Check(!AncientFieldExpansion.NeedsPowerRefill(0,3,0)&&!AncientFieldExpansion.NeedsPowerRefill(3,1,0),"Energy guidance never replaces an unfinished non-power or earlier objective");
+        Check(AncientFieldExpansion.NeedsPowerRefill(3,3,0)&&!AncientFieldExpansion.NeedsPowerRefill(3,3,1),"An empty receiver redirects to refill, and collected energy restores the receiver target");
+        Check(!AncientFieldExpansion.NeedsPowerRefill(3,7,0),"Completed power restoration cannot send the player back for unnecessary particles");
         Console.WriteLine("PASS: "+checks+" expanded-field layout checks");
     }
 }

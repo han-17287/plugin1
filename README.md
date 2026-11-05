@@ -2,13 +2,15 @@
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**v0.15.0 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/raw/refs/heads/ancient-civilization-prototype/PLUGIN_v0.15.0_Wire_GroundRoutes_Speech_Unity_6000.6.7f1.zip)
+**v0.15.1 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/raw/refs/heads/ancient-civilization-prototype/PLUGIN_v0.15.1_CombatFlow_Unity_6000.6.7f1.zip)
 
 - 와이어 좌클릭은 충돌을 검사하며 즉시 직선 견인, 가운데 클릭은 기존 스윙.
 - 캐릭터 곁의 작은 말풍선과 한국어 순차 표시. 긴 대사는 페이지로 나누고 통신관은 무전기 아이콘으로 표시합니다.
 - 일반 도시·현장은 지상 통로, 지정된 다섯 현장의 가운데 구간은 층별 점프·와이어 기믹. 현장 20개는 각각 폭 624단위·3구간이며 구간별 적은 최대 2명입니다.
 - 오토바이는 초반·마지막 추격전에서만 배치합니다. 메뉴는 고화질 블레이드 시안 원본을 포함한 배경 6종 중 실행별로 하나를 선택합니다.
 - 전용 48프레임 연격, 파란 입자, 굵은 연속 레이저, 주민 25명과 저격수 4페이즈·비서실장 시계 최종보스.
+- 일반 적은 경직 중 접촉 피해가 멈추고 화면 근처에서 새 공격을 준비합니다. 입자 수집과 40/80단계·100 완충 표시를 보완했습니다.
+- 주민은 확보한 통로에서 빠르게 뒤따라오며, 빈 전력 수광부는 입자 재채취 패널로 안내합니다. 사건 방식에 맞춰 근접 경비와 물체 투척 적을 함께 배치했습니다.
 
 ZIP의 `AncientCivilization` 폴더를 Unity **6000.6.7f1**에서 열고 `Assets/Scenes/Main.unity`를 실행하세요. 월드는 Play 중 생성됩니다. 실행 EXE가 아닌 소스 프로젝트입니다.
 

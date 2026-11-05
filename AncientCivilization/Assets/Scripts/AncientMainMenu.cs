@@ -126,7 +126,7 @@ namespace Plugin.AncientCivilization
                     Application.Quit();
 #endif
                 }
-                Label(new Rect(x,top+561,420,23),"F6 효과   F7 소리   F8 프레임 목표  /  v0.15.0",caption,new Color(.4f,.53f,.59f));
+                Label(new Rect(x,top+561,420,23),"F6 효과   F7 소리   F8 프레임 목표  /  v0.15.1",caption,new Color(.4f,.53f,.59f));
                 Label(new Rect(w-450,h-47,402,24),backdropCaptions[sessionBackground]+"  /  기록은 흔적을 남긴다",caption,new Color(.67f,.79f,.84f));
                 if(controls||confirmNew)DrawModal(w,h);
             }

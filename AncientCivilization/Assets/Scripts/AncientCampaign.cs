@@ -197,13 +197,12 @@ namespace Plugin.AncientCivilization
         void ActivateSector(int sector)
         {
             if(encounterSector==sector)return;RecordDefeats();ClearFoes();encounterSector=sector;
-            int floor=AncientCampaignData.Missions[active].Floor;
+            var mission=AncientCampaignData.Missions[active];int floor=mission.Floor;
             for(int i=0;i<AncientFieldExpansion.EnemiesPerSector;i++)
             {
                 if((defeated&AncientFieldExpansion.EnemyBit(sector,i))!=0)continue;
-                int ledge=AncientFieldExpansion.EnemySegment(sector,i);var segment=AncientFieldExpansion.Segment(active,ledge/9,ledge%9);
-                float x=AncientCampaignRules.Left(active)+(segment.left+segment.right)*.5f,y=AncientCampaignData.Missions[active].Kind==2?0:segment.top;
-                int kind=i==0?0:floor==3?4:floor==2?5:(active+sector)%3==0?2:1;
+                float x,y;AncientFieldExpansion.EncounterPosition(active,mission.Kind,sector,i,out x,out y);x+=AncientCampaignRules.Left(active);
+                int kind=AncientFieldExpansion.EncounterType(floor,mission.Kind,sector,i);
                 if(kind==4)y+=2.5f;
                 var enemy=new GameObject("Field criminal / sector "+(sector+1)).AddComponent<AncientEnemy>();enemy.Initialize(kind);
                 enemy.transform.position=new Vector2(x,y);enemy.ConfigureDistrict(floor,false);foes.Add(enemy);foeSlots.Add(sector*2+i);game.enemies.Add(enemy);
@@ -410,8 +409,7 @@ namespace Plugin.AncientCivilization
             {
                 Vector2 witness=escort.transform.position;float previousX=witness.x;bool blocked=false;
                 foreach(var enemy in foes)if(enemy&&enemy.IsAlive&&Mathf.Abs(enemy.transform.position.x-witness.x)<8)blocked=true;
-                if(!blocked&&Mathf.Abs(p.x-witness.x)<12&&p.x>witness.x+1.2f)
-                    witness.x=Mathf.MoveTowards(witness.x,p.x-1.2f,Mathf.Clamp(Mathf.Abs(game.hero.HorizontalSpeed)+1,4.3f,12)*Time.deltaTime);
+                witness.x=left+AncientFieldExpansion.EscortStep(witness.x-left,p.x-left,game.hero.HorizontalSpeed,Time.deltaTime,tasks,defeated,blocked);
                 float moved=Mathf.Abs(witness.x-previousX);escortCycle+=moved*2.2f;
                 int frame=moved>.0001f?(int)escortCycle%4:-1;
                 if(frame!=escortFrame)
@@ -437,13 +435,16 @@ namespace Plugin.AncientCivilization
         }
         int MissingObjective()
         {for(int i=0;i<3;i++)if((tasks&(1<<i))==0)return i;return -1;}
-        // Guide kinds: objective, stranded witness, current threat, next encounter, report exit.
+        // Guide kinds: objective, waiting witness, current threat, next encounter, report exit, energy panel.
         void GuideTarget(int next,out Vector2 point,out int kind,out int id)
         {
             float left=AncientCampaignRules.Left(active);id=next;kind=0;
-            if(next==2&&following&&escort&&Mathf.Abs(game.hero.transform.position.x-escort.transform.position.x)>12)
+            if(next==2&&AncientFieldExpansion.NeedsPowerRefill(AncientCampaignData.Missions[active].Kind,tasks,game.hero.CaptureEnergy))
+            {kind=5;id=CurrentSector;point=PowerPoint(active,id);return;}
+            bool escortThreat=next==2&&following&&escort&&ThreatsAlive();
+            if(next==2&&following&&escort&&!escortThreat&&Mathf.Abs(game.hero.transform.position.x-escort.transform.position.x)>12)
             {kind=1;point=(Vector2)escort.transform.position+Vector2.up*1.2f;return;}
-            if(next>=0&&next<=CurrentSector){point=NodePoint(active,next);return;}
+            if(next>=0&&next<=CurrentSector&&!escortThreat){point=NodePoint(active,next);return;}
             float nearest=float.MaxValue;AncientEnemy threat=null;
             for(int i=0;i<foes.Count;i++)if(foes[i]&&foes[i].IsAlive)
             {
@@ -464,10 +465,10 @@ namespace Plugin.AncientCivilization
                 fieldNodeLabels[i]=(UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
             uiMission=active;uiSector=sector;uiNext=next;uiGuideKind=kind;uiGuideId=id;uiFollowing=following;edgeMetres=-1;
             fieldTitle=(sector+1)+" / 3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 와이어 구간":" · 지상 통로");
-            guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"E · 조사 보고":
+            guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"E · 조사 보고":kind==5?"베기 · 입자 재채취":
                 mission.Kind==2&&next==2?"보호 대상과 출구로":fieldNodeLabels[next];
             fieldNext="다음 / "+guideCaption;
-            fieldHint=kind==1?"주민에게 돌아가 함께 이동하세요.":mission.Kind==2&&following?"주민 가까이 동행 · 거점/출구 E":
+            fieldHint=kind==5?"패널을 베고 우클릭으로 수집 · 길게 눌러 레이저":kind==1?"위협이 없는 통로에서는 주민이 뒤따라옵니다.":mission.Kind==2&&following?"주민을 보호하며 이동 · 거점/출구 E":
                 kind==2||kind==3?"위협을 제압하세요 · 안전 거점 E: 복귀":"안전 거점 E: 복귀 · 동쪽 출구 E: 보고";
         }
         static bool InView(Vector3 point)

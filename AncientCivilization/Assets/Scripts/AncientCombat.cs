@@ -171,7 +171,15 @@ namespace Plugin.AncientCivilization
             return found;
         }
         public void Receive(float energy)
-        {hero.AddCapturedEnergy(energy);CollectedParticles++;game.Story.OnTraining(6);game.Sound(2);}
+        {
+            float before=hero.CaptureEnergy;int stage=hero.CaptureStage;
+            hero.AddCapturedEnergy(energy);CollectedParticles++;game.Story.OnTraining(6);game.Sound(2);
+            if(game.Sniper&&game.Sniper.InputLocked)return;
+            if(before<100&&hero.CaptureEnergy>=100)
+            {game.Feel.Signal("입자 완충 · 최대 출력 레이저",AncientMoteVisuals.Blue,1.1f);game.Impact(Origin,AncientMoteVisuals.Blue,true);game.Sound(5);}
+            else if(stage>0&&hero.CaptureStage>stage)
+            {game.Feel.Signal("입자 축적 "+hero.CaptureStage+"단계 · 레이저 강화",AncientMoteVisuals.Blue,.8f);game.Impact(Origin,AncientMoteVisuals.Blue,false);game.Sound(3);}
+        }
         Vector2 ResolveBeam(Vector2 origin,Vector2 target)
         {
             Vector2 delta=target-origin;float range=Mathf.Clamp(delta.magnitude,.5f,24);
@@ -254,15 +262,19 @@ namespace Plugin.AncientCivilization
             Vector2 delta=(Vector2)hero.transform.position-(Vector2)transform.position;
             bool collecting=combat.CanCollect&&delta.sqrMagnitude<49&&!Physics2D.Linecast(transform.position,hero.transform.position,1<<8);
             if(collecting)
-            {velocity=delta.normalized*22;if(delta.sqrMagnitude<.45f){combat.Receive(energy);gameObject.SetActive(false);return;}}
+            {velocity=delta.normalized*AncientCombatRules.CollectionSpeed;if(delta.sqrMagnitude<AncientCombatRules.CollectionRadiusSquared){combat.Receive(energy);gameObject.SetActive(false);return;}}
             else velocity=Vector2.Lerp(velocity,Vector2.zero,Time.deltaTime*3);
-            Vector2 next=(Vector2)transform.position+velocity*Time.deltaTime;
+            Vector2 step=collecting?delta.normalized*AncientCombatRules.CollectionStep(delta.magnitude,Time.deltaTime):velocity*Time.deltaTime;
+            Vector2 next=(Vector2)transform.position+step;
             if(velocity.sqrMagnitude>.01f)
             {
                 var hit=Physics2D.Linecast(transform.position,next,1<<8);
                 if(hit){next=hit.point+hit.normal*.06f;velocity=Vector2.Reflect(velocity,hit.normal)*.25f;}
             }
-            transform.position=next;transform.Rotate(0,0,180*Time.deltaTime);visual.Tick(life,8-life,collecting);
+            transform.position=next;
+            if(collecting&&((Vector2)hero.transform.position-next).sqrMagnitude<AncientCombatRules.CollectionRadiusSquared)
+            {combat.Receive(energy);gameObject.SetActive(false);return;}
+            transform.Rotate(0,0,180*Time.deltaTime);visual.Tick(life,8-life,collecting);
         }
     }
 }
