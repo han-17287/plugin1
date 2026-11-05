@@ -17,7 +17,7 @@ namespace Plugin.AncientCivilization
             if (textures.TryGetValue(name, out texture) && texture) return texture;
             texture = Resources.Load<Texture2D>("Art/" + name);
             if (!texture) throw new System.InvalidOperationException("Missing Art/" + name + ".png");
-            if(name=="Hero"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name.StartsWith("Citizens")||name.StartsWith("Boss"))
+            if(name=="Hero"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name=="SniperEquipment"||name.StartsWith("Citizens")||name.StartsWith("Boss"))
             {
                 var pixels=texture.GetPixels32();var packed=new uint[pixels.Length];
                 for(int i=0;i<pixels.Length;i++)packed[i]=((uint)pixels[i].r<<24)|((uint)pixels[i].g<<16)|((uint)pixels[i].b<<8)|pixels[i].a;
@@ -76,7 +76,7 @@ namespace Plugin.AncientCivilization
         {
             floor=Mathf.Clamp(floor,0,5);pose=Mathf.Clamp(pose,0,5);int index=floor*6+pose;
             if(bossCache[index])return bossCache[index];Rect rect=AncientBossAtlas.Bounds[index];
-            float root=pose%3*512+256;
+            float root=AncientBossAtlas.RootX[index];
             bossCache[index]=Slice("Boss"+floor,"boss-"+index,rect,AncientBossAtlas.Ppu[floor],new Vector2((root-rect.x)/rect.width,0),false);
             return bossCache[index];
         }

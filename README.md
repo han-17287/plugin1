@@ -2,9 +2,9 @@
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**총 10시간 작업 진행 중 · v0.12.1 중간 확인본:** [Unity 소스 ZIP](https://github.com/han-17287/plugin1/raw/refs/heads/ancient-civilization-prototype/PLUGIN_v0.12.1_ClockBoss_Routes_Unity_6000.6.7f1.zip)
+**총 10시간 작업 진행 중 · v0.13.0 중간 확인본:** [Unity 소스 ZIP](https://github.com/han-17287/plugin1/raw/refs/heads/ancient-civilization-prototype/PLUGIN_v0.13.0_JokerSniper_Unity_6000.6.7f1.zip)
 
-메뉴 전 Hwasan Games → HG 로고, 저격수 뒤 비서실장 시계 최종보스 1페이즈, 자료 대조 선택지, 구역 보스별 패턴/외형을 추가했습니다. 비서실장 2페이즈는 이후 설계합니다. 백명 이름, 주민 25명과 상태별 대화/외형, 주요 사건·현장 구역 20개, 구조 대상 걷기와 실제 청취 기록을 추가했습니다. 조커 단서는 드문 주민 대화에 두고, 최상층은 저격수와 같은 처지만 확인합니다. **친구 공개는 2회차입니다.**
+조커 반가면·모자·긴 소총의 저격수 4페이즈, 파괴 지면, 탈취 가능한 포탑, Space+좌클릭 레이저 힘겨루기를 추가했습니다. 메뉴 전 Hwasan Games → HG 로고, 저격수 뒤 비서실장 시계 최종보스 1페이즈, 자료 대조 선택지, 구역 보스별 패턴/외형을 추가했습니다. 비서실장은 1페이즈만 싸운 뒤 살아서 퇴장하며, 2회차에 다시 등장합니다. 백명 이름, 주민 25명과 상태별 대화/외형, 주요 사건·현장 구역 20개, 구조 대상 걷기와 실제 청취 기록을 추가했습니다. 조커 단서는 드문 주민 대화에 두고, 최상층은 저격수와 같은 처지만 확인합니다. **친구 공개는 2회차입니다.**
 
 압축을 풀고 AncientCivilization 폴더를 Unity **6000.6.7f1**에서 여세요. 실행 EXE가 아닙니다. 새 조사→보스 순서는 새 게임으로 확인하세요. 기존 세이브의 출입 권한은 보존합니다.
 
@@ -12,6 +12,7 @@
 
 - [실행·조작·구현 범위](AncientCivilization/README_KO.md)
 - [현재 완성도와 남은 범위](AncientCivilization/COMPLETION_KO.md)
+- [저격수 4페이즈·포탑·힘겨루기](AncientCivilization/SNIPER_BOSS_KO.md)
 - [스토리·1회차/2회차 경계](AncientCivilization/STORY_KO.md)
 - [게임 데이터 기준 사건/주민 대사 전문](AncientCivilization/CAMPAIGN_SCRIPT_KO.md)
 - [작업 진행 기록](AncientCivilization/DEVELOPMENT_REPORT_KO.md)

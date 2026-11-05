@@ -11,7 +11,7 @@ namespace Plugin.AncientCivilization
     {
         static readonly int[] targets={60,120,144,240,-1};
         readonly float[] samples=new float[240],sorted=new float[240];
-        readonly int[] sampleFloor=new int[240],sampleTarget=new int[240],sampleQuality=new int[240],samplePhase=new int[240],sampleRoom=new int[240];
+        readonly int[] sampleFloor=new int[240],sampleTarget=new int[240],sampleQuality=new int[240],samplePhase=new int[240],sampleRoom=new int[240],sampleSniper=new int[240],sampleSniperObjects=new int[240];
         AncientGame game;int cursor,count,targetIndex;float updateAt;bool details;
         float mean,p95,peak;string summary="",diagnostics="";GUIStyle style;
         ProfilerRecorder allocations;
@@ -42,7 +42,7 @@ namespace Plugin.AncientCivilization
             if(!game.HasSession||game.Paused||!Application.isFocused)return;
             float dt=Time.unscaledDeltaTime;if(!AncientFrameRules.ValidSample(dt))return;
             samples[cursor]=dt*1000;sampleFloor[cursor]=game.Story.CurrentFloor;sampleTarget[cursor]=Target;
-            sampleQuality[cursor]=AncientVisuals.HighQuality?1:0;samplePhase[cursor]=game.Finale?game.Finale.Phase:0;sampleRoom[cursor]=game.Campaign?game.Campaign.CurrentRoom:-1;cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
+            sampleQuality[cursor]=AncientVisuals.HighQuality?1:0;samplePhase[cursor]=game.Finale?game.Finale.Phase:0;sampleRoom[cursor]=game.Campaign?game.Campaign.CurrentRoom:-1;sampleSniper[cursor]=game.Sniper?game.Sniper.Phase:0;sampleSniperObjects[cursor]=game.Sniper?game.Sniper.LiveObjects:0;cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
             if(Time.unscaledTime<updateAt)return;updateAt=Time.unscaledTime+.5f;Refresh();
         }
         void Refresh()
@@ -54,19 +54,19 @@ namespace Plugin.AncientCivilization
             if(!details)return;
             long bytes=allocations.Valid?allocations.LastValue:-1;
             diagnostics="프레임 평균 "+mean.ToString("F2")+"ms · P95 "+p95.ToString("F2")+"ms\n최대 "+peak.ToString("F2")+"ms / 최근 GC "+(bytes>=0?(bytes/1024f).ToString("F1")+"KB":"미지원")+
-                "\n정적 장식 "+game.WorldBatch.QuadCount+"개 → 묶음 "+game.WorldBatch.RendererCount+"개 / 현재 "+game.WorldBatch.ActiveRendererCount+"개\n활성 적 "+game.enemies.Count+" / 투척물 "+game.shots.Count+" / 풀 "+game.Projectiles.Capacity+" (누락 "+game.Projectiles.DroppedSpawns+")\nF8 프레임 목표 · F9 닫기 · F10 CSV 저장";
+                "\n정적 장식 "+game.WorldBatch.QuadCount+"개 → 묶음 "+game.WorldBatch.RendererCount+"개 / 현재 "+game.WorldBatch.ActiveRendererCount+"개\n활성 적 "+game.enemies.Count+" / 투척물 "+game.shots.Count+" / 풀 "+game.Projectiles.Capacity+" (누락 "+game.Projectiles.DroppedSpawns+")"+(game.Sniper?"\n저격수 물체 "+game.Sniper.LiveObjects+" / 풀 "+game.Sniper.ObjectCapacity+" · 누락 "+game.Sniper.DroppedSpawns:"")+"\nF8 프레임 목표 · F9 닫기 · F10 CSV 저장";
         }
         void Export()
         {
             if(count==0){game.Notice("플레이 중 프레임을 수집한 뒤 F10으로 저장하세요.",3);return;}
             try
             {
-                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room\n");
+                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room,sniper_phase,sniper_objects\n");
                 for(int i=0;i<count;i++)
                 {
                     int at=count==samples.Length?(cursor+i)%samples.Length:i;
                     text.Append(i).Append(',').Append(samples[at].ToString("F4",CultureInfo.InvariantCulture)).Append(',')
-                        .Append(sampleFloor[at]).Append(',').Append(sampleTarget[at]).Append(',').Append(sampleQuality[at]).Append(',').Append(samplePhase[at]).Append(',').Append(sampleRoom[at]).Append('\n');
+                        .Append(sampleFloor[at]).Append(',').Append(sampleTarget[at]).Append(',').Append(sampleQuality[at]).Append(',').Append(samplePhase[at]).Append(',').Append(sampleRoom[at]).Append(',').Append(sampleSniper[at]).Append(',').Append(sampleSniperObjects[at]).Append('\n');
                 }
                 string path=Path.Combine(Application.persistentDataPath,"performance-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv");
                 File.WriteAllText(path,text.ToString());game.Notice("성능 기록 저장: "+path,6);
@@ -78,8 +78,8 @@ namespace Plugin.AncientCivilization
             if(!details||game.MainMenu||Event.current.type!=EventType.Repaint)return;
             if(style==null)style=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,wordWrap=true};
             var matrix=GUI.matrix;GUI.matrix=Matrix4x4.identity;
-            float x=Mathf.Max(12,Screen.width-430);AncientHUD.Panel(new Rect(x,220,415,148),new Color(.015f,.035f,.05f,.94f));
-            GUI.Label(new Rect(x+12,228,390,135),diagnostics,style);GUI.matrix=matrix;
+            float x=Mathf.Max(12,Screen.width-430);AncientHUD.Panel(new Rect(x,220,415,170),new Color(.015f,.035f,.05f,.94f));
+            GUI.Label(new Rect(x+12,228,390,157),diagnostics,style);GUI.matrix=matrix;
         }
         void OnDestroy(){if(allocations.Valid)allocations.Dispose();}
     }

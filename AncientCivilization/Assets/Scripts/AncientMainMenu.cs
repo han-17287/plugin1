@@ -62,7 +62,7 @@ namespace Plugin.AncientCivilization
                 Application.Quit();
 #endif
             }
-            Label(new Rect(left+18,top+561,500,28),"F6 효과   F7 소리   v0.12.1 / BAEK MYEONG",caption,new Color(.42f,.59f,.64f));
+            Label(new Rect(left+18,top+561,500,28),"F6 효과   F7 소리   v0.13.0 / BAEK MYEONG",caption,new Color(.42f,.59f,.64f));
             Rect portrait=new Rect(left+630,top+75,430,520);
             GUI.color=new Color(.8f,.95f,1,.9f);
             var hero=AncientArt.Hero(0);Rect tex=hero.textureRect;

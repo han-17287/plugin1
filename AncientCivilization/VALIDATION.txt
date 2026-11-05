@@ -1,15 +1,22 @@
 PASS: 3211 combat and quest rule checks
+PASS: 76 sniper rule checks
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
+PASS: metadata coverage Editor
 PASS: metadata coverage Scenes
 PASS: metadata target Assets/Resources.meta
 PASS: 32-character GUID Resources.meta
 PASS: metadata coverage Scripts
 PASS: metadata target Assets/Scenes.meta
 PASS: 32-character GUID Scenes.meta
+PASS: metadata target Assets/Editor.meta
+PASS: 32-character GUID Editor.meta
 PASS: metadata coverage Resources
 PASS: metadata target Assets/Scripts.meta
 PASS: 32-character GUID Scripts.meta
+PASS: metadata coverage AncientSniperSmokeChecks.cs
+PASS: metadata target Assets/Editor/AncientSniperSmokeChecks.cs.meta
+PASS: 32-character GUID AncientSniperSmokeChecks.cs.meta
 PASS: metadata coverage Main.unity
 PASS: metadata target Assets/Scenes/Main.unity.meta
 PASS: 32-character GUID Main.unity.meta
@@ -31,6 +38,8 @@ PASS: metadata target Assets/Scripts/AncientBossController.cs.meta
 PASS: 32-character GUID AncientBossController.cs.meta
 PASS: metadata target Assets/Scripts/AncientEvidenceQuestions.cs.meta
 PASS: 32-character GUID AncientEvidenceQuestions.cs.meta
+PASS: metadata target Assets/Scripts/SniperEquipmentArt.cs.meta
+PASS: 32-character GUID SniperEquipmentArt.cs.meta
 PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
 PASS: 32-character GUID AncientCameraFX.cs.meta
 PASS: metadata coverage AncientBossRules.cs
@@ -45,6 +54,7 @@ PASS: metadata coverage AncientFrameRules.cs
 PASS: metadata target Assets/Scripts/AncientPerformance.cs.meta
 PASS: 32-character GUID AncientPerformance.cs.meta
 PASS: metadata coverage AncientCampaignRules.cs
+PASS: metadata coverage AncientSniperGround.cs
 PASS: metadata target Assets/Scripts/AncientExploration.cs.meta
 PASS: 32-character GUID AncientExploration.cs.meta
 PASS: metadata coverage AncientPointer.cs
@@ -58,6 +68,8 @@ PASS: 32-character GUID AncientProjectilePool.cs.meta
 PASS: metadata coverage AncientCityCampaign.cs
 PASS: metadata coverage AncientRules.cs
 PASS: metadata coverage AncientTraversal.cs
+PASS: metadata target Assets/Scripts/AncientSniperGround.cs.meta
+PASS: 32-character GUID AncientSniperGround.cs.meta
 PASS: metadata target Assets/Scripts/AncientCampaignData.cs.meta
 PASS: 32-character GUID AncientCampaignData.cs.meta
 PASS: metadata target Assets/Scripts/AncientCombat.cs.meta
@@ -68,6 +80,8 @@ PASS: 32-character GUID AncientFieldScenery.cs.meta
 PASS: metadata target Assets/Scripts/AncientBossRules.cs.meta
 PASS: 32-character GUID AncientBossRules.cs.meta
 PASS: metadata coverage AncientCombatRules.cs
+PASS: metadata target Assets/Scripts/AncientSniperRules.cs.meta
+PASS: 32-character GUID AncientSniperRules.cs.meta
 PASS: metadata coverage AncientFinaleRules.cs
 PASS: metadata coverage AncientJournal.cs
 PASS: metadata coverage AncientCampaignData.cs
@@ -78,6 +92,7 @@ PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
 PASS: 32-character GUID AncientVisuals.cs.meta
 PASS: metadata target Assets/Scripts/AncientFieldLayout.cs.meta
 PASS: 32-character GUID AncientFieldLayout.cs.meta
+PASS: metadata coverage AncientSniperRules.cs
 PASS: metadata target Assets/Scripts/AncientTraversal.cs.meta
 PASS: 32-character GUID AncientTraversal.cs.meta
 PASS: metadata target Assets/Scripts/AncientTraversalLayout.cs.meta
@@ -123,6 +138,8 @@ PASS: metadata target Assets/Scripts/AncientFinale.cs.meta
 PASS: 32-character GUID AncientFinale.cs.meta
 PASS: metadata coverage AncientBootIntro.cs
 PASS: metadata coverage AncientVisuals.cs
+PASS: metadata target Assets/Scripts/AncientSniperEncounter.cs.meta
+PASS: 32-character GUID AncientSniperEncounter.cs.meta
 PASS: metadata coverage AncientKoreanUI.cs
 PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
 PASS: 32-character GUID AncientClockRules.cs.meta
@@ -144,10 +161,12 @@ PASS: metadata target Assets/Scripts/AncientStory.cs.meta
 PASS: 32-character GUID AncientStory.cs.meta
 PASS: metadata coverage AncientFinale.cs
 PASS: metadata coverage AncientCombat.cs
+PASS: metadata coverage AncientSniperEncounter.cs
 PASS: metadata coverage AncientFieldScenery.cs
 PASS: metadata target Assets/Scripts/AncientKoreanUI.cs.meta
 PASS: 32-character GUID AncientKoreanUI.cs.meta
 PASS: metadata coverage AncientHUD.cs
+PASS: metadata coverage SniperEquipmentArt.cs
 PASS: metadata coverage AncientFieldLayout.cs
 PASS: metadata coverage AncientStory.cs
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
@@ -197,6 +216,7 @@ PASS: metadata coverage Citizens4.png
 PASS: metadata target Assets/Resources/Art/World.png.meta
 PASS: 32-character GUID World.png.meta
 PASS: metadata coverage HeroEmitterBody.png
+PASS: metadata coverage SniperEquipment.png
 PASS: metadata target Assets/Resources/Art/Hero.png.meta
 PASS: 32-character GUID Hero.png.meta
 PASS: metadata target Assets/Resources/Art/Enemies.png.meta
@@ -216,6 +236,8 @@ PASS: metadata target Assets/Resources/Art/CitizensWalk.png.meta
 PASS: 32-character GUID CitizensWalk.png.meta
 PASS: metadata target Assets/Resources/Art/Rooftop.png.meta
 PASS: 32-character GUID Rooftop.png.meta
+PASS: metadata target Assets/Resources/Art/SniperEquipment.png.meta
+PASS: 32-character GUID SniperEquipment.png.meta
 PASS: metadata coverage Hero.png
 PASS: metadata coverage Actions.png
 PASS: metadata coverage Enemies.png
@@ -250,6 +272,9 @@ PASS: metadata coverage ParticleGlow.shader
 PASS: metadata coverage CharacterRim.shader
 PASS: metadata target Assets/Resources/Shaders/ParticleGlow.shader.meta
 PASS: 32-character GUID ParticleGlow.shader.meta
+PASS: metadata coverage AncientEnergyClone.shader
+PASS: metadata target Assets/Resources/Shaders/AncientEnergyClone.shader.meta
+PASS: 32-character GUID AncientEnergyClone.shader.meta
 PASS: metadata target Assets/Resources/Fonts/LICENSE.txt.meta
 PASS: 32-character GUID LICENSE.txt.meta
 PASS: metadata coverage NeoDunggeunmo.ttf
@@ -537,6 +562,22 @@ PASS: boss silhouette crop within texture 33
 PASS: boss silhouette crop within texture 34
 PASS: boss silhouette crop within texture 35
 PASS: boss has six distinct silhouettes 5
+PASS: SniperEquipment.png PNG signature
+PASS: SniperEquipment.png PNG chunk integrity
+PASS: sniper equipment PNG integrity and dimensions
+PASS: six separate physical sniper equipment pieces
+PASS: equipment crop cannot bleed into neighbouring cell 0
+PASS: equipment piece has visible alpha 0
+PASS: equipment crop cannot bleed into neighbouring cell 1
+PASS: equipment piece has visible alpha 1
+PASS: equipment crop cannot bleed into neighbouring cell 2
+PASS: equipment piece has visible alpha 2
+PASS: equipment crop cannot bleed into neighbouring cell 3
+PASS: equipment piece has visible alpha 3
+PASS: equipment crop cannot bleed into neighbouring cell 4
+PASS: equipment piece has visible alpha 4
+PASS: equipment crop cannot bleed into neighbouring cell 5
+PASS: equipment piece has visible alpha 5
 PASS: StudioLogos.png PNG signature
 PASS: StudioLogos.png PNG chunk integrity
 PASS: boot logo sheet PNG integrity and dimensions
@@ -592,6 +633,7 @@ PASS: C# syntax AncientBossRules.cs
 PASS: C# syntax AncientCityLayout.cs
 PASS: C# syntax AncientFrameRules.cs
 PASS: C# syntax AncientCampaignRules.cs
+PASS: C# syntax AncientSniperGround.cs
 PASS: C# syntax AncientPointer.cs
 PASS: C# syntax AncientArt.cs
 PASS: C# syntax AncientCityCampaign.cs
@@ -603,6 +645,7 @@ PASS: C# syntax AncientFinaleRules.cs
 PASS: C# syntax AncientJournal.cs
 PASS: C# syntax AncientCampaignData.cs
 PASS: C# syntax AncientWireMath.cs
+PASS: C# syntax AncientSniperRules.cs
 PASS: C# syntax AncientFieldCases.cs
 PASS: C# syntax AncientProjectilePool.cs
 PASS: C# syntax AncientClockBoss.cs
@@ -627,8 +670,10 @@ PASS: C# syntax AncientParkedBike.cs
 PASS: C# syntax AncientCampaign.cs
 PASS: C# syntax AncientFinale.cs
 PASS: C# syntax AncientCombat.cs
+PASS: C# syntax AncientSniperEncounter.cs
 PASS: C# syntax AncientFieldScenery.cs
 PASS: C# syntax AncientHUD.cs
+PASS: C# syntax SniperEquipmentArt.cs
 PASS: C# syntax AncientFieldLayout.cs
 PASS: C# syntax AncientStory.cs
 PASS: C# syntax AncientMotorcycle.cs
@@ -646,5 +691,5 @@ PASS: five sparse Joker mentions across city resident dialogue
 PASS: protagonist dialogue consistently uses Baek Myeong
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 
-PASS: Supplemental C# type check using Unity 2021.3 reference modules; temporary linearVelocity-to-velocity compatibility copies only. Shipped Unity 6 source unchanged. This does not establish Unity 6000.6 API compatibility or runtime behavior.
-NOT RUN: actual Unity 6000.6.7f1 import, Play Mode, physics/telegraph timing, shader rendering, player build, measured FPS, first-run duration.
+PASS: Supplemental runtime C# type check with Unity 2021.3 reference DLLs and temporary linearVelocity-to-velocity copies; shipped Unity6 source unchanged.
+NOT RUN: actual Unity6000.6 runtime or Editor C# compilation, new energy shader compilation/rendering, physics, Editor smoke menu execution, user input timing, player build, FPS and full playthrough duration.

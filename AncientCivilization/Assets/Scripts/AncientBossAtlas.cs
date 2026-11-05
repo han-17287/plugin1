@@ -28,12 +28,12 @@ namespace Plugin.AncientCivilization
    new Rect(93,549,358,446),
    new Rect(565,549,430,446),
    new Rect(1109,549,326,446),
-   new Rect(149,37,254,446),
-   new Rect(589,85,318,390),
-   new Rect(1077,109,414,366),
-   new Rect(125,557,318,438),
-   new Rect(605,557,342,438),
-   new Rect(1133,557,254,438),
+   new Rect(117,45,318,438),
+   new Rect(541,101,406,382),
+   new Rect(1037,109,470,374),
+   new Rect(93,565,414,430),
+   new Rect(565,565,430,430),
+   new Rect(1085,573,366,422),
    new Rect(141,5,198,494),
    new Rect(653,5,198,494),
    new Rect(1085,5,310,494),
@@ -41,6 +41,8 @@ namespace Plugin.AncientCivilization
    new Rect(512,517,451,494),
    new Rect(1109,589,278,422)
   };
+  // Sprite roots follow the pelvis; a long rifle never shifts the actor pivot.
+  public static readonly float[] RootX={256f,768f,1280f,256f,768f,1280f,256f,768f,1280f,256f,768f,1280f,256f,768f,1280f,256f,768f,1280f,256f,768f,1280f,256f,768f,1280f,216f,676f,1200f,184f,676f,1176f,256f,768f,1280f,256f,768f,1280f};
   public static readonly float[] Ppu={150,185,175,145,220,195};
  }
 }

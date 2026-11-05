@@ -130,6 +130,7 @@ namespace Plugin.AncientCivilization
             }
             if(floor>=2&&p.y<-2.5f)
             {
+                if(game.Sniper)game.Sniper.PrepareSafeRecovery();
                 game.hero.TravelTo(ArenaActive?new Vector2(AncientCityLayout.ArenaLeft(floor)+1,1.3f):safeRecovery);game.SnapCameraToHero();
                 game.Notice("안전 회수 / 마지막 안전 발판에서 다시 시작합니다.",2);
             }
@@ -141,10 +142,10 @@ namespace Plugin.AncientCivilization
             Cleared|=1<<floor;AncientGame.SetSaved("cityCleared",Cleared);
             game.Story.OnDistrictCleared(floor);game.Save();
         }
-        public void SecretaryDefeated()
+        public void SecretaryRetreated(AncientEnemy secretary)
         {
             activeBoss=null;game.boss=null;SecretaryCleared=true;AncientGame.SetSaved("secretaryCleared",1);game.Save();
-            game.Story.Conversation(null,3,new[]{"비서실장","백명"},new[]{"정해진 순서를 벗어났군요. 하지만 회장님은 이미 다음 절차로 가셨습니다.","도시의 시간을 정해 온 게 너희였나. 이제 기록을 확인하겠다."});
+            game.Story.Conversation(()=>{if(secretary)secretary.DepartAlive();},3,new[]{"비서실장","백명","비서실장"},new[]{"시계를 멈추셨군요. 오늘은 여기까지 하지요. 회장님은 이곳에 계시지 않습니다.","도망치겠다는 건가. 기록을 확인한 뒤 네가 막아 온 일도 묻겠다.","살아 계신다면 다시 뵙겠지요. 그때는 제 시간도 달라져 있을 겁니다."});
         }
         public bool TryInteract()
         {

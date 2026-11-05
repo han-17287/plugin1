@@ -52,6 +52,7 @@ namespace Plugin.AncientCivilization
             }
             return hit;
         }
+        public void StopBattle(){Hide();foreach(var spear in spears)if(spear)spear.Disarm();}
         void BeginVector(){Hide();lastTick=-1;Enter(State.Vector,AncientClockRules.SpinSeconds);}
         void BeginTeleport()
         {
@@ -198,6 +199,7 @@ namespace Plugin.AncientCivilization
             shape.startColor=shape.endColor=kind==0?new Color(1,.77f,.25f):kind==1?new Color(.75f,.94f,1):new Color(1,.55f,.35f);shape.enabled=true;
         }
         public void Break(){if(!live)return;game.hero.Combat.EmitParticles(BreakPoint,kind==2?10:14);game.Burst(BreakPoint,AncientGame.Cyan,6);Remove();}
+        public void Disarm(){Remove();}
         void Remove(){live=false;shape.enabled=false;}
         void Update()
         {

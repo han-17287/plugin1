@@ -179,6 +179,15 @@ def main():
                 if boss<5:check((x,y,w,h)==rect,'boss crop matches exact native-grid alpha '+str(boss*6+pose))
                 poses.append(shape)
             check(len(set(poses))==6,'boss has six distinct silhouettes '+str(boss))
+        equipment=ROOT / 'Assets/Resources/Art/SniperEquipment.png'
+        check(png_info(equipment)[:2]==(1536,1024),'sniper equipment PNG integrity and dimensions')
+        equip_source=(ROOT / 'Assets/Scripts/SniperEquipmentArt.cs').read_text()
+        equip_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',equip_source)]
+        check(len(equip_rects)==6,'six separate physical sniper equipment pieces')
+        equipment_image=Image.open(equipment)
+        for index,(x,y,w,h) in enumerate(equip_rects):
+            check(x>=index%3*512 and y>=index//3*512 and x+w<=(index%3+1)*512 and y+h<=(index//3+1)*512,'equipment crop cannot bleed into neighbouring cell '+str(index))
+            check(equipment_image.getchannel('A').crop((x,y,x+w,y+h)).getbbox() is not None,'equipment piece has visible alpha '+str(index))
         info=png_info(ROOT / 'Assets/Resources/Art/StudioLogos.png')
         check(info[:2]==(1536,1024),'boot logo sheet PNG integrity and dimensions')
         image = Image.open(ROOT / 'Assets/Resources/Art/World.png')

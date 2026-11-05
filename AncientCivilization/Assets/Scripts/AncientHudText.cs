@@ -27,12 +27,12 @@ namespace Plugin.AncientCivilization
             {capture=hero.CaptureStage;lastCaptureEnergy=e;Capture="축적 "+capture+" / 3단계 · "+e+"%";}
             if(performance!=game.Performance.Summary||quality!=AncientVisuals.HighQuality||Performance.Length==0)
             {performance=game.Performance.Summary;quality=AncientVisuals.HighQuality;Performance=(quality?"F6 고품질":"F6 가볍게")+" · "+performance;}
-            if(boss!=game.boss||(game.boss&&enraged!=game.boss.Enraged))
-            {boss=game.boss;enraged=boss&&boss.Enraged;Boss=boss?boss.Role+(enraged?" / 2단계":""):"";}
+            if(boss!=game.boss||(game.boss&&enraged!=game.boss.Enraged)||(game.Sniper&&lastSniperPhase!=game.Sniper.Phase))
+            {boss=game.boss;enraged=boss&&boss.Enraged;lastSniperPhase=game.Sniper?game.Sniper.Phase:-1;Boss=boss?boss.Role+(game.Sniper?" / "+lastSniperPhase+"페이즈":enraged?" / 2단계":""):"";}
             int velocity=Mathf.RoundToInt(Mathf.Abs(hero.HorizontalSpeed)*3.6f);
             if(velocity!=speed){speed=velocity;Speed=velocity+" km/h";}
         }
-        int lastCaptureEnergy=-1;
+        int lastCaptureEnergy=-1,lastSniperPhase=-1;
         public void Distance(AncientPickup item,float value)
         {
             int current=Mathf.CeilToInt(value);
