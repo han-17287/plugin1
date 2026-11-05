@@ -410,6 +410,8 @@ namespace Plugin.AncientCivilization
             GUI.Label(new Rect(w-300,117,284,23),hud.Mode,small);
             GUI.Label(new Rect(w-300,141,284,24),hud.Capture,small);
             Bar(new Rect(w-300,168,284,7),hero.CaptureEnergy/100f,Cyan);
+            if(hero.AttackMode&&!hero.bike&&hero.Combat&&!hero.Combat.Charging)
+            {GUI.color=new Color(1,.88f,.3f);GUI.Label(new Rect(w-300,179,284,24),hud.Blade,small);GUI.color=Color.white;}
             foreach(var enemy in enemies)
             {
                 if(!enemy)continue;
@@ -522,6 +524,7 @@ namespace Plugin.AncientCivilization
         public float CaptureEnergy {get;private set;}
         public int CaptureStage {get{return CaptureEnergy<=0?0:CaptureEnergy<40?1:CaptureEnergy<80?2:3;}}
         public bool Capturing {get{return Input.GetMouseButton(1);}}
+        public bool MeleeInterrupted {get{return Time.time<hurtUntil;}}
         public float BikeSkid {get;private set;}
         public AncientCombat Combat {get;private set;}
         LineRenderer chargeRing;
@@ -566,8 +569,8 @@ namespace Plugin.AncientCivilization
         Vector2 previousRadial;int wireChain;bool wireZip;
         AncientEnemy wireEnemy,wireContactTarget;Transform wireMovingAnchor;Vector2 wireMovingLocal;float wireContactUntil;
         bool wired,airJumpUsed;float axis;int combo;
-        Sprite[] frames,actions;
-        float actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
+        Sprite[] frames,bladeFrames;
+        float actionStarted,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
         bool wasGrounded,cutJump;float strikeFacing;
         void Awake()
         {
@@ -585,7 +588,10 @@ namespace Plugin.AncientCivilization
             heroCollider=gameObject.AddComponent<CapsuleCollider2D>();heroCollider.size=new Vector2(.72f,2.1f);
             var frictionless=new PhysicsMaterial2D("Free movement"){friction=0,bounciness=0};heroCollider.sharedMaterial=frictionless;
             bikeCollider=gameObject.AddComponent<BoxCollider2D>();bikeCollider.size=new Vector2(2.85f,1.8f);bikeCollider.offset=new Vector2(0,.085f);bikeCollider.edgeRadius=.01f;bikeCollider.sharedMaterial=frictionless;bikeCollider.enabled=false;
-            frames=new Sprite[8];actions=new Sprite[8];for(int i=0;i<frames.Length;i++){frames[i]=AncientArt.Hero(i);actions[i]=AncientArt.Action(i);}
+            frames=new Sprite[8];for(int i=0;i<frames.Length;i++)frames[i]=AncientArt.Hero(i);
+            bladeFrames=new Sprite[AncientBladeRules.StepCount*AncientBladeRules.FramesPerStep];
+            for(int step=1;step<=AncientBladeRules.StepCount;step++)for(int frame=0;frame<AncientBladeRules.FramesPerStep;frame++)
+                bladeFrames[(step-1)*AncientBladeRules.FramesPerStep+frame]=AncientArt.Blade(step,frame);
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-1.05f),10,transform);
             swingMotion=new AncientSwingMotion(art);
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
@@ -694,7 +700,7 @@ namespace Plugin.AncientCivilization
             if(!bike&&!wired)
             {
                 if(Time.time<hurtUntil)art.sprite=frames[0];
-                else if(Time.time<actionUntil)art.sprite=actions[AncientRules.BladeAnimationFrame(Time.time-(actionUntil-AncientRules.BladeDuration))];
+                else if(Time.time<actionUntil)art.sprite=bladeFrames[(combo-1)*AncientBladeRules.FramesPerStep+AncientBladeRules.AnimationFrame(combo,Time.time-actionStarted)];
                 else if(Combat&&(Combat.Charging||Combat.Firing))art.sprite=frames[6];
                 else if(!onGround)art.sprite=frames[3];
             }
@@ -755,7 +761,13 @@ namespace Plugin.AncientCivilization
             AncientGame.Instance.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(1,.9f,.2f),7);
         }
         public void BladePose(float facing,int index)
-        {combo=index;strikeFacing=facing;actionUntil=Time.time+AncientRules.BladeDuration;}
+        {combo=AncientBladeRules.NormalizeStep(index);strikeFacing=facing;actionStarted=Time.time;actionUntil=actionStarted+AncientBladeRules.Duration(combo);}
+        public Vector2 BladeTipWorld(float animationFrame)
+        {
+            float frame=Mathf.Clamp(animationFrame,0,AncientBladeRules.FramesPerStep-1);int first=Mathf.FloorToInt(frame),next=Mathf.Min(first+1,AncientBladeRules.FramesPerStep-1);
+            Vector2 tip=Vector2.Lerp(AncientBladeAtlas.TipLocal(combo,first),AncientBladeAtlas.TipLocal(combo,next),frame-first);
+            if(strikeFacing<0)tip.x=-tip.x;return art.transform.TransformPoint(tip);
+        }
         public void CancelBladePose(){actionUntil=0;}
         public void AddCapturedEnergy(float amount){CaptureEnergy=Mathf.Min(100,CaptureEnergy+amount*(reservoir?1.25f:1));var g=AncientGame.Instance;if(g.Sniper)g.Sniper.EnergyChanged();}
         public float SpendCapturedEnergy(){float value=CaptureEnergy;CaptureEnergy=0;return value;}
@@ -1069,7 +1081,7 @@ namespace Plugin.AncientCivilization
             var g=AncientGame.Instance;if(Time.time<invulnerableUntil||g.won||(g.Sniper&&g.Sniper.Clashing))return;
             invulnerableUntil=Time.time+.65f;g.Shake(.14f);
             if(bike){bikeHP=Mathf.Max(0,bikeHP-damage);motorcycle.Damage();if(bikeHP<=0)ExplodeBike();return;}
-            if(Combat)Combat.CancelBlade();actionUntil=0;hurtUntil=Time.time+.18f;
+            if(Combat){Combat.CancelInput();Combat.CancelBlade();}actionUntil=0;hurtUntil=Time.time+.18f;
             hp-=damage;g.DamageEmphasis();g.Sound(1);g.Impact(transform.position,AncientGame.Orange,false);g.Burst(transform.position,AncientGame.Orange,9);
             if(hp<=0)Respawn();
         }

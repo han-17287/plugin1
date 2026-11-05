@@ -178,6 +178,8 @@ def main():
             check(region.getbbox() is not None,'swing crop has opaque actor '+str(i))
             shapes.append(region.resize((64,64)).tobytes())
         check(len(set(shapes))==8,'all swing poses have distinct silhouettes')
+        from validate_blade_atlas import validate_blade_atlas
+        validate_blade_atlas(ROOT,check,png_info)
         for field in ('PivotPixels','EmitterPixels'):
             block=swing_atlas.split(field)[1].split('};')[0]
             points=[tuple(float(v.rstrip('f')) for v in pair) for pair in re.findall(r'new Vector2\(([0-9.]+f?),([0-9.]+f?)\)',block)]
@@ -274,7 +276,7 @@ def main():
         import tree_sitter
         import tree_sitter_c_sharp
         parser = tree_sitter.Parser(tree_sitter.Language(tree_sitter_c_sharp.language()))
-        for script in (ROOT / 'Assets/Scripts').glob('*.cs'):
+        for script in (ROOT / 'Assets').rglob('*.cs'):
             tree = parser.parse(script.read_bytes())
             check(not tree.root_node.has_error, 'C# syntax ' + script.name)
     except ImportError:

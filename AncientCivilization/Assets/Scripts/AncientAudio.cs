@@ -8,7 +8,7 @@ namespace Plugin.AncientCivilization
     {
         AudioSource source,ambient;AudioClip ambience;bool muted;
         readonly Dictionary<int,AudioClip> clips=new Dictionary<int,AudioClip>();
-        readonly float[] nextVoice=new float[9];
+        readonly float[] nextVoice=new float[12];
         public bool Muted {get{return muted;}}
         void Awake()
         {
@@ -44,17 +44,18 @@ namespace Plugin.AncientCivilization
         {
             AudioClip clip;if(clips.TryGetValue(cue,out clip))return clip;
             const int rate=22050;
-            float duration=cue==4?.55f:cue==5?.65f:cue==7?.09f:cue==8?.45f:.18f;
+            float duration=cue==4?.55f:cue==5?.65f:cue==7?.09f:cue==8?.45f:cue==9?.16f:cue==10?.13f:cue==11?.22f:.18f;
             var samples=new float[Mathf.CeilToInt(rate*duration)];var random=new System.Random(17287+cue);
             float phase=0,filtered=0;
             for(int i=0;i<samples.Length;i++)
             {
                 float t=(float)i/rate,life=t/duration;
-                float frequency=cue==0?Mathf.Lerp(600,160,life):cue==1?Mathf.Lerp(140,55,life):cue==2?Mathf.Lerp(380,1050,life):cue==3?Mathf.Lerp(300,720,life):cue==4?Mathf.Lerp(95,30,life):cue==6?Mathf.Lerp(220,70,life):cue==7?70:cue==8?((int)(t*8)%2==0?330:440):650;
+                float frequency=cue==0?Mathf.Lerp(600,160,life):cue==1?Mathf.Lerp(140,55,life):cue==2?Mathf.Lerp(380,1050,life):cue==3?Mathf.Lerp(300,720,life):cue==4?Mathf.Lerp(95,30,life):cue==6?Mathf.Lerp(220,70,life):cue==7?70:cue==8?((int)(t*8)%2==0?330:440):cue==9?Mathf.Lerp(880,190,life):cue==10?Mathf.Lerp(1050,330,life):cue==11?Mathf.Lerp(560,85,life):650;
                 phase+=frequency*Mathf.PI*2/rate;
                 float noise=(float)random.NextDouble()*2-1;filtered=Mathf.Lerp(filtered,noise,cue==4?.15f:.4f);
                 float tone=Mathf.Sin(phase);
                 if(cue==0)tone=tone*.15f+noise*.65f;
+                if(cue>=9)tone=tone*.15f+filtered*(cue==11?.8f:.65f);
                 if(cue==1||cue==4||cue==6||cue==7)tone=tone*.45f+filtered*.65f;
                 if(cue==5)
                 {

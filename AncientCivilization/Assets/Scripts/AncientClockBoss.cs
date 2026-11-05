@@ -5,7 +5,7 @@ namespace Plugin.AncientCivilization
     public sealed class AncientClockBoss : MonoBehaviour
     {
         enum State { Rest,Vector,Flash,TeleportTell,AreaWindup,AreaActive,RainTell,Rain }
-        AncientEnemy owner;AncientGame game;State state;float began,until,nextRain,hour,minute;
+        AncientEnemy owner;AncientGame game;State state;float began,until,nextRain,hour,minute,areaStarted;
         int vectorIndex,areaIndex,rainIndex,cursor,lastTick=-1;
         AncientClockDial face;Vector2 centre,destination;float left,right;
         LineRenderer dial,hourHand,minuteHand,landing;
@@ -89,13 +89,14 @@ namespace Plugin.AncientCivilization
             {
                 Circle(landing,destination,.5f+.25f*Mathf.Sin(WindupProgress*Mathf.PI));
                 if(Time.time>=until)
-                {game.Burst(owner.AimPoint,AncientGame.Cyan,12);owner.transform.position=destination;centre=owner.AimPoint;landing.enabled=false;Enter(State.AreaWindup,areaIndex==2?1.1f:.7f);}
+                {game.Burst(owner.AimPoint,AncientGame.Cyan,12);owner.transform.position=destination;centre=owner.AimPoint;landing.enabled=false;areaStarted=Time.time;Enter(State.AreaWindup,areaIndex==2?1.1f:.7f);}
                 return;
             }
             if(state==State.AreaWindup||state==State.AreaActive)
             {
                 centre=owner.AimPoint;
-                float elapsed=Time.time-began,radius=areaIndex==2?11:3;
+                // The hands keep their angle when the warning becomes damaging.
+                float elapsed=Time.time-areaStarted,radius=areaIndex==2?11:3;
                 if(areaIndex==2)
                 {landing.startColor=landing.endColor=AncientGame.Cyan;Circle(landing,new Vector2(centre.x,.2f),AncientClockRules.UnderSafeHalfWidth);}
                 Circle(dial,centre,radius);float angle=elapsed*(areaIndex==2?3:5);

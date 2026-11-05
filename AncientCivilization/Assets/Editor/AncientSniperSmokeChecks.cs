@@ -76,6 +76,23 @@ namespace Plugin.AncientCivilization.EditorChecks
         }
         static int CloneCount(AncientGame game)
         {int count=0;foreach(var e in game.enemies)if(e&&e.IsAlive&&e.IsSniperClone)count++;return count;}
+        static void AssertTurretVisibleAt(int index,float expectedX)
+        {
+            var root=GameObject.Find("Emerging compressed-matter turret "+index);
+            Assert(root&&root.activeInHierarchy,"Turret "+index+" is active in the arena");
+            Assert(Mathf.Abs(root.transform.position.x-expectedX)<.01f,"Turret "+index+" root matches its logical interaction position");
+            var body=root.transform.Find("Deployable armored turret");
+            var core=root.transform.Find("Recoverable turret power core");
+            var barrel=root.transform.Find("Compressed matter launcher");
+            Assert(body&&core&&barrel,"Turret "+index+" has a body, core and barrel");
+            Assert(body.localPosition.sqrMagnitude<.0001f&&Mathf.Abs(core.localPosition.x)<.01f&&Mathf.Abs(barrel.localPosition.x)<.01f,
+                "Turret "+index+" art uses offsets from the root, without doubling its world position");
+            var renderer=body.GetComponent<SpriteRenderer>();
+            Assert(renderer&&renderer.enabled&&renderer.bounds.min.x<=expectedX&&renderer.bounds.max.x>=expectedX,
+                "Turret "+index+" visible body bounds cover its logical position");
+            Assert(Mathf.Abs(barrel.position.x-expectedX)<.01f&&Mathf.Abs(barrel.position.y-(root.transform.position.y+1.4f))<.01f,
+                "Turret "+index+" barrel appears at the projectile origin");
+        }
         static void Update()
         {
             if(!SessionState.GetBool(Root+"Running",false))return;
@@ -109,6 +126,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     if(!encounter||encounter.Phase!=3||StageAge<1.3)return;
                     Assert(CloneCount(game)==3,"Phase 3 creates exactly three live clones");
+                    AssertTurretVisibleAt(0,firstTurret);AssertTurretVisibleAt(1,secondTurret);
                     foreach(var e in game.enemies)if(e&&e.IsSniperClone)
                     {
                         var art=e.GetComponentInChildren<SpriteRenderer>();
@@ -135,6 +153,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     if(!encounter||encounter.Phase!=4||StageAge<.2)return;
                     Assert(CloneCount(game)==0,"Final phase removes all clones");
+                    AssertTurretVisibleAt(0,firstTurret);AssertTurretVisibleAt(1,secondTurret);
                     float health=encounter.Owner.HealthRatio;encounter.Owner.Hit(100000,true);
                     Assert(Mathf.Abs(encounter.Owner.HealthRatio-health)<.00001f,"Charging sniper is immune to ordinary damage");
                     for(int i=0;i<2;i++){encounter.TryBlade(new Vector2(firstTurret,1),Vector2.right);encounter.TryBlade(new Vector2(secondTurret,1),Vector2.right);}

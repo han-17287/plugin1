@@ -67,10 +67,11 @@ namespace Plugin.AncientCivilization
         {
             var t=new Turret();turrets[i]=t;t.position=new Vector2(i==0?left+4:right-4,0);
             t.root=new GameObject("Emerging compressed-matter turret "+i);t.root.transform.position=t.position;
-            AncientArt.Display("Turret ground hatch",AncientSniperEquipmentArt.Sprite(5),t.position,7,t.root.transform);
-            t.body=AncientArt.Display("Deployable armored turret",AncientSniperEquipmentArt.Sprite(0),t.position,8,t.root.transform);
-            AncientArt.Display("Recoverable turret power core",AncientSniperEquipmentArt.Sprite(4),t.position+Vector2.up*.8f,9,t.root.transform).transform.localScale=Vector3.one*.65f;
-            t.barrel=AncientArt.Display("Compressed matter launcher",AncientSniperEquipmentArt.Sprite(1),t.position+Vector2.up*1.4f,10,t.root.transform);
+            // Display takes local coordinates when parented; the root owns the arena position.
+            AncientArt.Display("Turret ground hatch",AncientSniperEquipmentArt.Sprite(5),Vector2.zero,7,t.root.transform);
+            t.body=AncientArt.Display("Deployable armored turret",AncientSniperEquipmentArt.Sprite(0),Vector2.zero,8,t.root.transform);
+            AncientArt.Display("Recoverable turret power core",AncientSniperEquipmentArt.Sprite(4),Vector2.up*.8f,9,t.root.transform).transform.localScale=Vector3.one*.65f;
+            t.barrel=AncientArt.Display("Compressed matter launcher",AncientSniperEquipmentArt.Sprite(1),Vector2.up*1.4f,10,t.root.transform);
             t.tell=game.Line("Slow turret compression",AncientGame.Orange,.05f,14);t.tell.positionCount=2;t.tell.enabled=false;t.root.SetActive(false);
         }
         void SpawnClone(int slot,Vector2 position)

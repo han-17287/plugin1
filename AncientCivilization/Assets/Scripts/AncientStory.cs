@@ -57,7 +57,8 @@ namespace Plugin.AncientCivilization
         }
         void Advance()
         {
-            if(choiceOpen||!DialogueOpen)return;
+            // Opening a dialogue consumes its triggering input; the same jump/click must not reveal a line.
+            if(choiceOpen||!DialogueOpen||!game.GameplayInputReady)return;
             if(!showFull&&revealedChars<lines[lineIndex].text.Length){showFull=true;return;}
             lineIndex++;ResetTyping();
             if(lineIndex>=lines.Count)
@@ -126,7 +127,8 @@ namespace Plugin.AncientCivilization
             if(Stage==1&&AncientRules.TutorialReady(Stage,flags))
             {SetStage(2);Talk(null,new Line("통신관","천장에 입자 와이어를 연결해 봐라. 정비소의 오토바이는 E로 타고 내린다. 확인했으면 블레이드 훈련으로 넘어가자.",1));}
             else if(Stage==2&&AncientRules.TutorialReady(Stage,flags))
-            {SetStage(3);Talk(null,new Line("통신관","훈련용 물체를 보낸다. 휠을 위로 돌리고 좌클릭을 짧게 눌러 부숴라. 나온 입자는 우클릭을 누르고 모은다. 좌클릭은 길게 눌러 조준한 뒤, 표시가 금색이 되면 놓아서 레이저를 쏜다.",1));}
+            {SetStage(3);Talk(null,new Line("통신관","훈련용 물체를 보낸다. 휠을 위로 돌려 공격 모드로. 좌클릭을 짧게 이어 누르면 세로·가로·사선으로 벤다.",1),
+                new Line("통신관","파란 입자는 우클릭으로 모아라. 좌클릭을 길게 눌러 조준하고, 금색 준비 표시가 뜨면 놓아서 레이저를 쏴라.",1));}
             else if(Stage==3)
             {
                 if(Time.time>=nextTrainingShot&&game.shots.Count<4)

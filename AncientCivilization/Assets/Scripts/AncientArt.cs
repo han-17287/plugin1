@@ -9,7 +9,7 @@ namespace Plugin.AncientCivilization
     {
         static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
         static readonly Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
-        static readonly Sprite[] bossCache=new Sprite[36],swingCache=new Sprite[8];
+        static readonly Sprite[] bossCache=new Sprite[36],swingCache=new Sprite[8],bladeCache=new Sprite[48];
         static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3],metalCache=new Sprite[3],citizenCache=new Sprite[25],citizenWalkCache=new Sprite[16];
         public static Texture2D Texture(string name)
         {
@@ -17,16 +17,20 @@ namespace Plugin.AncientCivilization
             if (textures.TryGetValue(name, out texture) && texture) return texture;
             texture = Resources.Load<Texture2D>("Art/" + name);
             if (!texture) throw new System.InvalidOperationException("Missing Art/" + name + ".png");
-            if(name=="Hero"||name=="HeroSwing"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name=="SniperEquipment"||name.StartsWith("Citizens")||name.StartsWith("Boss"))
+            if(name=="Hero"||name=="HeroSwing"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name=="SniperEquipment"||name.StartsWith("Blade")||name.StartsWith("Citizens")||name.StartsWith("Boss"))
             {
                 var pixels=texture.GetPixels32();var packed=new uint[pixels.Length];
                 for(int i=0;i<pixels.Length;i++)packed[i]=((uint)pixels[i].r<<24)|((uint)pixels[i].g<<16)|((uint)pixels[i].b<<8)|pixels[i].a;
                 bool rider=name=="Motorcycle";
-                int grid=name=="CitizensWalk"?4:8;
+                int grid=name.StartsWith("Blade")?AncientBladeAtlas.GridSize:name=="CitizensWalk"?4:8;
                 packed=AncientPixels.Grid(packed,texture.width,texture.height,grid,rider?730:texture.width,rider?544:texture.height);
                 for(int i=0;i<pixels.Length;i++){uint c=packed[i];pixels[i]=new Color32((byte)(c>>24),(byte)(c>>16),(byte)(c>>8),(byte)c);}
                 var native=new Texture2D(texture.width,texture.height,TextureFormat.RGBA32,false);
-                native.name=name+" / native palette grid";native.SetPixels32(pixels);native.Apply();texture=native;
+                native.name=name+" / native palette grid";native.SetPixels32(pixels);
+                bool blade=name.StartsWith("Blade");native.Apply(false,blade);
+                // Blade sprites use measured rectangles and never read pixels again after packing.
+                // Keep one GPU copy of each sheet instead of retaining imported and packed CPU copies.
+                if(blade)Resources.UnloadAsset(texture);texture=native;
             }
             texture.filterMode = FilterMode.Point; texture.wrapMode = TextureWrapMode.Clamp;
             textures[name] = texture; return texture;
@@ -79,6 +83,14 @@ namespace Plugin.AncientCivilization
             Vector2 pivot=new Vector2((hip.x-rect.x)/rect.width,(rect.yMax-hip.y)/rect.height);
             swingCache[frame]=Slice("HeroSwing","hero-swing-"+frame,rect,AncientSwingAtlas.PixelsPerUnit,pivot,false);
             return swingCache[frame];
+        }
+        public static Sprite Blade(int step,int frame)
+        {
+            step=AncientBladeRules.NormalizeStep(step);frame=Mathf.Clamp(frame,0,AncientBladeRules.FramesPerStep-1);
+            int index=(step-1)*AncientBladeRules.FramesPerStep+frame;if(bladeCache[index])return bladeCache[index];
+            bladeCache[index]=Slice(AncientBladeAtlas.Sheet(step),"blade-combo-"+index,AncientBladeAtlas.Bounds(step,frame),
+                AncientBladeAtlas.PixelsPerUnit(step),AncientBladeAtlas.Pivot(step,frame),false);
+            return bladeCache[index];
         }
         public static Sprite Boss(int floor,int pose)
         {

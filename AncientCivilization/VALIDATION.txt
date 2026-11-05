@@ -1,6 +1,7 @@
 PASS: 3211 combat and quest rule checks
 PASS: 76 sniper rule checks
 PASS: 596 swing presentation rule checks
+PASS: 807 blade timing, sequence and sweep checks
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
 PASS: metadata coverage Editor
@@ -18,6 +19,9 @@ PASS: 32-character GUID Scripts.meta
 PASS: metadata coverage AncientSniperSmokeChecks.cs
 PASS: metadata target Assets/Editor/AncientSniperSmokeChecks.cs.meta
 PASS: 32-character GUID AncientSniperSmokeChecks.cs.meta
+PASS: metadata coverage AncientBladeSmokeChecks.cs
+PASS: metadata target Assets/Editor/AncientBladeSmokeChecks.cs.meta
+PASS: 32-character GUID AncientBladeSmokeChecks.cs.meta
 PASS: metadata coverage Main.unity
 PASS: metadata target Assets/Scenes/Main.unity.meta
 PASS: 32-character GUID Main.unity.meta
@@ -110,6 +114,8 @@ PASS: metadata coverage AncientFieldCases.cs
 PASS: metadata coverage AncientProjectilePool.cs
 PASS: metadata target Assets/Scripts/AncientWireMath.cs.meta
 PASS: 32-character GUID AncientWireMath.cs.meta
+PASS: metadata target Assets/Scripts/AncientBladeRules.cs.meta
+PASS: 32-character GUID AncientBladeRules.cs.meta
 PASS: metadata coverage AncientClockBoss.cs
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
 PASS: 32-character GUID AncientGame.cs.meta
@@ -134,6 +140,7 @@ PASS: metadata target Assets/Scripts/AncientClockBoss.cs.meta
 PASS: 32-character GUID AncientClockBoss.cs.meta
 PASS: metadata target Assets/Scripts/AncientFinaleRules.cs.meta
 PASS: 32-character GUID AncientFinaleRules.cs.meta
+PASS: metadata coverage AncientMoteVisuals.cs
 PASS: metadata coverage AncientBeamVisuals.cs
 PASS: metadata coverage AncientPixels.cs
 PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
@@ -151,6 +158,8 @@ PASS: metadata coverage AncientVisuals.cs
 PASS: metadata coverage AncientSwingRules.cs
 PASS: metadata target Assets/Scripts/AncientSniperEncounter.cs.meta
 PASS: 32-character GUID AncientSniperEncounter.cs.meta
+PASS: metadata target Assets/Scripts/AncientBladeAtlas.cs.meta
+PASS: 32-character GUID AncientBladeAtlas.cs.meta
 PASS: metadata coverage AncientKoreanUI.cs
 PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
 PASS: 32-character GUID AncientClockRules.cs.meta
@@ -162,6 +171,8 @@ PASS: metadata coverage AncientEvidenceQuestions.cs
 PASS: metadata target Assets/Scripts/AncientCitizenAtlas.cs.meta
 PASS: 32-character GUID AncientCitizenAtlas.cs.meta
 PASS: metadata coverage AncientGameFeel.cs
+PASS: metadata target Assets/Scripts/AncientMoteVisuals.cs.meta
+PASS: 32-character GUID AncientMoteVisuals.cs.meta
 PASS: metadata coverage AncientParkedBike.cs
 PASS: metadata target Assets/Scripts/AncientWorldBatch.cs.meta
 PASS: 32-character GUID AncientWorldBatch.cs.meta
@@ -182,6 +193,7 @@ PASS: metadata coverage AncientHUD.cs
 PASS: metadata coverage SniperEquipmentArt.cs
 PASS: metadata coverage AncientFieldLayout.cs
 PASS: metadata coverage AncientStory.cs
+PASS: metadata coverage AncientBladeRules.cs
 PASS: metadata target Assets/Scripts/AncientArt.cs.meta
 PASS: 32-character GUID AncientArt.cs.meta
 PASS: metadata coverage AncientMotorcycle.cs
@@ -191,6 +203,7 @@ PASS: metadata coverage AncientGame.cs
 PASS: metadata coverage AncientHudText.cs
 PASS: metadata target Assets/Scripts/AncientGameFeel.cs.meta
 PASS: 32-character GUID AncientGameFeel.cs.meta
+PASS: metadata coverage AncientBladeAtlas.cs
 PASS: metadata coverage AncientWorldBatch.cs
 PASS: metadata target Assets/Resources/Art.meta
 PASS: 32-character GUID Art.meta
@@ -201,8 +214,11 @@ PASS: metadata target Assets/Resources/Shaders.meta
 PASS: 32-character GUID Shaders.meta
 PASS: metadata target Assets/Resources/Fonts.meta
 PASS: 32-character GUID Fonts.meta
+PASS: metadata target Assets/Resources/Art/BladeHorizontal.png.meta
+PASS: 32-character GUID BladeHorizontal.png.meta
 PASS: metadata target Assets/Resources/Art/Citizens3.png.meta
 PASS: 32-character GUID Citizens3.png.meta
+PASS: metadata coverage BladeVertical.png
 PASS: metadata target Assets/Resources/Art/Scrap.png.meta
 PASS: 32-character GUID Scrap.png.meta
 PASS: metadata target Assets/Resources/Art/StudioLogos.png.meta
@@ -226,6 +242,7 @@ PASS: 32-character GUID Truck.png.meta
 PASS: metadata target Assets/Resources/Art/Dialogue.png.meta
 PASS: 32-character GUID Dialogue.png.meta
 PASS: metadata coverage Dialogue.png
+PASS: metadata coverage BladeHorizontal.png
 PASS: metadata coverage Citizens4.png
 PASS: metadata target Assets/Resources/Art/World.png.meta
 PASS: 32-character GUID World.png.meta
@@ -253,6 +270,8 @@ PASS: 32-character GUID Rooftop.png.meta
 PASS: metadata target Assets/Resources/Art/SniperEquipment.png.meta
 PASS: 32-character GUID SniperEquipment.png.meta
 PASS: metadata coverage Hero.png
+PASS: metadata target Assets/Resources/Art/BladeVertical.png.meta
+PASS: 32-character GUID BladeVertical.png.meta
 PASS: metadata coverage Actions.png
 PASS: metadata coverage Enemies.png
 PASS: metadata coverage Motorcycle.png
@@ -273,8 +292,11 @@ PASS: metadata target Assets/Resources/Art/Boss0.png.meta
 PASS: 32-character GUID Boss0.png.meta
 PASS: metadata target Assets/Resources/Art/Citizens0.png.meta
 PASS: 32-character GUID Citizens0.png.meta
+PASS: metadata target Assets/Resources/Art/BladeDiagonal.png.meta
+PASS: 32-character GUID BladeDiagonal.png.meta
 PASS: metadata target Assets/Resources/Art/HeroSwing.png.meta
 PASS: 32-character GUID HeroSwing.png.meta
+PASS: metadata coverage BladeDiagonal.png
 PASS: metadata coverage World.png
 PASS: metadata target Assets/Resources/Art/Actions.png.meta
 PASS: 32-character GUID Actions.png.meta
@@ -508,6 +530,453 @@ PASS: swing crop has opaque actor 6
 PASS: swing crop within atlas 7
 PASS: swing crop has opaque actor 7
 PASS: all swing poses have distinct silhouettes
+PASS: three blade cuts each have sixteen measured crops, foot pivots and tip points
+PASS: three blade sheets have explicit positive world scales
+PASS: BladeVertical.png PNG signature
+PASS: BladeVertical.png PNG chunk integrity
+PASS: BladeVertical retains its transparent RGBA source
+PASS: BladeVertical uses readable point-filtered uncompressed import
+PASS: BladeVertical measured crop stays in the texture and follows frame order 0
+PASS: BladeVertical crop has no overlap with another pose 0
+PASS: BladeVertical foot pivot and blade tip are finite 0
+PASS: BladeVertical has an opaque actor 0
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 0
+PASS: BladeVertical blade and body form one complete actor 0
+PASS: BladeVertical keeps clear blade and boot gutters 0
+PASS: BladeVertical measured blade tip stays inside its pose 0
+PASS: BladeVertical tip metadata touches the yellow blade 0
+PASS: BladeVertical measured crop stays in the texture and follows frame order 1
+PASS: BladeVertical crop has no overlap with another pose 1
+PASS: BladeVertical foot pivot and blade tip are finite 1
+PASS: BladeVertical has an opaque actor 1
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 1
+PASS: BladeVertical blade and body form one complete actor 1
+PASS: BladeVertical keeps clear blade and boot gutters 1
+PASS: BladeVertical measured blade tip stays inside its pose 1
+PASS: BladeVertical tip metadata touches the yellow blade 1
+PASS: BladeVertical measured crop stays in the texture and follows frame order 2
+PASS: BladeVertical crop has no overlap with another pose 2
+PASS: BladeVertical foot pivot and blade tip are finite 2
+PASS: BladeVertical has an opaque actor 2
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 2
+PASS: BladeVertical blade and body form one complete actor 2
+PASS: BladeVertical keeps clear blade and boot gutters 2
+PASS: BladeVertical measured blade tip stays inside its pose 2
+PASS: BladeVertical tip metadata touches the yellow blade 2
+PASS: BladeVertical measured crop stays in the texture and follows frame order 3
+PASS: BladeVertical crop has no overlap with another pose 3
+PASS: BladeVertical foot pivot and blade tip are finite 3
+PASS: BladeVertical has an opaque actor 3
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 3
+PASS: BladeVertical blade and body form one complete actor 3
+PASS: BladeVertical keeps clear blade and boot gutters 3
+PASS: BladeVertical measured blade tip stays inside its pose 3
+PASS: BladeVertical tip metadata touches the yellow blade 3
+PASS: BladeVertical measured crop stays in the texture and follows frame order 4
+PASS: BladeVertical crop has no overlap with another pose 4
+PASS: BladeVertical foot pivot and blade tip are finite 4
+PASS: BladeVertical has an opaque actor 4
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 4
+PASS: BladeVertical blade and body form one complete actor 4
+PASS: BladeVertical keeps clear blade and boot gutters 4
+PASS: BladeVertical measured blade tip stays inside its pose 4
+PASS: BladeVertical tip metadata touches the yellow blade 4
+PASS: BladeVertical measured crop stays in the texture and follows frame order 5
+PASS: BladeVertical crop has no overlap with another pose 5
+PASS: BladeVertical foot pivot and blade tip are finite 5
+PASS: BladeVertical has an opaque actor 5
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 5
+PASS: BladeVertical blade and body form one complete actor 5
+PASS: BladeVertical keeps clear blade and boot gutters 5
+PASS: BladeVertical measured blade tip stays inside its pose 5
+PASS: BladeVertical tip metadata touches the yellow blade 5
+PASS: BladeVertical measured crop stays in the texture and follows frame order 6
+PASS: BladeVertical crop has no overlap with another pose 6
+PASS: BladeVertical foot pivot and blade tip are finite 6
+PASS: BladeVertical has an opaque actor 6
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 6
+PASS: BladeVertical blade and body form one complete actor 6
+PASS: BladeVertical keeps clear blade and boot gutters 6
+PASS: BladeVertical measured blade tip stays inside its pose 6
+PASS: BladeVertical tip metadata touches the yellow blade 6
+PASS: BladeVertical measured crop stays in the texture and follows frame order 7
+PASS: BladeVertical crop has no overlap with another pose 7
+PASS: BladeVertical foot pivot and blade tip are finite 7
+PASS: BladeVertical has an opaque actor 7
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 7
+PASS: BladeVertical blade and body form one complete actor 7
+PASS: BladeVertical keeps clear blade and boot gutters 7
+PASS: BladeVertical measured blade tip stays inside its pose 7
+PASS: BladeVertical tip metadata touches the yellow blade 7
+PASS: BladeVertical measured crop stays in the texture and follows frame order 8
+PASS: BladeVertical crop has no overlap with another pose 8
+PASS: BladeVertical foot pivot and blade tip are finite 8
+PASS: BladeVertical has an opaque actor 8
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 8
+PASS: BladeVertical blade and body form one complete actor 8
+PASS: BladeVertical keeps clear blade and boot gutters 8
+PASS: BladeVertical measured blade tip stays inside its pose 8
+PASS: BladeVertical tip metadata touches the yellow blade 8
+PASS: BladeVertical measured crop stays in the texture and follows frame order 9
+PASS: BladeVertical crop has no overlap with another pose 9
+PASS: BladeVertical foot pivot and blade tip are finite 9
+PASS: BladeVertical has an opaque actor 9
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 9
+PASS: BladeVertical blade and body form one complete actor 9
+PASS: BladeVertical keeps clear blade and boot gutters 9
+PASS: BladeVertical measured blade tip stays inside its pose 9
+PASS: BladeVertical tip metadata touches the yellow blade 9
+PASS: BladeVertical measured crop stays in the texture and follows frame order 10
+PASS: BladeVertical crop has no overlap with another pose 10
+PASS: BladeVertical foot pivot and blade tip are finite 10
+PASS: BladeVertical has an opaque actor 10
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 10
+PASS: BladeVertical blade and body form one complete actor 10
+PASS: BladeVertical keeps clear blade and boot gutters 10
+PASS: BladeVertical measured blade tip stays inside its pose 10
+PASS: BladeVertical tip metadata touches the yellow blade 10
+PASS: BladeVertical measured crop stays in the texture and follows frame order 11
+PASS: BladeVertical crop has no overlap with another pose 11
+PASS: BladeVertical foot pivot and blade tip are finite 11
+PASS: BladeVertical has an opaque actor 11
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 11
+PASS: BladeVertical blade and body form one complete actor 11
+PASS: BladeVertical keeps clear blade and boot gutters 11
+PASS: BladeVertical measured blade tip stays inside its pose 11
+PASS: BladeVertical tip metadata touches the yellow blade 11
+PASS: BladeVertical measured crop stays in the texture and follows frame order 12
+PASS: BladeVertical crop has no overlap with another pose 12
+PASS: BladeVertical foot pivot and blade tip are finite 12
+PASS: BladeVertical has an opaque actor 12
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 12
+PASS: BladeVertical blade and body form one complete actor 12
+PASS: BladeVertical keeps clear blade and boot gutters 12
+PASS: BladeVertical measured blade tip stays inside its pose 12
+PASS: BladeVertical tip metadata touches the yellow blade 12
+PASS: BladeVertical measured crop stays in the texture and follows frame order 13
+PASS: BladeVertical crop has no overlap with another pose 13
+PASS: BladeVertical foot pivot and blade tip are finite 13
+PASS: BladeVertical has an opaque actor 13
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 13
+PASS: BladeVertical blade and body form one complete actor 13
+PASS: BladeVertical keeps clear blade and boot gutters 13
+PASS: BladeVertical measured blade tip stays inside its pose 13
+PASS: BladeVertical tip metadata touches the yellow blade 13
+PASS: BladeVertical measured crop stays in the texture and follows frame order 14
+PASS: BladeVertical crop has no overlap with another pose 14
+PASS: BladeVertical foot pivot and blade tip are finite 14
+PASS: BladeVertical has an opaque actor 14
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 14
+PASS: BladeVertical blade and body form one complete actor 14
+PASS: BladeVertical keeps clear blade and boot gutters 14
+PASS: BladeVertical measured blade tip stays inside its pose 14
+PASS: BladeVertical tip metadata touches the yellow blade 14
+PASS: BladeVertical measured crop stays in the texture and follows frame order 15
+PASS: BladeVertical crop has no overlap with another pose 15
+PASS: BladeVertical foot pivot and blade tip are finite 15
+PASS: BladeVertical has an opaque actor 15
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 15
+PASS: BladeVertical blade and body form one complete actor 15
+PASS: BladeVertical keeps clear blade and boot gutters 15
+PASS: BladeVertical measured blade tip stays inside its pose 15
+PASS: BladeVertical tip metadata touches the yellow blade 15
+PASS: BladeHorizontal.png PNG signature
+PASS: BladeHorizontal.png PNG chunk integrity
+PASS: BladeHorizontal retains its transparent RGBA source
+PASS: BladeHorizontal uses readable point-filtered uncompressed import
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 0
+PASS: BladeHorizontal crop has no overlap with another pose 0
+PASS: BladeHorizontal foot pivot and blade tip are finite 0
+PASS: BladeHorizontal has an opaque actor 0
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 0
+PASS: BladeHorizontal blade and body form one complete actor 0
+PASS: BladeHorizontal keeps clear blade and boot gutters 0
+PASS: BladeHorizontal measured blade tip stays inside its pose 0
+PASS: BladeHorizontal tip metadata touches the yellow blade 0
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 1
+PASS: BladeHorizontal crop has no overlap with another pose 1
+PASS: BladeHorizontal foot pivot and blade tip are finite 1
+PASS: BladeHorizontal has an opaque actor 1
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 1
+PASS: BladeHorizontal blade and body form one complete actor 1
+PASS: BladeHorizontal keeps clear blade and boot gutters 1
+PASS: BladeHorizontal measured blade tip stays inside its pose 1
+PASS: BladeHorizontal tip metadata touches the yellow blade 1
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 2
+PASS: BladeHorizontal crop has no overlap with another pose 2
+PASS: BladeHorizontal foot pivot and blade tip are finite 2
+PASS: BladeHorizontal has an opaque actor 2
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 2
+PASS: BladeHorizontal blade and body form one complete actor 2
+PASS: BladeHorizontal keeps clear blade and boot gutters 2
+PASS: BladeHorizontal measured blade tip stays inside its pose 2
+PASS: BladeHorizontal tip metadata touches the yellow blade 2
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 3
+PASS: BladeHorizontal crop has no overlap with another pose 3
+PASS: BladeHorizontal foot pivot and blade tip are finite 3
+PASS: BladeHorizontal has an opaque actor 3
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 3
+PASS: BladeHorizontal blade and body form one complete actor 3
+PASS: BladeHorizontal keeps clear blade and boot gutters 3
+PASS: BladeHorizontal measured blade tip stays inside its pose 3
+PASS: BladeHorizontal tip metadata touches the yellow blade 3
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 4
+PASS: BladeHorizontal crop has no overlap with another pose 4
+PASS: BladeHorizontal foot pivot and blade tip are finite 4
+PASS: BladeHorizontal has an opaque actor 4
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 4
+PASS: BladeHorizontal blade and body form one complete actor 4
+PASS: BladeHorizontal keeps clear blade and boot gutters 4
+PASS: BladeHorizontal measured blade tip stays inside its pose 4
+PASS: BladeHorizontal tip metadata touches the yellow blade 4
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 5
+PASS: BladeHorizontal crop has no overlap with another pose 5
+PASS: BladeHorizontal foot pivot and blade tip are finite 5
+PASS: BladeHorizontal has an opaque actor 5
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 5
+PASS: BladeHorizontal blade and body form one complete actor 5
+PASS: BladeHorizontal keeps clear blade and boot gutters 5
+PASS: BladeHorizontal measured blade tip stays inside its pose 5
+PASS: BladeHorizontal tip metadata touches the yellow blade 5
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 6
+PASS: BladeHorizontal crop has no overlap with another pose 6
+PASS: BladeHorizontal foot pivot and blade tip are finite 6
+PASS: BladeHorizontal has an opaque actor 6
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 6
+PASS: BladeHorizontal blade and body form one complete actor 6
+PASS: BladeHorizontal keeps clear blade and boot gutters 6
+PASS: BladeHorizontal measured blade tip stays inside its pose 6
+PASS: BladeHorizontal tip metadata touches the yellow blade 6
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 7
+PASS: BladeHorizontal crop has no overlap with another pose 7
+PASS: BladeHorizontal foot pivot and blade tip are finite 7
+PASS: BladeHorizontal has an opaque actor 7
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 7
+PASS: BladeHorizontal blade and body form one complete actor 7
+PASS: BladeHorizontal keeps clear blade and boot gutters 7
+PASS: BladeHorizontal measured blade tip stays inside its pose 7
+PASS: BladeHorizontal tip metadata touches the yellow blade 7
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 8
+PASS: BladeHorizontal crop has no overlap with another pose 8
+PASS: BladeHorizontal foot pivot and blade tip are finite 8
+PASS: BladeHorizontal has an opaque actor 8
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 8
+PASS: BladeHorizontal blade and body form one complete actor 8
+PASS: BladeHorizontal keeps clear blade and boot gutters 8
+PASS: BladeHorizontal measured blade tip stays inside its pose 8
+PASS: BladeHorizontal tip metadata touches the yellow blade 8
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 9
+PASS: BladeHorizontal crop has no overlap with another pose 9
+PASS: BladeHorizontal foot pivot and blade tip are finite 9
+PASS: BladeHorizontal has an opaque actor 9
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 9
+PASS: BladeHorizontal blade and body form one complete actor 9
+PASS: BladeHorizontal keeps clear blade and boot gutters 9
+PASS: BladeHorizontal measured blade tip stays inside its pose 9
+PASS: BladeHorizontal tip metadata touches the yellow blade 9
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 10
+PASS: BladeHorizontal crop has no overlap with another pose 10
+PASS: BladeHorizontal foot pivot and blade tip are finite 10
+PASS: BladeHorizontal has an opaque actor 10
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 10
+PASS: BladeHorizontal blade and body form one complete actor 10
+PASS: BladeHorizontal keeps clear blade and boot gutters 10
+PASS: BladeHorizontal measured blade tip stays inside its pose 10
+PASS: BladeHorizontal tip metadata touches the yellow blade 10
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 11
+PASS: BladeHorizontal crop has no overlap with another pose 11
+PASS: BladeHorizontal foot pivot and blade tip are finite 11
+PASS: BladeHorizontal has an opaque actor 11
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 11
+PASS: BladeHorizontal blade and body form one complete actor 11
+PASS: BladeHorizontal keeps clear blade and boot gutters 11
+PASS: BladeHorizontal measured blade tip stays inside its pose 11
+PASS: BladeHorizontal tip metadata touches the yellow blade 11
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 12
+PASS: BladeHorizontal crop has no overlap with another pose 12
+PASS: BladeHorizontal foot pivot and blade tip are finite 12
+PASS: BladeHorizontal has an opaque actor 12
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 12
+PASS: BladeHorizontal blade and body form one complete actor 12
+PASS: BladeHorizontal keeps clear blade and boot gutters 12
+PASS: BladeHorizontal measured blade tip stays inside its pose 12
+PASS: BladeHorizontal tip metadata touches the yellow blade 12
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 13
+PASS: BladeHorizontal crop has no overlap with another pose 13
+PASS: BladeHorizontal foot pivot and blade tip are finite 13
+PASS: BladeHorizontal has an opaque actor 13
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 13
+PASS: BladeHorizontal blade and body form one complete actor 13
+PASS: BladeHorizontal keeps clear blade and boot gutters 13
+PASS: BladeHorizontal measured blade tip stays inside its pose 13
+PASS: BladeHorizontal tip metadata touches the yellow blade 13
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 14
+PASS: BladeHorizontal crop has no overlap with another pose 14
+PASS: BladeHorizontal foot pivot and blade tip are finite 14
+PASS: BladeHorizontal has an opaque actor 14
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 14
+PASS: BladeHorizontal blade and body form one complete actor 14
+PASS: BladeHorizontal keeps clear blade and boot gutters 14
+PASS: BladeHorizontal measured blade tip stays inside its pose 14
+PASS: BladeHorizontal tip metadata touches the yellow blade 14
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 15
+PASS: BladeHorizontal crop has no overlap with another pose 15
+PASS: BladeHorizontal foot pivot and blade tip are finite 15
+PASS: BladeHorizontal has an opaque actor 15
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 15
+PASS: BladeHorizontal blade and body form one complete actor 15
+PASS: BladeHorizontal keeps clear blade and boot gutters 15
+PASS: BladeHorizontal measured blade tip stays inside its pose 15
+PASS: BladeHorizontal tip metadata touches the yellow blade 15
+PASS: BladeDiagonal.png PNG signature
+PASS: BladeDiagonal.png PNG chunk integrity
+PASS: BladeDiagonal retains its transparent RGBA source
+PASS: BladeDiagonal uses readable point-filtered uncompressed import
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 0
+PASS: BladeDiagonal crop has no overlap with another pose 0
+PASS: BladeDiagonal foot pivot and blade tip are finite 0
+PASS: BladeDiagonal has an opaque actor 0
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 0
+PASS: BladeDiagonal blade and body form one complete actor 0
+PASS: BladeDiagonal keeps clear blade and boot gutters 0
+PASS: BladeDiagonal measured blade tip stays inside its pose 0
+PASS: BladeDiagonal tip metadata touches the yellow blade 0
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 1
+PASS: BladeDiagonal crop has no overlap with another pose 1
+PASS: BladeDiagonal foot pivot and blade tip are finite 1
+PASS: BladeDiagonal has an opaque actor 1
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 1
+PASS: BladeDiagonal blade and body form one complete actor 1
+PASS: BladeDiagonal keeps clear blade and boot gutters 1
+PASS: BladeDiagonal measured blade tip stays inside its pose 1
+PASS: BladeDiagonal tip metadata touches the yellow blade 1
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 2
+PASS: BladeDiagonal crop has no overlap with another pose 2
+PASS: BladeDiagonal foot pivot and blade tip are finite 2
+PASS: BladeDiagonal has an opaque actor 2
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 2
+PASS: BladeDiagonal blade and body form one complete actor 2
+PASS: BladeDiagonal keeps clear blade and boot gutters 2
+PASS: BladeDiagonal measured blade tip stays inside its pose 2
+PASS: BladeDiagonal tip metadata touches the yellow blade 2
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 3
+PASS: BladeDiagonal crop has no overlap with another pose 3
+PASS: BladeDiagonal foot pivot and blade tip are finite 3
+PASS: BladeDiagonal has an opaque actor 3
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 3
+PASS: BladeDiagonal blade and body form one complete actor 3
+PASS: BladeDiagonal keeps clear blade and boot gutters 3
+PASS: BladeDiagonal measured blade tip stays inside its pose 3
+PASS: BladeDiagonal tip metadata touches the yellow blade 3
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 4
+PASS: BladeDiagonal crop has no overlap with another pose 4
+PASS: BladeDiagonal foot pivot and blade tip are finite 4
+PASS: BladeDiagonal has an opaque actor 4
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 4
+PASS: BladeDiagonal blade and body form one complete actor 4
+PASS: BladeDiagonal keeps clear blade and boot gutters 4
+PASS: BladeDiagonal measured blade tip stays inside its pose 4
+PASS: BladeDiagonal tip metadata touches the yellow blade 4
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 5
+PASS: BladeDiagonal crop has no overlap with another pose 5
+PASS: BladeDiagonal foot pivot and blade tip are finite 5
+PASS: BladeDiagonal has an opaque actor 5
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 5
+PASS: BladeDiagonal blade and body form one complete actor 5
+PASS: BladeDiagonal keeps clear blade and boot gutters 5
+PASS: BladeDiagonal measured blade tip stays inside its pose 5
+PASS: BladeDiagonal tip metadata touches the yellow blade 5
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 6
+PASS: BladeDiagonal crop has no overlap with another pose 6
+PASS: BladeDiagonal foot pivot and blade tip are finite 6
+PASS: BladeDiagonal has an opaque actor 6
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 6
+PASS: BladeDiagonal blade and body form one complete actor 6
+PASS: BladeDiagonal keeps clear blade and boot gutters 6
+PASS: BladeDiagonal measured blade tip stays inside its pose 6
+PASS: BladeDiagonal tip metadata touches the yellow blade 6
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 7
+PASS: BladeDiagonal crop has no overlap with another pose 7
+PASS: BladeDiagonal foot pivot and blade tip are finite 7
+PASS: BladeDiagonal has an opaque actor 7
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 7
+PASS: BladeDiagonal blade and body form one complete actor 7
+PASS: BladeDiagonal keeps clear blade and boot gutters 7
+PASS: BladeDiagonal measured blade tip stays inside its pose 7
+PASS: BladeDiagonal tip metadata touches the yellow blade 7
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 8
+PASS: BladeDiagonal crop has no overlap with another pose 8
+PASS: BladeDiagonal foot pivot and blade tip are finite 8
+PASS: BladeDiagonal has an opaque actor 8
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 8
+PASS: BladeDiagonal blade and body form one complete actor 8
+PASS: BladeDiagonal keeps clear blade and boot gutters 8
+PASS: BladeDiagonal measured blade tip stays inside its pose 8
+PASS: BladeDiagonal tip metadata touches the yellow blade 8
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 9
+PASS: BladeDiagonal crop has no overlap with another pose 9
+PASS: BladeDiagonal foot pivot and blade tip are finite 9
+PASS: BladeDiagonal has an opaque actor 9
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 9
+PASS: BladeDiagonal blade and body form one complete actor 9
+PASS: BladeDiagonal keeps clear blade and boot gutters 9
+PASS: BladeDiagonal measured blade tip stays inside its pose 9
+PASS: BladeDiagonal tip metadata touches the yellow blade 9
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 10
+PASS: BladeDiagonal crop has no overlap with another pose 10
+PASS: BladeDiagonal foot pivot and blade tip are finite 10
+PASS: BladeDiagonal has an opaque actor 10
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 10
+PASS: BladeDiagonal blade and body form one complete actor 10
+PASS: BladeDiagonal keeps clear blade and boot gutters 10
+PASS: BladeDiagonal measured blade tip stays inside its pose 10
+PASS: BladeDiagonal tip metadata touches the yellow blade 10
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 11
+PASS: BladeDiagonal crop has no overlap with another pose 11
+PASS: BladeDiagonal foot pivot and blade tip are finite 11
+PASS: BladeDiagonal has an opaque actor 11
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 11
+PASS: BladeDiagonal blade and body form one complete actor 11
+PASS: BladeDiagonal keeps clear blade and boot gutters 11
+PASS: BladeDiagonal measured blade tip stays inside its pose 11
+PASS: BladeDiagonal tip metadata touches the yellow blade 11
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 12
+PASS: BladeDiagonal crop has no overlap with another pose 12
+PASS: BladeDiagonal foot pivot and blade tip are finite 12
+PASS: BladeDiagonal has an opaque actor 12
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 12
+PASS: BladeDiagonal blade and body form one complete actor 12
+PASS: BladeDiagonal keeps clear blade and boot gutters 12
+PASS: BladeDiagonal measured blade tip stays inside its pose 12
+PASS: BladeDiagonal tip metadata touches the yellow blade 12
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 13
+PASS: BladeDiagonal crop has no overlap with another pose 13
+PASS: BladeDiagonal foot pivot and blade tip are finite 13
+PASS: BladeDiagonal has an opaque actor 13
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 13
+PASS: BladeDiagonal blade and body form one complete actor 13
+PASS: BladeDiagonal keeps clear blade and boot gutters 13
+PASS: BladeDiagonal measured blade tip stays inside its pose 13
+PASS: BladeDiagonal tip metadata touches the yellow blade 13
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 14
+PASS: BladeDiagonal crop has no overlap with another pose 14
+PASS: BladeDiagonal foot pivot and blade tip are finite 14
+PASS: BladeDiagonal has an opaque actor 14
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 14
+PASS: BladeDiagonal blade and body form one complete actor 14
+PASS: BladeDiagonal keeps clear blade and boot gutters 14
+PASS: BladeDiagonal measured blade tip stays inside its pose 14
+PASS: BladeDiagonal tip metadata touches the yellow blade 14
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 15
+PASS: BladeDiagonal crop has no overlap with another pose 15
+PASS: BladeDiagonal foot pivot and blade tip are finite 15
+PASS: BladeDiagonal has an opaque actor 15
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 15
+PASS: BladeDiagonal blade and body form one complete actor 15
+PASS: BladeDiagonal keeps clear blade and boot gutters 15
+PASS: BladeDiagonal measured blade tip stays inside its pose 15
+PASS: BladeDiagonal tip metadata touches the yellow blade 15
+PASS: all forty-eight blade frames have distinct measured silhouettes
 PASS: swing PivotPixels metadata coverage
 PASS: swing PivotPixels stays in its pose 0
 PASS: swing PivotPixels stays in its pose 1
@@ -682,6 +1151,8 @@ PASS: motorcycle component silhouette and transparent gutters 3
 PASS: rotating wheel silhouette is circular
 PASS: healthy and damaged chassis display widths agree
 PASS: scrap projectile silhouette and transparent gutters
+PASS: C# syntax AncientSniperSmokeChecks.cs
+PASS: C# syntax AncientBladeSmokeChecks.cs
 PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientWireParticleBatch.cs
 PASS: C# syntax AncientBossRules.cs
@@ -713,6 +1184,7 @@ PASS: C# syntax AncientMainMenu.cs
 PASS: C# syntax AncientProgressRules.cs
 PASS: C# syntax AncientBossAtlas.cs
 PASS: C# syntax AncientAudio.cs
+PASS: C# syntax AncientMoteVisuals.cs
 PASS: C# syntax AncientBeamVisuals.cs
 PASS: C# syntax AncientPixels.cs
 PASS: C# syntax AncientCitizenArt.cs
@@ -735,9 +1207,11 @@ PASS: C# syntax AncientHUD.cs
 PASS: C# syntax SniperEquipmentArt.cs
 PASS: C# syntax AncientFieldLayout.cs
 PASS: C# syntax AncientStory.cs
+PASS: C# syntax AncientBladeRules.cs
 PASS: C# syntax AncientMotorcycle.cs
 PASS: C# syntax AncientGame.cs
 PASS: C# syntax AncientHudText.cs
+PASS: C# syntax AncientBladeAtlas.cs
 PASS: C# syntax AncientWorldBatch.cs
 PASS: active project avoids obsolete numeric Unity instance IDs
 PASS: bootstrap uses unsorted supported Unity object lookup
@@ -749,6 +1223,5 @@ PASS: first-run script withholds friendship reveal: 이제야 알아보네
 PASS: five sparse Joker mentions across city resident dialogue
 PASS: protagonist dialogue consistently uses Baek Myeong
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
-
-PASS: supplemental runtime C# type check using Unity2021.3 reference modules with temporary linearVelocity compatibility copies. Shipped Unity6 source unchanged.
-NOT RUN: actual Unity6000.6 import/PlayMode, rendering/glow texture UV, swing physics/animation feel, Editor smoke execution, player build, measured FPS or full playthrough.
+PASS: supplemental runtime C# type check with Unity 2021 references and temporary linearVelocity-to-velocity alias
+NOT RUN: actual Unity 6000.6.7f1 Editor/Play/player build, physical input, shader import, FPS or complete playthrough
