@@ -1,0 +1,42 @@
+{
+  "type": "generated-still-based cinematic concept animatic",
+  "reference": "ArtReferences/RelicArm_LongFilamentBlade_3D_Reference.png",
+  "images_generated_with": "image_gen.imagegen",
+  "shots": [
+    {
+      "shot": 1,
+      "source": "/workspace/generated_images/exec-b247eed9-09fc-4411-a809-d2c3e5b31e82.png",
+      "file": "Video/Stills/shot01.png",
+      "sha256": "0d8c27669acd1b8e29471a26c6f37cef0afdd08153852b1e5d515314a5f92ee8",
+      "unchanged_copy": true
+    },
+    {
+      "shot": 2,
+      "source": "/workspace/generated_images/exec-7b235eba-0b7a-4d06-98b5-5ca060dceaae.png",
+      "file": "Video/Stills/shot02.png",
+      "sha256": "d29c361a25487cfe58a5c0b230cca4cd9117e94029e872af699deccc4c78ad2a",
+      "unchanged_copy": true
+    },
+    {
+      "shot": 3,
+      "source": "/workspace/generated_images/exec-214242ec-ca21-4fc1-9985-d96e9b569053.png",
+      "file": "Video/Stills/shot03.png",
+      "sha256": "b806faed1ca74b0f728cd63182f6ba0e1bd7e43d87efe18f3cb35e33aa97842c",
+      "unchanged_copy": true
+    },
+    {
+      "shot": 4,
+      "source": "/workspace/generated_images/exec-5f4820eb-b1f5-45b8-9a35-20f94f0644f0.png",
+      "file": "Video/Stills/shot04.png",
+      "sha256": "69f7fb204902ef53051a6a67466e0c331d66079b75d94563ec8b2ae3f30a1819",
+      "unchanged_copy": true
+    },
+    {
+      "shot": 5,
+      "source": "/workspace/generated_images/exec-e9473ceb-03d9-4740-968b-00c262ff56d5.png",
+      "file": "Video/Stills/shot05.png",
+      "sha256": "c4e8e03ae1dfea94a12ee9ae7f51ec3f1125b0f462e6b95b6fb62806d34159e2",
+      "unchanged_copy": true
+    }
+  ]
+}
