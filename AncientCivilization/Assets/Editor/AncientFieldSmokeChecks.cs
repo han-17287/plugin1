@@ -27,7 +27,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             Application.logMessageReceived+=LogReceived;
         }
         [MenuItem(Menu,true)]
-        static bool CanRun(){return !EditorApplication.isPlayingOrWillChangePlaymode&&!EditorApplication.isCompiling&&!SessionState.GetBool(Root+"Running",false);}
+        static bool CanRun(){return !EditorApplication.isPlayingOrWillChangePlaymode&&!EditorApplication.isCompiling&&!SessionState.GetBool(Root+"Running",false)&&string.IsNullOrEmpty(SessionState.GetString(ProfileKey,""));}
         [MenuItem(Menu)]
         public static void Run()
         {
@@ -98,7 +98,11 @@ namespace Plugin.AncientCivilization.EditorChecks
         static void CloseDialogue(AncientStory story)
         {
             var advance=typeof(AncientStory).GetMethod("Advance",PrivateInstance);
-            for(int i=0;i<32&&story.DialogueOpen;i++)advance.Invoke(story,null);
+            var guard=typeof(AncientGame).GetField("inputReadyFrame",PrivateInstance);
+            // This fixture deliberately skips dialogue to test the report callback, not physical input.
+            // Production Advance now rejects the same-frame input that opened a conversation.
+            for(int i=0;i<32&&story.DialogueOpen;i++)
+            {guard.SetValue(AncientGame.Instance,Time.frameCount-1);advance.Invoke(story,null);}
             Assert(!story.DialogueOpen,"QA dialogue callback can finish without ordinary player input");
         }
         static void MoveToSector(AncientGame game,int sector)

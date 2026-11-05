@@ -27,7 +27,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             Application.logMessageReceived+=LogReceived;
         }
         [MenuItem(Menu,true)]
-        static bool CanRun(){return !EditorApplication.isPlayingOrWillChangePlaymode&&!EditorApplication.isCompiling&&!SessionState.GetBool(Root+"Running",false);}
+        static bool CanRun(){return !EditorApplication.isPlayingOrWillChangePlaymode&&!EditorApplication.isCompiling&&!SessionState.GetBool(Root+"Running",false)&&string.IsNullOrEmpty(SessionState.GetString(ProfileKey,""));}
         [MenuItem(Menu)]
         public static void Run()
         {

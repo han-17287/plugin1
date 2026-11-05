@@ -47,27 +47,6 @@ namespace Plugin.AncientCivilization
         public static bool CanBuffer(float remaining)
         {return Finite(remaining)&&remaining>0&&remaining<=InputBufferWindow;}
 
-        public static void SweepTip(int step,float progress,float facing,out float x,out float y)
-        {
-            float t=float.IsNaN(progress)?0:Clamp01(progress);
-            switch(NormalizeStep(step))
-            {
-                case 1: // Overhead vertical cleave: a narrow, mostly vertical plane.
-                    x=1.45f+.16f*(float)Math.Sin(Math.PI*t);
-                    y=1.65f-2.6f*t;
-                    break;
-                case 2: // Waist-height cut projected across the front of the body.
-                    x=.75f+1.65f*(float)Math.Sin(Math.PI*t);
-                    y=.55f+.22f*(float)Math.Cos(Math.PI*t);
-                    break;
-                default: // Diagonal finisher from the rear shoulder through the front foot.
-                    x=-.3f+2.6f*t;
-                    y=1.6f-2.55f*t;
-                    break;
-            }
-            if(facing<0)x=-x;
-        }
-
         static int SpanFrame(float value,float begin,float end,int first,int length)
         {return first+Math.Min(length-1,(int)((value-begin)/(end-begin)*length));}
         static float Clamp01(float value){return Math.Max(0,Math.Min(1,value));}

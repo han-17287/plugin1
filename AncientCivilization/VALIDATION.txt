@@ -1,7 +1,8 @@
 PASS: 3211 combat and quest rule checks
 PASS: 76 sniper rule checks
 PASS: 596 swing presentation rule checks
-PASS: 807 blade timing, sequence and sweep checks
+PASS: 432 blade timing, sequence and trail checks
+PASS: 23010 expanded-field layout checks
 PASS: required builtin Unity modules declared
 PASS: Unity version 6000.6.7f1
 PASS: metadata coverage Editor
@@ -17,6 +18,9 @@ PASS: metadata coverage Resources
 PASS: metadata target Assets/Scripts.meta
 PASS: 32-character GUID Scripts.meta
 PASS: metadata coverage AncientSniperSmokeChecks.cs
+PASS: metadata target Assets/Editor/AncientFieldSmokeChecks.cs.meta
+PASS: 32-character GUID AncientFieldSmokeChecks.cs.meta
+PASS: metadata coverage AncientFieldSmokeChecks.cs
 PASS: metadata target Assets/Editor/AncientSniperSmokeChecks.cs.meta
 PASS: 32-character GUID AncientSniperSmokeChecks.cs.meta
 PASS: metadata coverage AncientBladeSmokeChecks.cs
@@ -62,6 +66,7 @@ PASS: metadata coverage AncientFrameRules.cs
 PASS: metadata coverage AncientSwingMotion.cs
 PASS: metadata target Assets/Scripts/AncientPerformance.cs.meta
 PASS: 32-character GUID AncientPerformance.cs.meta
+PASS: metadata coverage AncientFieldExpansion.cs
 PASS: metadata coverage AncientCampaignRules.cs
 PASS: metadata coverage AncientSniperGround.cs
 PASS: metadata target Assets/Scripts/AncientExploration.cs.meta
@@ -83,6 +88,8 @@ PASS: metadata target Assets/Scripts/AncientCampaignData.cs.meta
 PASS: 32-character GUID AncientCampaignData.cs.meta
 PASS: metadata target Assets/Scripts/AncientCombat.cs.meta
 PASS: 32-character GUID AncientCombat.cs.meta
+PASS: metadata target Assets/Scripts/AncientFieldExpansion.cs.meta
+PASS: 32-character GUID AncientFieldExpansion.cs.meta
 PASS: metadata coverage AncientCitizenAtlas.cs
 PASS: metadata target Assets/Scripts/AncientFieldScenery.cs.meta
 PASS: 32-character GUID AncientFieldScenery.cs.meta
@@ -1152,6 +1159,7 @@ PASS: rotating wheel silhouette is circular
 PASS: healthy and damaged chassis display widths agree
 PASS: scrap projectile silhouette and transparent gutters
 PASS: C# syntax AncientSniperSmokeChecks.cs
+PASS: C# syntax AncientFieldSmokeChecks.cs
 PASS: C# syntax AncientBladeSmokeChecks.cs
 PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientWireParticleBatch.cs
@@ -1160,6 +1168,7 @@ PASS: C# syntax AncientCityLayout.cs
 PASS: C# syntax AncientSwingAtlas.cs
 PASS: C# syntax AncientFrameRules.cs
 PASS: C# syntax AncientSwingMotion.cs
+PASS: C# syntax AncientFieldExpansion.cs
 PASS: C# syntax AncientCampaignRules.cs
 PASS: C# syntax AncientSniperGround.cs
 PASS: C# syntax AncientPointer.cs
@@ -1224,4 +1233,7 @@ PASS: five sparse Joker mentions across city resident dialogue
 PASS: protagonist dialogue consistently uses Baek Myeong
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 PASS: supplemental runtime C# type check with Unity 2021 references and temporary linearVelocity-to-velocity alias
-NOT RUN: actual Unity 6000.6.7f1 Editor/Play/player build, physical input, shader import, FPS or complete playthrough
+PASS: supplemental combined runtime + three Editor smoke scripts compile with UNITY_EDITOR and minimal Editor API stubs
+PASS: Canvas atlas review; corrected duplicate diagonal forearm/blade and measured complete blade/boot crop gutters
+PASS: preserved high-resolution blade and wire reference SHA256 hashes
+NOT RUN: actual Unity 6000.6.7f1 Editor/API/Play/player build, shader import, physical inputs, FPS, or complete playthrough
