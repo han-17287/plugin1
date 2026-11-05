@@ -317,8 +317,8 @@ class RulesChecks
             Check(!AncientCampaignRules.CanStart(campaignMask,id,floor,0,31),"Field cases cannot bypass the opening tutorial");
             Check(mission.Tasks.Length==3&&AncientCampaignData.Details[id].Length==3,"Every case has three concrete objectives and evidence details");
             Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+6)==id,"Each interior entry maps to the correct room");
-            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+131)==id,"Each field exit remains in its room");
-            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+138)==-1,"Inter-room void cannot be mistaken for another field");
+            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+AncientCampaignRules.RoomWidth-1)==id,"Each field exit remains in its room");
+            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+AncientCampaignRules.RoomWidth+(AncientCampaignRules.RoomStride-AncientCampaignRules.RoomWidth)*.5f)==-1,"Inter-room void cannot be mistaken for another field");
             Check(AncientCityLayout.VisualSector(AncientCampaignRules.Left(id)+42)==floor,"Field scenery displays on its actual city floor");
             campaignMask=AncientCampaignRules.Claim(campaignMask,id);
             Check(AncientCampaignRules.Claim(campaignMask,id)==campaignMask,"Field reward claim is idempotent");

@@ -34,7 +34,7 @@ namespace Plugin.AncientCivilization
         public void Initialize(AncientGame owner,Sprite square){game=owner;white=square;}
         public void Box(Vector2 position,Vector2 size,Color color,int order)
         {
-            int floor=size.x>180?-1:AncientCityLayout.VisualSector(position.x);
+            int floor=size.x>180&&AncientCampaignRules.RoomAt(position.x)<0?-1:AncientCityLayout.VisualSector(position.x);
             Add(white,position,size,color,order,floor);
         }
         public void Sprite(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order)

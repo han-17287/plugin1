@@ -4,7 +4,7 @@ namespace Plugin.AncientCivilization
     public static class AncientCampaignRules
     {
         public const int MissionCount=20,TasksMask=7;
-        public const float Origin=1600,RoomStride=144,RoomWidth=132;
+        public const float Origin=1600,RoomStride=AncientFieldExpansion.Stride,RoomWidth=AncientFieldExpansion.Width;
         public static int Witness(int mission){return mission==2?4:mission==5?6:mission==11?14:mission==14?18:6;}
         public static int WalkRow(int citizen){return citizen==4?0:citizen==6?1:citizen==14?2:citizen==18?3:-1;}
         public static int SanitizeMask(int mask){return mask&((1<<MissionCount)-1);}
