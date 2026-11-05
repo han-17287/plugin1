@@ -14,7 +14,7 @@ ZIP의 `AncientCivilization` 폴더를 Unity **6000.6.7f1**에서 열고 `Assets
 
 초반 화면의 주인공 호칭은 **백 경위**입니다. 1회차 저격수는 같은 처지만 확인하고 친구 공개는 2회차, 비서실장은1페이즈 뒤 살아서 퇴장합니다. 실제 Unity Play/빌드/FPS·전체 완주 시간은 미검증이며, 9시간 플레이나 완성 비율을 보장하지 않습니다.
 
-별도 [블레이드 콘셉트 MP4](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/Video/Officer_Blade_Concept.mp4)는 **12초·1080p·30fps 애니매틱**입니다. 정지 이미지에 카메라·효과·소리를 합성했으며 게임 플레이 녹화나 연속 캐릭터 동작 영상이 아닙니다. [영상 구성·원본·재현 방법](Video/README_KO.md).
+별도 [수정된 블레이드 콘셉트 MP4](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/Video/Officer_Blade_Concept_60fps.mp4)는 **12초·1080p·60fps 애니매틱**입니다. 전개 전 팔을 수정하고 같은 자세에서 칼날이 뻗어나오도록 카메라·전개·효과를 새로 렌더링했습니다. 정지 이미지 기반 합성으로, 게임 플레이 녹화나 연속 캐릭터 동작 영상이 아닙니다. [영상 구성·원본·재현 방법](Video/README_KO.md).
 
 - [실행·조작](AncientCivilization/README_KO.md) · [블레이드 연격](AncientCivilization/BLADE_COMBO_KO.md) · [현장 경로](AncientCivilization/FIELD_EXPANSION_KO.md)
 - [현재 완성도](AncientCivilization/COMPLETION_KO.md) · [저격수](AncientCivilization/SNIPER_BOSS_KO.md) · [스토리](AncientCivilization/STORY_KO.md)

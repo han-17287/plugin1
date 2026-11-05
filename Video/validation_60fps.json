@@ -1,0 +1,28 @@
+{
+  "path": "/workspace/plugin1/Video/Officer_Blade_Concept_60fps.mp4",
+  "sha256": "f1580a5ddfd7fffe20b5af690df0caafc7107205eef310d19d286dd538a58585",
+  "video": {
+    "width": 1920,
+    "height": 1080,
+    "fps": "60/1",
+    "frames": "720",
+    "duration": "12.000000"
+  },
+  "audio": {
+    "codec": "aac",
+    "sample_rate": "48000",
+    "channels": 2,
+    "start_time": "0.000000",
+    "duration": "12.000000"
+  },
+  "timestamps": "All719 intervals are1/60s within2microseconds",
+  "mean_absolute_difference_160x90_gray": {
+    "min": 0.0045138888888888885,
+    "median": 0.3929166666666667,
+    "max": 38.11076388888889,
+    "exact_duplicate_frame_indices": [],
+    "unique_frame_digests": 720
+  },
+  "full_decode": "PASS",
+  "scope": "Native60camera/effects/source-code audit plus technical decode, not continuousriggedcharacteranimation."
+}

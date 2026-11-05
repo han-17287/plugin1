@@ -1,0 +1,53 @@
+{
+  "type": "generated-still-based cinematic concept animatic",
+  "version": "corrected arm and native60 camera/effects",
+  "reference": "ArtReferences/RelicArm_LongFilamentBlade_3D_Reference.png",
+  "output": "Video/Officer_Blade_Concept_60fps.mp4",
+  "fps": 60,
+  "duration_seconds": 12,
+  "source_images_edited_with": "image_gen.imagegen",
+  "video_compositing": "fresh per-frame camera paths, spatial blade reveal mask, animated lights/sparks/shockwave; not duplicated old30fps frames",
+  "limitation": "Still-based camera-and-effects animatic, not continuous rigged 3D character animation",
+  "shots": [
+    {
+      "shot": 1,
+      "file": "Video/Stills60/shot01.png",
+      "sha256": "14238c0d4dbca63b0df47136fe1568dd0c87372092e64a4f570ee4e10232c275",
+      "generated_source": "/workspace/generated_images/exec-2c341f1f-383a-4f18-8ab3-076c899e162e.png",
+      "unchanged_copy": true,
+      "reused_from_original": false
+    },
+    {
+      "shot": 2,
+      "file": "Video/Stills60/shot02.png",
+      "sha256": "9b494f83b54b5f0c8e02e1a0e7353ab3b70a6c330366403890429c3dbb542f51",
+      "generated_source": "/workspace/generated_images/exec-f3a3be70-43ba-4a82-ba98-a6c88d7a6ab7.png",
+      "unchanged_copy": true,
+      "reused_from_original": false
+    },
+    {
+      "shot": 3,
+      "file": "Video/Stills/shot03.png",
+      "sha256": "b806faed1ca74b0f728cd63182f6ba0e1bd7e43d87efe18f3cb35e33aa97842c",
+      "generated_source": "/workspace/generated_images/exec-214242ec-ca21-4fc1-9985-d96e9b569053.png",
+      "unchanged_copy": true,
+      "reused_from_original": true
+    },
+    {
+      "shot": 4,
+      "file": "Video/Stills/shot04.png",
+      "sha256": "69f7fb204902ef53051a6a67466e0c331d66079b75d94563ec8b2ae3f30a1819",
+      "generated_source": "/workspace/generated_images/exec-5f4820eb-b1f5-45b8-9a35-20f94f0644f0.png",
+      "unchanged_copy": true,
+      "reused_from_original": true
+    },
+    {
+      "shot": 5,
+      "file": "Video/Stills/shot05.png",
+      "sha256": "c4e8e03ae1dfea94a12ee9ae7f51ec3f1125b0f462e6b95b6fb62806d34159e2",
+      "generated_source": "/workspace/generated_images/exec-e9473ceb-03d9-4740-968b-00c262ff56d5.png",
+      "unchanged_copy": true,
+      "reused_from_original": true
+    }
+  ]
+}
