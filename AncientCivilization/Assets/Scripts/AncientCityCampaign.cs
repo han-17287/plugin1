@@ -164,8 +164,7 @@ namespace Plugin.AncientCivilization
         }
         public bool TryBladeTarget(Vector2 origin,Vector2 direction)
         {
-            if(activeBoss&&activeBoss.IsSecretary)
-            {var clock=activeBoss.GetComponent<AncientClockBoss>();if(clock&&clock.TryBlade(origin,direction))return true;}
+            if(TryBreakObjects(origin,direction))return true;
             foreach(var target in targets)
             {
                 if(!target||!target.Ready)continue;Vector2 delta=(Vector2)target.transform.position-origin;
@@ -173,6 +172,11 @@ namespace Plugin.AncientCivilization
                 target.Strike();return true;
             }
             return false;
+        }
+        public bool TryBreakObjects(Vector2 origin,Vector2 direction)
+        {
+            if(!activeBoss||!activeBoss.IsSecretary)return false;
+            var clock=activeBoss.GetComponent<AncientClockBoss>();return clock&&clock.TryBlade(origin,direction);
         }
         void OnGUI()
         {

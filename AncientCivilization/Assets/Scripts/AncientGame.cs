@@ -53,7 +53,7 @@ namespace Plugin.AncientCivilization
             if(isolated.StartsWith("PLUGIN.Ancient.QA.",System.StringComparison.Ordinal))SaveKey=isolated;
 #endif
         }
-        Camera view; Sprite square; Transform backdrop;
+        Camera view; Sprite square;
         GUIStyle small, title, centered;
         readonly AncientHudText hud=new AncientHudText();
         string message; float messageUntil, shake, runTime;
@@ -136,12 +136,6 @@ namespace Plugin.AncientCivilization
         }
         void BuildWorld()
         {
-            backdrop=new GameObject("City parallax").transform;
-            for(int i=-1;i<=1;i++)
-            {
-                var image=AncientArt.Display("Ancient city panorama",AncientArt.City(),new Vector2(i*48,0),-30,backdrop);
-                image.flipX=i!=0;
-            }
             Platform(-5,118,0);Platform(43,58,1);
             foreach(var ledge in AncientTraversalLayout.LowerRoute)Platform(ledge.left,ledge.right,ledge.top);
             foreach(var ledge in AncientTraversalLayout.LowerFastRoute)Platform(ledge.left,ledge.right,ledge.top);
@@ -360,9 +354,6 @@ namespace Plugin.AncientCivilization
             var p=cameraFollow;if(shake>0&&!skills){p+=(Vector3)(Random.insideUnitCircle*shake);shake=Mathf.MoveTowards(shake,0,Time.unscaledDeltaTime);}
             float displayPPU=Mathf.Max(1,Screen.height/(view.orthographicSize*2));
             p.x=Mathf.Round(p.x*displayPPU)/displayPPU;p.y=Mathf.Round(p.y*displayPPU)/displayPPU;view.transform.position=p;
-            float parallax=8+(p.x-8)*.82f;
-            parallax+=Mathf.Floor((p.x-parallax+24)/48)*48;
-            backdrop.position=new Vector3(parallax,Finale&&Finale.Active?p.y:6+(p.y-4)*.72f,0);
         }
         void OnApplicationQuit(){if(HasSession)Save();}
         void OnDestroy(){Time.timeScale=1;AncientHUD.Dispose();if(lineMaterial)Destroy(lineMaterial);}
@@ -389,116 +380,121 @@ namespace Plugin.AncientCivilization
         {
             if(!hero||MainMenu||(Story&&(Story.DialogueOpen||Story.LiftBusy))||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic))return;
             if(!skills&&!won&&Event.current.type!=EventType.Repaint)return;
-            GUIStyle oldButton=GUI.skin.button;GUI.skin.button=AncientHUD.Button;
-            if(small==null)
+            GUIStyle oldButton=GUI.skin.button;Matrix4x4 oldMatrix=GUI.matrix;Color oldColor=GUI.color;int oldDepth=GUI.depth;bool oldEnabled=GUI.enabled;
+            try
             {
-                small=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,wordWrap=true};title=new GUIStyle(small){fontSize=22,fontStyle=FontStyle.Bold};
-                centered=new GUIStyle(title){alignment=TextAnchor.MiddleCenter};
-            }
-            hud.Refresh(this);
-            float scale=Mathf.Min(2,Mathf.Min(Screen.width/1280f,Screen.height/720f));GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);
-            float w=Screen.width/scale,h=Screen.height/scale;
-            Panel(new Rect(16,16,302,106),new Color(.025f,.045f,.065f,.88f));
-            GUI.Label(new Rect(28,21,290,24),"PLUGIN / ANCIENT CIVILIZATION",small);
-            Bar(new Rect(28,49,272,18),healthEcho/hero.MaxHP,new Color(.48f,.23f,.12f));
-            Panel(new Rect(30,51,268*Mathf.Clamp01(hero.hp/hero.MaxHP),14),Orange);Bar(new Rect(28,73,272,13),hero.CaptureEnergy/100f,Cyan);
-            GUI.Label(new Rect(28,91,275,25),hud.Resources,small);
-            Panel(new Rect(w-300,16,284,74),new Color(.025f,.045f,.065f,.88f));
-            GUI.Label(new Rect(w-286,24,260,55),hud.Objective,small);
-            GUI.Label(new Rect(28,128,300,30),hud.Movement,small);
-            GUI.Label(new Rect(w-300,92,284,23),hud.Performance,small);
-            GUI.Label(new Rect(w-300,117,284,23),hud.Mode,small);
-            GUI.Label(new Rect(w-300,141,284,24),hud.Capture,small);
-            Bar(new Rect(w-300,168,284,7),hero.CaptureEnergy/100f,Cyan);
-            if(hero.AttackMode&&!hero.bike&&hero.Combat&&!hero.Combat.Charging)
-            {GUI.color=new Color(1,.88f,.3f);GUI.Label(new Rect(w-300,179,284,24),hud.Blade,small);GUI.color=Color.white;}
-            foreach(var enemy in enemies)
-            {
-                if(!enemy)continue;
-                if(enemy.IsTelegraphing)
+                GUI.skin.button=AncientHUD.Button;
+                if(small==null)
                 {
-                    Vector3 tell=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
-                    if(tell.z>0&&tell.x>0&&tell.x<Screen.width)
+                    small=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,wordWrap=true};title=new GUIStyle(small){fontSize=22,fontStyle=FontStyle.Bold};
+                    centered=new GUIStyle(title){alignment=TextAnchor.MiddleCenter};
+                }
+                hud.Refresh(this);
+                float scale=Mathf.Min(2,Mathf.Min(Screen.width/1280f,Screen.height/720f));GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);
+                float w=Screen.width/scale,h=Screen.height/scale;
+                Panel(new Rect(16,16,302,106),new Color(.025f,.045f,.065f,.88f));
+                GUI.Label(new Rect(28,21,290,24),"PLUGIN / ANCIENT CIVILIZATION",small);
+                Bar(new Rect(28,49,272,18),healthEcho/hero.MaxHP,new Color(.48f,.23f,.12f));
+                Panel(new Rect(30,51,268*Mathf.Clamp01(hero.hp/hero.MaxHP),14),Orange);Bar(new Rect(28,73,272,13),hero.CaptureEnergy/100f,Cyan);
+                GUI.Label(new Rect(28,91,275,25),hud.Resources,small);
+                Panel(new Rect(w-300,16,284,74),new Color(.025f,.045f,.065f,.88f));
+                GUI.Label(new Rect(w-286,24,260,55),hud.Objective,small);
+                GUI.Label(new Rect(28,128,300,30),hud.Movement,small);
+                GUI.Label(new Rect(w-300,92,284,23),hud.Performance,small);
+                GUI.Label(new Rect(w-300,117,284,23),hud.Mode,small);
+                GUI.Label(new Rect(w-300,141,284,24),hud.Capture,small);
+                Bar(new Rect(w-300,168,284,7),hero.CaptureEnergy/100f,Cyan);
+                if(hero.AttackMode&&!hero.bike&&hero.Combat&&!hero.Combat.Charging)
+                {GUI.color=new Color(1,.88f,.3f);GUI.Label(new Rect(w-300,179,284,24),hud.Blade,small);GUI.color=Color.white;}
+                foreach(var enemy in enemies)
+                {
+                    if(!enemy)continue;
+                    if(enemy.IsTelegraphing)
                     {
-                        Color tellColor=enemy.AttackIsPhysical?Orange:Cyan;
-                        Bar(new Rect(tell.x/scale-28,(Screen.height-tell.y)/scale,56,5),enemy.WindupProgress,tellColor);
-                        GUI.color=tellColor;GUI.Label(new Rect(tell.x/scale-30,(Screen.height-tell.y)/scale-21,90,22),enemy.AttackIsPhysical?"회피":"파괴 / 회피",small);GUI.color=Color.white;
+                        Vector3 tell=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
+                        if(tell.z>0&&tell.x>0&&tell.x<Screen.width)
+                        {
+                            Color tellColor=enemy.AttackIsPhysical?Orange:Cyan;
+                            Bar(new Rect(tell.x/scale-28,(Screen.height-tell.y)/scale,56,5),enemy.WindupProgress,tellColor);
+                            GUI.color=tellColor;GUI.Label(new Rect(tell.x/scale-30,(Screen.height-tell.y)/scale-21,90,22),enemy.AttackIsPhysical?"회피":"파괴 / 회피",small);GUI.color=Color.white;
+                        }
+                    }
+                    if(enemy.Recovering)
+                    {
+                        Vector3 opening=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
+                        if(opening.z>0&&opening.x>0&&opening.x<Screen.width)
+                        {
+                            GUI.color=new Color(1,.85f,.2f);GUI.Label(new Rect(opening.x/scale-35,(Screen.height-opening.y)/scale-22,110,24),"빈틈 · 공격",small);GUI.color=Color.white;
+                            Bar(new Rect(opening.x/scale-28,(Screen.height-opening.y)/scale,56,5),enemy.RecoveryRemaining,new Color(1,.85f,.2f));
+                        }
+                    }
+                    if(enemy==boss || enemy.HealthRatio>=1)continue;
+                    Vector3 screen=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.1f);
+                    if(screen.z>0 && screen.x>=0 && screen.x<Screen.width)
+                        Bar(new Rect(screen.x/scale-22,(Screen.height-screen.y)/scale,44,5),enemy.HealthRatio,Orange);
+                }
+                if(boss)
+                {
+                    GUI.Label(new Rect(w/2-220,h-104,440,25),hud.Boss,centered);
+                    Bar(new Rect(w/2-240,h-72,480,16),boss.HealthRatio,Orange);
+                }
+                if(Time.unscaledTime<messageUntil&&!skills)
+                {
+                    Panel(new Rect(w/2-270,100,540,68),new Color(.025f,.045f,.065f,.84f));
+                    GUI.Label(new Rect(w/2-256,106,512,60),message,small);
+                }
+                if(showHelp&&!skills&&!boss&&!won)
+                {
+                    Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
+                    GUI.Label(new Rect(28,h-87,w-56,70),"A/D 이동 · Ctrl 달리기 · Space 점프 · E 상호작용 · Tab 순찰 기록\n휠 위 공격 / 아래 와이어 · 좌클릭 베기/견인 · 길게 조준 후 놓아 레이저 · 우클릭 입자 수집 · 가운데 클릭 스윙",small);
+                }
+                if(skills)
+                {
+                    Panel(new Rect(0,0,w,h),new Color(0,.015f,.03f,.75f));
+                    float x=w/2-260,y=Mathf.Max(20,h/2-240);
+                    Panel(new Rect(x,y,520,515),new Color(.035f,.065f,.09f,.98f));
+                    GUI.Label(new Rect(x+25,y+20,470,35),"입자 장비 정비",title);
+                    GUI.Label(new Rect(x+25,y+57,470,52),"기술 재화: "+credits+"   /   에너지 코어: "+Cores+"\n코어를 회수하고 기술 재화를 모아 장비를 강화합니다.",small);
+                    if(GUI.Button(new Rect(x+25,y+122,470,35),"F8 / 프레임 목표 "+Performance.TargetLabel+" · F9 성능 표시"))Performance.CycleTarget();
+                    Upgrade(new Rect(x+25,y+174,470,42),"공중 스텝 / 2단 점프",10,1,hero.doubleJump,()=>hero.doubleJump=true);
+                    Upgrade(new Rect(x+25,y+226,470,42),"입자 도관 / 수집량 +25%",12,2,hero.reservoir,()=>hero.reservoir=true);
+                    Upgrade(new Rect(x+25,y+278,470,42),"강화 장갑 / 최대 체력 125",12,2,hero.armor,()=>{hero.armor=true;hero.hp=hero.MaxHP;});
+                    if(GUI.Button(new Rect(x+25,y+340,470,35),"돌아가기 / K 또는 Esc"))ToggleSkills();
+                    if(GUI.Button(new Rect(x+25,y+383,470,30),"체크포인트부터 재도전")){skills=false;hero.RetryFromCheckpoint();Time.timeScale=1;BlockGameplayInput();}
+                    if(GUI.Button(new Rect(x+25,y+423,470,30),"저장 후 메인 화면"))ReturnToMainMenu();
+                    if(GUI.Button(new Rect(x+25,y+463,470,28),"N을 누른 채 클릭하면 진행을 지우고 새 게임")&&Input.GetKey(KeyCode.N))NewRun();
+                }
+                if(!skills&&!won)
+                {
+                    Bar(new Rect(28,156,74,4),(hero.Combat?hero.Combat.ChargeProgress:0),Cyan);
+                    GUI.Label(new Rect(28,162,90,22),"좌클릭 / 조준",small);
+                    Bar(new Rect(120,156,74,4),hero.CaptureEnergy/100f,Orange);
+                    GUI.Label(new Rect(120,162,100,22),"입자",small);
+                    if(hero.bike)
+                    {
+                        Bar(new Rect(220,156,84,4),hero.bikeHP/80,Cyan);
+                        GUI.Label(new Rect(220,162,120,22),hud.Speed,small);
+                    }
+                    AncientPickup nearest=null;float distance=float.MaxValue;
+                    foreach(var item in pickups)if(item&&item.core>=0)
+                    {float d=Vector2.Distance(item.transform.position,hero.transform.position);if(d<distance){distance=d;nearest=item;}}
+                    if(nearest)
+                    {
+                        Vector3 point=view.WorldToScreenPoint(nearest.transform.position+Vector3.up*.65f);
+                        float x=Mathf.Clamp(point.x/scale,60,w-100),y=Mathf.Clamp((Screen.height-point.y)/scale,185,h-125);
+                        hud.Distance(nearest,distance);GUI.color=Orange;GUI.Label(new Rect(x-30,y,145,24),hud.CoreDistance,small);GUI.color=Color.white;
                     }
                 }
-                if(enemy.Recovering)
+                if(won&&!skills)
                 {
-                    Vector3 opening=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
-                    if(opening.z>0&&opening.x>0&&opening.x<Screen.width)
-                    {
-                        GUI.color=new Color(1,.85f,.2f);GUI.Label(new Rect(opening.x/scale-35,(Screen.height-opening.y)/scale-22,110,24),"빈틈 · 공격",small);GUI.color=Color.white;
-                        Bar(new Rect(opening.x/scale-28,(Screen.height-opening.y)/scale,56,5),enemy.RecoveryRemaining,new Color(1,.85f,.2f));
-                    }
-                }
-                if(enemy==boss || enemy.HealthRatio>=1)continue;
-                Vector3 screen=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.1f);
-                if(screen.z>0 && screen.x>=0 && screen.x<Screen.width)
-                    Bar(new Rect(screen.x/scale-22,(Screen.height-screen.y)/scale,44,5),enemy.HealthRatio,Orange);
-            }
-            if(boss)
-            {
-                GUI.Label(new Rect(w/2-220,h-104,440,25),hud.Boss,centered);
-                Bar(new Rect(w/2-240,h-72,480,16),boss.HealthRatio,Orange);
-            }
-            if(Time.unscaledTime<messageUntil&&!skills)
-            {
-                Panel(new Rect(w/2-270,100,540,68),new Color(.025f,.045f,.065f,.84f));
-                GUI.Label(new Rect(w/2-256,106,512,60),message,small);
-            }
-            if(showHelp&&!skills&&!boss&&!won)
-            {
-                Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
-                GUI.Label(new Rect(28,h-87,w-56,70),"A/D 이동 · Ctrl 달리기 · Space 점프 · E 상호작용 · Tab 순찰 기록\n휠 위 공격 / 아래 와이어 · 좌클릭 베기/견인 · 길게 조준 후 놓아 레이저 · 우클릭 입자 수집 · 가운데 클릭 스윙",small);
-            }
-            if(skills)
-            {
-                Panel(new Rect(0,0,w,h),new Color(0,.015f,.03f,.75f));
-                float x=w/2-260,y=Mathf.Max(20,h/2-240);
-                Panel(new Rect(x,y,520,515),new Color(.035f,.065f,.09f,.98f));
-                GUI.Label(new Rect(x+25,y+20,470,35),"입자 장비 정비",title);
-                GUI.Label(new Rect(x+25,y+57,470,52),"기술 재화: "+credits+"   /   에너지 코어: "+Cores+"\n코어를 회수하고 기술 재화를 모아 장비를 강화합니다.",small);
-                if(GUI.Button(new Rect(x+25,y+122,470,35),"F8 / 프레임 목표 "+Performance.TargetLabel+" · F9 성능 표시"))Performance.CycleTarget();
-                Upgrade(new Rect(x+25,y+174,470,42),"공중 스텝 / 2단 점프",10,1,hero.doubleJump,()=>hero.doubleJump=true);
-                Upgrade(new Rect(x+25,y+226,470,42),"입자 도관 / 수집량 +25%",12,2,hero.reservoir,()=>hero.reservoir=true);
-                Upgrade(new Rect(x+25,y+278,470,42),"강화 장갑 / 최대 체력 125",12,2,hero.armor,()=>{hero.armor=true;hero.hp=hero.MaxHP;});
-                if(GUI.Button(new Rect(x+25,y+340,470,35),"돌아가기 / K 또는 Esc"))ToggleSkills();
-                if(GUI.Button(new Rect(x+25,y+383,470,30),"체크포인트부터 재도전")){skills=false;hero.RetryFromCheckpoint();Time.timeScale=1;BlockGameplayInput();}
-                if(GUI.Button(new Rect(x+25,y+423,470,30),"저장 후 메인 화면"))ReturnToMainMenu();
-                if(GUI.Button(new Rect(x+25,y+463,470,28),"N을 누른 채 클릭하면 진행을 지우고 새 게임")&&Input.GetKey(KeyCode.N))NewRun();
-            }
-            if(!skills&&!won)
-            {
-                Bar(new Rect(28,156,74,4),(hero.Combat?hero.Combat.ChargeProgress:0),Cyan);
-                GUI.Label(new Rect(28,162,90,22),"좌클릭 / 조준",small);
-                Bar(new Rect(120,156,74,4),hero.CaptureEnergy/100f,Orange);
-                GUI.Label(new Rect(120,162,100,22),"입자",small);
-                if(hero.bike)
-                {
-                    Bar(new Rect(220,156,84,4),hero.bikeHP/80,Cyan);
-                    GUI.Label(new Rect(220,162,120,22),hud.Speed,small);
-                }
-                AncientPickup nearest=null;float distance=float.MaxValue;
-                foreach(var item in pickups)if(item&&item.core>=0)
-                {float d=Vector2.Distance(item.transform.position,hero.transform.position);if(d<distance){distance=d;nearest=item;}}
-                if(nearest)
-                {
-                    Vector3 point=view.WorldToScreenPoint(nearest.transform.position+Vector3.up*.65f);
-                    float x=Mathf.Clamp(point.x/scale,60,w-100),y=Mathf.Clamp((Screen.height-point.y)/scale,185,h-125);
-                    hud.Distance(nearest,distance);GUI.color=Orange;GUI.Label(new Rect(x-30,y,145,24),hud.CoreDistance,small);GUI.color=Color.white;
+                    Panel(new Rect(w/2-280,h/2-75,560,220),new Color(.02f,.05f,.075f,.96f));
+                    GUI.Label(new Rect(w/2-260,h/2-57,520,42),"THE SKY REMEMBERS",centered);
+                    GUI.Label(new Rect(w/2-245,h/2-8,490,90),"Ancient Civilization / Chapter 0 complete\nThe fracture was not the end. It was the beginning.\nScore "+score+"    Sentinels defeated "+kills+"    Time "+Mathf.FloorToInt(runTime)+"s",small);
+                    if(GUI.Button(new Rect(w/2-180,h/2+98,360,30),"New run (erase this prototype's save)"))NewRun();
                 }
             }
-            if(won&&!skills)
-            {
-                Panel(new Rect(w/2-280,h/2-75,560,220),new Color(.02f,.05f,.075f,.96f));
-                GUI.Label(new Rect(w/2-260,h/2-57,520,42),"THE SKY REMEMBERS",centered);
-                GUI.Label(new Rect(w/2-245,h/2-8,490,90),"Ancient Civilization / Chapter 0 complete\nThe fracture was not the end. It was the beginning.\nScore "+score+"    Sentinels defeated "+kills+"    Time "+Mathf.FloorToInt(runTime)+"s",small);
-                if(GUI.Button(new Rect(w/2-180,h/2+98,360,30),"New run (erase this prototype's save)"))NewRun();
-            }
-            GUI.skin.button=oldButton;
+            finally
+            {GUI.skin.button=oldButton;GUI.matrix=oldMatrix;GUI.color=oldColor;GUI.depth=oldDepth;GUI.enabled=oldEnabled;}
         }
     }
 

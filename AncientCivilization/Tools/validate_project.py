@@ -180,6 +180,20 @@ def main():
         check(len(set(shapes))==8,'all swing poses have distinct silhouettes')
         from validate_blade_atlas import validate_blade_atlas
         validate_blade_atlas(ROOT,check,png_info)
+        backdrop_path=ROOT / 'Assets/Resources/Art/DistrictBackdrops.png'
+        check(png_info(backdrop_path)[:2]==(1536,1024),'five-district backdrop atlas PNG integrity and dimensions')
+        backdrop_source=(ROOT / 'Assets/Scripts/AncientBackdropAtlas.cs').read_text()
+        backdrop_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',backdrop_source)]
+        check(len(backdrop_rects)==5,'one measured background panorama for each city floor')
+        backdrop_image=Image.open(backdrop_path).convert('RGBA');backdrop_shapes=[]
+        for i,(x,y,w,h) in enumerate(backdrop_rects):
+            check(0<=x<x+w<=1536 and 0<=y<y+h<=1024,'district backdrop stays inside the source '+str(i))
+            check(abs((w/h)/(16/9)-1)<.002,'district panorama keeps its authored wide aspect '+str(i))
+            region=backdrop_image.crop((x,y,x+w,y+h));backdrop_shapes.append(region.tobytes())
+            check(region.getchannel('A').getextrema()[0]>=250,'district panorama covers the distant background without holes '+str(i))
+        check(len(set(backdrop_shapes))==5,'all five district panoramas are distinct')
+        backdrop_meta=backdrop_path.with_suffix('.png.meta').read_text()
+        check(all(v in backdrop_meta for v in ('filterMode: 0','isReadable: 1','textureCompression: 0')),'district atlas uses point filtering and uncompressed readable import')
         for field in ('PivotPixels','EmitterPixels'):
             block=swing_atlas.split(field)[1].split('};')[0]
             points=[tuple(float(v.rstrip('f')) for v in pair) for pair in re.findall(r'new Vector2\(([0-9.]+f?),([0-9.]+f?)\)',block)]

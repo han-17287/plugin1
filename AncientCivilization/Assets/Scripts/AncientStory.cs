@@ -51,9 +51,15 @@ namespace Plugin.AncientCivilization
         {
             if(choiceOpen||showFull||!DialogueOpen||Time.unscaledTime<nextLetterAt)return;
             string text=lines[lineIndex].text;if(revealedChars>=text.Length)return;
-            char letter=text[revealedChars++];
-            float pause=letter=='.'||letter=='?'||letter=='!'||letter=='…'?.16f:letter==','?.08f:0;
-            nextLetterAt=Time.unscaledTime+.045f+pause;
+            float now=Time.unscaledTime;
+            // Keep the same reading pace at 30/60/120 Hz, without flooding a line after a long stall.
+            if(now-nextLetterAt>.3f)nextLetterAt=now-.1f;
+            for(int catchup=0;catchup<4&&revealedChars<text.Length&&now>=nextLetterAt;catchup++)
+            {
+                char letter=text[revealedChars++];
+                float pause=letter=='.'||letter=='?'||letter=='!'||letter=='…'?.16f:letter==','?.08f:0;
+                nextLetterAt+=.045f+pause;
+            }
         }
         void Advance()
         {

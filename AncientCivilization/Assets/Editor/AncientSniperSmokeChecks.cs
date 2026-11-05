@@ -156,6 +156,9 @@ namespace Plugin.AncientCivilization.EditorChecks
                     AssertTurretVisibleAt(0,firstTurret);AssertTurretVisibleAt(1,secondTurret);
                     float health=encounter.Owner.HealthRatio;encounter.Owner.Hit(100000,true);
                     Assert(Mathf.Abs(encounter.Owner.HealthRatio-health)<.00001f,"Charging sniper is immune to ordinary damage");
+                    for(int i=0;i<8;i++)
+                    {encounter.TryBreakObjects(new Vector2(firstTurret,1),Vector2.right);encounter.TryBreakObjects(new Vector2(secondTurret,1),Vector2.right);}
+                    Assert(encounter.TurretsBroken==0,"Repeated physical-object checks do not apply extra turret damage during a single visible cut");
                     for(int i=0;i<2;i++){encounter.TryBlade(new Vector2(firstTurret,1),Vector2.right);encounter.TryBlade(new Vector2(secondTurret,1),Vector2.right);}
                     Assert(encounter.TurretsBroken==2,"Both final-phase turrets can be broken");
                     game.hero.AddCapturedEnergy(100);

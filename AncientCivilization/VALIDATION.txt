@@ -124,6 +124,8 @@ PASS: 32-character GUID AncientWireMath.cs.meta
 PASS: metadata target Assets/Scripts/AncientBladeRules.cs.meta
 PASS: 32-character GUID AncientBladeRules.cs.meta
 PASS: metadata coverage AncientClockBoss.cs
+PASS: metadata target Assets/Scripts/AncientDistrictBackdrop.cs.meta
+PASS: 32-character GUID AncientDistrictBackdrop.cs.meta
 PASS: metadata target Assets/Scripts/AncientGame.cs.meta
 PASS: 32-character GUID AncientGame.cs.meta
 PASS: metadata coverage AncientClockRules.cs
@@ -171,9 +173,13 @@ PASS: metadata coverage AncientKoreanUI.cs
 PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
 PASS: 32-character GUID AncientClockRules.cs.meta
 PASS: metadata coverage AncientDistrict.cs
+PASS: metadata coverage AncientDistrictBackdrop.cs
 PASS: metadata target Assets/Scripts/AncientProgressRules.cs.meta
 PASS: 32-character GUID AncientProgressRules.cs.meta
+PASS: metadata target Assets/Scripts/AncientBackdropAtlas.cs.meta
+PASS: 32-character GUID AncientBackdropAtlas.cs.meta
 PASS: metadata coverage AncientPerformance.cs
+PASS: metadata coverage AncientBackdropAtlas.cs
 PASS: metadata coverage AncientEvidenceQuestions.cs
 PASS: metadata target Assets/Scripts/AncientCitizenAtlas.cs.meta
 PASS: 32-character GUID AncientCitizenAtlas.cs.meta
@@ -269,6 +275,8 @@ PASS: metadata target Assets/Resources/Art/Boss2.png.meta
 PASS: 32-character GUID Boss2.png.meta
 PASS: metadata target Assets/Resources/Art/Boss4.png.meta
 PASS: 32-character GUID Boss4.png.meta
+PASS: metadata target Assets/Resources/Art/DistrictBackdrops.png.meta
+PASS: 32-character GUID DistrictBackdrops.png.meta
 PASS: metadata coverage Citizens2.png
 PASS: metadata target Assets/Resources/Art/CitizensWalk.png.meta
 PASS: 32-character GUID CitizensWalk.png.meta
@@ -290,6 +298,7 @@ PASS: metadata target Assets/Resources/Art/Boss5.png.meta
 PASS: 32-character GUID Boss5.png.meta
 PASS: metadata target Assets/Resources/Art/Motorcycle.png.meta
 PASS: 32-character GUID Motorcycle.png.meta
+PASS: metadata coverage DistrictBackdrops.png
 PASS: metadata coverage Boss5.png
 PASS: metadata coverage Boss3.png
 PASS: metadata coverage Boss1.png
@@ -984,6 +993,27 @@ PASS: BladeDiagonal keeps clear blade and boot gutters 15
 PASS: BladeDiagonal measured blade tip stays inside its pose 15
 PASS: BladeDiagonal tip metadata touches the yellow blade 15
 PASS: all forty-eight blade frames have distinct measured silhouettes
+PASS: DistrictBackdrops.png PNG signature
+PASS: DistrictBackdrops.png PNG chunk integrity
+PASS: five-district backdrop atlas PNG integrity and dimensions
+PASS: one measured background panorama for each city floor
+PASS: district backdrop stays inside the source 0
+PASS: district panorama keeps its authored wide aspect 0
+PASS: district panorama covers the distant background without holes 0
+PASS: district backdrop stays inside the source 1
+PASS: district panorama keeps its authored wide aspect 1
+PASS: district panorama covers the distant background without holes 1
+PASS: district backdrop stays inside the source 2
+PASS: district panorama keeps its authored wide aspect 2
+PASS: district panorama covers the distant background without holes 2
+PASS: district backdrop stays inside the source 3
+PASS: district panorama keeps its authored wide aspect 3
+PASS: district panorama covers the distant background without holes 3
+PASS: district backdrop stays inside the source 4
+PASS: district panorama keeps its authored wide aspect 4
+PASS: district panorama covers the distant background without holes 4
+PASS: all five district panoramas are distinct
+PASS: district atlas uses point filtering and uncompressed readable import
 PASS: swing PivotPixels metadata coverage
 PASS: swing PivotPixels stays in its pose 0
 PASS: swing PivotPixels stays in its pose 1
@@ -1203,7 +1233,9 @@ PASS: C# syntax AncientVisuals.cs
 PASS: C# syntax AncientSwingRules.cs
 PASS: C# syntax AncientKoreanUI.cs
 PASS: C# syntax AncientDistrict.cs
+PASS: C# syntax AncientDistrictBackdrop.cs
 PASS: C# syntax AncientPerformance.cs
+PASS: C# syntax AncientBackdropAtlas.cs
 PASS: C# syntax AncientEvidenceQuestions.cs
 PASS: C# syntax AncientGameFeel.cs
 PASS: C# syntax AncientParkedBike.cs
@@ -1233,7 +1265,9 @@ PASS: five sparse Joker mentions across city resident dialogue
 PASS: protagonist dialogue consistently uses Baek Myeong
 NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
 PASS: supplemental runtime C# type check with Unity 2021 references and temporary linearVelocity-to-velocity alias
-PASS: supplemental combined runtime + three Editor smoke scripts compile with UNITY_EDITOR and minimal Editor API stubs
-PASS: Canvas atlas review; corrected duplicate diagonal forearm/blade and measured complete blade/boot crop gutters
-PASS: preserved high-resolution blade and wire reference SHA256 hashes
-NOT RUN: actual Unity 6000.6.7f1 Editor/API/Play/player build, shader import, physical inputs, FPS, or complete playthrough
+PASS: supplemental combined runtime + Editor smoke compile using minimal Editor API stubs (not actual Editor API verification)
+PASS: field HUD numerical rectangle bounds and guide priorities at 58 viewport sizes; no native font/render verification
+PASS: backdrop horizontal/vertical overscan checks in 28 camera cases including square and portrait arenas
+PASS: Canvas atlas/palette review; original PNG sources preserved, five sealed urban backdrops and forty-eight blade poses
+PASS: preserved high-resolution weapon reference hashes
+NOT RUN: actual Unity 6000.6.7f1 Editor/API/Play/player build, shader import, physical input, FPS, complete gameplay or nine-hour playtime

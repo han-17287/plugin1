@@ -18,6 +18,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         const string Root="PLUGIN.QA.BladeSmoke.",ProfileKey="PLUGIN.QA.ActiveProfile",NormalPrefix="PLUGIN.Ancient.v2.",QAPrefix="PLUGIN.Ancient.QA.";
         const BindingFlags PrivateInstance=BindingFlags.Instance|BindingFlags.NonPublic;
         static readonly string[] optionKeys={"muted","graphics","frameTarget"};
+        static AncientProjectile recoveryProbe;
         [Serializable] sealed class PrefSnapshot {public string[] keys;public bool[] present;public int[] values;}
 
         static AncientBladeSmokeChecks()
@@ -182,7 +183,55 @@ namespace Plugin.AncientCivilization.EditorChecks
                     combat.ResetCombat();foreach(var mote in Motes(combat))Assert(!mote.gameObject.activeSelf,"Reset returns every energy mote to the pool");
                     SetAttackMode(hero);hero.AddCapturedEnergy(50);combat.StrikeBlade();int shots=combat.LaserShots;combat.FireLaser();
                     Assert(!combat.BladeAnimating&&combat.Firing&&combat.LaserShots==shots+1&&hero.CaptureEnergy==0,"Laser release cancels melee, consumes stored energy and starts its continuous beam");
-                    Finish(true,"Structural blade and particle smoke checks completed. Physical hold/release, wheel switching, airborne swings, frame pacing and visual alignment still need manual playtesting.");
+                    SetStage(10);return;
+                }
+                if(stage==10)
+                {
+                    // Probe the scene at known animation instants without synthesizing mouse input.
+                    // Actual pooled projectiles, removal and Rigidbody2D rebound still run normally.
+                    hero.TravelTo(new Vector2(2,6));SetAttackMode(hero);
+                    var body=hero.GetComponent<Rigidbody2D>();body.constraints=RigidbodyConstraints2D.FreezeRotation;body.gravityScale=0;
+                    Physics2D.SyncTransforms();Assert(!hero.IsOnGround,"The object-break probes run in open air");
+                    combat.StrikeBlade();Assert(combat.BladeAnimating&&combat.BladeStep==1,"The airborne probe starts a fresh vertical cut");
+                    Field(typeof(AncientCombat),"bladeDirection").SetValue(combat,Vector2.right);
+                    Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ImpactTime(1)-.005f);TickCombat(combat);
+                    Assert(!(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"The ordinary enemy-damage pulse resolves before the late object arrives");
+                    int broken=combat.BrokenObjects;body.linearVelocity=new Vector2(7,-4);
+                    Vector2 objectPoint=(Vector2)hero.transform.position+new Vector2(1.7f,.55f);
+                    var late=game.Projectiles.Spawn(objectPoint,Vector2.zero,12,false,1);
+                    Assert(late&&!late.Available&&game.shots.Contains(late),"A real pooled plate enters the late active swing");
+                    Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ActiveEnd(1)+.005f);TickCombat(combat);
+                    Assert(late.Available&&!game.shots.Contains(late)&&combat.BrokenObjects==broken+1,"A plate arriving after the impact pulse still breaks during the visible swing");
+                    float firstLift=body.linearVelocity.y;
+                    Assert(firstLift>0&&Mathf.Abs(body.linearVelocity.x-7)<.001f,"The first airborne object break provides lift while preserving horizontal speed");
+                    var second=game.Projectiles.Spawn(objectPoint+Vector2.right*.15f,Vector2.zero,12,false,1);
+                    Assert(second,"A second pooled plate spawns during the same cut");TickCombat(combat);
+                    Assert(second.Available&&combat.BrokenObjects==broken+2,"The same visible cut can break a second physical object");
+                    Assert(Mathf.Abs(body.linearVelocity.y-firstLift)<.001f&&Mathf.Abs(body.linearVelocity.x-7)<.001f,"Several objects in one cut cannot stack the airborne rebound");
+                    recoveryProbe=game.Projectiles.Spawn(objectPoint,Vector2.zero,12,false,1);
+                    Assert(recoveryProbe&&!recoveryProbe.Available,"A third physical plate enters during recovery");
+                    Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ActiveEnd(1)-.005f);TickCombat(combat);
+                    Assert(!recoveryProbe.Available&&combat.BrokenObjects==broken+2,"Recovery frames cannot break a newly arriving object");
+                    var missedContact=new GameObject("QA missed blade contact enemy").AddComponent<AncientEnemy>();
+                    missedContact.Initialize(0);missedContact.enabled=false;missedContact.transform.position=objectPoint-Vector2.up*.95f;game.enemies.Add(missedContact);
+                    try
+                    {
+                        // A stalled render can skip from anticipation straight into recovery.
+                        // A pending contact flag must expire rather than damaging a fresh target late.
+                        Field(typeof(AncientCombat),"bladeHitPending").SetValue(combat,true);
+                        Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ActiveEnd(1)-.01f);TickCombat(combat);
+                        Assert(Mathf.Abs(missedContact.HealthRatio-1)<.00001f&&!(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"Skipping the visible contact window clears pending enemy damage without an invisible recovery hit");
+                    }
+                    finally {game.enemies.Remove(missedContact);UnityEngine.Object.Destroy(missedContact.gameObject);}
+                    SessionState.SetInt(Root+"RecoveryBroken",combat.BrokenObjects);
+                    body.linearVelocity=Vector2.zero;body.constraints=RigidbodyConstraints2D.FreezeAll;SetStage(11);return;
+                }
+                if(stage==11)
+                {
+                    if(StageAge<.12)return;
+                    Assert(recoveryProbe&&!recoveryProbe.Available&&game.shots.Contains(recoveryProbe)&&combat.BrokenObjects==SessionState.GetInt(Root+"RecoveryBroken",-1),"The recovery plate remains intact through subsequent scene updates");
+                    recoveryProbe.Remove();recoveryProbe=null;combat.ResetCombat();
+                    Finish(true,"Structural blade, late physical-object break, one-rebound-per-cut and particle checks completed. Physical hold/release, wheel switching, airborne wire transitions, frame pacing and visual alignment still need manual playtesting.");
                 }
             }
             catch(Exception error){Finish(false,error.ToString());}

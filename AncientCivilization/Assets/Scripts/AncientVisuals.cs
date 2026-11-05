@@ -20,6 +20,7 @@ namespace Plugin.AncientCivilization
         Vector2[] rainPositions;float[] rainSpeeds;
         SpriteRenderer[] haze;SpriteRenderer armGlow;
         AncientGame game;System.Random random=new System.Random(47287);
+        AncientDistrictBackdrop districtBackdrop;
         float Next(float min,float max){return min+(float)random.NextDouble()*(max-min);}
         void Awake()
         {
@@ -38,6 +39,7 @@ namespace Plugin.AncientCivilization
         void Start()
         {
             game=AncientGame.Instance;
+            districtBackdrop=new AncientDistrictBackdrop(game,transform);
             foreach(var anchor in game.anchors)Glow(anchor,AncientGame.Cyan,2.3f,4);
             Glow(new Vector2(46,1.65f),AncientGame.Cyan,3,4);Glow(new Vector2(86,.65f),AncientGame.Cyan,3,4);
             Glow(new Vector2(115,2.5f),AncientGame.Cyan,5,-1);
@@ -148,6 +150,7 @@ namespace Plugin.AncientCivilization
         }
         void OnDestroy()
         {
+            if(districtBackdrop!=null)districtBackdrop.Dispose();
             if(rainMesh)Destroy(rainMesh);if(rainMaterial)Destroy(rainMaterial);
             foreach(var light in lights)if(light)Destroy(light.gameObject);
             if(haze!=null)foreach(var fog in haze)if(fog)Destroy(fog.gameObject);

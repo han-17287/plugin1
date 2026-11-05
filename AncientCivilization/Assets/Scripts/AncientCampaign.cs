@@ -11,6 +11,13 @@ namespace Plugin.AncientCivilization
         readonly BoxCollider2D[,] fieldGateSolids=new BoxCollider2D[20,2];
         readonly List<AncientEnemy> foes=new List<AncientEnemy>();readonly List<int> foeSlots=new List<int>();SpriteRenderer escort;bool following;
         GUIStyle label;string objective="";int journalFloor=-1,journalMission=-1,journalCitizen=-1;bool journalPeople;float guardNoticeAt,powerEmitReady,escortCycle;int escortFrame=-1;
+        GUIStyle fieldTitleStyle,fieldBodyStyle,fieldHintStyle,fieldWorldStyle,fieldEdgeStyle;float fieldStyleScale=-1;
+        int uiMission=-1,uiSector=-1,uiNext=-2,uiGuideKind=-1,uiGuideId=-1,edgeMetres=-1,edgeDirection=-1;bool uiFollowing;
+        bool fieldGuideVisible;Rect fieldGuideRect;
+        string fieldTitle="",fieldNext="",fieldHint="",guideCaption="",edgeText="";
+        readonly string[] fieldNodeLabels=new string[3];
+        static readonly string[] terminalLabels={"안전 거점 1 / E: 도시 복귀","안전 거점 2 / E: 도시 복귀","안전 거점 3 / E: 도시 복귀"};
+        static readonly string[] guideArrows={"← ","→ ","↑ ","↓ "};
         public bool Active {get{return active>=0;}}
         public int CurrentRoom {get{return active;}}
         public int CurrentSector {get{return Active&&game.hero?AncientFieldExpansion.SectorAt(game.hero.transform.position.x-AncientCampaignRules.Left(active)):-1;}}
@@ -50,6 +57,7 @@ namespace Plugin.AncientCivilization
             float left=AncientCampaignRules.Left(mission.Id),right=left+AncientCampaignRules.RoomWidth;
             game.Ceiling(left,right,10);game.Platform(left,right,-4.5f);
             Color tint=mission.Floor==0?new Color(.12f,.17f,.2f):mission.Floor==1?new Color(.13f,.21f,.2f):mission.Floor==2?new Color(.12f,.18f,.28f):mission.Floor==3?new Color(.24f,.23f,.19f):new Color(.19f,.13f,.24f);
+            Color facade=tint;facade.a=.68f;Color window=tint*1.55f;window.a=.30f;
             if(mission.Kind==2)game.Platform(left,right,0);
             for(int sector=0;sector<AncientFieldExpansion.SectorCount;sector++)
             {
@@ -58,8 +66,8 @@ namespace Plugin.AncientCivilization
                 for(int i=0;i<12;i++)
                 {
                     float x=sectorLeft+6+i*12;
-                    game.StaticBox("Investigation facade",new Vector2(x,4.5f),new Vector2(11,9),tint,-8);
-                    game.StaticBox("Investigation window",new Vector2(x,6.6f),new Vector2(5,1.4f),tint*1.55f,-7);
+                    game.StaticBox("Investigation facade",new Vector2(x,4.5f),new Vector2(11,9),facade,-8);
+                    game.StaticBox("Investigation window",new Vector2(x,6.6f),new Vector2(5,1.4f),window,-7);
                     game.StaticBox("District floor stripe",new Vector2(x,9.88f),new Vector2(8,.06f),new Color(.2f,.65f,.7f),3);
                 }
                 if(mission.Kind!=2)
@@ -385,49 +393,126 @@ namespace Plugin.AncientCivilization
                 else if(blocked&&Time.time>=guardNoticeAt){guardNoticeAt=Time.time+5;game.Notice("위협을 먼저 제압하세요. 주민은 안전이 확인되면 따라옵니다.",2);}
             }
         }
+        void EnsureFieldStyles(float scale)
+        {
+            if(fieldTitleStyle==null)
+            {
+                fieldTitleStyle=new GUIStyle(label){fontStyle=FontStyle.Bold,wordWrap=false,clipping=TextClipping.Clip};
+                fieldBodyStyle=new GUIStyle(label){wordWrap=false,clipping=TextClipping.Clip};
+                fieldHintStyle=new GUIStyle(fieldBodyStyle);fieldWorldStyle=new GUIStyle(label);fieldEdgeStyle=new GUIStyle(label){fontStyle=FontStyle.Bold};
+                var padding=new RectOffset(0,0,0,0);
+                foreach(var style in new[]{fieldTitleStyle,fieldBodyStyle,fieldHintStyle,fieldWorldStyle,fieldEdgeStyle})style.padding=padding;
+            }
+            if(Mathf.Approximately(fieldStyleScale,scale))return;fieldStyleScale=scale;
+            fieldTitleStyle.fontSize=Mathf.Max(1,Mathf.RoundToInt(14*scale));fieldBodyStyle.fontSize=Mathf.Max(1,Mathf.RoundToInt(13*scale));
+            fieldHintStyle.fontSize=fieldEdgeStyle.fontSize=Mathf.Max(1,Mathf.RoundToInt(12*scale));fieldWorldStyle.fontSize=fieldBodyStyle.fontSize;
+        }
+        int MissingObjective()
+        {for(int i=0;i<3;i++)if((tasks&(1<<i))==0)return i;return -1;}
+        // Guide kinds: objective, stranded witness, current threat, next encounter, report exit.
+        void GuideTarget(int next,out Vector2 point,out int kind,out int id)
+        {
+            float left=AncientCampaignRules.Left(active);id=next;kind=0;
+            if(next==2&&following&&escort&&Mathf.Abs(game.hero.transform.position.x-escort.transform.position.x)>12)
+            {kind=1;point=(Vector2)escort.transform.position+Vector2.up*1.2f;return;}
+            if(next>=0&&next<=CurrentSector){point=NodePoint(active,next);return;}
+            float nearest=float.MaxValue;AncientEnemy threat=null;
+            for(int i=0;i<foes.Count;i++)if(foes[i]&&foes[i].IsAlive)
+            {
+                float distance=(foes[i].AimPoint-(Vector2)game.hero.transform.position).sqrMagnitude;
+                if(distance<nearest){nearest=distance;threat=foes[i];id=foeSlots[i];}
+            }
+            if(threat){kind=2;point=threat.AimPoint;return;}
+            if(next>=0){point=NodePoint(active,next);return;}
+            for(int sector=0;sector<3;sector++)if(!AncientFieldExpansion.SectorClear(defeated,sector))
+            {kind=3;id=sector;point=new Vector2(left+AncientFieldExpansion.EntranceOf(sector),1.3f);return;}
+            kind=4;id=-1;point=new Vector2(left+AncientCampaignRules.RoomWidth-6,1.3f);
+        }
+        void RefreshFieldText(int sector,int next,int kind,int id)
+        {
+            if(uiMission==active&&uiSector==sector&&uiNext==next&&uiGuideKind==kind&&uiGuideId==id&&uiFollowing==following)return;
+            var mission=AncientCampaignData.Missions[active];
+            if(uiMission!=active)for(int i=0;i<3;i++)
+                fieldNodeLabels[i]=(UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
+            uiMission=active;uiSector=sector;uiNext=next;uiGuideKind=kind;uiGuideId=id;uiFollowing=following;edgeMetres=-1;
+            fieldTitle=(sector+1)+" / 3 · "+AncientFieldExpansion.Names[active][sector];
+            guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"E · 조사 보고":
+                mission.Kind==2&&next==2?"보호 대상과 출구로":fieldNodeLabels[next];
+            fieldNext="다음 / "+guideCaption;
+            fieldHint=kind==1?"주민에게 돌아가 함께 이동하세요.":mission.Kind==2&&following?"주민 가까이 동행 · 거점/출구 E":
+                kind==2||kind==3?"위협을 제압하세요 · 안전 거점 E: 복귀":"안전 거점 E: 복귀 · 동쪽 출구 E: 보고";
+        }
+        static bool InView(Vector3 point)
+        {return point.z>0&&point.x>=0&&point.x<=Screen.width&&point.y>=0&&point.y<=Screen.height;}
+        void FieldWorldLabel(Vector3 point,string text,float width,float height,float scale)
+        {
+            if(!InView(point))return;
+            width=Mathf.Min(width*scale,Screen.width-24*scale);height*=scale;
+            float x=Mathf.Clamp(point.x-width*.5f,12*scale,Screen.width-12*scale-width);
+            float y=Mathf.Clamp(Screen.height-point.y-height,216*scale,Screen.height-110*scale-height);
+            var rect=new Rect(x,y,width,height);
+            if(fieldGuideVisible&&rect.Overlaps(fieldGuideRect))
+            {
+                float above=fieldGuideRect.y-height-6*scale,below=fieldGuideRect.yMax+6*scale;
+                rect.y=above>=216*scale?above:Mathf.Min(below,Screen.height-110*scale-height);
+                if(rect.Overlaps(fieldGuideRect))return;
+            }
+            GUI.Label(rect,text,fieldWorldStyle);
+        }
+        void FieldEdgeGuide(Vector2 target,int kind,float scale)
+        {
+            fieldGuideVisible=false;Vector3 point=game.View.WorldToScreenPoint(target);if(InView(point))return;
+            float reserve=334*scale,width=260*scale,height=44*scale,margin=12*scale,x,y;int direction;
+            if(point.z<=0||point.x<0||point.x>Screen.width)
+            {
+                bool left=point.z<=0?target.x<game.hero.transform.position.x:point.x<0;direction=left?0:1;
+                x=left?margin:Screen.width-margin-width;
+                y=Mathf.Clamp(Screen.height-point.y-height*.5f,226*scale,Screen.height-170*scale-height);
+            }
+            else
+            {
+                bool above=point.y>Screen.height;direction=above?2:3;
+                x=Mathf.Clamp(point.x-width*.5f,reserve,Screen.width-reserve-width);y=above?176*scale:Screen.height-150*scale;
+            }
+            int metres=Mathf.CeilToInt(Vector2.Distance(game.hero.transform.position,target));
+            if(metres!=edgeMetres||direction!=edgeDirection)
+            {edgeMetres=metres;edgeDirection=direction;edgeText=guideArrows[direction]+guideCaption+"\n"+metres+"m";}
+            var rect=new Rect(x,y,width,height);fieldGuideRect=rect;fieldGuideVisible=true;AncientHUD.Panel(rect,new Color(.025f,.055f,.075f,.84f));
+            GUI.color=kind==2||kind==3?new Color(1,.72f,.35f):new Color(.5f,1,1);GUI.Label(rect,edgeText,fieldEdgeStyle);GUI.color=Color.white;
+        }
+        void DrawFieldGui()
+        {
+            float scale=Mathf.Min(2,Mathf.Min(Screen.width/1280f,Screen.height/720f));EnsureFieldStyles(scale);
+            int sector=CurrentSector,next=MissingObjective(),kind,id;Vector2 target;GuideTarget(next,out target,out kind,out id);RefreshFieldText(sector,next,kind,id);
+            float reserve=334*scale,width=Mathf.Min(760*scale,Screen.width-reserve*2);
+            var header=new Rect((Screen.width-width)*.5f,16*scale,width,76*scale);
+            AncientHUD.Panel(header,new Color(.025f,.045f,.065f,.84f));
+            GUI.color=new Color(.5f,1,1);GUI.Label(new Rect(header.x+10*scale,header.y+4*scale,header.width-20*scale,22*scale),fieldTitle,fieldTitleStyle);
+            GUI.color=Color.white;GUI.Label(new Rect(header.x+10*scale,header.y+26*scale,header.width-20*scale,22*scale),fieldNext,fieldBodyStyle);
+            GUI.color=new Color(.65f,.77f,.8f);GUI.Label(new Rect(header.x+10*scale,header.y+48*scale,header.width-20*scale,22*scale),fieldHint,fieldHintStyle);GUI.color=Color.white;
+            FieldEdgeGuide(target,kind,scale);
+            for(int i=0;i<=checkpoint;i++)FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(i),2.3f)),terminalLabels[i],220,40,scale);
+            int gate=AncientFieldExpansion.MaximumCheckpoint(tasks,defeated);
+            if(gate<2)FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.SectorStart(gate+1)-.4f,5)),"다음 구간 / 조사·위협 해결 후 통과",300,44,scale);
+            var mission=AncientCampaignData.Missions[active];
+            if(mission.Kind==2&&following&&(tasks&4)==0)
+                FieldWorldLabel(game.View.WorldToScreenPoint(escort.transform.position+Vector3.up*2.1f),"보호 대상 / 가까이 동행",240,36,scale);
+            if(mission.Floor==0)for(int index=3;index<=6;index+=3)
+            {
+                var segment=AncientFieldExpansion.Segment(active,sector,index);float x=AncientCampaignRules.Left(active)+(segment.left+segment.right)*.5f,top=mission.Kind==2?0:segment.top;
+                FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(x,top+.7f)),index==3?"운송 벨트 →":"← 역방향 벨트",180,28,scale);
+            }
+            for(int i=0;i<3;i++)if((tasks&(1<<i))==0)FieldWorldLabel(game.View.WorldToScreenPoint(NodePoint(active,i)),fieldNodeLabels[i],260,44,scale);
+            if(next<0&&kind==4)FieldWorldLabel(game.View.WorldToScreenPoint(target),guideCaption,220,36,scale);
+            if(mission.Kind==3&&(tasks&1)!=0&&(tasks&4)==0)
+                FieldWorldLabel(game.View.WorldToScreenPoint(PowerPoint(active,sector)),"보조 전력 패널 / 베기: 입자 재채취",250,36,scale);
+        }
         void OnGUI()
         {
-            if(!game.Story||game.Paused||game.MainMenu||Event.current.type!=EventType.Repaint)return;
+            if(!game.Story||!game.hero||!game.View||game.Paused||game.MainMenu||Event.current.type!=EventType.Repaint)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,alignment=TextAnchor.MiddleCenter,wordWrap=true};
-            var matrix=GUI.matrix;var color=GUI.color;GUI.matrix=Matrix4x4.identity;
-            if(Active)
-            {
-                int sector=CurrentSector;
-                GUI.Label(new Rect(Screen.width/2-380,85,760,65),(sector+1)+" / 3 · "+AncientFieldExpansion.Names[active][sector]+"\n노란 판: 베기 / 입자: 우클릭 / 청록 수광부: 레이저 / 기록·증언: E\n안전 거점 E: 중단 · 동쪽 출구 E: 조사 보고",label);
-                for(int i=0;i<=checkpoint;i++)
-                {
-                    var terminal=game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(i),2.3f));
-                    if(terminal.x>0&&terminal.x<Screen.width)GUI.Label(new Rect(terminal.x-110,Screen.height-terminal.y-25,220,45),"안전 거점 "+(i+1)+" / E: 도시 복귀",label);
-                }
-                int next=AncientFieldExpansion.MaximumCheckpoint(tasks,defeated);
-                if(next<2)
-                {
-                    var gate=game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.SectorStart(next+1)-.4f,5));
-                    if(gate.x>-150&&gate.x<Screen.width+150)GUI.Label(new Rect(gate.x-150,Screen.height-gate.y-30,300,60),"다음 구간 / 조사 목표 확보 + 위협 제압",label);
-                }
-                if(AncientCampaignData.Missions[active].Kind==2&&following&&(tasks&4)==0)
-                {
-                    var witness=game.View.WorldToScreenPoint(escort.transform.position+Vector3.up*2.1f);
-                    float x=Mathf.Clamp(witness.x,150,Mathf.Max(150,Screen.width-150));
-                    GUI.Label(new Rect(x-150,Screen.height-210,300,45),"보호 대상 / 가까이 동행 · 위협 우선 제압",label);
-                }
-                if(AncientCampaignData.Missions[active].Floor==0)for(int index=3;index<=6;index+=3)
-                {
-                    var segment=AncientFieldExpansion.Segment(active,sector,index);float x=AncientCampaignRules.Left(active)+(segment.left+segment.right)*.5f,top=AncientCampaignData.Missions[active].Kind==2?0:segment.top;
-                    var point=game.View.WorldToScreenPoint(new Vector2(x,top+.7f));
-                    if(point.x>0&&point.x<Screen.width)GUI.Label(new Rect(point.x-100,Screen.height-point.y-20,200,30),index==3?"운송 벨트 →":"← 역방향 벨트",label);
-                }
-                for(int i=0;i<3;i++)if((tasks&(1<<i))==0)
-                {
-                    var p=game.View.WorldToScreenPoint(NodePoint(active,i)+Vector2.up*.7f);
-                    if(p.x>-140&&p.x<Screen.width+140)GUI.Label(new Rect(p.x-140,Screen.height-p.y-30,280,60),(UsesBlade(AncientCampaignData.Missions[active].Kind,i)?"베기 / ":AncientCampaignData.Missions[active].Kind==3&&i==2?"레이저 / ":AncientCampaignData.Missions[active].Kind==2&&i==2?"보호 / ":"E / ")+AncientCampaignData.Missions[active].Tasks[i],label);
-                }
-                if(AncientCampaignData.Missions[active].Kind==3&&(tasks&1)!=0&&(tasks&4)==0)
-                {
-                    var power=game.View.WorldToScreenPoint(PowerPoint(active,sector)+Vector2.up*.7f);
-                    if(power.x>-120&&power.x<Screen.width+120)GUI.Label(new Rect(power.x-120,Screen.height-power.y-25,240,45),"보조 전력 패널 / 베기: 입자 재채취",label);
-                }
-            }
+            var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;
+            if(Active){GUI.depth=-8;DrawFieldGui();}
             else if(!(game.Finale&&game.Finale.Phase!=0))
             {
                 int nearest=NearestCitizen();
@@ -452,7 +537,7 @@ namespace Plugin.AncientCivilization
                 if(game.Story.Stage>=8)
                 {int next=AncientCampaignRules.Next(completed,floor);GUI.Label(new Rect(Screen.width/2-330,Screen.height-145,660,50),next==19&&(game.City.Cleared&16)==0?"전방 저격수와 대치 / 동결된 통행 심사의 단서 확인":next>=0?"구역 사건 "+AncientCampaignRules.FloorCount(completed,floor)+" / 4 · "+AncientCampaignData.Citizens[GiverFor(floor,next)].Name+"에게 다음 현장 확인":"구역 조사 완료 / 전투와 출입 권한 확인",label);}
             }
-            GUI.matrix=matrix;GUI.color=color;
+            GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;
         }
         public void DrawJournal(Rect area,GUIStyle text,GUIStyle small)
         {

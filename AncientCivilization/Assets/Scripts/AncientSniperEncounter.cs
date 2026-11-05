@@ -234,17 +234,22 @@ namespace Plugin.AncientCivilization
         void ClearObjects(){foreach(var s in objects)if(s!=null)RemoveObject(s);foreach(var a in actors)if(a!=null)a.tell.enabled=false;}
         public bool TryBlade(Vector2 origin,Vector2 direction)
         {
+            bool found=TryBreakObjects(origin,direction);
+            if(phase==4&&!clashing)for(int i=0;i<2;i++)
+            {
+                var t=turrets[i];Vector2 p=t.position+Vector2.up,d=p-origin;
+                if(!t.broken&&d.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(d.normalized,direction)>-.15f&&!Physics2D.Linecast(origin,p,1<<8))HitTurret(i,35);
+            }
+            return found;
+        }
+        public bool TryBreakObjects(Vector2 origin,Vector2 direction)
+        {
             bool found=false;
             foreach(var s in objects)
             {
                 if(!s.live)continue;Vector2 d=s.position-origin;
                 if(d.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(d.normalized,direction)>-.15f&&!Physics2D.Linecast(origin,s.position,1<<8))
                 {game.hero.Combat.EmitParticles(s.position,s.grenade?14:20);game.Burst(s.position,AncientGame.Cyan,8);RemoveObject(s);found=true;}
-            }
-            if(phase==4&&!clashing)for(int i=0;i<2;i++)
-            {
-                var t=turrets[i];Vector2 p=t.position+Vector2.up,d=p-origin;
-                if(!t.broken&&d.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(d.normalized,direction)>-.15f&&!Physics2D.Linecast(origin,p,1<<8))HitTurret(i,35);
             }
             return found;
         }

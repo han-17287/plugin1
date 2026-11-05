@@ -20,7 +20,7 @@ namespace Plugin.AncientCivilization
         public bool CanCollect {get{return hero&&!(game.Sniper&&game.Sniper.InputLocked)&&AncientRules.CanCollectParticles(Input.GetMouseButton(1),Application.isFocused,game.Paused,game.GameplayInputReady,hero.CaptureEnergy);}}
         AncientBeamVisuals beamProfile;AncientMoteVisuals moteVisuals;
         AncientHero hero;AncientGame game;LineRenderer slashTrail,slashGlow,aim,beam,beamGlow,beamCore;
-        AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,bladeBufferedUntil;bool bladeHitPending,readySignal;
+        AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,bladeBufferedUntil;bool bladeHitPending,bladeRebounded,readySignal;
         Vector2 bladeDirection,bufferedDirection,beamStart,beamEnd;
         readonly Vector3[] slashPoints=new Vector3[9];
         static readonly Color Yellow=new Color(1,.88f,.18f);
@@ -56,7 +56,7 @@ namespace Plugin.AncientCivilization
         public void CancelInput(){heldAt=-1;readySignal=false;bladeBufferedUntil=0;if(aim)aim.enabled=false;}
         public void CancelBlade()
         {
-            bladeHitPending=false;bladeUntil=bladeBufferedUntil=bladeReady=0;combo=0;
+            bladeHitPending=bladeRebounded=false;bladeUntil=bladeBufferedUntil=bladeReady=0;combo=0;
             if(slashTrail)slashTrail.enabled=false;if(slashGlow)slashGlow.enabled=false;
             if(hero)hero.CancelBladePose();
         }
@@ -100,7 +100,7 @@ namespace Plugin.AncientCivilization
         void StartBlade(Vector2 direction)
         {
             combo=AncientBladeRules.NextStep(combo,bladeReady,Time.time);
-            bladeStarted=Time.time;bladeReady=Time.time+AncientBladeRules.Duration(combo);bladeUntil=bladeReady;bladeHitPending=true;bladeBufferedUntil=0;
+            bladeStarted=Time.time;bladeReady=Time.time+AncientBladeRules.Duration(combo);bladeUntil=bladeReady;bladeHitPending=true;bladeRebounded=false;bladeBufferedUntil=0;
             bladeDirection=direction;
             hero.BladePose(bladeDirection.x<0?-1:1,combo);BladeUses++;game.Sound(8+combo);
         }
@@ -110,10 +110,13 @@ namespace Plugin.AncientCivilization
             if(!ControlsReady){CancelInput();CancelBlade();return;}
             if(!hero.AttackMode){CancelInput();CancelBlade();return;}
             if(Charging)bladeBufferedUntil=0;
+            // Incoming physical objects can meet any visible part of the cut, including after contact.
+            // Enemy and interactive-target damage still resolves once at its authored contact pose.
+            if(!hero.Wired&&Time.time<bladeUntil&&AncientBladeRules.IsActive(combo,Time.time-bladeStarted))ResolvePhysicalBreaks();
             if(bladeHitPending&&Time.time>=bladeStarted+AncientBladeRules.ImpactTime(combo))
             {
                 bladeHitPending=false;
-                if(hero.AttackMode&&!hero.Wired)ResolveBladeHit();
+                if(hero.AttackMode&&!hero.Wired&&AncientBladeRules.IsActive(combo,Time.time-bladeStarted))ResolveBladeHit();
             }
             if(!hero.Wired&&!Charging&&!Firing&&Time.time>=bladeReady&&Time.time<bladeBufferedUntil)
             {Vector2 direction=bufferedDirection;bladeBufferedUntil=0;StartBlade(direction);}
@@ -121,6 +124,18 @@ namespace Plugin.AncientCivilization
         void ResolveBladeHit()
         {
             Vector2 origin=BladeOrigin;bool rebound=(game.Sniper&&game.Sniper.TryBlade(origin,bladeDirection))||(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
+            for(int i=game.enemies.Count-1;i>=0;i--)
+            {
+                var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
+                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8)){if(enemy.kind==4)rebound=true;enemy.Hit(combo==3?42:28,combo==3);}
+            }
+            if(rebound)ReboundOnce();
+            game.Burst(origin+bladeDirection*1.5f,Yellow,6);
+        }
+        void ReboundOnce(){if(bladeRebounded||hero.bike||hero.IsOnGround)return;bladeRebounded=true;hero.BladeRebound();}
+        void ResolvePhysicalBreaks()
+        {
+            Vector2 origin=BladeOrigin;bool rebound=(game.Sniper&&game.Sniper.TryBreakObjects(origin,bladeDirection))||(game.City&&game.City.TryBreakObjects(origin,bladeDirection));
             for(int i=game.shots.Count-1;i>=0;i--)
             {
                 var shot=game.shots[i];if(!shot)continue;
@@ -134,13 +149,7 @@ namespace Plugin.AncientCivilization
                     shot.Remove();BrokenObjects++;game.Story.OnTraining(5);
                 }
             }
-            for(int i=game.enemies.Count-1;i>=0;i--)
-            {
-                var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
-                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8)){if(enemy.kind==4)rebound=true;enemy.Hit(combo==3?42:28,combo==3);}
-            }
-            if(rebound)hero.BladeRebound();
-            game.Burst(origin+bladeDirection*1.5f,Yellow,6);
+            if(rebound)ReboundOnce();
         }
         public void EmitParticles(Vector2 position,float energy)
         {
