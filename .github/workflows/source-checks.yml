@@ -1,0 +1,51 @@
+name: Unity source and portable rules
+
+on:
+  push:
+    branches: [ancient-civilization-prototype]
+    paths:
+      - AncientCivilization/**
+      - .github/workflows/source-checks.yml
+  pull_request:
+    paths:
+      - AncientCivilization/**
+      - .github/workflows/source-checks.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portable-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-and-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install source validation dependencies
+        run: python -m pip install -r AncientCivilization/Tools/requirements-checks.txt
+      - name: Validate assets, C# syntax and portable gameplay rules
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+          DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+        shell: bash
+        run: |
+          set -o pipefail
+          python AncientCivilization/Tools/run_checks.py 2>&1 | tee portable-checks.log
+          python -c "from pathlib import Path; lines=Path('portable-checks.log').read_text().splitlines(); assert not any(line.startswith('SKIP:') for line in lines), 'Required validation dependency was skipped.'"
+      - name: Upload verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-checks
+          path: portable-checks.log
+          if-no-files-found: ignore

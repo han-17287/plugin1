@@ -12,7 +12,7 @@ namespace Plugin.AncientCivilization
         public bool InUpperCity {get{return CurrentFloor>0;}}
         public bool LiftBusy {get{return liftMenu||liftTravelling;}}
         bool choiceOpen;string choicePrompt;string[] choiceEvidence,choiceOptions;Action<int> choiceAction;
-        bool liftMenu,liftTravelling;int liftDestination;float liftStarted;
+        bool liftMenu,liftTravelling;int liftDestination;float liftElapsed;
         float LiftX
         {
             get
@@ -26,6 +26,20 @@ namespace Plugin.AncientCivilization
         AncientGame game;int flags,lineIndex;float nextTrainingShot,nextLetterAt;int revealedChars;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
         struct Line {public string speaker,text;public int portrait;public Line(string who,string words,int face){speaker=who;text=words.Replace("백명 경위","백 경위").Replace("백명","백 경위");portrait=face;}}
         readonly List<Line> lines=new List<Line>();GUIStyle body,nameStyle,small,nextButton;bool inspectionReadyPrompted,reportPending;
+        int coachedStep=-1;float nextTrainingHint;AncientProjectile trainingObject;
+        const float TrainingLaunchClearance=2.2f;
+        int guideStage=-1,guideFlags=-1;bool guideEnergy,guideEmitterClose;string productionTutorialObjective="";
+        public string ProductionTutorialObjective
+        {
+            get
+            {
+                bool energy=game&&game.hero&&game.hero.CaptureEnergy>0;
+                bool emitterClose=Stage==3&&game&&game.hero&&TooCloseToTrainingEmitter();
+                if(guideStage!=Stage||guideFlags!=flags||guideEnergy!=energy||guideEmitterClose!=emitterClose)
+                {guideStage=Stage;guideFlags=flags;guideEnergy=energy;guideEmitterClose=emitterClose;productionTutorialObjective=Objective();}
+                return productionTutorialObjective;
+            }
+        }
         AncientSpeechBubble speech;
         int pageStart,pageEnd;bool pageReady;float pageWidth,pageHeight;
         string bubbleName="";int bubbleNameLine=-1,bubbleNameKind=-1;
@@ -53,15 +67,19 @@ namespace Plugin.AncientCivilization
         }
         void SetStage(int value){Stage=value;Persist();}
         bool Has(int bit){return (flags&(1<<bit))!=0;}
-        public void OnTraining(int bit){if(Has(bit))return;flags|=1<<bit;Persist();}
+        public void OnTraining(int bit)
+        {
+            if(Stage==3&&bit==5)nextTrainingShot=Mathf.Max(nextTrainingShot,Time.time+6);
+            if(Has(bit))return;flags|=1<<bit;Persist();
+        }
         public void Begin()
         {
             if(Stage==0)
             {
                 SetStage(1);
-                Talk(null,new Line("통신관","백명 경위, 오늘은 생산장 코어 재고를 확인해라. 교대 통로를 따라 동쪽 검수실로 가면 된다.",1),
-                    new Line("백명","재고 관리 업무군요. 이동하면서 장비도 확인하겠습니다.",0),
-                    new Line("통신관","그래. Space로 낮은 턱을 넘고 Ctrl로 달리기를 전환해라. 생산장 C-00 예비분은 별도 승인 물량이니 봉인은 건드리지 마라.",1));
+                Talk(null,new Line("통신관","백 경위. 생산장 코어 재고를 확인해라. 교대 통로를 따라 동쪽 검수실로 가면 된다.",1),
+                    new Line("백명","오늘은 출고가 잦군요. 장부와 실물, 둘 다 확인하겠습니다.",0),
+                    new Line("통신관","이동하며 장비부터 점검해라. C-00 예비분은 별도 승인 물량이다. 봉인은 그대로 두고.",1));
             }
             else if(Stage==4)TheftReport();
             else if(Stage==5)StartProductionIfReady();
@@ -101,7 +119,7 @@ namespace Plugin.AncientCivilization
         void Advance()
         {
             // Opening a dialogue consumes its triggering input; the same jump/click must not reveal a line.
-            if(choiceOpen||!DialogueOpen||!pageReady||!game.GameplayInputReady||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||LiftBusy)return;
+            if(choiceOpen||!DialogueOpen||!pageReady||!Application.isFocused||!game.GameplayInputReady||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||LiftBusy)return;
             if(!showFull&&revealedChars<pageEnd){showFull=true;return;}
             if(pageEnd<lines[lineIndex].text.Length)
             {
@@ -115,9 +133,9 @@ namespace Plugin.AncientCivilization
         {
             ClearProductionRadio();
             Talk(StartProductionBreach,
-                new Line("백명","생산장 도착. 장부상 재고는 120기인데, 검수 단말에는 117기만 확인됩니다. 세 기가 부족합니다.",0),
-                new Line("통신관","예정된 출고는 없다. 봉인 구역과 운송 기록을 대조해 봐라.",1),
-                new Line("백명","출고 기록도 비어 있습니다. 격벽 너머 적재 구역을 확인하겠습… 잠깐, 저 소리는?",0));
+                new Line("백명","생산장 도착. 장부에는 120기, 실물은 117기입니다. 코어 세 기가 부족합니다.",0),
+                new Line("통신관","예정된 출고는 없다. 운송 기록부터 대조해 봐라.",1),
+                new Line("백명","출고 기록은 없고, 인계 서명은… 잠깐, 격벽 쪽에서…",0));
             reportPending=true;
         }
         void StartProductionBreach()
@@ -135,7 +153,7 @@ namespace Plugin.AncientCivilization
             if(Stage<3)
             {game.Notice(Stage==1?"장비 점검 / Space 점프와 Ctrl 달리기를 한 번씩 확인하세요.":"검수 회랑을 지나 생산장 재고 단말로 이동하세요.",2);return true;}
             if(!AncientRules.TutorialReady(3,flags))
-            {game.Notice("장비 점검을 마치세요. 휠 위 → 물체 베기 → 우클릭 입자 수집 → 좌클릭 유지 후 놓아 레이저.",3);return true;}
+            {game.Notice(ProductionTutorialObjective,3);return true;}
             var combat=game.hero.Combat;
             if(combat&&(combat.Firing||combat.BladeAnimating||combat.Charging))
             {game.Notice("장비 동작이 끝나면 E로 재고를 확인하세요.",1.2f);return true;}
@@ -143,7 +161,7 @@ namespace Plugin.AncientCivilization
         }
         public void ProductionCleared()
         {
-            if(Stage>=7)return;
+            if(Stage<5||Stage>=7)return;
             ClearProductionRadio();
             game.coreMask|=7;game.bossDefeated=true;
             ResidencePoints=AncientRules.PointsAfterArrest(ResidencePoints,6);
@@ -152,18 +170,77 @@ namespace Plugin.AncientCivilization
         void ArrestDialogue()
         {
             Talk(()=>{if(game.Production)game.Production.CloseAfterArrest();SetStage(8);},
-                new Line("백명","코어 적재함은 안전하게 분리했다. 당신을 에너지 코어 절도 혐의로 체포한다. 상층에 사는 사람이 왜 아래층의 코어를 훔친 거지?",0),
+                new Line("백명","코어는 확보했다. 당신을 에너지 코어 절도 혐의로 체포한다.",0),
+                new Line("백명","상층 주민이 왜 아래층 코어를 훔쳤지? 위에서 살 포인트도 있었을 텐데.",0),
                 new Line("운송대장","그 코어, 여기서 쓸 물건이라고 들었지? 운송장 마지막 칸까지 봤어?",2),
-                new Line("백명","그걸 대답이라고 하나. 위에서 살 포인트도 있었을 텐데… 이 코어 때문에 전부 걸었다고?",0),
-                new Line("통신관","검거 확인. 이번 보상으로 시민 포인트가 "+ResidencePoints+"점에 도달했다. 한 단계 위 도시의 거주·통행 자격이 승인됐다. 이동 엘리베이터에서 목적 층을 선택하면 된다.",1),
+                new Line("통신관","검거 확인. 시민 포인트 "+ResidencePoints+"점. 한 단계 위 도시의 거주·통행 자격이 승인됐다.",1),
                 new Line("백명","잠깐, 수령처부터 확인하겠습니다. 용의자도 아직 할 말이 있는 것 같습니다.",0),
-                new Line("통신관","회수품과 용의자는 별도 이송으로 바뀌었다. 승인 코드 C-00… 원본 운송장은 내 권한으로도 열리지 않는다. 사본은 남겨 두겠다.",1),
-                new Line("백명","점검에서도 빠지고, 수령처도 볼 수 없고… 일단 사본부터 보내 주세요.",0));
+                new Line("통신관","회수품과 용의자는 별도 이송 명령이다. 승인 코드 C-00… 원본은 내 권한으로도 열리지 않아.",1),
+                new Line("백명","점검에서도 빠지고, 수령처도 못 본다… 운송장 사본부터 남겨 주세요.",0),
+                new Line("통신관","보관했다. 인계를 마치고 동쪽 운송로를 확인해라. 위층으로 갈 때는 이동 엘리베이터를 이용하고.",1));
         }
         public void ResetChaseBikeForRetry()
         {if(Stage==5)StartProductionIfReady();}
+        int TrainingPracticeStep()
+        {
+            if(!Has(5))return 0;
+            if(!Has(6)||(!Has(7)&&game.hero.CaptureEnergy<=0))return 1;
+            return Has(7)?3:2;
+        }
+        bool TooCloseToTrainingEmitter()
+        {
+            foreach(float x in AncientProductionLayout.TrainingEmitterX)
+                if(Mathf.Abs(game.hero.transform.position.x-x)<TrainingLaunchClearance)return true;
+            return false;
+        }
+        void TrainingHint(int step)
+        {
+            ClearProductionRadio();
+            if(step==0)RadioBark("통신관","장비 검수 배출구다. 휠을 위로 돌린 뒤, 다가오는 빈 하우징을 짧은 좌클릭으로 베어라. 훈련 물체는 안전하다.");
+            else if(step==1)RadioBark("통신관",Has(6)?"입자가 비었군. 빈 하우징을 다시 베고, 파란 입자 가까이에서 우클릭을 누르고 있어라.":"베인 물체가 파란 입자로 변했다. 가까이 가서 우클릭을 누르고 있으면 수집된다. 모드는 그대로 둬도 된다.");
+            else if(step==2)RadioBark("통신관","입자가 모였다. 빈 공간을 겨냥하고 좌클릭을 유지해라. 조준선이 금색이 되면 놓아서 레이저를 발사한다.");
+            else RadioBark("통신관","장비 확인 완료. 동쪽 재고 단말에서 E를 눌러 장부와 실제 수량을 대조해라.");
+            nextTrainingHint=Time.time+18;
+        }
+        void TickTraining()
+        {
+            int step=TrainingPracticeStep();
+            if(step!=coachedStep)
+            {
+                bool justCut=coachedStep==0&&step==1;
+                coachedStep=step;TrainingHint(step);
+                if(trainingObject&&!trainingObject.Available)trainingObject.Remove();
+                // A broken object leaves eight seconds of collectible motes. Give collection
+                // and aiming their own quiet window before offering another safe housing.
+                nextTrainingShot=Time.time+(justCut?6:step<2?1.1f:0);
+            }
+            if(step==3)
+            {
+                if(!inspectionReadyPrompted){inspectionReadyPrompted=true;game.ClearBattleProjectiles();}
+                return;
+            }
+            if(Time.time>=nextTrainingHint)TrainingHint(step);
+            if(step==2||Time.time<nextTrainingShot||(trainingObject&&!trainingObject.Available))return;
+            var hero=game.hero;var combat=hero.Combat;
+            if(hero.Wired||!combat||combat.Charging||combat.Firing)return;
+            float nearest=AncientProductionLayout.TrainingEmitterRange,emitter=0;bool found=false;
+            foreach(float x in AncientProductionLayout.TrainingEmitterX)
+            {
+                float distance=Mathf.Abs(hero.transform.position.x-x);
+                if(distance<TrainingLaunchClearance||distance>nearest)continue;
+                nearest=distance;emitter=x;found=true;
+            }
+            if(!found)return;
+            // The launcher is fixed in the scenery, rather than materialising an attack
+            // beside a running player. Empty housings are harmless if a first cut misses.
+            float side=hero.transform.position.x>=emitter?1:-1;
+            trainingObject=game.Projectiles.Spawn(new Vector2(emitter+side*.35f,AncientProductionLayout.TrainingEmitterY),Vector2.right*side*4,8,true);
+            if(trainingObject)trainingObject.TrainingObject=true;
+            nextTrainingShot=Time.time+2.4f;
+        }
         void Update()
         {
+            if(!Application.isFocused)return;
             if(Stage>=8&&Truck){Destroy(Truck.gameObject);Truck=null;}
             if(choiceOpen)
             {
@@ -176,7 +253,8 @@ namespace Plugin.AncientCivilization
             }
             if(liftTravelling)
             {
-                if(!game.MainMenu&&Time.unscaledTime-liftStarted>=1.6f)FinishLiftTravel();
+                if(!game.MainMenu&&!game.skills&&!(game.Journal&&game.Journal.Open))
+                {liftElapsed+=Mathf.Min(.25f,Time.unscaledDeltaTime);if(liftElapsed>=1.6f)FinishLiftTravel();}
                 return;
             }
             if(liftMenu)
@@ -208,28 +286,13 @@ namespace Plugin.AncientCivilization
             }
             if(Stage==1&&hero.transform.position.x>=-154&&AncientRules.TutorialReady(1,flags))
             {
-                SetStage(2);RadioBark("통신관","운송 벨트 구간이다. 천장을 겨냥해 좌클릭하면 직선 견인, 가운데 클릭하면 스윙한다. 아래 통로도 안전하니 서두를 필요는 없다.");
+                SetStage(2);RadioBark("통신관","휠 아래는 와이어 모드다. 천장에 좌클릭하면 직선 견인, 가운데 클릭하면 스윙한다. 위는 지름길이고 아래도 안전하다.");
             }
             else if(Stage==2&&hero.transform.position.x>=-60)
             {
-                SetStage(3);RadioBark("통신관","검수 회랑에서는 절단 장비를 확인해라. 휠 위로 공격 모드, 짧은 좌클릭은 베기다. 파란 입자는 우클릭으로 모으고, 좌클릭을 길게 눌렀다 놓으면 레이저를 쏜다.");
+                SetStage(3);coachedStep=-1;TickTraining();
             }
-            else if(Stage==3)
-            {
-                if(AncientRules.TutorialReady(3,flags))
-                {
-                    if(!inspectionReadyPrompted)
-                    {
-                        inspectionReadyPrompted=true;game.ClearBattleProjectiles();
-                        RadioBark("통신관","장비 확인 완료. 생산장 재고 단말에서 E를 눌러 장부와 실제 수량을 대조해라.");
-                    }
-                }
-                else if(Time.time>=nextTrainingShot&&game.shots.Count<4)
-                {
-                    nextTrainingShot=Time.time+1.5f;float side=hero.transform.position.x>88?-1:1;
-                    game.Projectiles.Spawn((Vector2)hero.transform.position+new Vector2(side*5,.35f),Vector2.left*side*4,4,true);
-                }
-            }
+            else if(Stage==3)TickTraining();
             else if(Stage==5)StartProductionIfReady();
             else if(Stage==6&&game.bossDefeated)ProductionCleared();
             else if(Stage==7)BeginArrestIfReady();
@@ -246,7 +309,7 @@ namespace Plugin.AncientCivilization
         {
             if(!AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,destination)||!game.Campaign.ReadyForLift(destination))return;
             game.Campaign.LeaveFloor();
-            liftMenu=false;liftTravelling=true;liftDestination=destination;liftStarted=Time.unscaledTime;
+            liftMenu=false;liftTravelling=true;liftDestination=destination;liftElapsed=0;
             game.hero.TravelTo(new Vector2(LiftX,1.3f));game.BlockGameplayInput();game.Sound(2);
         }
         void FinishLiftTravel()
@@ -272,7 +335,7 @@ namespace Plugin.AncientCivilization
             if(liftTravelling)
             {
                 GUI.Label(new Rect(x+28,y+98,544,80),(liftDestination>CurrentFloor?"상승 중…":"하강 중…")+" / "+AncientCityLayout.Name(liftDestination),body);
-                float progress=Mathf.Clamp01((Time.unscaledTime-liftStarted)/1.6f);
+                float progress=Mathf.Clamp01(liftElapsed/1.6f);
                 AncientHUD.Panel(new Rect(x+28,y+212,544*progress,6),AncientGame.Cyan);return;
             }
             GUI.Label(new Rect(x+28,y+68,544,48),"관제 C-00 / "+AncientCityLayout.Name(CurrentFloor)+" / "+ResidencePoints+"점",small);
@@ -376,7 +439,16 @@ namespace Plugin.AncientCivilization
         {
             if(Stage<=1)return "생산장으로 이동 / "+Check(0,"이동")+"  "+Check(1,"Space 점프")+"  "+Check(2,"Ctrl 달리기 전환");
             if(Stage==2)return "검수 회랑으로 이동 / 천장 와이어 연습 · 아래는 안전 통로";
-            if(Stage==3)return "재고 단말로 이동 / "+Check(5,"베기")+"  "+Check(6,"우클릭 수집")+"  "+Check(7,"레이저")+" · 단말 E";
+            if(Stage==3)
+            {
+                int step=TrainingPracticeStep();
+                if(step==0&&TooCloseToTrainingEmitter())return "장비 확인 / 배출구에서 두 걸음 물러나 빈 하우징을 베세요";
+                if(step==0)return "장비 확인 1 / 휠 위 → 짧은 좌클릭으로 빈 하우징 베기";
+                if(step==1&&TooCloseToTrainingEmitter())return "장비 확인 2 / 파란 입자 우클릭 수집 · 새 물체는 배출구에서 두 걸음 뒤로";
+                if(step==1)return "장비 확인 2 / 파란 입자 근처에서 우클릭 유지 · 놓쳤다면 다시 베기";
+                if(step==2)return "장비 확인 3 / 좌클릭 유지 → 금색 조준선 확인 → 놓아서 레이저";
+                return "장비 확인 완료 / 동쪽 재고 단말 앞에서 E로 수량 확인";
+            }
             if(Stage==4)return "생산장 재고 보고 / 장부 120기 · 실제 117기";
             if(Stage==5)return game.Production?game.Production.Objective:"코어 탈취 차량 추격 / 자동주행 · Space 점프";
             if(Stage==6)return "코어 확보 / 운송대장 검거";
@@ -393,6 +465,7 @@ namespace Plugin.AncientCivilization
             if(speaker=="통신관"||speaker=="사령관"){kind=1;return;}
             Transform actor=null;float offset=2;
             bool found=(game.Production&&game.Production.TryDialogueActor(speaker,out actor,out offset));
+            if(!found)found=game.ProductionResidents&&game.ProductionResidents.TryDialogueActor(speaker,out actor,out offset);
             if(!found)found=game.City&&game.City.TryDialogueActor(speaker,out actor,out offset);
             if(!found)found=game.Campaign&&game.Campaign.TryDialogueActor(speaker,out actor,out offset);
             if(found&&actor)

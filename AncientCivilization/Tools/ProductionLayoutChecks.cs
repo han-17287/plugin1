@@ -5,6 +5,139 @@ class ProductionLayoutChecks
     static int checks;
     static void Check(bool value,string message){if(!value)throw new Exception(message);checks++;}
     static bool Near(float a,float b){return Math.Abs(a-b)<.0001f;}
+    struct Point
+    {
+        public double X,Y;
+        public Point(double x,double y){X=x;Y=y;}
+    }
+    // Solver-free planning oracle. This checks the authored route's capsule envelope,
+    // viewport reach and landing room; it is not a substitute for Unity's joint solver.
+    // Force values describe the current Hero contract. Native smoke checks exercise the
+    // real component; a change to that contract also requires reviewing this plan.
+    sealed class RoutePlan
+    {
+        public Point Position;public double Vx,Vy,Age;
+        double cameraX,cameraY=4.6,zoom=5.8;readonly double dt,aspect;
+        const double Radius=.36,InnerHalf=.69;
+        public RoutePlan(double step,double viewAspect){dt=step;aspect=viewAspect;Position=new Point(-129,1.4);cameraX=Position.X+2.5;}
+        void Frame(bool wired)
+        {
+            Age+=dt;
+            double lead=2.5+1.5*Math.Min(1,Math.Abs(Vx)/25);
+            double follow=1-Math.Exp(-7*dt),size=1-Math.Exp(-3*dt);
+            cameraX+=(Position.X+lead-cameraX)*follow;
+            cameraY+=(Math.Max(4.6,Position.Y+1)-cameraY)*follow;
+            zoom+=((wired?7.5:5.8)-zoom)*size;
+        }
+        public void Pick(Point anchor,bool swing)
+        {
+            double dx=anchor.X-Position.X,dy=anchor.Y-(Position.Y+.35);
+            Check(dx*dx+dy*dy<=AncientZipRules.Range*AncientZipRules.Range,"Every planned attachment is within the actual hand-to-target wire reach");
+            Check(!swing||dx*dx+dy*dy>=2.2*2.2,"Every planned swing satisfies PickAnchor's minimum distance");
+            Check(!swing||anchor.Y>Position.Y+1,"Every planned swing satisfies PickAnchor's above-player condition");
+            Check(Math.Abs(anchor.X-cameraX)<zoom*aspect-.15&&Math.Abs(anchor.Y-cameraY)<zoom-.15,"The next planned hook can be clicked inside the current camera viewport");
+            for(int sample=0;sample<=40;sample++)
+            {
+                double t=sample/40.0,x=Position.X+dx*t,y=Position.Y+.35+dy*t;
+                foreach(var span in AncientProductionLayout.WireShortcut)
+                    Check(!(x>span.Left&&x<span.Right&&y>span.Top-AncientProductionLayout.CatwalkThickness&&y<span.Top),"The hand-to-hook sightline does not pass through a service grating");
+            }
+        }
+        public void Clear()
+        {
+            Check(Position.Y+1.05<AncientProductionLayout.Ceiling+.003,"The route's full-height capsule stays below the solid roof");
+            Check(Position.Y-1.05>-.003,"The optional route does not fall through the safe ground road");
+            foreach(var span in AncientProductionLayout.WireShortcut)
+            {
+                double dx=Math.Max(0,Math.Max(span.Left-Position.X,Position.X-span.Right));
+                double dy=Math.Max(0,Math.Max(span.Top-AncientProductionLayout.CatwalkThickness-(Position.Y+InnerHalf),(Position.Y-InnerHalf)-span.Top));
+                Check(dx*dx+dy*dy>=(Radius-.003)*(Radius-.003),"The planned capsule clears actual service grating sides and undersides");
+            }
+        }
+        public void Zip(Point anchor)
+        {
+            Pick(anchor,false);
+            double dx=Position.X-anchor.X,dy=Position.Y-anchor.Y,length=Math.Sqrt(dx*dx+dy*dy);
+            double support=AncientZipRules.Support((float)dx,(float)dy,false);
+            Point goal=new Point(anchor.X+dx/length*support,anchor.Y+dy/length*support);
+            for(int frame=0;frame<300;frame++)
+            {
+                dx=goal.X-Position.X;dy=goal.Y-Position.Y;length=Math.Sqrt(dx*dx+dy*dy);
+                if(length<.00001){Vx=Vy=0;return;}
+                double travel=Math.Min(length,AncientZipRules.Speed*dt);
+                Vx=dx/length*travel/dt;Vy=dy/length*travel/dt;
+                Position.X+=Vx*dt;Position.Y+=Vy*dt;Clear();Frame(true);
+            }
+            throw new Exception("Planned straight zip did not terminate");
+        }
+        public void Land(AncientProductionLayout.Span ledge)
+        {
+            Vx=Vy=0;
+            for(int frame=0;frame<600;frame++)
+            {
+                // Falling gravity 38.4 from the first frame is conservative: Hero applies
+                // ordinary gravity for the first zero-velocity frame, then its 1.2 multiplier.
+                Vx=Math.Min(9,Vx+22*dt);Vy-=38.4*dt;
+                Point next=new Point(Position.X+Vx*dt,Position.Y+Vy*dt);
+                if(Position.Y-1.05>=ledge.Top&&next.Y-1.05<=ledge.Top)
+                {
+                    double t=(Position.Y-1.05-ledge.Top)/(Position.Y-next.Y);
+                    Position.X+=(next.X-Position.X)*t;Position.Y=ledge.Top+1.05;Vy=0;
+                    Check(Position.X>ledge.Left+.36&&Position.X<ledge.Right-.36,"Holding right after the real zip endpoint lands the whole capsule inside the next grating");
+                    Clear();Frame(false);return;
+                }
+                Position=next;Clear();Frame(false);
+            }
+            throw new Exception("The planned wire arrival missed its service grating");
+        }
+        public void Swing(Point anchor)
+        {
+            Pick(anchor,true);
+            double dx=anchor.X-Position.X,dy=anchor.Y-Position.Y,length=Math.Sqrt(dx*dx+dy*dy),rx=dx/length,ry=dy/length;
+            Vx=Math.Max(13,Vx+rx*11+ry*5);Vy=Math.Max(8,Vy+ry*11-rx*5);
+            double rope=length,minimum=Math.Min(length,Math.Max(3.2,Math.Min(8,length*.68)));
+            double previous=Math.Atan2(-ry,-rx),arc=0;
+            for(int frame=0;frame<Math.Ceiling(1.5/dt);frame++)
+            {
+                double age=frame*dt;dx=anchor.X-Position.X;dy=anchor.Y-Position.Y;length=Math.Sqrt(dx*dx+dy*dy);rx=dx/length;ry=dy/length;
+                rope=Math.Max(minimum,rope-8*dt);Vx+=(rx*10+ry*19)*dt;Vy+=(ry*10-rx*19)*dt;
+                double speed=Math.Sqrt(Vx*Vx+Vy*Vy);if(speed>30){Vx*=30/speed;Vy*=30/speed;}
+                double angle=Math.Atan2(-ry,-rx),change=angle-previous;
+                while(change>Math.PI)change-=2*Math.PI;while(change<-Math.PI)change+=2*Math.PI;
+                arc=Math.Max(0,arc+change*180/Math.PI);previous=angle;
+                if(age>.32&&arc>66&&Vx>4&&Vy>1||age>=1.35||length<2)
+                {
+                    Check(age>=.18,"The swing exit reaches the next zip after the real wire click cooldown");
+                    Vx=Math.Max(13,Vx);Vy=Math.Max(5,Vy);return;
+                }
+                Vy-=32*dt;Position.X+=Vx*dt;Position.Y+=Vy*dt;
+                dx=Position.X-anchor.X;dy=Position.Y-anchor.Y;length=Math.Sqrt(dx*dx+dy*dy);
+                if(length>rope)
+                {
+                    double ox=dx/length,oy=dy/length;Position.X=anchor.X+ox*rope;Position.Y=anchor.Y+oy*rope;
+                    double outward=Vx*ox+Vy*oy;if(outward>0){Vx-=outward*ox;Vy-=outward*oy;}
+                }
+                Clear();Frame(true);
+            }
+            throw new Exception("The planned swing never found its next zip window");
+        }
+    }
+    static void CheckUpperRoutePlan()
+    {
+        Check(AncientProductionLayout.SwingHookX.Length+1==AncientProductionLayout.WireShortcut.Length,"There is one visible low swing hoist between successive high zip sockets");
+        foreach(double aspect in new[]{4.0/3,16.0/10,16.0/9})foreach(int rate in new[]{30,60,120,240})
+        {
+            var plan=new RoutePlan(1.0/rate,aspect);
+            for(int i=0;i<AncientProductionLayout.WireHookX.Length;i++)
+            {
+                plan.Zip(new Point(AncientProductionLayout.WireHookX[i],AncientProductionLayout.WireHookY));
+                plan.Land(AncientProductionLayout.WireShortcut[i]);
+                if(i<AncientProductionLayout.SwingHookX.Length)plan.Swing(new Point(AncientProductionLayout.SwingHookX[i],AncientProductionLayout.SwingHookY));
+            }
+            double groundRun=(plan.Position.X+129)/9;
+            Check(plan.Age<groundRun*.85,"The optional linked route beats direct ground running by at least fifteen percent without a double jump");
+        }
+    }
     static void Main()
     {
         Check(AncientProductionLayout.TutorialLeft<AncientProductionLayout.TutorialSpawn-6,"The opening spawn has a safe margin from its retaining wall");
@@ -50,6 +183,31 @@ class ProductionLayoutChecks
             }
         }
         Check(AncientProductionLayout.WireHookY+1.05f+.045f<AncientProductionLayout.Ceiling,"A nearly horizontal hook chain leaves capsule clearance under the real roof");
+        CheckUpperRoutePlan();
+        // Check the full capsule footprint, not just the centre point of a checkpoint.
+        for(int stage=0;stage<=4;stage++)
+        {
+            float x=AncientProductionLayout.TutorialCheckpointX(stage),y=AncientProductionLayout.TutorialCheckpointY(stage);
+            Check(AncientProductionLayout.InTutorial(x),"Each tutorial checkpoint belongs to the authored lower production route");
+            for(int sample=0;sample<=12;sample++)
+            {
+                float footprint=x-.36f+sample*.06f;
+                Check(y-1.05f>AncientProductionLayout.GroundHeight(footprint)+.08f,"Checkpoint capsules spawn above the entire local floor profile, including slopes");
+            }
+            Check(y+1.05f<AncientProductionLayout.Ceiling-.1f,"Checkpoint capsules fit below the solid roof");
+        }
+        Check(Near(AncientProductionLayout.TutorialCheckpointX(2),-159),"The conveyor checkpoint sits before the access ramp instead of intersecting its rise");
+        Check(AncientProductionLayout.TrainingEmitterY>1.05f&&AncientProductionLayout.TrainingEmitterY<2.1f,"The practice housing exits at the character's visible blade height");
+        for(float x=-48;x<=AncientProductionLayout.StockX;x+=.25f)
+        {
+            float nearest=float.MaxValue;
+            foreach(float emitter in AncientProductionLayout.TrainingEmitterX)nearest=Math.Min(nearest,Math.Abs(x-emitter));
+            Check(nearest<=AncientProductionLayout.TrainingEmitterRange,"The entire training-to-stock approach remains within a visible housing emitter's reach");
+        }
+        int absent=0;
+        for(int rack=0;rack<4;rack++)for(int row=0;row<3;row++)for(int slot=0;slot<3;slot++)
+            if(!AncientProductionLayout.StockCorePresent(rack,row,slot))absent++;
+        Check(absent==120-117,"Representative shelf art leaves exactly the reported three missing core cradles");
         Check(Near(AncientProductionLayout.GroundHeight(AncientProductionLayout.StockX),0),"The inventory interaction point has a flat unobstructed standing height");
         Check(AncientProductionLayout.TunnelCeiling>1.3f+8+1.05f,"The tunnel roof leaves room for the requested high backflip silhouette");
         for(int section=0;section<AncientProductionLayout.SectionStarts.Length;section++)

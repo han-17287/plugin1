@@ -64,7 +64,9 @@ namespace Plugin.AncientCivilization
                 {
                     bool current=floor==game.Story.CurrentFloor;
                     bool visited=floor==0||floor==1&&game.Story.Stage>=9||(game.City.Cleared&(1<<floor))!=0||current;
-                    string state=current?"현재 위치":floor==4?"정식 출입 불가":AncientCityLayout.CanLift(game.Story.Stage,game.Story.ResidencePoints,game.City.Cleared,game.Story.CurrentFloor,floor)?"엘리베이터 해금":"통행 잠김";
+                    bool approved=AncientCityLayout.CanLift(game.Story.Stage,game.Story.ResidencePoints,game.City.Cleared,game.Story.CurrentFloor,floor);
+                    bool ready=approved&&game.Campaign.ReadyForLift(floor);
+                    string state=current?"현재 위치":floor==4?"정식 출입 불가":ready?"엘리베이터 해금":approved?"통행 승인 · 하층 운송로 조사 중":"통행 잠김";
                     string line=AncientCityLayout.Name(floor)+" / "+state+" / 보급품 "+AncientProgressRules.CachesOnFloor(game.Exploration.CacheMask,floor)+" / 2";
                     GUI.color=current?new Color(1,.85f,.2f):visited?Color.white:new Color(.5f,.6f,.65f);
                     GUI.Label(new Rect(x+28,y+145+floor*64,880,50),line,text);

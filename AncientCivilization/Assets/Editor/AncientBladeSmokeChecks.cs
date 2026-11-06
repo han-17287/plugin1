@@ -139,6 +139,34 @@ namespace Plugin.AncientCivilization.EditorChecks
             var ordinary=game.Projectiles.Spawn((Vector2)hero.transform.position+Vector2.right*5,Vector2.zero,20,false,1);hero.AbsorbShot(ordinary);
             Assert(ordinary.Available&&Mathf.Abs(MoteEnergy(combat)-20)<.001f&&Mathf.Abs(hero.particles-12)<.001f,"An ordinary F decomposition retains its original collectible energy and resource amount");combat.ResetCombat();
         }
+        static void CheckTrainingObjectReuse(AncientGame game)
+        {
+            var hero=game.hero;var combat=hero.Combat;Vector2 original=hero.transform.position;
+            float health=hero.hp,energy=hero.CaptureEnergy;
+            FieldInfo immunity=Field(typeof(AncientHero),"invulnerableUntil"),hurt=Field(typeof(AncientHero),"hurtUntil");
+            object savedImmunity=immunity.GetValue(hero),savedHurt=hurt.GetValue(hero);AncientProjectile practice=null;
+            try
+            {
+                // Use the real pooled projectile contact path in an empty part of the scene.
+                // A missed lesson must not consume health or reward a contact as if it were a capture.
+                combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));immunity.SetValue(hero,0f);hurt.SetValue(hero,0f);
+                practice=game.Projectiles.Spawn(hero.transform.position,Vector2.zero,17,false,1);
+                Assert(practice&&!practice.Available,"A training-contact probe uses an actual pooled physical object");
+                practice.TrainingObject=true;Field(typeof(AncientProjectile),"age").SetValue(practice,1f);Invoke(practice,"Update");
+                Assert(practice.Available&&!game.shots.Contains(practice)&&hero.hp==health&&hero.CaptureEnergy==energy,"Missing a practice object removes it without damage or free collected energy");
+                // Replay the same pool slot, rather than creating a fresh component: immunity must not leak.
+                practice.Play(hero.transform.position,Vector2.zero,17,false,1,0);
+                Assert(!practice.TrainingObject&&!practice.Available,"Reusing the practice pool slot resets its training-only protection");
+                Field(typeof(AncientProjectile),"age").SetValue(practice,1f);Invoke(practice,"Update");
+                Assert(practice.Available&&Mathf.Abs(hero.hp-(health-17))<.001f,"The reused enemy object still damages the officer through its ordinary contact path");
+            }
+            finally
+            {
+                if(practice)practice.Remove();combat.ResetCombat();hero.hp=health;
+                Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,energy);
+                immunity.SetValue(hero,savedImmunity);hurt.SetValue(hero,savedHurt);MoveProbeHero(hero,original);
+            }
+        }
         static void CheckPulseCallbacks(AncientGame game)
         {
             var transport=new GameObject("QA pulse cargo truck").AddComponent<AncientTruck>();AncientFinalTruck finalTransport=null;AncientSniperEncounter encounter=null;
@@ -182,7 +210,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             Assert(!story.DialogueOpen&&!combat.Firing,"The tutorial handoff probe begins outside dialogue with an idle arm");
             var stage=Field(typeof(AncientStory),"<Stage>k__BackingField");var flags=Field(typeof(AncientStory),"flags");
             int savedStage=story.Stage,savedFlags=(int)flags.GetValue(story),savedInput=(int)Field(typeof(AncientGame),"inputReadyFrame").GetValue(game);float savedEnergy=hero.CaptureEnergy;
-            string[] fields={"choiceOpen","choiceAction","lineIndex","revealedChars","pageStart","pageEnd","pageReady","pageWidth","pageHeight","nextLetterAt","showFull","visibleChars","shownText","bubbleNameLine","afterDialogue","dialogueFocusReady","nextTrainingShot","reportPending"};
+            string[] fields={"choiceOpen","choiceAction","lineIndex","revealedChars","pageStart","pageEnd","pageReady","pageWidth","pageHeight","nextLetterAt","showFull","visibleChars","shownText","bubbleNameLine","afterDialogue","dialogueFocusReady","nextTrainingShot","reportPending","coachedStep","nextTrainingHint","trainingObject"};
             var values=new object[fields.Length];for(int i=0;i<fields.Length;i++)values[i]=Field(typeof(AncientStory),fields[i]).GetValue(story);
             var dialogue=(System.Collections.IList)Field(typeof(AncientStory),"lines").GetValue(story);
             try
@@ -377,7 +405,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     if(StageAge<.12)return;
                     Assert(recoveryProbe&&!recoveryProbe.Available&&game.shots.Contains(recoveryProbe)&&combat.BrokenObjects==SessionState.GetInt(Root+"RecoveryBroken",-1),"The recovery plate remains intact through subsequent scene updates");
                     recoveryProbe.Remove();recoveryProbe=null;combat.ResetCombat();
-                    CheckLaserPulse(game);CheckCaptureEnergy(game);CheckPulseCallbacks(game);CheckTutorialLaser(game);
+                    CheckLaserPulse(game);CheckCaptureEnergy(game);CheckTrainingObjectReuse(game);CheckPulseCallbacks(game);CheckTutorialLaser(game);
                     // Conversation is last because it deliberately acquires the gameplay input guard.
                     MoveProbeHero(hero,new Vector2(2,80));hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);Assert(combat.Firing,"The dialogue cancellation probe starts with a live pulse");
                     game.Story.Conversation(null,0,new[]{"QA 통신관"},new[]{"레이저 중단 확인."});Assert(game.Story.DialogueOpen&&!combat.Firing,"Opening a real conversation cancels the arm's active pulse");

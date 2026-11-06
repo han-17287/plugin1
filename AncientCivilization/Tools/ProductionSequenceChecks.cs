@@ -18,6 +18,63 @@ class ProductionSequenceChecks
         Until(sequence,AncientProductionPhase.Approach,60,18);
         Check(sequence.BeginBoarding()&&sequence.LandOnDeck(),"A granted wire window permits an explicit attach and physical landing");return sequence;
     }
+    static void PauseWithoutChanging(AncientProductionSequence sequence)
+    {
+        var phase=sequence.Phase;float elapsed=sequence.Elapsed,health=sequence.HealthRatio;
+        int round=sequence.Round,mounts=sequence.MountCount;
+        foreach(float seconds in new[]{1/144f,.2f,1f,float.MaxValue})sequence.Tick(seconds,true);
+        Check(sequence.Phase==phase&&sequence.Elapsed==elapsed&&sequence.HealthRatio==health&&sequence.Round==round&&sequence.MountCount==mounts,
+            "Pause preserves the full encounter state during "+phase);
+    }
+    // Replay the requested two complete rides, variable-length deck fights, a missed
+    // wire and a fall. This catches interactions that isolated gate checks cannot.
+    static void Replay(float[] steps,int seed)
+    {
+        var random=new Random(seed);var sequence=new AncientProductionSequence();sequence.Begin();
+        int frames=0,deckVisits=0,fallRound=-1,lastMount=1;float acceptedDamage=0;
+        bool missedWire=false,deckFall=false;var visited=new bool[10];
+        while(!sequence.Completed&&frames<50000)
+        {
+            float dt=steps[frames%steps.Length];frames++;visited[(int)sequence.Phase]=true;
+            if(frames%47==0)PauseWithoutChanging(sequence);
+            if(sequence.Phase==AncientProductionPhase.Approach)
+            {
+                Check(sequence.ApplyDamage(.5f)==0,"A weapon held during a safe approach cannot damage the captain");
+                Check(sequence.BeginBoarding(),"Every safe approach admits another deliberate wire attempt");
+                if(!missedWire){missedWire=true;Check(sequence.AbortBoarding(),"A missed first wire restores its safe approach");}
+            }
+            else if(sequence.Phase==AncientProductionPhase.Boarding)
+            {PauseWithoutChanging(sequence);Check(sequence.LandOnDeck(),"A later successful wire reaches a real deck fight");deckVisits++;}
+            else if(sequence.Phase==AncientProductionPhase.Deck)
+            {
+                float health=sequence.HealthRatio;
+                if(!deckFall&&sequence.Round==0&&health<.91f)
+                {deckFall=true;fallRound=sequence.Round;Check(sequence.AbortBoarding(),"A player falling off during a partial fight can reboard");Check(sequence.HealthRatio==health,"A deck fall preserves damage already earned");}
+                else
+                {
+                    float hit=(float)(.005+random.NextDouble()*.047);
+                    float preview=sequence.FilterRatioDamage(hit);
+                    Check(sequence.HealthRatio==health,"Damage previews never consume health before a hit connects");
+                    float accepted=sequence.ApplyDamage(hit);acceptedDamage+=accepted;
+                    Check(Near(preview,accepted)&&accepted>=0&&accepted<=hit+.000001f,"Each connected hit accepts exactly its gate-limited preview");
+                }
+            }
+            else Check(sequence.ApplyDamage(.2f)==0,"Protected travel and cinematic frames reject damage without advancing health gates");
+            if(sequence.MountCount!=lastMount)
+            {
+                Check(sequence.MountCount==lastMount+1,"A landing adds exactly one bike mount");
+                Check(lastMount==1?sequence.Round==1&&sequence.Phase==AncientProductionPhase.Chase:sequence.Phase==AncientProductionPhase.Finisher,
+                    "Bike mounts two and three enter the correct playable ride and finishing scene");lastMount=sequence.MountCount;
+            }
+            Check(sequence.MountCount>=1&&sequence.MountCount<=3&&sequence.HealthRatio>=.3f,"No valid replay can invent a fourth ride or kill the arrested captain");
+            sequence.Tick(dt);
+        }
+        Check(sequence.Completed&&missedWire&&deckFall&&fallRound==0&&deckVisits==3,"A full encounter remains completable after one missed wire and one deck fall");
+        Check(Near(acceptedDamage,.7f)&&Near(sequence.HealthRatio,.3f)&&sequence.MountCount==3,"A full encounter conserves seventy percent damage over exactly three mounts");
+        foreach(var phase in new[]{AncientProductionPhase.Breach,AncientProductionPhase.Chase,AncientProductionPhase.Approach,AncientProductionPhase.Boarding,AncientProductionPhase.Deck,AncientProductionPhase.Knockback,AncientProductionPhase.Finisher})
+            Check(visited[(int)phase],"The replay includes the authored scene "+phase);
+        PauseWithoutChanging(sequence);
+    }
     static void Main()
     {
         var sequence=new AncientProductionSequence();
@@ -89,6 +146,8 @@ class ProductionSequenceChecks
         Check(sequence.Phase==AncientProductionPhase.Finisher&&sequence.Elapsed==0&&!sequence.Completed,"A paused finishing shot cannot silently secure cores or unlock the next story scene");
         sequence.Begin();Check(sequence.Round==0&&sequence.MountCount==1&&sequence.HealthRatio==1&&!sequence.Completed,"Starting a fresh production encounter removes old victory and retry state");
         sequence.Reset();Check(sequence.Phase==AncientProductionPhase.Dormant&&sequence.MountCount==0&&!sequence.Active&&sequence.Elapsed==0,"A new game or scene cleanup releases all sequence state");
+        foreach(float[] steps in new[]{new[]{1/30f},new[]{1/60f},new[]{1/144f},new[]{1/144f,.3f,1/30f,.008f,.7f}})
+            for(int seed=1;seed<=8;seed++)Replay(steps,seed);
         Console.WriteLine("PASS: "+checks+" production chase, boarding, health-gate, third-mount finale and active-clock checks");
     }
 }

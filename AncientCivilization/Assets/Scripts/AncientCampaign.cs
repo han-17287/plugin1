@@ -441,7 +441,9 @@ namespace Plugin.AncientCivilization
                 }
                 Mark(i);
                 if(m.Kind==2&&i==1){escort.transform.position=NodePoint(active,1)-Vector2.up*1.2f;following=true;Refresh();}
-                game.Story.Conversation(null,m.Kind==2?2:3,new string[]{m.Speaker,"백명"},new string[]{AncientCampaignData.Details[active][i],"확인했습니다. 사본을 남기겠습니다."});return true;
+                bool rescuedWitness=m.Kind==2&&i==1;
+                game.Story.Conversation(null,m.Kind==2?2:3,new string[]{m.Speaker,"백명"},
+                    new string[]{rescuedWitness?m.Brief:AncientCampaignData.Details[active][i],rescuedWitness?"잠금 장치는 잘랐습니다. 제 뒤로 오세요. 증언은 안전한 곳에서 듣겠습니다.":"확인했습니다. 사본을 남기겠습니다."});return true;
             }
             return false;
         }

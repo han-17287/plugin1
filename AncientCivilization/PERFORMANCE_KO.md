@@ -1,4 +1,4 @@
-v0.18.0 생산구에서는362단위 튜토리얼과 별도1,600단위 수송 터널,12개 재사용 잔재/폭탄, 기존64개 투척물 풀을 사용합니다. 추격/갑판 구간은 F9/F10에 표본을 남기며 자체 컷신은 일시정지 상태이므로 통계에서 제외합니다. 컷신 프레임·GC·렌더링은 Unity Profiler로 별도 측정해야 합니다. 실제 FPS 개선률은 미측정입니다.
+v0.19.0 생산구에서는362단위 튜토리얼과 별도1,600단위 수송 터널,12개 재사용 잔재/폭탄, 기존64개 투척물 풀을 사용합니다. 추격/갑판 구간은 F9/F10에 표본을 남기며 자체 컷신은 일시정지 상태이므로 통계에서 제외합니다. 컷신 프레임·GC·렌더링은 Unity Profiler로 별도 측정해야 합니다. 실제 FPS 개선률은 미측정입니다.
 
 # 실제 프레임 측정
 
@@ -15,7 +15,9 @@ v0.17.0은 다섯 층의 연속 챕터와 굵은 레이저를 사용합니다. �
 
 GC 값은 Unity ProfilerRecorder가 제공하는 가장 최근 표본이며 창 전체의 평균이 아닙니다. 플랫폼이 카운터를 제공하지 않으면 미지원으로 나옵니다. 풀 누락 수는 이미 살아 있는 투척물을 옮겨 재활용하는 대신 새 생성 요청을 거절한 횟수입니다. 정상 플레이에서 계속 증가한다면 투척 밀도와 수명을 확인해야 합니다.
 
-CSV 열은 `sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room,sniper_phase,sniper_objects,hero_x,hero_y,horizontal_speed,capture_energy,attack_mode,wired,laser_active`입니다. 각 표본이 발생한 시점의 층·설정·추격 단계를 기록합니다. `campaign_room`은 현재 진행 중인 수사 이정표 ID(0~19)이며 -1은 활성 이정표가 없는 상태입니다. 연속 맵의 실제 카메라 위치나 지나간 물리 구간 번호를 뜻하지 않으므로 v0.17.0부터 같은 표본의 `hero_x`/`hero_y`로 실제 위치를 함께 기록합니다. `horizontal_speed`는 부호 있는 가로 속도, `capture_energy`는 저장 입자량, `attack_mode`/`wired`/`laser_active`는 각각 공격 모드/와이어 연결/레이저 발사 중이면1입니다. 따라서 같은 이정표 안에서 이동 중인지, 빔 발사 중인지 구분할 수 있습니다. 마지막 저장 순간의 설정을 과거 표본 전체에 적용하지 않습니다. 저격수 페이즈(0은 해당 전투 밖)와 수류탄·압축판 활성 수도 표본 시점에 기록합니다. F9의 저격수 전용 풀은24칸이며 기존64칸 풀과 따로 표시합니다. 입력 시각·GPU 프레임 시간·프로파일러 마커는 포함하지 않습니다.
+CSV 열은 `sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room,sniper_phase,sniper_objects,hero_x,hero_y,horizontal_speed,capture_energy,attack_mode,wired,laser_active,production_phase,production_round,production_mounts,story_stage`입니다. 각 표본이 발생한 시점의 층·설정·추격 단계를 기록합니다. `campaign_room`은 현재 진행 중인 수사 이정표 ID(0~19)이며 -1은 활성 이정표가 없는 상태입니다. 연속 맵의 실제 카메라 위치나 지나간 물리 구간 번호를 뜻하지 않으므로 v0.17.0부터 같은 표본의 `hero_x`/`hero_y`로 실제 위치를 함께 기록합니다. `horizontal_speed`는 부호 있는 가로 속도, `capture_energy`는 저장 입자량, `attack_mode`/`wired`/`laser_active`는 각각 공격 모드/와이어 연결/레이저 발사 중이면1입니다. 따라서 같은 이정표 안에서 이동 중인지, 빔 발사 중인지 구분할 수 있습니다. 마지막 저장 순간의 설정을 과거 표본 전체에 적용하지 않습니다. 저격수 페이즈(0은 해당 전투 밖)와 수류탄·압축판 활성 수도 표본 시점에 기록합니다. F9의 저격수 전용 풀은24칸이며 기존64칸 풀과 따로 표시합니다. 입력 시각·GPU 프레임 시간·프로파일러 마커는 포함하지 않습니다.
+
+v0.19.0의 네 추가 열은 표본 시점의 생산구 단계(AncientProductionPhase enum의0~9), 추격 회차0/1, 탑승 횟수0~3, 스토리 단계다. 자체 컷신은 통계에서 제외하므로 주로 주행·접근·승선·갑판 표본을 비교한다. 작업장 배경은 기존 정적 레이어 안에 추가하며 실제 드로콜 증가 여부는 Unity에서 확인한다. 위험 범위/신관 표시도 미리 만든 풀을 재사용한다. 피니셔 빔 갱신의 임시 배열을 제거했으며, 음향 파형은 메뉴/부팅 때 한 번 생성한다. 이 변경은 측정된 FPS 향상 수치가 아니다.
 
 ## 같은 기기에서 비교
 

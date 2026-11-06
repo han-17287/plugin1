@@ -5,10 +5,10 @@ namespace Plugin.AncientCivilization
 {
     public sealed class AncientFinale : MonoBehaviour
     {
-        AncientGame game;int phase,zone;float countdown=60,phaseAt;bool restored;
+        AncientGame game;int phase,zone;float countdown=60,phaseElapsed;bool restored;
         AncientFinalTruck truck;SpriteRenderer notebook,windowTruck;
         readonly SpriteRenderer[] boardingCrew=new SpriteRenderer[3];LineRenderer supportShot,blast;
-        GUIStyle label,title,button;string caption="";float captionAt;string visibleCaption="";int visibleLetters=-1;
+        GUIStyle label,title,button;string caption="";float captionElapsed;string visibleCaption="";int visibleLetters=-1;
         readonly List<AncientEnemy> crew=new List<AncientEnemy>();
         readonly List<AncientParkedBike> chaseBikes=new List<AncientParkedBike>();
         AncientSpeechBubble speechBubble;
@@ -17,6 +17,10 @@ namespace Plugin.AncientCivilization
         public bool Cinematic {get{return phase>=3;}}
         public bool Finished {get{return phase==5;}}
         public int Phase {get{return phase;}}
+        // The finale pauses ordinary simulation itself, so its own cinematic clock
+        // must distinguish that hold from a menu, another conversation or lost focus.
+        bool ExternalPaused
+        {get{return !game||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||!Application.isFocused;}}
         public void Build(AncientGame owner)
         {
             game=owner;phase=Mathf.Clamp(AncientGame.Saved("finalePhase"),0,5);zone=Mathf.Clamp(AncientGame.Saved("finaleZone"),0,4);
@@ -65,14 +69,14 @@ namespace Plugin.AncientCivilization
             {
                 if(!game.City.SecretaryCleared){game.Notice("회장실을 지키는 비서실장을 먼저 제압하세요.",3);return true;}
                 if(!game.Campaign.ReadyForFinale){game.Notice("동쪽으로 이어지는 기록 통로에서 회장실 자료 대조를 먼저 마치세요.",4);return true;}
-                phase=1;countdown=60;Persist();ShowBoarding(true);
+                phase=1;phaseElapsed=captionElapsed=0;countdown=60;Persist();ShowBoarding(true);
                 game.Story.FinaleBriefing("회장은 없다. 노트에는 최하층 아래에 묻힌 고대 문명이 적혀 있어… 옆에는 회수 계획. C-00 코어는 이 작전에 묶인 물량이었군.",
                     "작전 개시까지 1분. 창밖이다! 회장과 특수부대가 코어 운송 트럭에 타고 있어. 화물 승강로로 내려가면 따라붙을 수 있다.");return true;
             }
             if(phase==1){BeginChase();return true;}return false;
         }
         void SetCaption(string text)
-        {if(caption==text)return;caption=text;captionAt=Time.unscaledTime;visibleLetters=-1;}
+        {if(caption==text)return;caption=text;captionElapsed=0;visibleLetters=-1;}
         void ClearTruck()
         {
             foreach(var enemy in crew)if(enemy){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}crew.Clear();
@@ -103,7 +107,7 @@ namespace Plugin.AncientCivilization
         }
         void BeginChase()
         {
-            phase=2;game.won=false;fired=false;ShowBoarding(false);supportShot.enabled=blast.enabled=false;ClearTruck();
+            phase=2;phaseElapsed=captionElapsed=0;game.won=false;fired=false;ShowBoarding(false);supportShot.enabled=blast.enabled=false;ClearTruck();
             float start=AncientFinaleRules.Checkpoint(zone);
             game.hero.TravelTo(new Vector2(start,AncientFinaleRules.Road(start)+1.3f));PrepareChaseBikes();game.City.OnEnterFloor();
             truck=new GameObject("Chairman core transport truck").AddComponent<AncientFinalTruck>();truck.Initialize(game,this,start+13);
@@ -118,7 +122,7 @@ namespace Plugin.AncientCivilization
         {if(truck&&phase==2)truck.HitBeam(start,end,damage,bodyRadius,pulseId);}
         public void TruckArrived()
         {
-            phase=3;phaseAt=Time.unscaledTime;game.hero.TravelTo((Vector2)truck.transform.position+new Vector2(.7f,3.65f));ClearChaseBikes();
+            phase=3;phaseElapsed=captionElapsed=0;game.hero.TravelTo((Vector2)truck.transform.position+new Vector2(.7f,3.65f));ClearChaseBikes();
             game.hero.AimWeaponAt(truck.transform.position+Vector3.right*2);game.hero.CinematicPose(false,1);
             var threat=new GameObject("Cab special-operations ambush").AddComponent<AncientEnemy>();threat.Initialize(1);threat.ConfigureDistrict(4,false);
             threat.transform.SetParent(truck.transform,false);threat.transform.localPosition=new Vector2(1.6f,2.5f);threat.FaceToward(game.hero.transform.position.x);
@@ -132,13 +136,23 @@ namespace Plugin.AncientCivilization
             {
                 restored=true;
                 if(AncientFinaleRules.RestorePhase(phase)==2){phase=2;BeginChase();}
-                else if(phase==5){game.won=true;phaseAt=Time.unscaledTime;}
+                else if(phase==5){game.won=true;phaseElapsed=captionElapsed=0;}
                 else if(phase==1)ShowBoarding(true);
             }
-            if(game.MainMenu)return;
+            if(ExternalPaused)return;
+            if(phase==3||phase==4)
+            {
+                float step=Time.unscaledDeltaTime;
+                if(!float.IsNaN(step)&&!float.IsInfinity(step)&&step>0)
+                {
+                    // Accumulate active viewing time. Absolute unscaled timestamps
+                    // would skip the rescue and ending after a long focus loss.
+                    step=Mathf.Min(step,.25f);phaseElapsed+=step;captionElapsed+=step;
+                }
+            }
             if(phase==3)
             {
-                float age=Time.unscaledTime-phaseAt;
+                float age=phaseElapsed;
                 if(age>=1.2f&&!fired)
                 {
                     fired=true;SetCaption("엎드려!");game.Sound(6);game.Shake(.18f);
@@ -149,19 +163,19 @@ namespace Plugin.AncientCivilization
                 }
                 if(age>1.32f)supportShot.enabled=false;
                 if(age>1.9f)SetCaption("코어가…!");
-                if(age>2.6f){phase=4;phaseAt=Time.unscaledTime;SetCaption("보호부가 깨졌어!");blast.enabled=true;game.Sound(4);Persist();}
+                if(age>2.6f){phase=4;phaseElapsed=0;SetCaption("보호부가 깨졌어!");blast.enabled=true;game.Sound(4);Persist();}
                 return;
             }
             if(phase==4)
             {
-                float age=Time.unscaledTime-phaseAt;
+                float age=phaseElapsed;
                 Vector2 centre=truck?truck.transform.position:(Vector2)game.hero.transform.position;
                 float radius=.2f+age*12;
                 for(int i=0;i<blast.positionCount;i++){float a=i*Mathf.PI*2/blast.positionCount;blast.SetPosition(i,centre+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*radius);}
                 blast.startColor=blast.endColor=new Color(.75f,.95f,1,Mathf.Clamp01(1-age/.9f));
                 if(age>.6f)SetCaption("떨어진다!");
                 Vector2 point=centre+new Vector2(.7f,3.65f-Mathf.Max(0,age-.5f)*8);game.hero.CinematicMove(point);
-                if(age>=2.2f){phase=5;game.won=true;AncientGame.SetSaved("firstRunCleared",1);blast.enabled=false;Persist();}
+                if(age>=2.2f){phase=5;phaseElapsed=captionElapsed=0;game.won=true;AncientGame.SetSaved("firstRunCleared",1);blast.enabled=false;Persist();}
                 return;
             }
             if(game.Paused)return;
@@ -186,7 +200,7 @@ namespace Plugin.AncientCivilization
         void ReturnToCity()
         {
             ClearTruck();
-            phase=0;countdown=60;zone=0;game.won=false;game.hero.hp=game.hero.MaxHP;
+            phase=0;phaseElapsed=captionElapsed=0;countdown=60;zone=0;game.won=false;game.hero.hp=game.hero.MaxHP;
             Vector2 officeReturn=new Vector2(AncientChapterLayout.OfficeX-3,1.3f);
             game.hero.TravelTo(officeReturn);ClearChaseBikes();
             foreach(var bike in game.parkedBikes)if(bike)bike.ResetAtSpawn();
@@ -213,7 +227,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game.Story||game.MainMenu)return;
+            if(!game.Story||ExternalPaused)return;
             if(label==null)
             {
                 label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=20,alignment=TextAnchor.MiddleCenter,wordWrap=true};
@@ -230,9 +244,9 @@ namespace Plugin.AncientCivilization
             {GUI.Label(new Rect(w/2-260,20,520,60),AncientCityLayout.Name(4-AncientFinaleRules.Zone(game.hero.transform.position.x))+" 하강 추격\n트럭 끝에서 점프 / 와이어로 지붕에 올라타세요",label);}
             if(phase==3||phase==4)
             {
-                float age=Time.unscaledTime-phaseAt;
+                float age=phaseElapsed;
                 if(phase==4){GUI.color=new Color(1,1,1,Mathf.Clamp01(1-age*2));GUI.DrawTexture(new Rect(0,0,w,h),Texture2D.whiteTexture);}
-                int chars=Mathf.Min(caption.Length,Mathf.FloorToInt((Time.unscaledTime-captionAt)/.045f));
+                int chars=Mathf.Min(caption.Length,Mathf.FloorToInt(captionElapsed/.045f));
                 if(chars!=visibleLetters){visibleLetters=chars;visibleCaption=caption.Substring(0,chars);}
                 GUI.color=Color.white;DrawCaptionBubble();
                 if(phase==4){GUI.color=new Color(0,0,0,Mathf.Clamp01((age-.8f)/1.1f));GUI.DrawTexture(new Rect(0,0,w,h),Texture2D.whiteTexture);}

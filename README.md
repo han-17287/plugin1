@@ -2,9 +2,11 @@
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**v0.18.1 Unity 소스:** [다운로드 ZIP](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/PLUGIN_v0.18.1_ProductionPursuit_Unity_6000.6.7f1.zip)
+**v0.19.0 Unity 소스:** [다운로드 ZIP](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/PLUGIN_v0.19.0_LowerDistrict_Unity_6000.6.7f1.zip)
 
 생산구 도입을 **재고 점검 → 보고 중 벽 돌파 → 자동주행 오토바이/트럭 위 전투 두 차례 → 세 번째 탑승 회수 컷신**으로 바꿨습니다. 생산장까지362단위의 안전한 이동 튜토리얼과 별도1,600단위 수송 터널을 구성했습니다. 코어를 담은 짐칸을 먼저 분리하고, 높은 백덤블링 뒤 굵은 입자 레이저로 트럭을 폭파합니다. 새 도입부는 **새 게임**으로 확인하세요.
+
+v0.19.0에서는 베기→수집→레이저 훈련을 한 단계씩 안내하고, 익명 작업자 세 명·공장 생활 소품·낮은 스윙 고리를 추가했습니다. 위험물과 대장 공격의 전조, 움직이는 지붕 점프, 세 번째 탑승의 블레이드·백덤블링·코어 분리·생존 검거 연출을 다듬었습니다. 재접속 후 닫히던 격벽과 재도전 때 사라지던 지붕도 수정했습니다.
 
 [생산구 맵 구조도](AncientCivilization/ProductionMapOverview.svg)는 설계도이며 실제 Unity 실행 화면은 아닙니다.
 

@@ -26,6 +26,10 @@ namespace Plugin.AncientCivilization
         public static readonly Span[] WireShortcut={new Span(-120,-112,3.2f),new Span(-100,-92,4.2f),new Span(-80,-72,4.2f),new Span(-60,-52,3.2f)};
         public static readonly float[] WireHookX={-120.55f,-100.55f,-80.55f,-60.55f};
         public const float WireHookY=8.8f,CatwalkThickness=.18f;
+        public static readonly float[] SwingHookX={-111,-91,-71};
+        public const float SwingHookY=7.5f;
+        public static readonly float[] TrainingEmitterX={-42,-18,7,28,56,86};
+        public const float TrainingEmitterY=1.6f,TrainingEmitterRange=16;
         public static readonly float[] SectionStarts={TutorialLeft,-194,-128,-52,38};
         public static readonly string[] SectionNames={"교대 통로","운송 벨트","검수 회랑","장비 검수실","코어 재고 관리실"};
         public static float GroundHeight(float x)
@@ -42,6 +46,13 @@ namespace Plugin.AncientCivilization
             return -1;
         }
         public static bool InTutorial(float x){return SectionAt(x)>=0;}
+        public static float TutorialCheckpointX(int stage)
+        {return stage<=1?TutorialSpawn:stage==2?-159:stage==3?-48:StockX-3;}
+        public static float TutorialCheckpointY(int stage)
+        {return GroundHeight(TutorialCheckpointX(stage))+1.3f;}
+        // These are representative visible racks, not a replacement for the full 120-unit stock ledger.
+        public static bool StockCorePresent(int rack,int row,int slot)
+        {return rack>=0&&rack<4&&row>=0&&row<3&&slot>=0&&slot<3&&!(rack==3&&row==2);}
         public static bool InChaseLane(float x)
         {return !float.IsNaN(x)&&!float.IsInfinity(x)&&x>=ChaseStart&&x<=ChaseEnd;}
     }

@@ -14,6 +14,7 @@ namespace Plugin.AncientCivilization
         readonly int[] sampleFloor=new int[240],sampleTarget=new int[240],sampleQuality=new int[240],samplePhase=new int[240],sampleRoom=new int[240],sampleSniper=new int[240],sampleSniperObjects=new int[240];
         readonly float[] sampleX=new float[240],sampleY=new float[240],sampleSpeed=new float[240],sampleEnergy=new float[240];
         readonly int[] sampleMode=new int[240],sampleWire=new int[240],sampleLaser=new int[240];
+        readonly int[] sampleProductionPhase=new int[240],sampleProductionRound=new int[240],sampleProductionMounts=new int[240],sampleStoryStage=new int[240];
         AncientGame game;int cursor,count,targetIndex;float updateAt;bool details;
         float mean,p95,peak;string summary="",diagnostics="";GUIStyle style;
         ProfilerRecorder allocations;
@@ -47,6 +48,9 @@ namespace Plugin.AncientCivilization
             sampleQuality[cursor]=AncientVisuals.HighQuality?1:0;samplePhase[cursor]=game.Finale?game.Finale.Phase:0;sampleRoom[cursor]=game.Campaign?game.Campaign.CurrentRoom:-1;sampleSniper[cursor]=game.Sniper?game.Sniper.Phase:0;sampleSniperObjects[cursor]=game.Sniper?game.Sniper.LiveObjects:0;
             Vector2 position=game.hero.transform.position;sampleX[cursor]=position.x;sampleY[cursor]=position.y;sampleSpeed[cursor]=game.hero.HorizontalSpeed;
             sampleEnergy[cursor]=game.hero.CaptureEnergy;sampleMode[cursor]=game.hero.AttackMode?1:0;sampleWire[cursor]=game.hero.Wired?1:0;sampleLaser[cursor]=game.hero.Combat&&game.hero.Combat.Firing?1:0;
+            var pursuit=game.Production;
+            sampleProductionPhase[cursor]=pursuit?(int)pursuit.Sequence.Phase:0;sampleProductionRound[cursor]=pursuit?pursuit.Sequence.Round:0;
+            sampleProductionMounts[cursor]=pursuit?pursuit.Sequence.MountCount:0;sampleStoryStage[cursor]=game.Story.Stage;
             cursor=(cursor+1)%samples.Length;count=Mathf.Min(count+1,samples.Length);
             if(Time.unscaledTime<updateAt)return;updateAt=Time.unscaledTime+.5f;Refresh();
         }
@@ -66,7 +70,7 @@ namespace Plugin.AncientCivilization
             if(count==0){game.Notice("플레이 중 프레임을 수집한 뒤 F10으로 저장하세요.",3);return;}
             try
             {
-                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room,sniper_phase,sniper_objects,hero_x,hero_y,horizontal_speed,capture_energy,attack_mode,wired,laser_active\n");
+                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room,sniper_phase,sniper_objects,hero_x,hero_y,horizontal_speed,capture_energy,attack_mode,wired,laser_active,production_phase,production_round,production_mounts,story_stage\n");
                 for(int i=0;i<count;i++)
                 {
                     int at=count==samples.Length?(cursor+i)%samples.Length:i;
@@ -74,7 +78,8 @@ namespace Plugin.AncientCivilization
                         .Append(sampleFloor[at]).Append(',').Append(sampleTarget[at]).Append(',').Append(sampleQuality[at]).Append(',').Append(samplePhase[at]).Append(',').Append(sampleRoom[at]).Append(',').Append(sampleSniper[at]).Append(',').Append(sampleSniperObjects[at]).Append(',')
                         .Append(sampleX[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',').Append(sampleY[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',')
                         .Append(sampleSpeed[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',').Append(sampleEnergy[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',')
-                        .Append(sampleMode[at]).Append(',').Append(sampleWire[at]).Append(',').Append(sampleLaser[at]).Append('\n');
+                        .Append(sampleMode[at]).Append(',').Append(sampleWire[at]).Append(',').Append(sampleLaser[at]).Append(',')
+                        .Append(sampleProductionPhase[at]).Append(',').Append(sampleProductionRound[at]).Append(',').Append(sampleProductionMounts[at]).Append(',').Append(sampleStoryStage[at]).Append('\n');
                 }
                 string path=Path.Combine(Application.persistentDataPath,"performance-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv");
                 File.WriteAllText(path,text.ToString());game.Notice("성능 기록 저장: "+path,6);

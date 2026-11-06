@@ -6,13 +6,17 @@ class ProductionHazardChecks
     static int checks;
     static void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;}
     static bool Near(float a,float b){return Math.Abs(a-b)<.0002f;}
-    static float RiderY(float time,bool jump)
+    static float RiderY(float time,bool jump,float jumpAt=.65f,float inputDelay=0)
     {
-        float t=time-.65f;
-        return !jump||t<0?.84f:Math.Max(.84f,.84f+14*t-16*t*t);
+        float t=time-jumpAt-inputDelay;
+        if(!jump||t<0)return .84f;
+        // The motorcycle deliberately ignores short-hop release. Its full14m/s jump
+        // uses gravity32 upward and the hero's actual1.2 falling gravity multiplier.
+        const float apex=14/32f,peak=.84f+14*apex-16*apex*apex;
+        return t<=apex?.84f+14*t-16*t*t:Math.Max(.84f,peak-19.2f*(t-apex)*(t-apex));
     }
     struct Blast {public bool detonated,hit;public float time,x,y;}
-    static Blast BombRun(float[] steps,bool jump,bool old=false)
+    static Blast BombRun(float[] steps,bool jump,bool old=false,float jumpAt=.65f,float inputDelay=0)
     {
         float y=old?3.4f:AncientProductionHazardRules.BombStartHeight,velocity=old?0:AncientProductionHazardRules.BombStartVelocityY;
         float fuse=old?.9f:AncientProductionHazardRules.BombFuse,time=0;bool landed=false;
@@ -22,12 +26,23 @@ class ProductionHazardChecks
             bool blast=AncientProductionHazardRules.TickBomb(ref y,ref velocity,ref fuse,ref landed,step,out after);
             if(blast)
             {
-                Check(AncientProductionHazardRules.BombImpactHero(time*17,RiderY(time,jump),(time+step)*17,RiderY(time+step,jump),after,step,out x,out heroY),"A detonation samples the rider inside the actual crossed frame");
+                Check(AncientProductionHazardRules.BombImpactHero(time*17,RiderY(time,jump,jumpAt,inputDelay),(time+step)*17,RiderY(time+step,jump,jumpAt,inputDelay),after,step,out x,out heroY),"A detonation samples the rider inside the actual crossed frame");
                 return new Blast{detonated=true,time=time+after,x=x,y=heroY,hit=AncientProductionHazardRules.BombHit(x,heroY,18)};
             }
             time+=step;
         }
         return new Blast();
+    }
+    static bool DebrisRun(float[] steps,float jumpAt,float inputDelay)
+    {
+        float time=0;
+        for(int frame=0;time<2&&frame<500;frame++)
+        {
+            float next=time+steps[frame%steps.Length];
+            if(AncientProductionHazardRules.SweptDebris(time*17,RiderY(time,true,jumpAt,inputDelay),next*17,RiderY(next,true,jumpAt,inputDelay),18))return true;
+            time=next;
+        }
+        return false;
     }
     static void Main()
     {
@@ -95,6 +110,22 @@ class ProductionHazardChecks
         {
             float before=y;Check(!AncientProductionHazardRules.TickBomb(ref y,ref velocity,ref fuse,ref landed,step,out after)&&y==before,"Paused/nonpositive steps leave bombs unchanged");
             Check(!AncientProductionHazardRules.BombImpactHero(0,0,1,1,.1f,step,out x,out heroY),"A stopped clock cannot sample a new explosion");
+        }
+        // A tutorial obstacle must allow a broad reaction window, rather than merely
+        // one hand-picked successful press. Include one full60Hz input/physics delay.
+        foreach(float[] steps in new[]{new[]{1/30f},new[]{1/60f},new[]{1/144f},new[]{1/60f,.1f,1/144f,.066f}})
+        {
+            int safe=0;float first=-1,last=-1;
+            for(int sample=0;sample<=120;sample++)
+            {
+                float press=sample/120f;
+                var blast=BombRun(steps,true,false,press,1/60f);
+                bool clear=blast.detonated&&!blast.hit&&!DebrisRun(steps,press,1/60f);
+                if(clear){safe++;if(first<0)first=press;last=press;}
+                if(press>=.45f&&press<=.8f)Check(clear,"Both road hazards admit a comfortable Space press from450 to800ms after their appearance, including input delay");
+            }
+            Check(safe>=50&&last-first>.4f,"The shared debris/bomb jump window is over400ms across smooth and uneven render pacing");
+            Check(BombRun(steps,true,false,.1f).hit&&BombRun(steps,true,false,1).hit,"Jumping immediately at spawn or after the explosion remains meaningfully different from a timely reaction");
         }
         Console.WriteLine("PASS: "+checks+" production road-hazard sweep, bomb landing/fuse, rider timing and jump-clearance checks");
     }
