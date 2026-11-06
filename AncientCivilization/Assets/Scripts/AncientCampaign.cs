@@ -9,7 +9,8 @@ namespace Plugin.AncientCivilization
         readonly SpriteRenderer[,] nodes=new SpriteRenderer[20,3];readonly SpriteRenderer[] citizens=new SpriteRenderer[25];
         readonly SpriteRenderer[,] fieldGates=new SpriteRenderer[20,2],terminals=new SpriteRenderer[20,3],powerStations=new SpriteRenderer[20,3];
         readonly BoxCollider2D[,] fieldGateSolids=new BoxCollider2D[20,2];
-        readonly List<AncientEnemy> foes=new List<AncientEnemy>();readonly List<int> foeSlots=new List<int>();SpriteRenderer escort;bool following;
+        readonly List<AncientEnemy> foes=new List<AncientEnemy>();readonly List<int> foeSlots=new List<int>();SpriteRenderer escort,rescuedReha;bool following;
+        const string RehaName="야간 작업자 재하";
         GUIStyle label;string objective="";int journalFloor=-1,journalMission=-1,journalCitizen=-1;bool journalPeople;float guardNoticeAt,powerEmitReady,escortCycle;int escortFrame=-1;
         GUIStyle fieldTitleStyle,fieldBodyStyle,fieldHintStyle,fieldWorldStyle,fieldEdgeStyle;float fieldStyleScale=-1;
         int uiMission=-1,uiSector=-1,uiNext=-2,uiGuideKind=-1,uiGuideId=-1,edgeMetres=-1,edgeDirection=-1;bool uiFollowing;
@@ -43,9 +44,11 @@ namespace Plugin.AncientCivilization
             if(Active&&following&&escort&&escort.enabled)
             {
                 string witness=AncientCampaignData.Citizens[AncientCampaignRules.Witness(active)].Name;
-                if(speaker==AncientCampaignData.Missions[active].Speaker||MatchesDialogueName(speaker,witness))
+                if(speaker==AncientCampaignData.Missions[active].Speaker||(active==2?IsRehaSpeaker(speaker):MatchesDialogueName(speaker,witness)))
                 {actor=escort.transform;headOffset=DialogueHeadOffset(escort);return true;}
             }
+            if(rescuedReha&&rescuedReha.enabled&&rescuedReha.gameObject.activeInHierarchy&&IsRehaSpeaker(speaker))
+            {actor=rescuedReha.transform;headOffset=DialogueHeadOffset(rescuedReha);return true;}
             foreach(var citizen in AncientCampaignData.Citizens)
             {
                 if(citizen.Floor!=game.Story.CurrentFloor||!MatchesDialogueName(speaker,citizen.Name))continue;
@@ -54,6 +57,7 @@ namespace Plugin.AncientCivilization
             }
             return false;
         }
+        static bool IsRehaSpeaker(string speaker){return speaker=="재하"||MatchesDialogueName(speaker,RehaName);}
         static bool MatchesDialogueName(string speaker,string name)
         {
             if(speaker==name)return true;int space=name.LastIndexOf(' ');
@@ -96,7 +100,9 @@ namespace Plugin.AncientCivilization
                 citizens[citizen.Id].transform.localScale=Vector3.one*(citizen.Id==2?1:.9f);
             }
             for(int i=0;i<4;i++)foreach(int person in new[]{4,6,14,18})AncientArt.CitizenWalk(person,i);
-            escort=AncientArt.Display("Protected witness",AncientCitizenArt.ForCitizen(6),Vector2.zero,9,transform);escort.transform.localScale=Vector3.one*.9f;escort.enabled=false;Refresh();
+            escort=AncientArt.Display("Protected witness",AncientCitizenArt.ForCitizen(6),Vector2.zero,9,transform);escort.transform.localScale=Vector3.one*.9f;escort.enabled=false;
+            rescuedReha=AncientArt.Display("Rescued night worker Reha",AncientCitizenArt.ForCitizen(4),new Vector2(AncientChapterLayout.CaseRight(2)-16,0),9,transform);
+            rescuedReha.transform.localScale=Vector3.one*.9f;rescuedReha.enabled=false;Refresh();
         }
         void BuildRoom(AncientMission mission)
         {
@@ -134,7 +140,7 @@ namespace Plugin.AncientCivilization
                     if(jumping)game.Platform(x,left+segment.right,top);
                     game.StaticBox("Field route edge",new Vector2(left+(segment.left+segment.right)*.5f,(mission.Kind==2?0:top)+.025f),new Vector2(segment.right-segment.left,.05f),AncientGame.Cyan,3);
                     if(jumping&&i%3==1)
-                    {float fastTop=Mathf.Max(6.2f,top+2.2f);game.Platform(x+1,x+3.2f,fastTop);game.StaticBox("Expert field shortcut",new Vector2(x+2.1f,fastTop+.03f),new Vector2(2.2f,.05f),new Color(1,.82f,.2f),4);}
+                        BuildExpertCatwalk(left,AncientFieldExpansion.ExpertSegment(mission.Id,sector,i));
                 }
                 if(mission.Floor==0)for(int index=3;index<=6;index+=3)
                 {
@@ -183,6 +189,16 @@ namespace Plugin.AncientCivilization
                 nodes[mission.Id,i].color=person?Color.white:blade?new Color(1,.82f,.25f):receiver?new Color(.2f,1,.85f):new Color(.4f,.85f,1);nodes[mission.Id,i].enabled=false;
             }
         }
+        void BuildExpertCatwalk(float roomLeft,AncientTraversalLayout.Ledge span)
+        {
+            float width=span.right-span.left,x=roomLeft+(span.left+span.right)*.5f,depth=AncientFieldExpansion.ExpertLedgeDepth;
+            var ledge=new GameObject("Expert service catwalk");ledge.layer=8;ledge.transform.SetParent(transform,false);
+            ledge.transform.position=new Vector2(x,span.top-depth*.5f);ledge.AddComponent<BoxCollider2D>().size=new Vector2(width,depth);
+            game.StaticBox("Expert service catwalk steel",new Vector2(x,span.top-depth*.5f),new Vector2(width,depth),new Color(.25f,.36f,.38f),2);
+            for(float slot=span.left+.22f;slot<span.right;slot+=.4f)
+                game.StaticBox("Expert catwalk grating slot",new Vector2(roomLeft+slot,span.top-.06f),new Vector2(.13f,.06f),new Color(.05f,.1f,.13f),3);
+            game.StaticBox("Expert field shortcut",new Vector2(x,span.top+.03f),new Vector2(width,.05f),new Color(1,.82f,.2f),4);
+        }
         readonly List<AncientAirTarget> buoys=new List<AncientAirTarget>();
         readonly List<AncientMovingAnchor> cranes=new List<AncientMovingAnchor>();
         static bool UsesBlade(int kind,int node){return kind==1||kind==2&&node==0||kind==3&&node==0;}
@@ -197,8 +213,12 @@ namespace Plugin.AncientCivilization
         {var segment=AncientFieldExpansion.Segment(id,sector,4);return new Vector2(AncientCampaignRules.Left(id)+(segment.left+segment.right)*.5f,segment.top+1.3f);}
         public bool TryMovingAnchor(Vector2 point,out Transform target)
         {
-            target=null;if(!Active)return false;
-            foreach(var crane in cranes)if(((Vector2)crane.transform.position-point).sqrMagnitude<.04f){target=crane.transform;return true;}return false;
+            target=null;if(!game||!game.Story)return false;
+            foreach(var crane in cranes)
+                if(crane&&crane.isActiveAndEnabled&&AncientCityLayout.VisualSector(crane.transform.position.x)==game.Story.CurrentFloor&&
+                    ((Vector2)crane.transform.position-point).sqrMagnitude<.04f)
+                {target=crane.transform;return true;}
+            return false;
         }
         public bool ReadyForBoss(int floor){return legacy||AncientCampaignRules.ReadyForBoss(completed,floor);}
         public bool ReadyForLift(int destination){return legacy||destination!=1||AncientCampaignRules.FloorCount(completed,0)==4;}
@@ -272,6 +292,22 @@ namespace Plugin.AncientCivilization
         {
             game.City.OnEnterFloor();ActivateCase(id,false);
             game.Feel.Signal(ChapterTitle(id/4),AncientGame.Cyan,2);
+        }
+        public bool TryContinueProductionRoute()
+        {
+            // The arrest radio has already assigned this investigation. Open the forward
+            // road at the handoff instead of sending the officer back to the same briefing.
+            if(!game||!game.Story||!game.hero||!game.hero.Combat||!game.HasSession||game.MainMenu||game.Paused||!Application.isFocused)return false;
+            if(game.Story.Stage!=8||game.Story.CurrentFloor!=0||Active||ChapterStarted(0)||AncientCampaignRules.Next(completed,0)!=0)return false;
+            if(game.Production&&(game.Production.Active||game.Production.Cinematic||game.Production.InChaseLane))return false;
+            // Mark restoration handled before activation: the ordinary save-resume path
+            // relocates to a safety terminal and must not run after this continuous entry.
+            restored=true;restoreId=-1;ActivateCase(0,false);
+            if(active!=0)return false;
+            // ActivateCase persists the chapter bit first. No dialogue, reward, travel or
+            // repeated radio line is needed on retries, menus or subsequent reloads.
+            if(game.Feel)game.Feel.Signal(ChapterTitle(0),AncientGame.Cyan,2);
+            return true;
         }
         public void ContinueAfterSniper()
         {
@@ -356,6 +392,17 @@ namespace Plugin.AncientCivilization
                 view.transform.position=new Vector2(AncientCampaignRules.ResidentPositionX(resident.Id,resident.X,completed,savedTasks),rescued?0:resident.Y);
                 view.enabled=resident.Floor==game.Story.CurrentFloor&&(resident.Id!=3||game.Story.Stage>=8)&&AncientCampaignRules.ResidentVisible(resident.Id,active,tasks);
             }
+            if(rescuedReha)
+            {
+                // Citizen 4 is the production foreman, not Reha. Keep the rescued worker
+                // at the same exit where his escort stopped, independently of that resident.
+                int savedRehaTasks=active==2?tasks:routeTasks[2];
+                bool rescued=AncientCampaignRules.Complete(completed,2)||(savedRehaTasks&4)!=0;
+                bool walking=active==2&&escort&&escort.enabled;
+                rescuedReha.enabled=game.Story.Stage>=8&&game.Story.CurrentFloor==0&&rescued&&!walking;
+                if(rescuedReha.enabled&&game.hero&&Mathf.Abs(game.hero.transform.position.x-rescuedReha.transform.position.x)<7)
+                    rescuedReha.flipX=game.hero.transform.position.x<rescuedReha.transform.position.x;
+            }
         }
         void Mark(int index)
         {
@@ -395,6 +442,13 @@ namespace Plugin.AncientCivilization
         public bool TryInteract()
         {
             if(!game.Story||game.hero.bike||game.ArenaActive||(game.Finale&&game.Finale.Phase!=0))return false;
+            if(NearRescuedReha())
+            {
+                if(game.Paused||!game.GameplayInputReady)return false;
+                if(game.hero.Wired||!game.hero.IsOnGround){game.Notice("착지한 뒤 재하와 대화하세요.");return true;}
+                game.Story.Conversation(null,0,new[]{RehaName,"백명"},
+                    new[]{"꺼내 줘서 고맙습니다. 전 안에 남아 있었어요. 피난 완료라고 쓰인 기록은 제 증언으로 바로잡고 싶습니다.","직접 나오셨다는 사실과 잠금 기록을 함께 남기겠습니다. 안전선 안에서 기다리세요."});return true;
+            }
             int id=NearestCitizen();if(id<0)return Active&&InteractRoom();
             if(!game.hero.IsOnGround){game.Notice("착지한 뒤 주민과 대화하세요.");return true;}
             var npc=AncientCampaignData.Citizens[id];seen|=1<<id;Persist();
@@ -472,6 +526,12 @@ namespace Plugin.AncientCivilization
             }
             return nearest;
         }
+        bool NearRescuedReha()
+        {
+            if(!rescuedReha||!rescuedReha.enabled||!rescuedReha.gameObject.activeInHierarchy||!game.hero)return false;
+            Vector2 target=(Vector2)rescuedReha.transform.position+Vector2.up;
+            return ((Vector2)game.hero.transform.position-target).sqrMagnitude<2.2f*2.2f&&!Physics2D.Linecast(game.hero.transform.position,target,1<<8);
+        }
         void RecoverToCheckpoint()
         {
             RecordDefeats();checkpoint=AncientFieldExpansion.ResolveCheckpoint(checkpoint,tasks,defeated);
@@ -493,6 +553,7 @@ namespace Plugin.AncientCivilization
                 restored=true;int resume=AncientCampaignRules.ResumeCase(completed,chapters,restoreId,game.Story.CurrentFloor,game.Story.Stage,game.City.Cleared);
                 if(resume>=0)Begin(resume);
             }
+            if(!Active)TryContinueProductionRoute();
             if(!Active||game.Paused)return;
             RecordDefeats();
             float left=AncientCampaignRules.Left(active);Vector2 p=game.hero.transform.position;
@@ -661,7 +722,12 @@ namespace Plugin.AncientCivilization
             if(!(game.Finale&&game.Finale.Phase!=0))
             {
                 int nearest=NearestCitizen();
-                if(nearest>=0)
+                if(NearRescuedReha())
+                {
+                    var p=game.View.WorldToScreenPoint(rescuedReha.transform.position+Vector3.up*2.2f);
+                    if(InView(p))GUI.Label(new Rect(p.x-170,Screen.height-p.y-25,340,55),RehaName+" / E: 대화",label);
+                }
+                else if(nearest>=0)
                 {
                     var npc=AncientCampaignData.Citizens[nearest];var p=game.View.WorldToScreenPoint(citizens[nearest].transform.position+Vector3.up*2.2f);
                     GUI.Label(new Rect(p.x-170,Screen.height-p.y-25,340,55),npc.Name+" / E: 대화",label);

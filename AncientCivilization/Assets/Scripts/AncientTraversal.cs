@@ -153,9 +153,13 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            bool visible=AncientChapterView.NearCamera(game,centre,AncientCityLayout.VisualSector(centre.x));
+            if(!game||!game.Story)return;
+            int floor=AncientCityLayout.VisualSector(centre.x);
+            bool visible=AncientChapterView.NearCamera(game,centre,floor);
             if(shown!=visible){shown=visible;node.enabled=rail.enabled=visible;}
-            if(!visible||game.Paused)return;
+            // Visibility only controls drawing. A wire can remain attached beyond
+            // the camera margin, so its crane must keep moving on the current floor.
+            if(game.Paused||game.Story.CurrentFloor!=floor)return;
             Vector2 point=centre+new Vector2(AncientRules.CraneOffset(Time.time,index),0);
             transform.position=point;game.anchors[slot]=point;
         }

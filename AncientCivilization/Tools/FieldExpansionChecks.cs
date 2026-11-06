@@ -8,13 +8,36 @@ class FieldExpansionChecks
     static void Check(bool condition,string message)
     {if(!condition)throw new InvalidOperationException(message);checks++;}
     static bool Near(float left,float right){return Math.Abs(left-right)<.0001f;}
+    static void CheckExpertGrate(int mission,int sector,int index)
+    {
+        const float heroWidth=.72f,heroHeight=2.1f,safety=.15f,ceiling=10;
+        var support=AncientFieldExpansion.Segment(mission,sector,index);
+        var expert=AncientFieldExpansion.ExpertSegment(mission,sector,index);
+        float underside=expert.top-AncientFieldExpansion.ExpertLedgeDepth;
+        Check(expert.left>support.left+heroWidth*.5f&&expert.right<support.right-heroWidth*.5f,"The expert grate rests entirely over its own broad landing and leaves both ends clear");
+        Check(expert.right-expert.left>heroWidth+.5f,"An expert landing supports the actual hero capsule with a readable landing margin");
+        Check(underside-support.top>=heroHeight+safety,"A full-height hero and safety margin fit below every expert grate");
+        Check(expert.top+heroHeight+safety<ceiling,"Standing on the expert grate keeps the entire hero below the physical ceiling");
+        if(index>0)Check(expert.left>AncientFieldExpansion.Segment(mission,sector,index-1).right+heroWidth*.5f,"The upper grate does not intrude into the previous landing's approach");
+        if(index<8)Check(expert.right<AncientFieldExpansion.Segment(mission,sector,index+1).left-heroWidth*.5f,"The upper grate does not intrude into the next landing's reverse approach");
+        // An AABB enclosing the actual capsule is conservative: if this box clears
+        // the grate, neither direction of ordinary walking can catch the head on it.
+        foreach(int direction in new[]{1,-1})for(int sample=0;sample<=128;sample++)
+        {
+            float travel=(direction>0?sample:128-sample)/128f;
+            float x=support.left+heroWidth*.5f+(support.right-support.left-heroWidth)*travel;
+            bool horizontal=x+heroWidth*.5f>expert.left&&x-heroWidth*.5f<expert.right;
+            Check(!horizontal||support.top+heroHeight+safety<underside,
+                direction>0?"Forward walking beneath an optional shortcut has no capsule/head intersection":"Reverse walking beneath an optional shortcut has no capsule/head intersection");
+        }
+    }
     static void Main()
     {
         Check(AncientFieldExpansion.SectorCount==3&&AncientFieldExpansion.RouteCount==27,"Each expanded field contains three nine-ledge sections");
         Check(AncientFieldExpansion.Width>=600&&AncientFieldExpansion.Width==AncientFieldExpansion.SectorCount*AncientFieldExpansion.SectorSpan,"Fields are longer than the former432-unit interiors and cover all three complete sectors");
         Check(AncientFieldExpansion.Stride>AncientFieldExpansion.Width,"Consecutive case sections leave room for a physical connecting road");
         Check(AncientFieldExpansion.Names.Length==20,"All twenty existing cases retain section names");
-        var names=new HashSet<string>();var jumpSignatures=new HashSet<string>();int jumpSectors=0;var floorsWithJump=new HashSet<int>();
+        var names=new HashSet<string>();var jumpSignatures=new HashSet<string>();int jumpSectors=0,expertGrates=0,oldDepthConflicts=0;var floorsWithJump=new HashSet<int>();
         for(int mission=0;mission<20;mission++)
         {
             Check(AncientFieldExpansion.Names[mission].Length==3,"Every case has three named sections");
@@ -51,6 +74,12 @@ class FieldExpansionChecks
                     Check(jump||Near(ledge.top,0),"Ordinary investigation, power and escort targets stay on the fast ground route");
                     hasRaisedLanding|=ledge.top>1;
                     if(jump)jumpSignature+=(ledge.left-offset).ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+":"+ledge.top.ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+";";
+                    if(jump&&i%3==1)
+                    {
+                        CheckExpertGrate(mission,sector,i);expertGrates++;
+                        var expert=AncientFieldExpansion.ExpertSegment(mission,sector,i);
+                        if(expert.top-1-ledge.top<2.1f)oldDepthConflicts++;
+                    }
                     if(i>0)
                     {
                         var previous=AncientFieldExpansion.Segment(mission,sector,i-1);
@@ -80,6 +109,8 @@ class FieldExpansionChecks
             Check(missionJumps<=1,"Most of each investigation remains continuous fast travel");
         }
         Check(jumpSectors==5&&floorsWithJump.Count==5,"Every city floor retains one dedicated course while the other fifty-five sectors stay grounded");
+        Check(expertGrates==15,"All three expert grates in each of the five authored jump sectors receive physical clearance checks");
+        Check(oldDepthConflicts>0,"The geometry regression includes real landings blocked by the former one-meter expert platform depth");
         Check(names.Count==60,"All sixty section landmark names are unique");
         Check(AncientFieldExpansion.SectorAt(-1)==0&&AncientFieldExpansion.SectorAt(0)==0,"Left boundary and negative recovery position stay in first section");
         Check(AncientFieldExpansion.SectorAt(AncientFieldExpansion.SectorSpan-.01f)==0&&AncientFieldExpansion.SectorAt(AncientFieldExpansion.SectorSpan)==1,"First section boundary follows the longer actual next section start");

@@ -1318,7 +1318,7 @@ namespace Plugin.AncientCivilization
         public void MountProductionBike(AncientParkedBike vehicle,Vector2 point,float speed)
         {
             if(!body||!vehicle)return;
-            TravelTo(point);mountedBike=vehicle;vehicle.Take();SetBike(true);
+            TravelTo(point);SetProductionAttackMode(false);mountedBike=vehicle;vehicle.Take();SetBike(true);
             body.simulated=true;body.gravityScale=1;body.position=point;transform.position=point;
             body.linearVelocity=new Vector2(speed,0);direction=1;bikeHP=80;BikeSkid=0;
             motorcycle.Mount();
@@ -1398,6 +1398,7 @@ namespace Plugin.AncientCivilization
         SpriteRenderer art;LineRenderer warning;AncientFinalTruck carrier;
         Vector2 home,lockedAim;float facing=1;
         public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(productionEncounter?1.3f:IsSniperClone||IsDistrictBoss&&DistrictFloor==4&&!IsSecretary?1.5f:kind==3?1.65f:kind==4?.65f:.95f);}}
+        public float DialogueHeadHeight {get{return art?Mathf.Clamp(art.bounds.max.y-transform.position.y,.9f,2.5f):2.2f;}}
         public Vector2 SniperMuzzle {get{return AimPoint+Vector2.right*facing*1.42f;}}
         public bool IsAlive {get{return !dead;}}
         float wirePushRemaining;
@@ -1411,7 +1412,7 @@ namespace Plugin.AncientCivilization
         void Start()
         {
             var g=AncientGame.Instance;home=transform.position;carrier=GetComponentInParent<AncientFinalTruck>();
-            art=AncientArt.Display(Role,productionEncounter?AncientArt.Boss(1,0):IsSniperClone?AncientArt.Boss(4,cloneSlot>=2?1:0):AncientArt.Enemy(kind),Vector2.zero,8,transform);art.flipX=facing<0;
+            art=AncientArt.Display(Role,productionEncounter?AncientArt.ProductionCaptain(0):IsSniperClone?AncientArt.Boss(4,cloneSlot>=2?1:0):AncientArt.Enemy(kind),Vector2.zero,8,transform);art.flipX=facing<0;
             if(IsSniperClone){art.sharedMaterial=sniperEncounter.CloneMaterial;art.color=AncientGame.Cyan;}
             if(AncientVisuals.Instance)
             {
@@ -1592,7 +1593,7 @@ namespace Plugin.AncientCivilization
         internal void BossVisual(int pose,float direction,float anticipation,bool telegraph,bool recovery)
         {
             if(!art)return;
-            facing=direction;art.flipX=facing<0;art.sprite=AncientArt.Boss(productionEncounter?1:IsSecretary?5:IsSniperClone?4:IsDistrictBoss?DistrictFloor:0,pose);
+            facing=direction;art.flipX=facing<0;art.sprite=productionEncounter?AncientArt.ProductionCaptain(pose):AncientArt.Boss(IsSecretary?5:IsSniperClone?4:IsDistrictBoss?DistrictFloor:0,pose);
             art.transform.localScale=new Vector3(1-anticipation*.025f,1+anticipation*.025f,1);
             art.transform.localRotation=Quaternion.identity;
             art.color=Time.time<flashUntil?AncientGame.Cyan:recovery?new Color(1,.87f,.5f):telegraph?Color.Lerp(Color.white,AttackIsPhysical?AncientGame.Orange:AncientGame.Cyan,(.5f+Mathf.Sin(Time.time*20)*.5f)*.45f):Color.white;

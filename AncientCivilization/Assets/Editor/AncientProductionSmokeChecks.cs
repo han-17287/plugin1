@@ -143,6 +143,20 @@ namespace Plugin.AncientCivilization.EditorChecks
                 story.ClearProductionRadio();MoveHero(hero,original);Call(story,"Persist");
             }
         }
+        static void CheckStockApproach(AncientGame game)
+        {
+            var hero=game.hero;var story=game.Story;int stage=story.Stage,flags=(int)Field(typeof(AncientStory),"flags").GetValue(story);
+            int cores=game.Cores,points=story.ResidencePoints,credits=game.credits,score=game.score;
+            hero.TravelTo(new Vector2(AncientProductionLayout.StockX,2.5f));Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);
+            Assert(!hero.IsOnGround&&story.TryProductionStock()&&!story.DialogueOpen&&story.Stage==stage,"An actual airborne stock-terminal request is handled without starting the report or breach");
+            hero.TravelTo(new Vector2(AncientProductionLayout.StockX,1.06f));hero.SetProductionAttackMode(false);Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);
+            Assert(hero.IsOnGround,"The wire-safety probe starts with the actual capsule resting at the stock-room floor");
+            Call(hero,"AttachWire",new Vector2(AncientProductionLayout.StockX+1.5f,10),null,Vector2.down);
+            Assert(hero.Wired&&hero.IsOnGround&&story.TryProductionStock()&&!story.DialogueOpen&&story.Stage==stage,"A live ceiling wire blocks the stock report even during its still-grounded launch frame");
+            Assert((int)Field(typeof(AncientStory),"flags").GetValue(story)==flags&&game.Cores==cores&&story.ResidencePoints==points&&game.credits==credits&&game.score==score&&!game.Production.Active,"Rejected stock requests change no tutorial flags, rewards, inventory or pursuit phase");
+            hero.TravelTo(new Vector2(AncientProductionLayout.StockX,1.06f));Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);
+            Assert(!hero.Wired&&hero.IsOnGround,"Releasing the wire and reaching the real floor leaves the stock terminal ready for a grounded request");
+        }
         static void CheckAutomaticBike(AncientGame game)
         {
             var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();var director=game.Production;bool enabled=hero.enabled;
@@ -151,6 +165,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 hero.enabled=false;MoveHero(hero,new Vector2(AncientProductionLayout.ChaseStart+6,.84f));
                 Field(typeof(AncientHero),"axis").SetValue(hero,-1f);body.linearVelocity=Vector2.zero;Call(hero,"FixedUpdate");
                 Assert(hero.bike&&body.simulated&&hero.GetComponent<BoxCollider2D>().enabled&&!hero.GetComponent<CapsuleCollider2D>().enabled,"The initial automatic mount uses the real motorcycle body and collider");
+                Assert(!hero.AttackMode&&hero.ZipMode,"The actual automatic mount starts in straight-wire mode without retaining a prior attack or swing mode");
                 Assert(Near(body.linearVelocity.x,director.DriveSpeed)&&body.linearVelocity.x>0,"Bike physics advances without a held forward key and overrides a stale reverse axis");
                 Field(typeof(AncientHero),"jumpBufferedUntil").SetValue(hero,Time.time+AncientMovementRules.BufferSeconds);
                 Field(typeof(AncientHero),"jumpHeld").SetValue(hero,true);Field(typeof(AncientHero),"cutJump").SetValue(hero,false);Call(hero,"FixedUpdate");
@@ -211,12 +226,51 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Physics2D.SyncTransforms();Physics2D.simulationMode=simulation;hero.enabled=heroEnabled;director.enabled=directorEnabled;
             }
         }
+        static void CheckCaptainPresentation(AncientGame game)
+        {
+            var director=game.Production;var captain=director.Commander;var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
+            var art=(SpriteRenderer)Field(typeof(AncientEnemy),"art").GetValue(captain);var tell=(LineRenderer)Field(typeof(AncientProductionPursuit),"tell").GetValue(director);var zone=(LineRenderer)Field(typeof(AncientProductionPursuit),"strikeZone").GetValue(director);
+            string[] fields={"captainPattern","captainLastAttack","captainWindup","captainAim","captainFacing","captainTimer","captainRecoverySeconds","captainActionUntil"};
+            var saved=new object[fields.Length];for(int i=0;i<fields.Length;i++)saved[i]=Field(typeof(AncientProductionPursuit),fields[i]).GetValue(director);
+            Vector2 position=body.position,velocity=body.linearVelocity;Sprite sprite=art.sprite;bool flipped=art.flipX,tellShown=tell.enabled,zoneShown=zone.enabled;
+            Color tint=art.color;Vector3 scale=art.transform.localScale;Quaternion rotation=art.transform.localRotation;object facing=Field(typeof(AncientEnemy),"facing").GetValue(captain);
+            var oldShots=new System.Collections.Generic.HashSet<AncientProjectile>(game.shots);var tellPoints=new Vector3[tell.positionCount];tell.GetPositions(tellPoints);var zonePoints=new Vector3[zone.positionCount];zone.GetPositions(zonePoints);
+            try
+            {
+                MoveHero(hero,new Vector2(captain.transform.position.x+1,3.76f));
+                Field(typeof(AncientProductionPursuit),"captainPattern").SetValue(director,0);Field(typeof(AncientProductionPursuit),"captainWindup").SetValue(director,true);Field(typeof(AncientProductionPursuit),"captainFacing").SetValue(director,1f);Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,.5f);
+                Field(typeof(AncientProductionPursuit),"captainAim").SetValue(director,(Vector2)hero.transform.position-(Vector2)captain.transform.parent.position);director.TickCommander(captain);
+                Assert(art.sprite==AncientArt.ProductionCaptain(1)&&!art.flipX,"The actual transport captain selects the original melee-anticipation sprite and locked facing");
+                MoveHero(hero,new Vector2(captain.transform.position.x-2,3.76f));Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,0f);director.TickCommander(captain);director.TickCommander(captain);
+                Assert(art.sprite==AncientArt.ProductionCaptain(2)&&!art.flipX,"Resolving the real melee pattern selects its follow-through and keeps facing when the officer crosses behind");
+                Field(typeof(AncientProductionPursuit),"captainActionUntil").SetValue(director,Time.time-1);director.TickCommander(captain);
+                Assert(art.sprite==AncientArt.ProductionCaptain(5)&&art.flipX,"After its action window, the actual captain returns to recovery and can face the officer again");
+                Transform speaker;float head;
+                Assert(director.TryDialogueActor("운송대장",out speaker,out head)&&speaker==captain.transform&&Mathf.Abs(head-(art.bounds.max.y-captain.transform.position.y))<.01f,"The captain's dialogue anchor follows the displayed original pose bounds rather than a fixed old portrait height");
+                Field(typeof(AncientProductionPursuit),"captainPattern").SetValue(director,1);Field(typeof(AncientProductionPursuit),"captainWindup").SetValue(director,true);Field(typeof(AncientProductionPursuit),"captainFacing").SetValue(director,-1f);Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,.5f);
+                Field(typeof(AncientProductionPursuit),"captainAim").SetValue(director,(Vector2)hero.transform.position-(Vector2)captain.transform.parent.position);director.TickCommander(captain);
+                Assert(art.sprite==AncientArt.ProductionCaptain(3)&&art.flipX&&tell.enabled,"The physical plate pattern uses its distinct original throwing-anticipation pose and real trajectory tell");
+                Vector2 muzzle=tell.GetPosition(0);int shots=game.shots.Count;
+                Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,0f);director.TickCommander(captain);
+                Assert(game.shots.Count==shots+1&&((Vector2)game.shots[game.shots.Count-1].transform.position-muzzle).sqrMagnitude<.00001f,"The actual thrown plate starts exactly at the displayed arm-side trajectory origin");
+                MoveHero(hero,new Vector2(captain.transform.position.x+1,3.76f));director.TickCommander(captain);
+                Assert(art.sprite==AncientArt.ProductionCaptain(4)&&art.flipX&&!tell.enabled&&!zone.enabled,"Throw follow-through keeps its facing and clears the resolved attack tell after the officer crosses sides");
+            }
+            finally
+            {
+                foreach(var shot in game.shots.ToArray())if(shot&&!oldShots.Contains(shot))shot.Remove();
+                for(int i=0;i<fields.Length;i++)Field(typeof(AncientProductionPursuit),fields[i]).SetValue(director,saved[i]);
+                MoveHero(hero,position);body.linearVelocity=velocity;art.sprite=sprite;art.flipX=flipped;art.color=tint;art.transform.localScale=scale;art.transform.localRotation=rotation;Field(typeof(AncientEnemy),"facing").SetValue(captain,facing);
+                tell.positionCount=tellPoints.Length;tell.SetPositions(tellPoints);tell.enabled=tellShown;zone.positionCount=zonePoints.Length;zone.SetPositions(zonePoints);zone.enabled=zoneShown;
+            }
+        }
         static void CheckRun(AncientGame game)
         {
             var director=game.Production;var sequence=director.Sequence;var commander=director.Commander;
             Assert(sequence.Phase==AncientProductionPhase.Chase&&sequence.Round==0&&sequence.MountCount==1&&game.Story.Stage==5,"The actual interrupted stock report reaches the first playable motorcycle chase");
             Assert(game.hero.transform.position.x>=AncientProductionLayout.ChaseStart&&game.hero.transform.position.x<AncientProductionLayout.ChaseEnd,"The playable chase starts on its dedicated tunnel instead of the stock-room coordinates");
             Assert(!game.ArenaActive,"The moving commander cannot activate the old stationary guardian clamp");
+            director.TickCommander(commander);Assert(((SpriteRenderer)Field(typeof(AncientEnemy),"art").GetValue(commander)).sprite==AncientArt.ProductionCaptain(0),"The road phase displays the original transport captain's idle pose");
             CheckAutomaticBike(game);
             float initial=commander.HealthRatio;commander.Hit(100000,true);
             Assert(Near(commander.HealthRatio,initial),"The captain cannot lose deck-phase health from an early road attack");
@@ -227,7 +281,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             Assert(LiveHazards(director)==0&&game.shots.Count==0,"The ceasefire removes actual road hazards and flying attack objects");
             Step(director,1);Step(director,1);
             Assert(sequence.Phase==AncientProductionPhase.Approach,"The wire-boarding opportunity stays open instead of timing out");
-            BoardRoof(game);CheckMovingRoofJump(game);commander.Hit(100000,true);
+            BoardRoof(game);CheckMovingRoofJump(game);CheckCaptainPresentation(game);commander.Hit(100000,true);
             Assert(sequence.Phase==AncientProductionPhase.Knockback&&Near(commander.HealthRatio,AncientProductionRules.FirstHealthGate)&&commander.IsAlive,"An actual captain hit stops at the first health gate and begins the knockback transition");
             Advance(director,AncientProductionPhase.Chase);
             Assert(sequence.Round==1&&sequence.MountCount==2&&game.hero.bike,"The first knockback automatically returns to the second bike mount");
@@ -260,7 +314,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             Assert(captainArt&&captainArt.enabled,"The arrested captain stays visible after the vehicle's renderers are hidden");
             int points=game.Story.ResidencePoints;game.Story.ProductionCleared();
             Assert(points==1000&&game.Story.ResidencePoints==points,"Arrest awards the first promotion points once even if completion is called again");
-            float beforeHandoff=game.hero.transform.position.x;FinishDialogue(game,12);
+            float beforeHandoff=game.hero.transform.position.x;int handoffCredits=game.credits,handoffScore=game.score;FinishDialogue(game,12);
             var body=game.hero.GetComponent<Rigidbody2D>();
             Assert(game.Story.Stage==8&&director.Cinematic&&Mathf.Abs(game.hero.transform.position.x-beforeHandoff)<.001f&&!body.simulated,"Finishing the actual arrest conversation begins the held handoff before moving the officer across the map");
             float elapsedHandoff=(float)Field(typeof(AncientProductionPursuit),"handoffElapsed").GetValue(director);
@@ -270,6 +324,10 @@ namespace Plugin.AncientCivilization.EditorChecks
             Assert(director.Cinematic&&!director.InChaseLane&&Near(game.hero.transform.position.x,115)&&!body.simulated,"The corridor transfer occurs at the fully black handoff midpoint while player physics stays held");
             Call(director,"TickHandoff",.25f);Call(director,"TickHandoff",.25f);
             Assert(!director.Cinematic&&body.simulated&&Near(game.hero.transform.position.x,115)&&game.Cores==3,"The completed handoff restores play on the continuing production road with all recovered cores");
+            Assert(game.Campaign.Active&&game.Campaign.CurrentRoom==0&&game.Campaign.ChapterStarted(0)&&!game.Story.DialogueOpen,"The actual arrest handoff opens the forward investigation without a walk back to the chief or a second briefing");
+            Assert((AncientGame.Saved("campaignChapterStarted")&1)!=0&&AncientGame.Saved("campaignActive")==0&&game.credits==handoffCredits&&game.score==handoffScore&&game.Story.ResidencePoints==points,"The forward assignment is persisted without granting a duplicate arrest reward");
+            Vector2 settled=body.position,motion=body.linearVelocity;int enemies=game.enemies.Count;
+            Assert(!game.Campaign.TryContinueProductionRoute()&&body.position==settled&&body.linearVelocity==motion&&game.enemies.Count==enemies,"Repeating the handoff continuation cannot reset movement or respawn the first encounter");
         }
         static void Update()
         {
@@ -290,7 +348,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     if(Time.time<.5f)return;
                     Assert(game.Story.Stage==3&&!game.Story.DialogueOpen&&!game.Production.Active,"Completed weapon practice leaves the stock objective available without starting the chase");
                     CheckOptionalWorkers(game);CheckTrainingFeeder(game);
-                    MoveHero(game.hero,new Vector2(AncientProductionLayout.StockX,1.3f));game.Story.TryProductionStock();
+                    CheckStockApproach(game);game.Story.TryProductionStock();
                     Assert(game.Story.Stage==4&&game.Story.DialogueOpen&&!game.Production.Active,"An actual stock-terminal request opens the discrepancy report before the breach");
                     SetStage(1);return;
                 }

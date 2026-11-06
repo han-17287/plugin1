@@ -14,7 +14,7 @@ namespace Plugin.AncientCivilization
         AncientProductionPhase applied=AncientProductionPhase.Dormant;
         bool lane,cargoSecured,truckDestroyed,pendingArrest,ready,boardingReady,handoff,handedOff,captainEjecting;float truckX,nextHazard,deckTime,captainTimer,captainRecoverySeconds=.7f,kinematicSpeed,handoffElapsed;
         int hazardCursor,volley,captainPattern,captainLastAttack,hookSlot=-1;bool captainWindup;Vector2 captainAim,throwOrigin;float throwBikeX,captainFacing=1;
-        string objective="";GUIStyle caption,hint;Vector2 roadHeroPrevious,cargoReleaseOffset,captainEjectOrigin;float cargoReleasedAt,captainEjectedAt;
+        string objective="";GUIStyle caption,hint;Vector2 roadHeroPrevious,cargoReleaseOffset,captainEjectOrigin;float cargoReleasedAt,captainEjectedAt,captainActionUntil;
         public AncientProductionSequence Sequence {get{return sequence;}}
         public AncientEnemy Commander {get{return commander;}}
         public bool Active {get{return sequence.Phase!=AncientProductionPhase.Dormant&&sequence.Phase!=AncientProductionPhase.Secured;}}
@@ -34,7 +34,7 @@ namespace Plugin.AncientCivilization
         public Vector2 BoardingHook {get{return truck?(Vector2)truck.position+new Vector2(-1.5f,6):Vector2.zero;}}
         public string Objective {get{return objective;}}
         public float DriveSpeed {get{return lane?Mathf.Min(17,Mathf.Max(0,(AncientProductionLayout.ChaseEnd-46-game.hero.transform.position.x)*.8f)):17;}}
-        public void Initialize(AncientGame owner){game=owner;AncientArt.Truck();}
+        public void Initialize(AncientGame owner){game=owner;AncientArt.Truck();AncientArt.ProductionCaptain(0);}
         bool ExternalPaused {get{return !game||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||!Application.isFocused;}}
         bool EnsureActors()
         {
@@ -116,7 +116,9 @@ namespace Plugin.AncientCivilization
         }
         void FinishHandoff()
         {
-            CompleteArrestHandoff();handoff=false;game.hero.HoldForEncounter(false);game.BlockGameplayInput();game.SnapCameraToHero();game.Notice("현장 인계 완료 / 동부 운송로로 계속 이동",3);
+            CompleteArrestHandoff();handoff=false;game.hero.HoldForEncounter(false);game.BlockGameplayInput();game.SnapCameraToHero();
+            if(game.Campaign)game.Campaign.TryContinueProductionRoute();
+            game.Notice("현장 인계 완료 / 동부 운송로로 계속 이동",3);
         }
         public void WriteSave()
         {if(!game||!game.Story||game.Story.Stage>=8)return;AncientGame.SetSaved("productionVersion",1);if(Active||lane)AncientGame.SetSaved("productionRound",sequence.Round);}
@@ -150,8 +152,10 @@ namespace Plugin.AncientCivilization
         {
             if(!ready||enemy!=commander||!game.hero)return;
             if(lane&&!truckDestroyed){var p=enemy.transform.localPosition;p.x=Mathf.Clamp(p.x,-2.25f,2.25f);p.y=2.7f;enemy.transform.localPosition=p;}
-            float face=captainWindup?captainFacing:game.hero.transform.position.x<enemy.transform.position.x?-1:1;
-            enemy.BossVisual(captainWindup?1:DeckCombat?5:0,face,CommanderWindup,captainWindup,CommanderRecovering);
+            bool followThrough=DeckCombat&&Time.time<captainActionUntil;
+            float face=captainWindup||followThrough?captainFacing:game.hero.transform.position.x<enemy.transform.position.x?-1:1;
+            int pose=captainWindup?(captainPattern%3==0?1:3):DeckCombat?(followThrough?(captainLastAttack==0?2:4):5):0;
+            enemy.BossVisual(pose,face,CommanderWindup,captainWindup,CommanderRecovering);
             if(!DeckCombat||ExternalPaused){tell.enabled=strikeZone.enabled=false;return;}
             captainTimer-=Time.deltaTime;
             if(captainWindup)
@@ -159,14 +163,16 @@ namespace Plugin.AncientCivilization
                 Vector2 target=(Vector2)truck.position+captainAim;DrawCaptainTell(enemy.AimPoint,target);
                 if(captainTimer>0)return;captainWindup=false;tell.enabled=strikeZone.enabled=false;
                 if(captainPattern%3==0)
-                {Vector2 d=(Vector2)game.hero.transform.position-enemy.AimPoint;if(Mathf.Abs(d.x)<3.3f&&Mathf.Abs(d.y)<1.7f&&d.x*captainFacing>=-.5f)game.hero.Hurt(18);game.Slash(enemy.AimPoint,captainFacing,true);}
+                {Vector2 origin=enemy.AimPoint,d=(Vector2)game.hero.transform.position-origin;game.Slash(origin,captainFacing,true);if(Mathf.Abs(d.x)<3.3f&&Mathf.Abs(d.y)<1.7f&&d.x*captainFacing>=-.5f)game.hero.Hurt(18);}
                 else
                 {
-                    Vector2 startPoint=captainPattern%3==2?CaptainDropOrigin(target):enemy.AimPoint+Vector2.up*.35f;
+                    Vector2 startPoint=captainPattern%3==2?CaptainDropOrigin(target):CaptainThrowOrigin(enemy.AimPoint);
                     Vector2 velocity=captainPattern%3==2?new Vector2(kinematicSpeed,-4):(target-startPoint)/.6f+new Vector2(kinematicSpeed,2.4f);
                     game.Projectiles.Spawn(startPoint,velocity,16,false,1,8);
                 }
-                captainLastAttack=captainPattern%3;captainTimer=captainRecoverySeconds=captainLastAttack==2?1.45f:1.25f;captainPattern++;game.Sound(6);
+                if(!DeckCombat)return;
+                captainLastAttack=captainPattern%3;captainTimer=captainRecoverySeconds=captainLastAttack==2?1.45f:1.25f;captainPattern++;captainActionUntil=Time.time+.2f;
+                enemy.BossVisual(captainLastAttack==0?2:4,captainFacing,0,false,true);game.Sound(6);
             }
             else if(captainTimer<=0)
             {captainWindup=true;captainFacing=face;captainTimer=CaptainWindupSeconds;captainAim=(Vector2)game.hero.transform.position-(Vector2)truck.position;game.Sound(8);}
@@ -184,7 +190,7 @@ namespace Plugin.AncientCivilization
             {
                 // The aim is locked in truck-local space; draw the real ballistic arc in
                 // that same frame, without the carrier's world-space travel component.
-                Vector2 start=origin+Vector2.up*.35f,velocity=(target-start)/.6f+Vector2.up*2.4f;
+                Vector2 start=CaptainThrowOrigin(origin),velocity=(target-start)/.6f+Vector2.up*2.4f;
                 tell.positionCount=15;for(int i=0;i<15;i++){float t=i/14f*.6f;tell.SetPosition(i,start+velocity*t+Vector2.down*4*t*t);}
                 SetFootprint(strikeZone,target.x,truck.position.y+2.79f,.75f,.1f);
             }
@@ -199,6 +205,7 @@ namespace Plugin.AncientCivilization
             line.SetPosition(0,new Vector2(x-halfWidth,y));line.SetPosition(1,new Vector2(x+halfWidth,y));
             line.SetPosition(2,new Vector2(x+halfWidth,y+height));line.SetPosition(3,new Vector2(x-halfWidth,y+height));
         }
+        Vector2 CaptainThrowOrigin(Vector2 chest){return chest+new Vector2(captainFacing*.9f,.35f);}
         static Vector2 CaptainDropOrigin(Vector2 target)
         {return new Vector2(target.x,Mathf.Min(target.y+4,AncientProductionLayout.TunnelCeiling-.6f));}
         void Update()
@@ -271,7 +278,7 @@ namespace Plugin.AncientCivilization
             {boardingReady=false;ClearHazards();game.ClearBattleProjectiles();objective="공격 중지 / 트럭 접근 중 · 승선 고리 점등 대기";game.Notice("적 공격 중지 · 트럭에 접근합니다.",2);}
             if(applied==AncientProductionPhase.Boarding){ClearHazards();game.hero.SetProductionAttackMode(false);}
             if(applied==AncientProductionPhase.Deck)
-            {game.hero.SetProductionAttackMode(true);deckTime=0;captainPattern=captainLastAttack=0;captainTimer=captainRecoverySeconds=.7f;captainWindup=false;game.Notice("트럭 지붕 전투 / 전조를 피하고 빈틈에 블레이드·입자 레이저",4);game.BlockGameplayInput();}
+            {game.hero.SetProductionAttackMode(true);deckTime=0;captainPattern=captainLastAttack=0;captainTimer=captainRecoverySeconds=.7f;captainActionUntil=-1;captainWindup=false;game.Notice("트럭 지붕 전투 / 전조를 피하고 빈틈에 블레이드·입자 레이저",4);game.BlockGameplayInput();}
             if(applied==AncientProductionPhase.Knockback)
             {
                 commander.ClearProductionHitFlash();game.ClearBattleProjectiles();ClearHazards();tell.enabled=strikeZone.enabled=false;captainWindup=false;game.hero.Combat.CancelAttacks();throwOrigin=game.hero.transform.position;throwBikeX=truck.position.x-8;game.hero.HoldForEncounter(true);game.Sound(8);game.Notice("트럭 급가속 / 자동주행 오토바이로 복귀",2);
@@ -453,7 +460,7 @@ namespace Plugin.AncientCivilization
             else{focus=new Vector2(game.hero.transform.position.x+7,4.6f);zoom=7.8f;}return true;
         }
         public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
-        {actor=null;headOffset=2.2f;if(!ready||!commander||(speaker!="운송대장"&&speaker!="용의자"))return false;actor=commander.transform;return true;}
+        {actor=null;headOffset=2.2f;if(!ready||!commander||(speaker!="운송대장"&&speaker!="용의자"))return false;actor=commander.transform;headOffset=commander.DialogueHeadHeight;return true;}
         void LateUpdate()
         {
             if(!ready)return;bool shown=sequence.Phase==AncientProductionPhase.Approach&&boardingReady||sequence.Phase==AncientProductionPhase.Boarding;hook.enabled=shown;

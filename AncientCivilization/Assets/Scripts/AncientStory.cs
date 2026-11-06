@@ -150,6 +150,8 @@ namespace Plugin.AncientCivilization
             Vector2 point=new Vector2(AncientProductionLayout.StockX,1.3f);
             if(((Vector2)game.hero.transform.position-point).sqrMagnitude>2.7f*2.7f)return false;
             if(DialogueOpen||game.Paused||!game.GameplayInputReady)return true;
+            if(game.hero.Wired||!game.hero.IsOnGround)
+            {game.Notice("재고 단말 앞 통로에 착지한 뒤 E로 수량을 확인하세요.",1.8f);return true;}
             if(Stage<3)
             {game.Notice(Stage==1?"장비 점검 / Space 점프와 Ctrl 달리기를 한 번씩 확인하세요.":"검수 회랑을 지나 생산장 재고 단말로 이동하세요.",2);return true;}
             if(!AncientRules.TutorialReady(3,flags))

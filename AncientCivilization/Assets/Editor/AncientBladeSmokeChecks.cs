@@ -67,7 +67,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         static void Invoke(object owner,string method)
         {var call=owner.GetType().GetMethod(method,PrivateInstance);if(call==null)throw new MissingMethodException(owner.GetType().Name,method);call.Invoke(owner,null);}
         static void MoveProbeHero(AncientHero hero,Vector2 point)
-        {hero.GetComponent<Rigidbody2D>().position=point;hero.transform.position=point;Physics2D.SyncTransforms();}
+        {hero.GetComponent<Rigidbody2D>().position=point;hero.transform.position=point;Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);}
         static void FireRight(AncientGame game)
         {
             // The existing no-camera fallback gives a deterministic release direction without mouse synthesis.
@@ -228,7 +228,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 var pulse=Field(typeof(AncientCombat),"laserPulse").GetValue(combat);Field(pulse.GetType(),"<Until>k__BackingField").SetValue(pulse,Time.time-.01f);
                 Field(typeof(AncientCombat),"laserUntil").SetValue(combat,Time.time-.01f);Invoke(story,"Update");
                 Assert(story.Stage==3&&!story.DialogueOpen&&!combat.Firing,"Expired practice effects leave the inventory objective active until the player reaches its terminal");
-                MoveProbeHero(hero,new Vector2(AncientProductionLayout.StockX,1.3f));story.TryProductionStock();
+                MoveProbeHero(hero,new Vector2(AncientProductionLayout.StockX,1.06f));Assert(hero.IsOnGround,"The final practice handoff reaches the actual stock-room floor before interaction");story.TryProductionStock();
                 Assert(story.Stage==4&&story.DialogueOpen,"An explicit stock-terminal interaction starts the inventory discrepancy report after practice");
             }
             finally

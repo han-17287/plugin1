@@ -37,7 +37,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             SessionState.SetBool(Root+"Running",true);SessionState.SetBool(Root+"Finishing",false);SessionState.SetBool(Root+"Passed",false);
             SessionState.SetString(Root+"Profile",profile);SessionState.SetString(ProfileKey,profile);SessionState.SetString(Root+"Log","");
             SetTime("Started",Now);SetStage(0);
-            Set(profile,"questStage",9);Set(profile,"cityFloor",0);Set(profile,"storyBoss",1);Set(profile,"storyCores",7);
+            Set(profile,"questStage",8);Set(profile,"cityFloor",0);Set(profile,"storyBoss",1);Set(profile,"storyCores",7);
             Set(profile,"residencePoints",5000);Set(profile,"started",1);Set(profile,"campaignVersion",AncientCampaignRules.RouteVersion);
             PlayerPrefs.Save();Append("START: isolated continuous-chapter structural smoke. Leave controls untouched.");
             Append("Uses directed positions/objective seeds to test streaming, retry, save and resource recovery; this does not verify a human traversal playthrough.");
@@ -102,6 +102,48 @@ namespace Plugin.AncientCivilization.EditorChecks
         {return (int)typeof(AncientCampaign).GetMethod("NearestCitizen",PrivateInstance).Invoke(campaign,null);}
         static void MoveToSector(AncientGame game,int sector)
         {game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(game.Campaign.CurrentRoom)+AncientFieldExpansion.EntranceOf(sector),1.3f));}
+        static void CheckExpertCatwalkGeometry(AncientHero hero)
+        {
+            Physics2D.SyncTransforms();int grates=0;Vector2 size=hero.GetComponent<CapsuleCollider2D>().size;float standing=size.y*.5f+.01f;
+            foreach(int mission in new[]{3,6,9,15,18})foreach(int index in new[]{1,4,7})
+            {
+                var support=AncientFieldExpansion.Segment(mission,1,index);var expert=AncientFieldExpansion.ExpertSegment(mission,1,index);
+                float x=AncientCampaignRules.Left(mission)+(expert.left+expert.right)*.5f;
+                var hit=Physics2D.Raycast(new Vector2(x,expert.top+.1f),Vector2.down,.3f,1<<8);
+                Assert(hit.collider&&hit.collider is BoxCollider2D&&hit.collider.gameObject.name=="Expert service catwalk"&&Mathf.Abs(hit.collider.bounds.size.y-AncientFieldExpansion.ExpertLedgeDepth)<.001f&&Mathf.Abs(hit.point.y-expert.top)<.002f,"The actual expert catwalk is the authored thin collider at mission "+mission+" / grate "+index);
+                Assert(!Physics2D.OverlapCapsule(new Vector2(x,support.top+standing),size,CapsuleDirection2D.Vertical,0,1<<8),"The actual hero capsule fits on the broad landing beneath the expert grate");
+                Assert(!Physics2D.OverlapCapsule(new Vector2(x,expert.top+standing),size,CapsuleDirection2D.Vertical,0,1<<8),"The actual hero capsule standing on the expert grate fits below the physical ceiling");grates++;
+            }
+            Assert(grates==15,"All authored expert grates across the five floor mechanics pass real collider-clearance probes");
+        }
+        static void CheckProductionContinuation(AncientGame game)
+        {
+            var campaign=game.Campaign;var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
+            Assert(game.Story.Stage==8&&campaign.Active&&campaign.CurrentRoom==0&&campaign.ChapterStarted(0),"The real Stage 8 load automatically opens the assigned lower investigation without returning to the chief");
+            Assert((AncientGame.Saved("campaignChapterStarted")&1)!=0&&AncientGame.Saved("campaignActive")==0&&!game.Story.DialogueOpen,"The automatic lower assignment is persisted without replaying another briefing");
+            // Seed only the old idle-save state. The actual arm attachment and director
+            // calls below must preserve live movement; a mock body cannot establish that.
+            Call(campaign,"LeaveFloor");typeof(AncientCampaign).GetField("chapters",PrivateInstance).SetValue(campaign,0);
+            typeof(AncientCampaign).GetField("restored",PrivateInstance).SetValue(campaign,false);typeof(AncientCampaign).GetField("restoreId",PrivateInstance).SetValue(campaign,-1);
+            hero.TravelTo(new Vector2(115,1.3f));hero.SetProductionAttackMode(false);body.linearVelocity=new Vector2(4,2);Physics2D.SyncTransforms();
+            var attach=typeof(AncientHero).GetMethod("AttachWire",PrivateInstance);
+            attach.Invoke(hero,new object[]{new Vector2(119,10),null,Vector2.down});
+            Assert(hero.Wired,"The continuous-assignment probe starts with an actual ceiling wire attached");
+            Vector2 position=body.position,motion=body.linearVelocity,anchor=(Vector2)typeof(AncientHero).GetField("anchor",PrivateInstance).GetValue(hero);
+            int input=(int)typeof(AncientGame).GetField("inputReadyFrame",PrivateInstance).GetValue(game),credits=game.credits,score=game.score,points=game.Story.ResidencePoints,cores=game.Cores;
+            float health=hero.hp;
+            Assert(campaign.TryContinueProductionRoute(),"The real continuation action accepts the legacy Stage 8 idle assignment");
+            Assert(body.position==position&&body.linearVelocity==motion&&hero.Wired&&(Vector2)typeof(AncientHero).GetField("anchor",PrivateInstance).GetValue(hero)==anchor,"Starting the lower investigation preserves actual position, velocity and the existing wire anchor");
+            Assert((int)typeof(AncientGame).GetField("inputReadyFrame",PrivateInstance).GetValue(game)==input&&!game.Story.DialogueOpen,"Continuous assignment neither clears live input nor opens a second briefing");
+            Assert(hero.hp==health&&game.credits==credits&&game.score==score&&game.Story.ResidencePoints==points&&game.Cores==cores,"Opening the already assigned investigation grants no duplicate recovery, score, promotion or currency reward");
+            var enemy=game.enemies.Count>0?game.enemies[0]:null;int enemies=game.enemies.Count;
+            Assert(!campaign.TryContinueProductionRoute(),"A repeated continuation call cannot restart an active investigation");Call(campaign,"Update");
+            Assert(body.position==position&&body.linearVelocity==motion&&hero.Wired&&game.enemies.Count==enemies&&(enemies==0||game.enemies[0]==enemy),"The next real campaign update cannot relocate the wired officer or replace the newly active encounter");
+            Assert((AncientGame.Saved("campaignChapterStarted")&1)!=0&&AncientGame.Saved("campaignActive")==0,"The live continuation saves its chapter and active case before play proceeds");
+            hero.TravelTo(position);body.linearVelocity=Vector2.zero;
+            // The remaining pre-existing probes cover independent upper-floor cases.
+            typeof(AncientStory).GetProperty("Stage").GetSetMethod(true).Invoke(game.Story,new object[]{9});AncientGame.SetSaved("questStage",9);PlayerPrefs.Save();
+        }
         static void CheckCheckpointCrossing(AncientGame game,int sector,float before,float expected)
         {
             game.hero.hp=before;MoveToSector(game,sector);Call(game.Campaign,"Update");
@@ -165,6 +207,85 @@ namespace Plugin.AncientCivilization.EditorChecks
             Call(campaign,"LeaveFloor");Call(campaign,"EnterFloor");
             Assert(AncientGame.Saved("routeTask5")==7&&view.enabled&&Mathf.Abs(view.transform.position.x-exit)<.001f&&!escort.enabled,"Existing saved rescue tasks preserve the single exit resident after floor re-entry");
         }
+        static void FinishOptionalDialogue(AncientGame game)
+        {
+            var story=game.Story;var lines=(System.Collections.IList)typeof(AncientStory).GetField("lines",PrivateInstance).GetValue(story);
+            for(int i=0;i<4&&story.DialogueOpen;i++)
+            {
+                int index=(int)typeof(AncientStory).GetField("lineIndex",PrivateInstance).GetValue(story);var line=lines[index];int length=((string)line.GetType().GetField("text").GetValue(line)).Length;
+                typeof(AncientStory).GetField("pageReady",PrivateInstance).SetValue(story,true);typeof(AncientStory).GetField("pageEnd",PrivateInstance).SetValue(story,length);typeof(AncientStory).GetField("showFull",PrivateInstance).SetValue(story,true);
+                typeof(AncientGame).GetField("inputReadyFrame",PrivateInstance).SetValue(game,Time.frameCount-1);typeof(AncientStory).GetMethod("Advance",PrivateInstance).Invoke(story,null);
+            }
+            Assert(!story.DialogueOpen,"The optional rescued-worker conversation completes through the actual dialogue callback");
+        }
+        static void CheckRehaRescue(AncientGame game)
+        {
+            var campaign=game.Campaign;var hero=game.hero;var foreman=Resident(campaign,4);Vector3 foremanPoint=foreman.transform.position;
+            var escort=(SpriteRenderer)typeof(AncientCampaign).GetField("escort",PrivateInstance).GetValue(campaign);
+            var rescued=(SpriteRenderer)typeof(AncientCampaign).GetField("rescuedReha",PrivateInstance).GetValue(campaign);Transform actor;float offset;
+            Assert(campaign.CurrentRoom==2&&Tasks(campaign)==3&&escort.enabled&&!rescued.enabled,"Before the exit is secured, Reha has one moving escort and no duplicate static body");
+            Assert(campaign.TryDialogueActor("재하",out actor,out offset)&&actor==escort.transform,"Reha's short name resolves the actual moving escort");
+            Assert(campaign.TryDialogueActor("생산소 작업반장",out actor,out offset)&&actor==foreman.transform,"The independent foreman cannot borrow Reha's escort speech anchor");
+            Call(campaign,"Mark",2);float exit=AncientChapterLayout.CaseRight(2)-16;
+            Assert(!escort.enabled&&rescued.enabled&&Mathf.Abs(rescued.transform.position.x-exit)<.001f&&Mathf.Abs(rescued.transform.position.y)<.001f,"Finishing the escort immediately transfers Reha to the actual protected ground-level exit");
+            Assert(campaign.TryDialogueActor("야간 작업자 재하",out actor,out offset)&&actor==rescued.transform&&foreman.enabled&&foreman.transform.position==foremanPoint,"The rescued worker keeps her own speech anchor while the independent foreman stays in place");
+            hero.TravelTo(new Vector2(exit,1.06f));Physics2D.SyncTransforms();typeof(AncientHero).GetField("groundSampleTick",PrivateInstance).SetValue(hero,-1f);
+            int credits=game.credits,points=game.Story.ResidencePoints,cores=game.Cores;typeof(AncientGame).GetField("inputReadyFrame",PrivateInstance).SetValue(game,Time.frameCount-1);
+            Assert(campaign.TryInteract()&&game.Story.DialogueOpen,"The rescued Reha remains an actual optional E interaction at the exit");FinishOptionalDialogue(game);
+            Assert(Tasks(campaign)==7&&game.credits==credits&&game.Story.ResidencePoints==points&&game.Cores==cores,"Talking to Reha cannot award a second rescue or advance another task");
+            DefeatCurrent(game);hero.TravelTo(new Vector2(AncientChapterLayout.CaseRight(2)-6,1.3f));Call(campaign,"Update");
+            Assert(campaign.CurrentRoom==3&&AncientCampaignRules.Complete(campaign.CompletedMask,2)&&rescued.enabled&&!escort.enabled,"Reha remains visible after the continuous chapter advances to the following case");
+            Call(campaign,"LeaveFloor");var floorSetter=typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true);floorSetter.Invoke(game.Story,new object[]{1});Call(campaign,"EnterFloor");
+            Assert(!rescued.enabled&&!campaign.TryDialogueActor("재하",out actor,out offset),"The protected lower worker cannot appear as an actor on another floor");
+            Call(campaign,"LeaveFloor");floorSetter.Invoke(game.Story,new object[]{0});hero.TravelTo(new Vector2(exit,1.3f));Call(campaign,"EnterFloor");
+            Assert(AncientGame.Saved("routeTask2")==7&&rescued.enabled&&!escort.enabled&&campaign.TryDialogueActor("재하",out actor,out offset)&&actor==rescued.transform,"Saved rescue goals restore the same exit worker and speech anchor after a lift return");
+        }
+        static void CheckCompletedCrane(AncientGame game)
+        {
+            var campaign=game.Campaign;var hero=game.hero;int oldFloor=game.Story.CurrentFloor;
+            FieldInfo completed=typeof(AncientCampaign).GetField("completed",PrivateInstance),chapters=typeof(AncientCampaign).GetField("chapters",PrivateInstance);
+            int oldCompleted=campaign.CompletedMask,oldChapters=(int)chapters.GetValue(campaign);Vector2 original=hero.transform.position;
+            var floorSetter=typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true);
+            AncientMovingAnchor selected=null;Vector3 previous=Vector3.zero,camera=game.View.transform.position;bool enabled=false,active=false,shown=false,nodeEnabled=false,railEnabled=false;int slot=-1;Vector2 savedAnchor=Vector2.zero;SpriteRenderer node=null;LineRenderer rail=null;
+            try
+            {
+                Call(campaign,"LeaveFloor");completed.SetValue(campaign,oldCompleted|15);chapters.SetValue(campaign,oldChapters|1);floorSetter.Invoke(game.Story,new object[]{0});Call(campaign,"EnterFloor");
+                Assert(!campaign.Active&&AncientCampaignRules.FloorCount(campaign.CompletedMask,0)==4,"The moving-hook revisit runs after the entire lower investigation is completed and no case is active");
+                var cranes=(System.Collections.Generic.List<AncientMovingAnchor>)typeof(AncientCampaign).GetField("cranes",PrivateInstance).GetValue(campaign);
+                foreach(var crane in cranes)if(crane&&AncientCityLayout.VisualSector(crane.transform.position.x)==0){selected=crane;break;}
+                Assert(selected,"The completed lower chapter retains a real authored moving crane");previous=selected.transform.position;enabled=selected.enabled;active=selected.gameObject.activeSelf;
+                selected.gameObject.SetActive(true);selected.enabled=true;
+                Vector2 centre=(Vector2)typeof(AncientMovingAnchor).GetField("centre",PrivateInstance).GetValue(selected);int index=(int)typeof(AncientMovingAnchor).GetField("index",PrivateInstance).GetValue(selected);
+                slot=(int)typeof(AncientMovingAnchor).GetField("slot",PrivateInstance).GetValue(selected);savedAnchor=game.anchors[slot];shown=(bool)typeof(AncientMovingAnchor).GetField("shown",PrivateInstance).GetValue(selected);
+                node=(SpriteRenderer)typeof(AncientMovingAnchor).GetField("node",PrivateInstance).GetValue(selected);rail=(LineRenderer)typeof(AncientMovingAnchor).GetField("rail",PrivateInstance).GetValue(selected);nodeEnabled=node.enabled;railEnabled=rail.enabled;
+                game.View.transform.position=new Vector3(centre.x+1000,centre.y,-10);selected.transform.position=centre+Vector2.right*99;
+                typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);Vector2 expected=centre+new Vector2(AncientRules.CraneOffset(Time.time,index),0);
+                Assert(((Vector2)selected.transform.position-expected).sqrMagnitude<.00001f&&(game.anchors[slot]-expected).sqrMagnitude<.00001f&&!node.enabled&&!rail.enabled,"An off-screen current-floor crane updates its real moving hook and selectable anchor while both renderers stay culled");
+                selected.transform.position=centre+Vector2.right*88;game.skills=true;typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);game.skills=false;
+                Assert((Vector2)selected.transform.position==centre+Vector2.right*88&&game.anchors[slot]==expected,"A paused off-screen crane cannot advance motion or its selectable anchor");
+                floorSetter.Invoke(game.Story,new object[]{1});selected.transform.position=centre+Vector2.right*77;typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);
+                Assert((Vector2)selected.transform.position==centre+Vector2.right*77&&game.anchors[slot]==expected,"A crane on an inactive floor cannot advance motion or its selectable anchor");floorSetter.Invoke(game.Story,new object[]{0});
+                typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);Transform found;Vector2 point=(Vector2)selected.transform.position+Vector2.right*.08f;
+                Assert(campaign.TryMovingAnchor(point,out found)&&found==selected.transform,"The inactive completed chapter still resolves its live crane as a moving support");
+                hero.TravelTo((Vector2)selected.transform.position+Vector2.left*3);hero.SetProductionAttackMode(false);Physics2D.SyncTransforms();
+                typeof(AncientHero).GetMethod("AttachWire",PrivateInstance).Invoke(hero,new object[]{point,null,Vector2.zero});
+                var moving=typeof(AncientHero).GetField("wireMovingAnchor",PrivateInstance);var local=typeof(AncientHero).GetField("wireMovingLocal",PrivateInstance);var anchor=typeof(AncientHero).GetField("anchor",PrivateInstance);
+                Assert(hero.Wired&&(Transform)moving.GetValue(hero)==selected.transform,"The actual hero wire binds to the revisited crane rather than freezing at a world-space point");
+                Vector2 offset=(Vector2)local.GetValue(hero);selected.transform.position+=new Vector3(.45f,.15f,0);Physics2D.SyncTransforms();
+                typeof(AncientHero).GetMethod("FixedUpdate",PrivateInstance).Invoke(hero,null);
+                Assert(hero.Wired&&((Vector2)anchor.GetValue(hero)-(Vector2)selected.transform.TransformPoint(offset)).sqrMagnitude<.00001f,"A real hero physics step follows the completed chapter's moving hook and its clicked offset");
+                point=(Vector2)selected.transform.position;floorSetter.Invoke(game.Story,new object[]{1});
+                Assert(!campaign.TryMovingAnchor(point,out found)&&!found,"A crane from another floor cannot become the current floor's moving support");floorSetter.Invoke(game.Story,new object[]{0});
+                selected.enabled=false;Assert(!campaign.TryMovingAnchor(point,out found)&&!found,"A disabled crane component cannot accept a moving attachment");selected.enabled=true;
+                selected.gameObject.SetActive(false);Assert(!campaign.TryMovingAnchor(point,out found)&&!found,"An inactive crane object cannot accept a moving attachment");
+            }
+            finally
+            {
+                game.skills=false;game.View.transform.position=camera;
+                if(selected){selected.transform.position=previous;selected.enabled=enabled;selected.gameObject.SetActive(active);if(slot>=0)game.anchors[slot]=savedAnchor;if(node)node.enabled=nodeEnabled;if(rail)rail.enabled=railEnabled;typeof(AncientMovingAnchor).GetField("shown",PrivateInstance).SetValue(selected,shown);}
+                hero.TravelTo(original);floorSetter.Invoke(game.Story,new object[]{oldFloor});completed.SetValue(campaign,oldCompleted);chapters.SetValue(campaign,oldChapters);Call(campaign,"EnterFloor");
+            }
+        }
         static void Update()
         {
             if(!SessionState.GetBool(Root+"Running",false))return;
@@ -185,17 +306,14 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     if(!game.GameplayInputReady||game.Paused)return;
                     CheckCacheReward(game);
-                    var body=game.hero.GetComponent<Rigidbody2D>();Vector2 position=body.position,motion=new Vector2(4,0);body.linearVelocity=motion;
-                    Call(campaign,"StartChapter",0);
-                    Assert(body.position==position&&body.linearVelocity==motion,"Accepting the chapter mission preserves the player's actual position and movement");
-                    Assert((AncientGame.Saved("campaignChapterStarted")&1)!=0,"The accepted chapter is saved before proceeding");
-                    body.linearVelocity=Vector2.zero;SetStage(1);return;
+                    CheckProductionContinuation(game);SetStage(1);return;
                 }
                 if(stage==1)
                 {
                     Assert(campaign.CurrentRoom==0&&campaign.CurrentSector==0,"Case 0 begins in sector 1");
                     Assert(campaign.CameraRight-campaign.CameraLeft>AncientCampaignRules.RoomWidth*4,"The camera spans the connected chapter rather than clamping to one case");
                     Assert(LiveEnemies(game)==2,"Exactly two criminals are active in the first sector");
+                    CheckExpertCatwalkGeometry(game.hero);
                     Physics2D.SyncTransforms();
                     for(int sector=0;sector<3;sector++)
                     {
@@ -324,7 +442,8 @@ namespace Plugin.AncientCivilization.EditorChecks
                     floorSetter.Invoke(game.Story,new object[]{0});game.hero.TravelTo(arrival);Call(campaign,"EnterFloor");
                     Assert(campaign.CurrentRoom==2&&Tasks(campaign)==3&&campaign.EarnedCheckpoint==2&&campaign.DefeatedMask==15,"Returning to the escort chapter restores its own goals, checkpoint and defeat bits");
                     Assert(((Vector2)game.hero.transform.position-arrival).sqrMagnitude<.001f,"The floor resume never replaces the lift's actual arrival with a field teleport");
-                    CheckNamedResidentRescue(game);
+                    CheckRehaRescue(game);CheckNamedResidentRescue(game);
+                    CheckCompletedCrane(game);
                     AncientProjectileSmokeChecks.RunInQAProfile(game);
                     Append("PASS: isolated real-object projectile wall/hero ordering and clock-hand floor probes completed.");
                     Finish(true,"Continuous-chapter structural smoke completed, including one-time checkpoint/cache recovery, rescued resident interactions and projectile collision ordering. Human traversal, live escort pacing, boss transitions, exact shutter timing and wire shortcuts still need manual playtesting.");

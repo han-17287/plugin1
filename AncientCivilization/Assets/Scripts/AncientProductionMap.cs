@@ -38,6 +38,8 @@ namespace Plugin.AncientCivilization
         }
         void B(string name,float x,float y,float w,float h,Color color,int order=-5)
         {game.StaticBox(name,new Vector2(x,y),new Vector2(w,h),color,order);}
+        void Prop(int index,float x,float y,float scale=1,int order=-4)
+        {game.WorldBatch.Sprite(AncientArt.ProductionProp(index),new Vector2(x,y),Vector2.one*scale,new Color(.68f,.75f,.78f,.92f),order);}
         void Solid(string name,float x,float y,float w,float h)
         {
             var o=new GameObject(name);o.layer=8;o.transform.SetParent(transform,false);o.transform.position=new Vector2(x,y);o.AddComponent<BoxCollider2D>().size=new Vector2(w,h);
@@ -121,12 +123,7 @@ namespace Plugin.AncientCivilization
         void BuildShiftHall()
         {
             Portal(-222,34,Ivory*.55f);
-            for(int i=0;i<6;i++)
-            {
-                float x=-236+i*5.2f;B("Shift locker frame",x,2.2f,3.6f,4.4f,Steel,-6);B("Shift locker door",x,2.2f,3.2f,4.1f,Back,-5);
-                B("Shift locker white panel",x,3.1f,2.7f,1.8f,Ivory*.65f,-4);B("Shift locker number lamp",x-.9f,3.7f,.15f,.15f,Teal,-3);
-                B("Shift locker handle",x+1,1.6f,.12f,.5f,Ivory,-3);
-            }
+            foreach(float x in new[]{-233f,-222f,-211f})Prop(2,x,0,.9f);
             B("Workers notice board",-201,5.4f,5.8f,2.6f,Steel,-5);B("Workers notice sheet",-201,5.4f,5.2f,2.15f,Ivory*.7f,-4);
             for(int line=0;line<4;line++)B("Notice board list",-201.2f,6-line*.4f,3.6f,.08f,Back,-3);
             B("Main supply conduit",-222,9,41,.35f,Steel,-4);B("Main supply conduit light",-222,9.02f,40,.055f,Teal,-3);
@@ -144,9 +141,9 @@ namespace Plugin.AncientCivilization
             {B("Conveyor steel roller",x,.1f,.7f,.14f,Steel,3);B("Conveyor travel mark",x+.18f,.18f,.22f,.05f,Amber,4);}
             for(int i=0;i<3;i++)
             {
-                float x=-188+i*18;B("Production press casing",x,5.2f,6.8f,7.6f,Steel*.8f,-7);B("Production press opening",x,4.6f,5.2f,5.2f,Back,-6);
-                B("Press white upper shell",x,7.5f,6.2f,1.6f,Ivory*.6f,-5);B("Press piston",x,5.9f,.55f,2.4f,Steel,-4);
-                B("Press inspection table",x,2.6f,4.6f,.4f,Steel,-4);B("Press warning lip",x,2.86f,4.7f,.12f,Amber,-3);
+                float x=-188+i*18;B("Production press casing",x,5.2f,7.2f,7.6f,Steel*.7f,-7);B("Production press opening",x,4.6f,6.8f,6.8f,Back,-6);
+                Prop(i==0?0:1,x,1.1f);
+                B("Press white upper shell",x,7.8f,6.8f,.65f,Ivory*.5f,-5);
             }
             for(float x=-190;x<-139;x+=5.5f)B("Machine status indicator",x,8.65f,.5f,.15f,Teal,-2);
             // The raised maintenance road belongs to a machine foundation, rather than a floating platform.
@@ -157,8 +154,7 @@ namespace Plugin.AncientCivilization
                 B("Conveyor safety chain post",x,1.55f,.09f,2.9f,Steel,-5);
                 B("Conveyor safety chain cap",x,3.02f,.24f,.16f,Amber,-4);
             }
-            B("Factory heat exchanger",-138,6.9f,4.5f,2.2f,Back,-4);
-            for(int fin=0;fin<9;fin++)B("Heat exchanger fin",-139.8f+fin*.45f,6.9f,.12f,1.9f,Steel,-3);
+            Prop(6,-138,3.5f,.65f);
         }
         void BuildInspectionHall()
         {
@@ -184,11 +180,11 @@ namespace Plugin.AncientCivilization
         void BuildEquipmentRoom()
         {
             Portal(-9,80,Ivory*.55f);
-            foreach(float x in new[]{-42f,-18f,7f,28f})
+            for(int index=0;index<4;index++)
             {
-                B("Inspection machinery cabinet",x,3.4f,8.4f,5.8f,Steel,-6);B("Inspection cabinet white casing",x,5.7f,8,.9f,Ivory*.65f,-5);
-                B("Inspection cabinet intake",x,3.6f,6.2f,3.2f,Back,-4);B("Inspection cabinet status",x-2.3f,4.3f,.5f,.2f,Teal,-3);
-                B("Inspection cabinet lower panel",x,1.55f,6.7f,.5f,Steel*.65f,-3);
+                float x=index==0?-42:index==1?-18:index==2?7:28;
+                B("Inspection machinery cabinet recess",x,4.3f,8.4f,6.6f,Back,-6);
+                Prop(index==0?0:index==1?7:index==2?6:3,x,1.2f);
             }
             foreach(float x in AncientProductionLayout.TrainingEmitterX)
             {
@@ -227,6 +223,7 @@ namespace Plugin.AncientCivilization
             }
             B("Stock administration console",92,.8f,1.6f,1.6f,Steel,2);B("Stock console display",92,1.3f,1.2f,.65f,Teal,3);
             B("Stock console print shelf",92,1.78f,1.9f,.1f,Ivory,4);
+            Prop(3,98,1.1f,.82f);
             B("Priority reserve caution plate",60,8.8f,12,.7f,Back,-3);B("Priority reserve plate underline",60,8.42f,12,.04f,Amber,-2);
             B("Unlogged cargo trolley bay",84,.34f,5.4f,.14f,Amber*.55f,-2);
             foreach(float x in new[]{78f,80.5f,83f,85.5f,88f,90.5f,93f,95.5f,98f,100.5f})
@@ -258,6 +255,8 @@ namespace Plugin.AncientCivilization
                 if(section==2){B("Emergency siding frame",x+15,4.2f,.3f,8.4f,Ivory*.45f,-4);B("Emergency siding beacon",x+15,8.65f,.7f,.25f,Amber,-3);}
                 if(((int)((x-left+12)/20))%3==0)
                 {
+                    if(section==1)Prop(6,x+11,2.2f,.95f,-5);
+                    else if(section==2)Prop(3,x+9,1.3f,.88f,-5);
                     B("Tunnel heavy diagonal foot",x+1.6f,1.25f,.9f,2.5f,Steel*.8f,-6);
                     Diagonal("Tunnel heavy diagonal support",x+2.7f,6.3f,5.4f,.32f,-65,Steel*.8f,-6);
                     B("Tunnel service designation plaque",x+5.4f,5.9f,2.8f,1.25f,section==1?Ivory*.3f:Steel,-5);

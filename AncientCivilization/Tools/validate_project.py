@@ -48,6 +48,138 @@ def png_info(path):
     return header
 
 
+def validate_production_props(Image):
+    """Measure the actual sheet's output alpha independently of its C# crop table.
+
+    Pillow is top-down, while Unity GetPixels32 and AncientPixels.Grid are bottom-up.
+    Map each output pixel back to its sampled source pixel; this also handles the
+    three-pixel top row and two-pixel right column in the non-divisible source.
+    No image is changed or written by this inspection.
+    """
+    path = ROOT / 'Assets/Resources/Art/ProductionMachinery.png'
+    image = Image.open(path).convert('RGBA')
+    width, height = image.size
+    alpha = image.getchannel('A')
+    pixels = alpha.load()
+    step = 4
+    columns = [round(i * width / 4) for i in range(5)]
+    rows = [round(i * height / 2) for i in range(3)]
+    source_x = [min(x // step * step + step // 2, width - 1) for x in range(width)]
+    source_y = [height - 1 - min((height - 1 - y) // step * step + step // 2, height - 1)
+                for y in range(height)]
+    check(source_y[:4] == [0, 0, 0, 4] and source_y[-1] == 884,
+          'factory alpha measurement respects the 887px bottom-up grid and partial top row')
+    check(source_x[-2:] == [1773, 1773], 'factory grid retains its partial rightmost column')
+    sampled_rows = {y: bytes(1 if pixels[x, y] >= 110 else 0 for x in source_x)
+                    for y in set(source_y)}
+    atlas = (ROOT / 'Assets/Scripts/AncientProductionPropAtlas.cs').read_text()
+    rectangles = [tuple(map(int, match)) for match in
+                  re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', atlas)]
+    check(len(rectangles) == 8, 'factory prop atlas has eight measured original machinery slices')
+    raw_mask = alpha.point(lambda value: 255 if value >= 110 else 0)
+    for boundary in columns[1:-1]:
+        check(raw_mask.crop((boundary - 3, 0, boundary + 3, height)).getbbox() is None,
+              'factory source has a clear vertical cell gutter at ' + str(boundary))
+    check(raw_mask.crop((0, rows[1] - 3, width, rows[1] + 3)).getbbox() is None,
+          'factory source has a clear horizontal cell gutter')
+    identities = []
+    for prop in range(8):
+        left, right = columns[prop % 4:prop % 4 + 2]
+        top, bottom = rows[prop // 4:prop // 4 + 2]
+        raw = raw_mask.crop((left, top, right, bottom)).getbbox()
+        check(raw is not None and raw[0] > 3 and raw[1] > 3 and
+              raw[2] < right - left - 3 and raw[3] < bottom - top - 3,
+              'factory prop retains an opaque silhouette and transparent source gutter ' + str(prop))
+        footprint = [sampled_rows[source_y[y]][left:right] for y in range(top, bottom)]
+        opaque_rows = [(row, values.find(1), values.rfind(1)) for row, values in enumerate(footprint)
+                       if 1 in values]
+        check(bool(opaque_rows), 'factory prop survives the real four-pixel opacity sampling ' + str(prop))
+        x0 = left + min(first for _, first, _ in opaque_rows)
+        y0 = top + opaque_rows[0][0]
+        x1 = left + max(last for _, _, last in opaque_rows) + 1
+        y1 = top + opaque_rows[-1][0] + 1
+        expected = (x0 - 3, y0 - 3, x1 - x0 + 6, y1 - y0 + 6)
+        check(rectangles[prop] == expected,
+              'factory measured crop encloses its complete packed alpha with three-pixel margins ' + str(prop))
+        x, y, w, h = rectangles[prop]
+        check(left < x < x + w < right and top < y < y + h < bottom,
+              'factory crop cannot bleed into a neighbouring prop cell ' + str(prop))
+        opaque = sum(values.count(1) for values in footprint)
+        check(opaque > (right - left) * (bottom - top) * .15,
+              'factory machinery has substantial visible opaque grid coverage ' + str(prop))
+        identities.append(b''.join(footprint))
+    check(len(set(identities)) == 8, 'all eight factory props have distinct packed silhouettes')
+
+
+def validate_production_captain(Image):
+    """Inspect real packed alpha and the two planted boots, without altering the PNG."""
+    image = Image.open(ROOT / 'Assets/Resources/Art/ProductionCaptain.png').convert('RGBA')
+    width, height = image.size
+    alpha = image.getchannel('A')
+    pixels = alpha.load()
+    source_x = [min(x // 8 * 8 + 4, width - 1) for x in range(width)]
+    source_y = [height - 1 - min((height - 1 - y) // 8 * 8 + 4, height - 1)
+                for y in range(height)]
+    sampled_rows = {y: bytes(1 if pixels[x, y] >= 110 else 0 for x in source_x)
+                    for y in set(source_y)}
+    atlas = (ROOT / 'Assets/Scripts/AncientProductionCaptainAtlas.cs').read_text()
+    pixels_per_unit = float(re.search(r'PixelsPerUnit=([0-9.]+)', atlas)[1])
+    check(pixels_per_unit == 200, 'captain measured poses share the authored 200 pixels-per-unit scale')
+    rectangles = [tuple(map(int, match)) for match in
+                  re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', atlas)]
+    roots = [float(value.rstrip('f')) for value in
+             atlas.split('RootX={', 1)[1].split('};', 1)[0].split(',')]
+    feet = [float(value.rstrip('f')) for value in
+            atlas.split('FootY={', 1)[1].split('};', 1)[0].split(',')]
+    check(len(rectangles) == len(roots) == len(feet) == 6,
+          'captain atlas provides six measured crops, boot roots and foot baselines')
+    raw_mask = alpha.point(lambda value: 255 if value >= 110 else 0)
+    identities = []
+    baselines = []
+    for pose in range(6):
+        left, top = pose % 3 * 512, pose // 3 * 512
+        raw = raw_mask.crop((left, top, left + 512, top + 512)).getbbox()
+        check(raw is not None and raw[0] > 3 and raw[1] > 3 and raw[2] < 509 and raw[3] < 509,
+              'captain pose has a complete source silhouette and clear cell gutters ' + str(pose))
+        footprint = [sampled_rows[source_y[y]][left:left + 512] for y in range(top, top + 512)]
+        opaque_rows = [(row, values.find(1), values.rfind(1)) for row, values in enumerate(footprint)
+                       if 1 in values]
+        check(bool(opaque_rows), 'captain pose survives native eight-pixel alpha sampling ' + str(pose))
+        x0 = left + min(first for _, first, _ in opaque_rows)
+        y0 = top + opaque_rows[0][0]
+        x1 = left + max(last for _, _, last in opaque_rows) + 1
+        y1 = top + opaque_rows[-1][0] + 1
+        check(rectangles[pose] == (x0 - 3, y0 - 3, x1 - x0 + 6, y1 - y0 + 6),
+              'captain crop retains its complete actual packed silhouette and three-pixel margins ' + str(pose))
+        x, y, w, h = rectangles[pose]
+        check(left < x < x + w < left + 512 and top < y < y + h < top + 512,
+              'captain crop cannot include a neighbouring pose ' + str(pose))
+        boot_rows = footprint[y1 - top - 32:y1 - top]
+        boot_columns = [column for column in range(512) if any(row[column] for row in boot_rows)]
+        runs = []
+        for column in boot_columns:
+            if not runs or column != runs[-1][-1] + 1:
+                runs.append([column])
+            else:
+                runs[-1].append(column)
+        check(len(runs) == 2 and all(len(run) >= 32 for run in runs),
+              'captain planted-root measurement contains two substantial separate boots ' + str(pose))
+        measured_root = left + (boot_columns[0] + boot_columns[-1] + 1) / 2
+        check(roots[pose] == measured_root,
+              'captain horizontal pivot follows the measured boot span rather than extended arms ' + str(pose))
+        check(feet[pose] == y1 and y + h - feet[pose] == 3,
+              'captain per-pose foot baseline has exactly three lower transparent pixels ' + str(pose))
+        check(x < roots[pose] < x + w,
+              'captain planted pivot remains inside its own sprite rectangle ' + str(pose))
+        baselines.append((y + h - feet[pose]) / pixels_per_unit)
+        identities.append(b''.join(footprint))
+    check(len(set(identities)) == 6, 'all six captain combat poses have distinct packed silhouettes')
+    check(len(set(baselines)) == 1 and baselines[0] == .015,
+          'captain boots keep one world baseline despite different source-row foot heights')
+    check(rectangles[5][3] < rectangles[0][3],
+          'captain recovery retains its actual crouched height instead of stretching to idle height')
+
+
 def main():
     manifest = json.loads((ROOT / 'Packages/manifest.json').read_text())
     check(set(manifest['dependencies']) == {
@@ -78,6 +210,22 @@ def main():
         meta = path.with_suffix('.png.meta').read_text()
         check('isReadable: 1' in meta and 'filterMode: 0' in meta and 'textureCompression: 0' in meta,
               name + ' readable point-filtered uncompressed import')
+    production_path = ROOT / 'Assets/Resources/Art/ProductionMachinery.png'
+    production_header = png_info(production_path)
+    check(production_header[:2] == (1774, 887) and production_header[3] == 6,
+          'original factory machinery atlas keeps its exact 1774x887 RGBA source')
+    production_meta = production_path.with_suffix('.png.meta').read_text()
+    check(all(value in production_meta for value in
+              ('filterMode: 0', 'isReadable: 1', 'textureCompression: 0', 'enableMipMap: 0', 'nPOTScale: 0')),
+          'factory source import preserves point filtering, readable pixels, full dimensions and no compression')
+    captain_path = ROOT / 'Assets/Resources/Art/ProductionCaptain.png'
+    captain_header = png_info(captain_path)
+    check(captain_header[:2] == (1536, 1024) and captain_header[3] == 6,
+          'original captain combat atlas keeps its exact 1536x1024 RGBA source')
+    captain_meta = captain_path.with_suffix('.png.meta').read_text()
+    check(all(value in captain_meta for value in
+              ('filterMode: 0', 'isReadable: 1', 'textureCompression: 0', 'enableMipMap: 0', 'nPOTScale: 0')),
+          'captain source import preserves native point pixels, readable alpha and full dimensions')
     art = (ROOT / 'Assets/Scripts/AncientArt.cs').read_text()
     rect_block = art.split('Rect[] cells = {', 1)[1].split('};', 1)[0]
     rects = [tuple(map(int, m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', rect_block)]
@@ -103,6 +251,8 @@ def main():
               'shader resource and program delimiters ' + name)
     try:
         from PIL import Image
+        validate_production_props(Image)
+        validate_production_captain(Image)
         image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
         hero_cells=[(0,0,384,512),(384,0,316,480),(700,0,420,480),(1120,0,416,512),
                     (0,512,424,512),(424,480,312,544),(736,512,450,512),(1186,512,350,512)]

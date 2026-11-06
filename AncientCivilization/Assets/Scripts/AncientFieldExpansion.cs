@@ -8,6 +8,7 @@ namespace Plugin.AncientCivilization
     {
         public const int SectorCount=3,SectorSpan=208,Width=SectorCount*SectorSpan,Stride=Width+64,RouteCount=27;
         public const int EnemiesPerSector=2,EnemyMask=(1<<(SectorCount*EnemiesPerSector))-1;
+        public const float ExpertLedgeDepth=.18f;
         public static readonly string[][] Names={
             new[]{"야간 하역장","분리 계량실","밀봉 출고로"},
             new[]{"압력 배관구","고장 도관실","수동 배전소"},
@@ -57,6 +58,14 @@ namespace Plugin.AncientCivilization
             float variation=ledge.left-(16+slot*11.1f),left=offset+16+slot*18.4f+variation*.35f;
             float width=15+(ledge.right-ledge.left-8)*.8f;
             return new AncientTraversalLayout.Ledge(left,left+width,IsJumpSector(mission,section)?ledge.top+section*.15f:0);
+        }
+        // Optional grates must leave room for the complete2.1m hero underneath.
+        // Use this top together with ExpertLedgeDepth; the ordinary1m platform
+        // depth would turn an upper shortcut into a wall across its base landing.
+        public static AncientTraversalLayout.Ledge ExpertSegment(int mission,int sector,int index)
+        {
+            var support=Segment(mission,sector,index);
+            return new AncientTraversalLayout.Ledge(support.left+1,support.left+3.2f,Math.Max(6.2f,support.top+2.45f));
         }
         // Checkpoint 1 needs the first section objective; checkpoint 2 needs both earlier objectives.
         // A saved location can move a retry backward, but cannot grant unearned progress.

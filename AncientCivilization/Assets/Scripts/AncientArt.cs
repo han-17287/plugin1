@@ -12,24 +12,26 @@ namespace Plugin.AncientCivilization
         static readonly Sprite[] bossCache=new Sprite[36],swingCache=new Sprite[8],bladeCache=new Sprite[48];
         static readonly Sprite[] heroCache=new Sprite[8],portraitCache=new Sprite[3],metalCache=new Sprite[3],citizenCache=new Sprite[25],citizenWalkCache=new Sprite[16];
         static readonly Sprite[] districtBackdropCache=new Sprite[5];
+        static readonly Sprite[] productionPropCache=new Sprite[AncientProductionPropAtlas.Count];
+        static readonly Sprite[] productionCaptainCache=new Sprite[AncientProductionCaptainAtlas.Count];
         public static Texture2D Texture(string name)
         {
             Texture2D texture;
             if (textures.TryGetValue(name, out texture) && texture) return texture;
             texture = Resources.Load<Texture2D>("Art/" + name);
             if (!texture) throw new System.InvalidOperationException("Missing Art/" + name + ".png");
-            if(name=="Hero"||name=="HeroSwing"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name=="SniperEquipment"||name=="DistrictBackdrops"||name.StartsWith("Blade")||name.StartsWith("Citizens")||name.StartsWith("Boss"))
+            if(name=="Hero"||name=="HeroSwing"||name=="HeroEmitterBody"||name=="Actions"||name=="Dialogue"||name=="SniperEquipment"||name=="DistrictBackdrops"||name=="ProductionMachinery"||name=="ProductionCaptain"||name.StartsWith("Blade")||name.StartsWith("Citizens")||name.StartsWith("Boss"))
             {
                 var pixels=texture.GetPixels32();var packed=new uint[pixels.Length];
                 for(int i=0;i<pixels.Length;i++)packed[i]=((uint)pixels[i].r<<24)|((uint)pixels[i].g<<16)|((uint)pixels[i].b<<8)|pixels[i].a;
                 bool rider=name=="Motorcycle";
-                int grid=name=="DistrictBackdrops"?1:name.StartsWith("Blade")?AncientBladeAtlas.GridSize:name=="CitizensWalk"?4:8;
+                int grid=name=="DistrictBackdrops"?1:name=="ProductionMachinery"?AncientProductionPropAtlas.GridSize:name=="ProductionCaptain"?AncientProductionCaptainAtlas.GridSize:name.StartsWith("Blade")?AncientBladeAtlas.GridSize:name=="CitizensWalk"?4:8;
                 packed=AncientPixels.Grid(packed,texture.width,texture.height,grid,rider?730:texture.width,rider?544:texture.height);
                 for(int i=0;i<pixels.Length;i++){uint c=packed[i];pixels[i]=new Color32((byte)(c>>24),(byte)(c>>16),(byte)(c>>8),(byte)c);}
                 var native=new Texture2D(texture.width,texture.height,TextureFormat.RGBA32,false);
                 native.name=name+" / native palette grid";native.SetPixels32(pixels);
-                bool packedOnly=name.StartsWith("Blade")||name=="DistrictBackdrops";native.Apply(false,packedOnly);
-                // Measured blade and backdrop rectangles never read pixels again after packing.
+                bool packedOnly=name.StartsWith("Blade")||name=="DistrictBackdrops"||name=="ProductionMachinery"||name=="ProductionCaptain";native.Apply(false,packedOnly);
+                // Measured blade, backdrop and factory rectangles never read pixels after packing.
                 // Keep one GPU copy of each sheet instead of retaining imported and packed CPU copies.
                 if(packedOnly)Resources.UnloadAsset(texture);texture=native;
             }
@@ -98,6 +100,31 @@ namespace Plugin.AncientCivilization
             floor=Mathf.Clamp(floor,0,4);if(districtBackdropCache[floor])return districtBackdropCache[floor];
             districtBackdropCache[floor]=Slice("DistrictBackdrops","district-backdrop-"+floor,AncientBackdropAtlas.Bounds(floor),32,Vector2.one*.5f,false);
             return districtBackdropCache[floor];
+        }
+        public static Sprite ProductionProp(int prop)
+        {
+            prop=Mathf.Clamp(prop,0,AncientProductionPropAtlas.Count-1);
+            if(productionPropCache[prop])return productionPropCache[prop];
+            // First access warms every measured piece while the static world is built.
+            // trim=false is required: the packed texture has already released its CPU pixels.
+            for(int i=0;i<productionPropCache.Length;i++)
+                if(!productionPropCache[i])productionPropCache[i]=Slice("ProductionMachinery","production-prop-"+i,
+                    AncientProductionPropAtlas.Bounds(i),AncientProductionPropAtlas.PixelsPerUnit,new Vector2(.5f,0),false);
+            return productionPropCache[prop];
+        }
+        public static Sprite ProductionCaptain(int pose)
+        {
+            pose=Mathf.Clamp(pose,0,AncientProductionCaptainAtlas.Count-1);
+            if(productionCaptainCache[pose])return productionCaptainCache[pose];
+            for(int i=0;i<productionCaptainCache.Length;i++)
+            {
+                if(productionCaptainCache[i])continue;
+                Rect rect=AncientProductionCaptainAtlas.Bounds(i);
+                float root=AncientProductionCaptainAtlas.RootX[i];
+                productionCaptainCache[i]=Slice("ProductionCaptain","production-captain-"+i,rect,
+                    AncientProductionCaptainAtlas.PixelsPerUnit,new Vector2((root-rect.x)/rect.width,0),false);
+            }
+            return productionCaptainCache[pose];
         }
         public static Sprite Boss(int floor,int pose)
         {

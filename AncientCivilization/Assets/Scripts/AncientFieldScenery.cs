@@ -55,85 +55,16 @@ namespace Plugin.AncientCivilization
                 }
             }
         }
-        static readonly Color FactoryDark=new Color(.035f,.07f,.09f),FactorySteel=new Color(.15f,.23f,.26f),FactoryIvory=new Color(.48f,.56f,.55f),FactoryTeal=new Color(.12f,.33f,.35f),FactoryAmber=new Color(.58f,.4f,.2f);
+        static readonly Color FactorySteel=new Color(.15f,.23f,.26f),FactoryTeal=new Color(.12f,.33f,.35f),FactoryTint=new Color(.65f,.72f,.75f,.9f);
         static void ProductionFurnishing(AncientGame game,float x,int variant,int index)
         {
-            // These are wall-mounted background fixtures: no colliders, anchor sprites or
-            // foreground warning colours. One shared sorting layer keeps the meshes batched.
+            // Bottom-pivoted, original factory art stays behind actors and objectives.
+            // The atlas cells fit within 6.5 by 5.6 metres at their authored 64 PPU.
             int kind=((variant%4)+4)%4;float side=index%2==0?1:-1;
+            game.WorldBatch.Sprite(AncientArt.ProductionProp(kind),new Vector2(x,1.25f),Vector2.one,FactoryTint,-5);
             B(game,x,8.2f,8.5f,.24f,FactorySteel);
-            if(kind==0)
-            {
-                // Separate weighing cells and numbered storage columns for the night load.
-                B(game,x,4.65f,8.6f,6.25f,FactorySteel);B(game,x,4.65f,8.05f,5.7f,FactoryDark);
-                B(game,x+side*3.1f,4.65f,.2f,5.6f,FactoryIvory);
-                for(int row=0;row<3;row++)
-                {
-                    float y=2.65f+row*1.8f;
-                    B(game,x,y-.62f,7.65f,.17f,FactorySteel);
-                    for(int cell=0;cell<2;cell++)
-                    {
-                        float bx=x-1.7f+cell*3.2f;
-                        B(game,bx,y,2.25f,1.05f,FactorySteel);
-                        B(game,bx,y+.35f,1.9f,.18f,FactoryIvory);
-                        B(game,bx+side*.65f,y,.16f,.62f,FactoryTeal);
-                    }
-                }
-                B(game,x,1.45f,7.8f,.34f,FactorySteel);B(game,x+side*2.4f,1.45f,1.25f,.18f,FactoryDark);
-            }
-            else if(kind==1)
-            {
-                // Pressure vessels, a common supply pipe and a recessed distribution gauge.
-                B(game,x,4.6f,8.4f,6.4f,FactoryDark);
-                for(int vessel=0;vessel<2;vessel++)
-                {
-                    float bx=x-2.7f+vessel*5.4f;
-                    B(game,bx,4.65f,1.9f,5.65f,FactorySteel);
-                    B(game,bx,6.9f,1.55f,.55f,FactoryIvory);
-                    B(game,bx+side*.48f,4.7f,.18f,3.6f,FactoryTeal);
-                    B(game,bx,2.5f,2.2f,.28f,FactorySteel);
-                }
-                B(game,x,3.7f,6.6f,.42f,FactorySteel);B(game,x,5.1f,2.65f,2.3f,FactoryIvory);
-                B(game,x,5.1f,2.15f,1.8f,FactoryDark);B(game,x,5.25f,1.55f,.16f,FactoryTeal);
-                B(game,x+side*.3f,4.85f,.65f,.18f,FactoryAmber);
-                B(game,x+side*1.45f,7.4f,.3f,1.35f,FactorySteel);
-            }
-            else if(kind==2)
-            {
-                // Work lockers and a preserved evacuation diagram remain after the closure.
-                for(int locker=0;locker<3;locker++)
-                {
-                    float bx=x-2.65f+locker*2.65f;
-                    B(game,bx,4.35f,2.3f,5.45f,FactorySteel);
-                    B(game,bx,4.35f,1.98f,5.08f,FactoryDark);
-                    B(game,bx,5.9f,1.8f,1.35f,FactoryIvory);
-                    B(game,bx+side*.57f,3.8f,.1f,.58f,FactoryIvory);
-                    B(game,bx-side*.55f,6.1f,.22f,.13f,FactoryAmber);
-                }
-                B(game,x,1.25f,7.95f,.32f,FactorySteel);
-                B(game,x+side*5.65f,6.1f,2.7f,2.05f,FactoryIvory);
-                B(game,x+side*5.65f,6.1f,2.3f,1.65f,FactoryDark);
-                B(game,x+side*5.65f,6.15f,1.7f,.16f,FactoryTeal);
-                B(game,x+side*5.15f,5.85f,.16f,.65f,FactoryTeal);
-            }
-            else
-            {
-                // Local relay electronics and paper-copy drawers lead toward the dispatch.
-                B(game,x-side*1.8f,4.45f,4.5f,5.8f,FactorySteel);
-                B(game,x-side*1.8f,5.2f,3.95f,2.5f,FactoryIvory);
-                B(game,x-side*1.8f,5.2f,3.35f,1.95f,FactoryDark);
-                for(int row=0;row<3;row++)
-                {
-                    B(game,x-side*1.9f,5.75f-row*.48f,2.45f-row*.35f,.1f,row==0?FactoryTeal:FactorySteel);
-                    float y=2.6f+row*1.4f;
-                    B(game,x+side*2.6f,y,2.5f,1.12f,FactorySteel);
-                    B(game,x+side*2.6f,y+.18f,1.5f,.16f,FactoryIvory);
-                }
-                B(game,x-side*1.8f,3.2f,3.5f,.35f,FactoryDark);
-                B(game,x-side*1.65f,2.5f,1.5f,.5f,FactoryIvory);
-                B(game,x+side*2.6f,7.2f,2.7f,.3f,FactoryIvory);
-                B(game,x+.4f*side,7.1f,.16f,1.7f,FactorySteel);
-            }
+            B(game,x+side*4.05f,5.15f,.16f,5.7f,FactorySteel);
+            B(game,x+side*3.55f,8.05f,1.15f,.12f,FactoryTeal);
         }
     }
 }
