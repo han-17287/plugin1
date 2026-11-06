@@ -14,7 +14,7 @@ namespace Plugin.AncientCivilization.EditorChecks
     [InitializeOnLoad]
     public static class AncientFieldSmokeChecks
     {
-        const string Menu="PLUGIN/검사/확장 현장 3구간";
+        const string Menu="PLUGIN/검사/연속 챕터 진행";
         const string Root="PLUGIN.QA.FieldSmoke.",ProfileKey="PLUGIN.QA.ActiveProfile",NormalPrefix="PLUGIN.Ancient.v2.",QAPrefix="PLUGIN.Ancient.QA.";
         const double TimeoutSeconds=90;
         static readonly string[] optionKeys={"muted","graphics","frameTarget"};
@@ -38,8 +38,8 @@ namespace Plugin.AncientCivilization.EditorChecks
             SessionState.SetString(Root+"Profile",profile);SessionState.SetString(ProfileKey,profile);SessionState.SetString(Root+"Log","");
             SetTime("Started",Now);SetStage(0);
             Set(profile,"questStage",9);Set(profile,"cityFloor",0);Set(profile,"storyBoss",1);Set(profile,"storyCores",7);
-            Set(profile,"residencePoints",5000);Set(profile,"started",1);Set(profile,"campaignVersion",1);
-            PlayerPrefs.Save();Append("START: isolated expanded-field structural smoke. Leave controls untouched.");
+            Set(profile,"residencePoints",5000);Set(profile,"started",1);Set(profile,"campaignVersion",AncientCampaignRules.RouteVersion);
+            PlayerPrefs.Save();Append("START: isolated continuous-chapter structural smoke. Leave controls untouched.");
             Append("Uses directed positions/objective seeds to test streaming, retry, save and resource recovery; this does not verify a human traversal playthrough.");
             Append("Normal profile: "+NormalPrefix+"; test profile: "+profile);
             EditorApplication.isPlaying=true;
@@ -76,7 +76,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         static readonly BindingFlags PrivateInstance=BindingFlags.Instance|BindingFlags.NonPublic;
         static void Call(AncientCampaign campaign,string method,params object[] args)
         {
-            var target=typeof(AncientCampaign).GetMethod(method,PrivateInstance);
+            var target=typeof(AncientCampaign).GetMethod(method,PrivateInstance|BindingFlags.Public);
             if(target==null)throw new MissingMethodException("AncientCampaign."+method);target.Invoke(campaign,args);
         }
         static Vector2 Point(string method,int id,int index)
@@ -94,28 +94,6 @@ namespace Plugin.AncientCivilization.EditorChecks
         {
             var motes=(AncientEnergyMote[])typeof(AncientCombat).GetField("motes",PrivateInstance).GetValue(hero.Combat);int count=0;
             foreach(var mote in motes)if(mote&&mote.gameObject.activeSelf)count++;return count;
-        }
-        static void CloseDialogue(AncientStory story)
-        {
-            var advance=typeof(AncientStory).GetMethod("Advance",PrivateInstance);
-            var guard=typeof(AncientGame).GetField("inputReadyFrame",PrivateInstance);
-            var script=(System.Collections.IList)typeof(AncientStory).GetField("lines",PrivateInstance).GetValue(story);
-            var lineIndex=typeof(AncientStory).GetField("lineIndex",PrivateInstance);
-            var pageReady=typeof(AncientStory).GetField("pageReady",PrivateInstance);
-            var pageStart=typeof(AncientStory).GetField("pageStart",PrivateInstance);
-            var pageEnd=typeof(AncientStory).GetField("pageEnd",PrivateInstance);
-            // This fixture deliberately skips dialogue to test the report callback, not physical input.
-            // Pagination normally becomes ready in OnGUI. Prepare the complete current line here;
-            // production Advance still owns reveal/advance and rejects the opening input frame.
-            for(int i=0;i<32&&story.DialogueOpen;i++)
-            {
-                if(script.Count==0)throw new InvalidOperationException("Report smoke encountered a choice instead of a scripted dialogue.");
-                object line=script[(int)lineIndex.GetValue(story)];
-                string text=(string)line.GetType().GetField("text").GetValue(line);
-                pageStart.SetValue(story,0);pageEnd.SetValue(story,text.Length);pageReady.SetValue(story,true);
-                guard.SetValue(AncientGame.Instance,Time.frameCount-1);advance.Invoke(story,null);
-            }
-            Assert(!story.DialogueOpen,"QA dialogue callback can finish without ordinary player input");
         }
         static void MoveToSector(AncientGame game,int sector)
         {game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(game.Campaign.CurrentRoom)+AncientFieldExpansion.EntranceOf(sector),1.3f));}
@@ -138,12 +116,16 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==0)
                 {
                     if(!game.GameplayInputReady||game.Paused)return;
-                    Call(campaign,"Begin",0);SetStage(1);return;
+                    var body=game.hero.GetComponent<Rigidbody2D>();Vector2 position=body.position,motion=new Vector2(4,0);body.linearVelocity=motion;
+                    Call(campaign,"StartChapter",0);
+                    Assert(body.position==position&&body.linearVelocity==motion,"Accepting the chapter mission preserves the player's actual position and movement");
+                    Assert((AncientGame.Saved("campaignChapterStarted")&1)!=0,"The accepted chapter is saved before proceeding");
+                    body.linearVelocity=Vector2.zero;SetStage(1);return;
                 }
                 if(stage==1)
                 {
                     Assert(campaign.CurrentRoom==0&&campaign.CurrentSector==0,"Case 0 begins in sector 1");
-                    Assert(campaign.CameraRight-campaign.CameraLeft>AncientCampaignRules.RoomWidth-20,"Field camera spans the complete expanded room");
+                    Assert(campaign.CameraRight-campaign.CameraLeft>AncientCampaignRules.RoomWidth*4,"The camera spans the connected chapter rather than clamping to one case");
                     Assert(LiveEnemies(game)==2,"Exactly two criminals are active in the first sector");
                     Physics2D.SyncTransforms();
                     for(int sector=0;sector<3;sector++)
@@ -172,14 +154,23 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     Assert(campaign.CurrentSector==1&&campaign.EarnedCheckpoint==1&&campaign.DefeatedMask==3,"Retry preserves the earned entrance and previous defeats");
                     Assert(LiveEnemies(game)==2,"Retry does not duplicate the active encounter");
-                    Assert(campaign.TryInteract()&&!campaign.Active,"The earned safety terminal returns to the city");
-                    Assert(AncientGame.Saved("campaignActive")==-1&&AncientGame.Saved("campaignTasks")==1,"City return stores goals without leaving an active field");
+                    Vector2 position=game.hero.transform.position;
+                    Assert(campaign.TryInteract()&&campaign.Active&&((Vector2)game.hero.transform.position-position).sqrMagnitude<.001f,"The earned safety terminal saves in place without returning to a chief");
+                    Assert(AncientGame.Saved("campaignActive")==0&&AncientGame.Saved("campaignTasks")==1,"The checkpoint keeps the active case and its partial goals");
+                    Call(campaign,"LeaveFloor");
+                    Assert(!campaign.Active,"Leaving a floor releases its active encounter without granting completion");
+                    Assert(AncientGame.Saved("routeTask0")==1&&AncientGame.Saved("routeCheckpoint0")==1&&AncientGame.Saved("routeDefeated0")==3,"The floor handoff stores this case's own partial progress");
                     SetStage(4);return;
                 }
-                if(stage==4){Call(campaign,"Begin",0);SetStage(5);return;}
+                if(stage==4)
+                {
+                    Vector2 position=game.hero.transform.position;Call(campaign,"EnterFloor");
+                    Assert(((Vector2)game.hero.transform.position-position).sqrMagnitude<.001f,"Returning by the lift keeps its arrival position instead of teleporting to the field");
+                    SetStage(5);return;
+                }
                 if(stage==5)
                 {
-                    Assert(campaign.CurrentSector==1&&campaign.DefeatedMask==3,"Re-entering the same case resumes its saved entrance");
+                    Assert(campaign.CurrentSector==1&&campaign.DefeatedMask==3&&Tasks(campaign)==1,"Re-entering the same floor resumes its saved objective and defeat state");
                     DefeatCurrent(game);Call(campaign,"Mark",1);MoveToSector(game,2);SetStage(6);return;
                 }
                 if(stage==6)
@@ -192,12 +183,28 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     Assert(campaign.CurrentSector==2&&game.hero.transform.position.y>0,"A field fall recovers to the earned final entrance");
                     Assert(campaign.DefeatedMask==15&&LiveEnemies(game)==2,"Fall recovery does not clear or duplicate living threats");
-                    DefeatCurrent(game);Call(campaign,"Mark",2);
+                    DefeatCurrent(game);Call(campaign,"RecordDefeats");Call(campaign,"Mark",2);
                     game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(0)+AncientCampaignRules.RoomWidth-6,1.3f));
-                    Assert(campaign.TryInteract()&&(campaign.CompletedMask&1)!=0,"All three objectives and all six defeats allow the exit report");
-                    CloseDialogue(game.Story);SetStage(8);return;
+                    var body=game.hero.GetComponent<Rigidbody2D>();Vector2 position=body.position,motion=new Vector2(9,1);body.linearVelocity=motion;
+                    // Synthetic attachment tests state preservation only; casting and swinging still need a human playthrough.
+                    var wired=typeof(AncientHero).GetField("wired",PrivateInstance);wired.SetValue(game.hero,true);
+                    Call(campaign,"Update");
+                    Assert(campaign.CurrentRoom==1&&(campaign.CompletedMask&1)!=0,"All goals and six defeats hand off directly to the next case");
+                    Assert(body.position==position&&body.linearVelocity==motion&&game.hero.Wired,"The forward handoff preserves position, movement and an attached wire");
+                    wired.SetValue(game.hero,false);body.linearVelocity=Vector2.zero;
+                    Assert(!game.Story.DialogueOpen,"Sending the milestone report does not open a blocking return dialogue");
+                    Assert(AncientGame.Saved("campaignActive")==1&&(AncientGame.Saved("campaignComplete")&1)!=0,"Completion and the next active case are saved together");
+                    SetStage(8);return;
                 }
-                if(stage==8){Assert(!campaign.Active,"Reporting leaves the field");Call(campaign,"Begin",1);SetStage(9);return;}
+                if(stage==8)
+                {
+                    Assert(campaign.CurrentRoom==1&&game.hero.transform.position.x<AncientCampaignRules.Left(1),"The player remains on the previous section while the next objective activates");
+                    Physics2D.SyncTransforms();float right=AncientChapterLayout.CaseRight(0),next=AncientChapterLayout.CaseLeft(1);
+                    for(float x=right+2;x<next-2;x+=4)
+                        Assert(Physics2D.OverlapPoint(new Vector2(x,-.1f),1<<8),"The case-to-case bridge is physical ground at x="+x);
+                    Assert(Physics2D.Raycast(new Vector2((right+next)*.5f,9),Vector2.up,2,1<<8),"The joining road has a continuous wire ceiling");
+                    MoveToSector(game,0);SetStage(9);return;
+                }
                 if(stage==9)
                 {
                     Assert(campaign.CurrentRoom==1&&campaign.DefeatedMask==0&&campaign.EarnedCheckpoint==0,"The next case starts with fresh encounter/checkpoint state");
@@ -215,9 +222,11 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(Tasks(campaign)==3,"Refill does not grant the laser objective");
                     Vector2 receiver=Point("NodePoint",1,2);campaign.OnLaser(receiver-Vector2.right*3,receiver+Vector2.right*3);
                     Assert(Tasks(campaign)==7,"A visible ray through the final receiver completes the power objective");
-                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(1)+AncientCampaignRules.RoomWidth-6,1.3f));campaign.TryInteract();
-                    Assert(campaign.Active&&(campaign.CompletedMask&2)==0,"The exit still refuses a live final encounter");
-                    DefeatCurrent(game);campaign.TryInteract();CloseDialogue(game.Story);Call(campaign,"Begin",2);SetStage(12);return;
+                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(1)+AncientCampaignRules.RoomWidth-6,1.3f));Call(campaign,"Update");
+                    Assert(campaign.CurrentRoom==1&&(campaign.CompletedMask&2)==0,"The onward road still refuses a live final encounter");
+                    DefeatCurrent(game);Call(campaign,"RecordDefeats");Vector2 position=game.hero.transform.position;Call(campaign,"Update");
+                    Assert(campaign.CurrentRoom==2&&((Vector2)game.hero.transform.position-position).sqrMagnitude<.001f,"The power case hands off to the escort without a report trip");
+                    MoveToSector(game,0);SetStage(12);return;
                 }
                 if(stage==12)
                 {
@@ -235,7 +244,14 @@ namespace Plugin.AncientCivilization.EditorChecks
                     var escort=(SpriteRenderer)typeof(AncientCampaign).GetField("escort",PrivateInstance).GetValue(campaign);
                     Assert(escort&&escort.enabled&&Mathf.Abs(escort.transform.position.x-game.hero.transform.position.x)<3,"A rescued witness resumes near the earned safe entrance instead of becoming stranded behind the player");
                     Assert(Tasks(campaign)==3,"Witness recovery does not grant escort completion");
-                    Finish(true,"Expanded-field structural smoke completed. Human traversal, live escort pacing, exact shutter timing and wire shortcuts still need manual playtesting.");
+                    Vector2 arrival=game.hero.transform.position;Call(campaign,"LeaveFloor");
+                    var floorSetter=typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true);
+                    floorSetter.Invoke(game.Story,new object[]{1});Call(campaign,"Begin",4);Call(campaign,"Mark",0);Call(campaign,"LeaveFloor");
+                    Assert(AncientGame.Saved("routeTask2")==3&&AncientGame.Saved("routeTask4")==1,"Working on another floor preserves both cases' separate partial saves");
+                    floorSetter.Invoke(game.Story,new object[]{0});game.hero.TravelTo(arrival);Call(campaign,"EnterFloor");
+                    Assert(campaign.CurrentRoom==2&&Tasks(campaign)==3&&campaign.EarnedCheckpoint==2&&campaign.DefeatedMask==15,"Returning to the escort chapter restores its own goals, checkpoint and defeat bits");
+                    Assert(((Vector2)game.hero.transform.position-arrival).sqrMagnitude<.001f,"The floor resume never replaces the lift's actual arrival with a field teleport");
+                    Finish(true,"Continuous-chapter structural smoke completed. Human traversal, live escort pacing, boss transitions, exact shutter timing and wire shortcuts still need manual playtesting.");
                 }
             }
             catch(Exception error){Finish(false,error.ToString());}
@@ -277,7 +293,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 string path=Path.Combine(folder,"field-smoke-last.txt");File.WriteAllText(path,report,new UTF8Encoding(false));
                 if(passed)Debug.Log("Field smoke PASS. Report: "+path);else Debug.LogError("Field smoke did not pass. Report: "+path);
             }
-            catch(Exception error){Debug.LogError("Could not write sniper smoke report: "+error.Message+"\n"+report);}
+            catch(Exception error){Debug.LogError("Could not write field smoke report: "+error.Message+"\n"+report);}
         }
     }
 }

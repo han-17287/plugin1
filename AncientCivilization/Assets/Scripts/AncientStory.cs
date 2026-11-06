@@ -13,7 +13,14 @@ namespace Plugin.AncientCivilization
         public bool LiftBusy {get{return liftMenu||liftTravelling;}}
         bool choiceOpen;string choicePrompt;string[] choiceEvidence,choiceOptions;Action<int> choiceAction;
         bool liftMenu,liftTravelling;int liftDestination;float liftStarted;
-        float LiftX {get{return AncientCityLayout.Entry(CurrentFloor);}}
+        float LiftX
+        {
+            get
+            {
+                float entry=AncientCityLayout.Entry(CurrentFloor),exit=AncientChapterLayout.ExitLift(CurrentFloor);
+                return game&&game.hero&&Mathf.Abs(game.hero.transform.position.x-exit)<Mathf.Abs(game.hero.transform.position.x-entry)?exit:entry;
+            }
+        }
         public AncientTruck Truck {get;private set;}
         public int ResidencePoints {get;private set;}
         AncientGame game;int flags,lineIndex;float nextTrainingShot,nextLetterAt;int revealedChars;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
@@ -24,6 +31,12 @@ namespace Plugin.AncientCivilization
         string bubbleName="";int bubbleNameLine=-1,bubbleNameKind=-1;
         bool dialogueFocusReady;Vector2 dialogueFocus;float dialogueWidth,dialogueHeight;
         AncientParkedBike chaseBike;
+        AncientRouteRadio routeRadio;
+        public void RadioBark(string speaker,string text)
+        {
+            if(!routeRadio){routeRadio=gameObject.AddComponent<AncientRouteRadio>();routeRadio.Initialize(game);}
+            routeRadio.Show(speaker,text);
+        }
         public void Initialize(AncientGame owner)
         {game=owner;Stage=AncientGame.Saved("questStage");flags=AncientGame.Saved("questFlags");ResidencePoints=AncientGame.Saved("residencePoints");CurrentFloor=Mathf.Clamp(AncientGame.Saved("cityFloor",AncientGame.Saved("upperCity")!=0?1:0),0,4);}
         void Start(){if(game.HasSession)Begin();}
@@ -127,6 +140,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
+            if(Stage>=8&&Truck){Destroy(Truck.gameObject);Truck=null;}
             if(Stage!=5&&chaseBike)ClearChaseBike();
             if(choiceOpen)
             {
@@ -200,6 +214,7 @@ namespace Plugin.AncientCivilization
         void StartLiftTravel(int destination)
         {
             if(!AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,destination)||!game.Campaign.ReadyForLift(destination))return;
+            game.Campaign.LeaveFloor();
             liftMenu=false;liftTravelling=true;liftDestination=destination;liftStarted=Time.unscaledTime;
             game.hero.TravelTo(new Vector2(LiftX,1.3f));game.BlockGameplayInput();game.Sound(2);
         }
@@ -207,7 +222,10 @@ namespace Plugin.AncientCivilization
         {
             bool firstArrival=liftDestination==1&&Stage==8;
             CurrentFloor=liftDestination;if(firstArrival)Stage=9;
-            game.hero.TravelTo(new Vector2(LiftX,1.3f));game.SetLiftCheckpoint(CurrentFloor);game.City.OnEnterFloor();
+            bool finished=AncientCampaignRules.FloorCount(game.Campaign.CompletedMask,CurrentFloor)==4;
+            Vector2 arrival=new Vector2(finished?AncientChapterLayout.ExitLift(CurrentFloor):AncientCityLayout.Entry(CurrentFloor),1.3f);
+            AncientGame.SetSaved("cityFloor",CurrentFloor);AncientGame.SetSaved("upperCity",InUpperCity?1:0);AncientGame.SetSaved("questStage",Stage);
+            game.hero.TravelTo(arrival);game.City.OnEnterFloor();game.SetLiftCheckpoint(CurrentFloor,arrival);game.Campaign.EnterFloor();
             Persist();game.SnapCameraToHero();liftTravelling=false;game.BlockGameplayInput();
             game.Notice(InUpperCity?"상층 도시 도착 / 같은 엘리베이터로 하층에 돌아갈 수 있습니다.":"하층 도시 도착 / 상층 출입 권한은 유지됩니다.",4);
             if(firstArrival)Talk(null,new Line("통신관","상층 도착. 귀환할 때도 이동 엘리베이터를 이용해라. 하층 출입 권한도 유지된다.",1),
@@ -298,16 +316,18 @@ namespace Plugin.AncientCivilization
             else if(floor==3)
                 Talk(done,new Line("통신관","구역은 확보했다. 하지만 네 포인트 심사가 보류됐다. 최상층은 승진 대상도 아니야. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
                     new Line("백명","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
-            else Talk(done,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 입구 엘리베이터에서 목적지를 선택해라.",1));
+            else Talk(done,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 동쪽 이동 엘리베이터에서 목적지를 선택해라.",1));
         }
         public void TravelBySidePassage(int destination)
         {
             if(game.Paused||game.hero.bike||!game.hero.IsOnGround)return;
             if(destination==4&&!AncientCityLayout.CanInfiltrate(game.City.Cleared,CurrentFloor))return;
             if(destination==3&&CurrentFloor!=4)return;
-            CurrentFloor=destination;
-            game.hero.TravelTo(new Vector2(destination==4?AncientCityLayout.Entry(4):AncientCityLayout.ArenaRight(3)-2,1.3f));
-            game.SetLiftCheckpoint(destination);game.City.OnEnterFloor();Persist();game.BlockGameplayInput();game.SnapCameraToHero();
+            game.Campaign.LeaveFloor();CurrentFloor=destination;
+            Vector2 arrival=new Vector2(destination==4?AncientCityLayout.Entry(4):AncientCityLayout.Right(3)-8,1.3f);
+            AncientGame.SetSaved("cityFloor",CurrentFloor);AncientGame.SetSaved("upperCity",InUpperCity?1:0);
+            game.hero.TravelTo(arrival);game.City.OnEnterFloor();game.SetLiftCheckpoint(destination,arrival);game.Campaign.EnterFloor();
+            Persist();game.BlockGameplayInput();game.SnapCameraToHero();
             game.Notice(destination==4?"최상층 외벽 샛길 / 불법 침입":"상층 거주구 귀환",3);
         }
         string cachedObjective="",cachedResidence="";int shownStage=-1,shownFlags=-1,shownFloor=-1,shownCores=-1,shownPoints=-1;
@@ -328,8 +348,8 @@ namespace Plugin.AncientCivilization
             if(Stage<=5)return "코어 도난 / 트럭 추격 · 에너지 코어 회수 "+game.Cores+" / 3";
             if(Stage==6)return "미니 보스 / 화물 수호기 제압 · 용의자 검거";
             if(Stage==7)return "검거 / 상층 주민이 코어를 훔친 이유를 물어보자";
-            if(Stage==8)return "상층 출입 권한 해금 / 동쪽 이동 엘리베이터에서 E · 목적 층 선택";
-            return CurrentFloor==0?"하층 생산구 / 엘리베이터로 해금 층 왕복":AncientCityLayout.Name(CurrentFloor)+" / 이동 구간 돌파 · 구역 사건 해결";
+            if(Stage==8)return "회수 운송로 수사 / 동쪽 길 끝의 이동 엘리베이터로";
+            return AncientCityLayout.Name(CurrentFloor)+" / 수사로를 따라 동쪽 목적지로 이동";
         }
         static bool IsHero(string speaker){return speaker=="백명"||speaker=="백 경위"||speaker=="백명 경위";}
         static string DisplaySpeaker(string speaker){return IsHero(speaker)?"백 경위":speaker=="통신관"?"사령관":speaker;}
@@ -433,11 +453,11 @@ namespace Plugin.AncientCivilization
             else if(!dropped)
             {dropped=true;for(int i=0;i<3;i++)game.SpawnPickup(new Vector2(98+i*4,1.3f),i);game.Notice("트럭 정지 / 도난 코어를 회수하고 용의자를 확보하세요.",5);}
         }
-        public void HitByLaser(Vector2 start,Vector2 end,float damage)
+        public void HitByLaser(Vector2 start,Vector2 end,float damage,float bodyRadius=0)
         {
             if(Stopped)return;Vector2 delta=end-start;if(delta.sqrMagnitude<.01f)return;
-            var bounds=new Bounds(transform.position+Vector3.up*1.4f,new Vector3(6,2.8f,1));float hit;
-            if(bounds.IntersectRay(new Ray(start,delta.normalized),out hit)&&hit<=delta.magnitude)
+            Vector2 center=(Vector2)transform.position+Vector2.up*1.4f,offset=center-start;
+            if(AncientBeamRules.IntersectsBox(delta.x,delta.y,offset.x,offset.y,bodyRadius,3,1.4f)&&!Physics2D.Linecast(start,center,1<<8))
             {health=Mathf.Max(0,health-damage);suppressedUntil=Time.time+3;game.Burst(transform.position+Vector3.up,AncientGame.Orange,12);}
         }
     }

@@ -94,7 +94,7 @@ namespace Plugin.AncientCivilization
             {
                 if(game.hero.bike||game.Story.Stage<4||!((x>21&&x<26)||(lowerFinished&&x>=94&&x<=98&&game.hero.transform.position.y>3)))return false;
                 lowerRunning=lowerFinished=false;lowerElapsed=0;
-                game.hero.TravelTo(new Vector2(24,4.7f));game.BlockGameplayInput();game.SnapCameraToHero();return true;
+                game.Notice("옥상 기록 초기화 / 점프와 와이어로 서쪽 옥상에 올라 출발하세요.",2);return true;
             }
             return false;
         }
@@ -111,7 +111,7 @@ namespace Plugin.AncientCivilization
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;GUI.depth=-10;
             if(!game.Story.InUpperCity)
             {
-                Sign(new Vector2(24,5.7f),"하층 공장 운송로 / E: 옥상 경로 시작\n도로: 안전 경로 · 옥상: 숙련 지름길");
+                Sign(new Vector2(24,5.7f),"하층 공장 운송로 / 점프·와이어로 옥상 진입\nE: 기록 초기화 · 도로: 안전 경로");
                 Sign(new Vector2(33,6.5f),"운송 벨트 → 가속 후 와이어 연결\n움직이는 크레인에 연결해 다음 옥상으로");
                 Sign(new Vector2(75,6.5f),"역방향 벨트 ←\n스윙으로 넘거나 높은 금색 발판으로 우회");
                 Sign(new Vector2(96,5.7f),"공장 운송로 끝 / E: 다시 도전");
@@ -125,10 +125,10 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientMovingAnchor : MonoBehaviour
     {
-        AncientGame game;Vector2 centre;int slot,index,room;LineRenderer rail;SpriteRenderer node;bool shown=true;
+        AncientGame game;Vector2 centre;int slot,index;LineRenderer rail;SpriteRenderer node;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point,int number)
         {
-            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);index=number;slot=game.anchors.Count;game.anchors.Add(point);
+            game=owner;centre=point;index=number;slot=game.anchors.Count;game.anchors.Add(point);
             transform.position=point;
             node=AncientArt.Display("Moving crane hook",AncientArt.WireParticle(),Vector2.zero,5,transform);
             node.transform.localScale=Vector3.one*.55f;node.color=new Color(1,.8f,.2f);
@@ -137,7 +137,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            bool visible=game.Story&&game.Story.CurrentFloor==AncientCityLayout.VisualSector(centre.x)&&game.Campaign&&game.Campaign.CurrentRoom==room;
+            bool visible=AncientChapterView.NearCamera(game,centre,AncientCityLayout.VisualSector(centre.x));
             if(shown!=visible){shown=visible;node.enabled=rail.enabled=visible;}
             if(!visible||game.Paused)return;
             Vector2 point=centre+new Vector2(AncientRules.CraneOffset(Time.time,index),0);
@@ -147,11 +147,11 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientAirTarget : MonoBehaviour
     {
-        AncientGame game;Vector2 centre;SpriteRenderer core,ring;float readyAt,phase;int room;bool shown=true;
+        AncientGame game;Vector2 centre;SpriteRenderer core,ring;float readyAt,phase;bool shown=true;
         public bool Ready {get{return Time.time>=readyAt;}}
         public void Initialize(AncientGame owner,Vector2 point)
         {
-            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);phase=point.x;transform.position=point;
+            game=owner;centre=point;phase=point.x;transform.position=point;
             ring=AncientArt.Display("Ancient rebound shell",AncientArt.WireParticle(),Vector2.zero,11,transform);
             ring.transform.localScale=Vector3.one*.8f;ring.color=new Color(.1f,.55f,.8f);
             core=AncientArt.Display("Blade reactive amber core",AncientArt.WireParticle(),Vector2.zero,12,transform);
@@ -164,7 +164,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            bool visible=game.Story&&game.Story.CurrentFloor==AncientCityLayout.VisualSector(centre.x)&&game.Campaign.CurrentRoom==room;
+            bool visible=AncientChapterView.NearCamera(game,centre,AncientCityLayout.VisualSector(centre.x));
             if(shown!=visible){shown=visible;core.enabled=ring.enabled=visible;}
             if(!visible||game.Paused)return;
             transform.position=centre+Vector2.up*(Mathf.Sin(Time.time*1.8f+phase)*.18f);

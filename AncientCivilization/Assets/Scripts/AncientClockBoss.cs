@@ -17,7 +17,7 @@ namespace Plugin.AncientCivilization
         public float RecoveryRemaining {get{return Recovering?Mathf.Clamp01((until-Time.time)/1.6f):0;}}
         public void Initialize(AncientEnemy enemy,AncientGame world)
         {
-            owner=enemy;game=world;left=AncientCityLayout.ArenaLeft(4)+1;right=AncientCityLayout.ArenaRight(4)-1;
+            owner=enemy;game=world;left=AncientCityLayout.BossArenaLeft(4,true)+1;right=AncientCityLayout.BossArenaRight(4,true)-1;
             face=new GameObject("Secretary brass clock dial").AddComponent<AncientClockDial>();face.Initialize();
             dial=game.Line("Secretary clock face",new Color(1,.8f,.3f),.04f,15);dial.loop=true;dial.positionCount=64;
             hourHand=game.Line("Hour force / no resultant arrow",new Color(1,.73f,.17f),.12f,16);hourHand.positionCount=2;
@@ -96,7 +96,7 @@ namespace Plugin.AncientCivilization
             {
                 centre=owner.AimPoint;
                 // The hands keep their angle when the warning becomes damaging.
-                float elapsed=Time.time-areaStarted,radius=areaIndex==2?11:3;
+                float elapsed=Time.time-areaStarted,radius=areaIndex==2?AncientClockRules.BroadRadius(right-left+2):3;
                 if(areaIndex==2)
                 {landing.startColor=landing.endColor=AncientGame.Cyan;Circle(landing,new Vector2(centre.x,.2f),AncientClockRules.UnderSafeHalfWidth);}
                 Circle(dial,centre,radius);float angle=elapsed*(areaIndex==2?3:5);

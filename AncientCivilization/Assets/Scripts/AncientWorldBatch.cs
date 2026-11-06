@@ -27,15 +27,14 @@ namespace Plugin.AncientCivilization
         readonly Dictionary<Key,Build> builders=new Dictionary<Key,Build>();
         readonly Dictionary<Texture,Material> materials=new Dictionary<Texture,Material>();
         readonly List<Entry> entries=new List<Entry>();
-        AncientGame game;Sprite white;int shownFloor=-99,shownRoom=-99;
+        AncientGame game;Sprite white;int shownFloor=-99,shownCases=-1;
         public int QuadCount {get;private set;}
         public int RendererCount {get{return entries.Count;}}
         public int ActiveRendererCount {get;private set;}
         public void Initialize(AncientGame owner,Sprite square){game=owner;white=square;}
         public void Box(Vector2 position,Vector2 size,Color color,int order)
         {
-            int floor=size.x>180&&AncientCampaignRules.RoomAt(position.x)<0?-1:AncientCityLayout.VisualSector(position.x);
-            Add(white,position,size,color,order,floor);
+            Add(white,position,size,color,order,AncientCityLayout.VisualSector(position.x));
         }
         public void Sprite(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order)
         {Add(sprite,position,scale,color,order,AncientCityLayout.VisualSector(position.x));}
@@ -83,16 +82,21 @@ namespace Plugin.AncientCivilization
                 {material=new Material(Shader.Find("Sprites/Default"));material.mainTexture=build.texture;materials.Add(key.texture,material);}
                 renderer.sharedMaterial=material;entries.Add(new Entry{mesh=mesh,renderer=renderer,floor=key.floor,room=key.room});
             }
-            builders.Clear();UpdateVisibility(0,-1);
+            builders.Clear();UpdateVisibility(0,0);
         }
-        void UpdateVisibility(int floor,int room)
+        void UpdateVisibility(int floor,int visibleCases)
         {
-            shownFloor=floor;shownRoom=room;ActiveRendererCount=0;
+            shownFloor=floor;shownCases=visibleCases;ActiveRendererCount=0;
             foreach(var entry in entries)
-            {bool visible=entry.floor<0||entry.floor==floor&&entry.room==room;entry.renderer.enabled=visible;if(visible)ActiveRendererCount++;}
+            {bool visible=AncientChapterVisibility.SceneryVisible(entry.floor,entry.room,floor,visibleCases);entry.renderer.enabled=visible;if(visible)ActiveRendererCount++;}
         }
         void LateUpdate()
-        {int floor=game&&game.Finale&&game.Finale.Active?5:game&&game.Story?game.Story.CurrentFloor:0;int room=game&&game.Campaign?game.Campaign.CurrentRoom:-1;if(floor!=shownFloor||room!=shownRoom)UpdateVisibility(floor,room);}
+        {
+            int floor=game&&game.Finale&&game.Finale.Active?5:game&&game.Story?game.Story.CurrentFloor:0;
+            var view=game?game.View:null;
+            int visibleCases=view?AncientChapterVisibility.VisibleCases(floor,view.transform.position.x,view.orthographicSize*view.aspect):0;
+            if(floor!=shownFloor||visibleCases!=shownCases)UpdateVisibility(floor,visibleCases);
+        }
         void OnDestroy()
         {
             foreach(var entry in entries)if(entry.mesh)Destroy(entry.mesh);

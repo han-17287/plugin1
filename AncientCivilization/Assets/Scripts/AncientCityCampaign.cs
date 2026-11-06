@@ -7,6 +7,9 @@ namespace Plugin.AncientCivilization
     {
         AncientGame game;int activeFloor=-1;AncientEnemy activeBoss,retiringSniper,retiringSecretary;GUIStyle label;Vector2 safeRecovery;
         readonly List<AncientAirTarget> targets=new List<AncientAirTarget>();
+        readonly SpriteRenderer[] exitGates=new SpriteRenderer[5];readonly BoxCollider2D[] exitSolids=new BoxCollider2D[5];
+        readonly SpriteRenderer[] entranceGates=new SpriteRenderer[5];readonly BoxCollider2D[] entranceSolids=new BoxCollider2D[5];
+        SpriteRenderer officeGate,officeEntrance;BoxCollider2D officeSolid,officeEntranceSolid;
         public int Cleared {get;private set;}
         public bool SecretaryCleared {get;private set;}
         public bool ArenaActive {get{return activeBoss&&activeBoss.IsAlive;}}
@@ -29,19 +32,26 @@ namespace Plugin.AncientCivilization
         {
             if(actor)actor.DepartAlive();
             if(secretary){if(retiringSecretary==actor)retiringSecretary=null;}
-            else if(retiringSniper==actor)retiringSniper=null;
+            else
+            {
+                if(retiringSniper==actor)retiringSniper=null;
+                if(game.Campaign)game.Campaign.ContinueAfterSniper();
+            }
         }
         public void Initialize(AncientGame owner)
         {
             game=owner;Cleared=AncientGame.Saved("cityCleared");SecretaryCleared=AncientGame.Saved("secretaryCleared")!=0||AncientGame.Saved("finalePhase")>0;
-            game.Platform(264,282,0);
-            for(int floor=2;floor<=4;floor++)BuildFloor(floor);
+            for(int floor=1;floor<=4;floor++)BuildFloor(floor);
         }
         void BuildFloor(int floor)
         {
             float x=AncientCityLayout.Left(floor),right=AncientCityLayout.Right(floor);
-            var street=AncientCityLayout.StreetRoad(floor);game.Platform(street.left,street.right,street.top);game.Ceiling(x-2,right+2,10);
-            // Ordinary city streets stay continuous; wire challenges live in marked field sectors.
+            var street=AncientCityLayout.StreetRoad(floor);game.Platform(street.left,street.right,street.top);
+            game.Ceiling(x-2,AncientChapterLayout.CaseLeft(floor*4),10);
+            game.Ceiling(AncientChapterLayout.CaseEnd(floor),right+2,10);
+            game.Platform(AncientChapterLayout.CaseEnd(floor),right,0);
+            // The authored case roads and bridges occupy the chapter between these two streets.
+            // Never fill their jumping sections with a second ground collider.
             var tint=floor==2?new Color(.1f,.22f,.3f):floor==3?new Color(.2f,.24f,.21f):new Color(.19f,.12f,.21f);
             for(int i=0;i<12;i++)
             {
@@ -55,13 +65,43 @@ namespace Plugin.AncientCivilization
                 var wall=game.Box("District boundary",new Vector2(bx,4),new Vector2(.4f,12),tint,0);
                 wall.layer=8;wall.AddComponent<BoxCollider2D>();
             }
-            if(floor<4)game.BuildLiftTerminal(AncientCityLayout.Entry(floor));
+            if(floor<4)
+            {game.BuildLiftTerminal(AncientCityLayout.Entry(floor));game.BuildLiftTerminal(AncientChapterLayout.ExitLift(floor));}
             else
             {
                 game.StaticBox("Illegal maintenance hatch",new Vector2(x+4,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
                 game.StaticBox("Sealed chairman office",new Vector2(right-2,2),new Vector2(2,4),new Color(.23f,.13f,.18f),1);
             }
-
+            var gate=BuildExitGate("District arena exit",AncientCityLayout.ArenaRight(floor)+.45f);
+            exitGates[floor]=gate.GetComponent<SpriteRenderer>();exitSolids[floor]=gate.GetComponent<BoxCollider2D>();
+            var entry=BuildExitGate("District arena entrance",AncientCityLayout.ArenaLeft(floor)-.45f);
+            entranceGates[floor]=entry.GetComponent<SpriteRenderer>();entranceSolids[floor]=entry.GetComponent<BoxCollider2D>();
+            if(floor==4)
+            {
+                var office=BuildExitGate("Secretary office seal",AncientCityLayout.BossArenaRight(4,true)+.45f);
+                officeGate=office.GetComponent<SpriteRenderer>();officeSolid=office.GetComponent<BoxCollider2D>();
+                var officeEntry=BuildExitGate("Secretary arena entrance",AncientCityLayout.BossArenaLeft(4,true)-.45f);
+                officeEntrance=officeEntry.GetComponent<SpriteRenderer>();officeEntranceSolid=officeEntry.GetComponent<BoxCollider2D>();
+            }
+            if(floor==3)game.StaticBox("Illegal maintenance hatch",new Vector2(right-8,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
+        }
+        GameObject BuildExitGate(string name,float x)
+        {
+            var gate=game.Box(name,new Vector2(x,4.8f),new Vector2(.2f,10.4f),new Color(.9f,.38f,.12f,.55f),5);
+            gate.layer=8;gate.AddComponent<BoxCollider2D>();gate.transform.SetParent(transform,true);return gate;
+        }
+        void RefreshExitGates()
+        {
+            for(int floor=1;floor<=4;floor++)
+            {
+                bool closed=(Cleared&(1<<floor))==0;
+                exitSolids[floor].enabled=closed;exitGates[floor].enabled=closed&&game.Story.CurrentFloor==floor;
+                bool fighting=activeBoss&&activeBoss.IsAlive&&!activeBoss.IsSecretary&&activeBoss.DistrictFloor==floor;
+                entranceSolids[floor].enabled=fighting;entranceGates[floor].enabled=fighting&&game.Story.CurrentFloor==floor;
+            }
+            officeSolid.enabled=!SecretaryCleared;officeGate.enabled=!SecretaryCleared&&game.Story.CurrentFloor==4;
+            bool secretaryFight=activeBoss&&activeBoss.IsAlive&&activeBoss.IsSecretary;
+            officeEntranceSolid.enabled=secretaryFight;officeEntrance.enabled=secretaryFight&&game.Story.CurrentFloor==4;
         }
         public void OnEnterFloor()
         {
@@ -86,21 +126,13 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!game||!game.Story||!game.hero||game.Paused||game.Story.CurrentFloor==0||(game.Campaign&&game.Campaign.Active)||(game.Finale&&game.Finale.Active))return;
+            if(!game||!game.Story||!game.hero)return;
+            RefreshExitGates();
+            if(game.Paused||game.Story.CurrentFloor==0||(game.Campaign&&game.Campaign.Active)||(game.Finale&&game.Finale.Active))return;
             int floor=game.Story.CurrentFloor;float x=AncientCityLayout.Left(floor);var p=game.hero.transform.position;
             if(activeFloor!=floor)
             {
                 activeFloor=floor;safeRecovery=new Vector2(AncientCityLayout.Entry(floor),1.3f);
-                if((Cleared&(1<<floor))==0)
-                {
-                    if(floor==1){Spawn(195,0,0,floor,false);Spawn(240,0,1,floor,false);}
-                    else
-                    {
-                        var route=AncientCityLayout.Route(floor);
-                        Spawn((route[2].left+route[2].right)/2,0,0,floor,false);
-                        Spawn((route[6].left+route[6].right)/2,0,1,floor,false);
-                    }
-                }
             }
             if(!activeBoss&&game.Campaign.ReadyForBoss(floor)&&(Cleared&(1<<floor))==0&&p.x>=AncientCityLayout.ArenaLeft(floor)+1&&p.y<4)
             {
@@ -108,26 +140,18 @@ namespace Plugin.AncientCivilization
                 Spawn(AncientCityLayout.ArenaRight(floor)-4,0,floor==4?1:3,floor,true);
                 game.Notice(floor==4?"저격수 / 조준 전조를 보고 엄폐·접근하세요.":"구역 보스 / 전조를 피하고 공격 후 빈틈을 노리세요.",3);
             }
-            if(floor==4&&!activeBoss&&(Cleared&(1<<4))!=0&&!SecretaryCleared&&game.Campaign.ReadyForFinale&&p.x>=739&&p.y<4)
+            if(floor==4&&!activeBoss&&(Cleared&(1<<4))!=0&&!SecretaryCleared&&game.Campaign.ReadyForFinale&&p.x>=AncientCityLayout.BossArenaLeft(4,true)+1&&p.y<4)
             {
-                game.CombatCheckpoint(4,new Vector2(738.5f,1.3f));
-                var secretary=Spawn(AncientCityLayout.ArenaLeft(4)+3,0,3,4,true);secretary.ConfigureSecretary();
+                game.CombatCheckpoint(4,new Vector2(AncientCityLayout.BossArenaLeft(4,true)+1.5f,1.3f));
+                var secretary=Spawn(AncientCityLayout.BossArenaRight(4,true)-5,0,3,4,true);secretary.ConfigureSecretary();
                 game.Story.Conversation(null,3,new[]{"비서실장","백명","비서실장"},new[]{"이 문 너머의 기록은 허가된 시간에만 열립니다. 당신의 이의 신청도, 그자의 동결 기록도 예외는 아니지요.","회장은 어디 있지? 기록을 막을 권한까지 받은 건가.","회수 작전의 준비는 끝났습니다. 여기서 시간을 더 쓰시겠습니까?"});
             }
-            if(floor>=2&&game.hero.IsOnGround)
-            {
-                var route=AncientCityLayout.Route(floor);
-                for(int index=4;index<=7;index+=3)
-                {
-                    var ledge=route[index];
-                    if(p.x>=ledge.left&&p.x<=ledge.right&&Mathf.Abs(p.y-1.05f)<.3f)
-                        safeRecovery=new Vector2((ledge.left+ledge.right)/2,1.3f);
-                }
-            }
-            if(floor>=2&&p.y<-2.5f)
+            if(!ArenaActive&&game.hero.IsOnGround&&p.y>=.5f&&p.y<8.3f)
+                safeRecovery=new Vector2(p.x,Mathf.Max(1.3f,p.y+.15f));
+            if(p.y<-2.5f)
             {
                 if(game.Sniper)game.Sniper.PrepareSafeRecovery();
-                game.hero.TravelTo(ArenaActive?new Vector2(AncientCityLayout.ArenaLeft(floor)+1,1.3f):safeRecovery);game.SnapCameraToHero();
+                game.hero.TravelTo(ArenaActive?new Vector2(AncientCityLayout.BossArenaLeft(floor,activeBoss.IsSecretary)+1,1.3f):safeRecovery);game.SnapCameraToHero();
                 game.Notice("안전 회수 / 마지막 안전 발판에서 다시 시작합니다.",2);
             }
         }
@@ -154,7 +178,7 @@ namespace Plugin.AncientCivilization
         public bool TryInteract()
         {
             if(!game.Story||!game.hero)return false;int floor=game.Story.CurrentFloor;float x=game.hero.transform.position.x;
-            if(floor==3&&x>=AncientCityLayout.ArenaRight(3)-5)
+            if(floor==3&&Mathf.Abs(x-(AncientCityLayout.Right(3)-8))<3)
             {
                 if(!AncientCityLayout.CanInfiltrate(Cleared,floor)){game.Notice("샛길은 구역 보안 장치를 제압한 뒤 열립니다.");return true;}
                 game.Story.TravelBySidePassage(4);return true;
@@ -188,33 +212,34 @@ namespace Plugin.AncientCivilization
             if(!game||!game.Story||game.Paused||game.MainMenu||(game.Campaign&&game.Campaign.Active)||(game.Finale&&game.Finale.Active)||Event.current.type!=EventType.Repaint)return;
             int floor=game.Story.CurrentFloor;if(floor==0)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
-            string hint=AncientCityLayout.Name(floor)+" / 지상 이동로 · 와이어 정비 구간은 현장 안에 표시됩니다";
-            if((Cleared&(1<<floor))!=0)hint+=floor==3?"\n동쪽 샛길에서 E / 최상층 불법 침입":floor==4?(SecretaryCleared?"\n비서실장 제압 / 회장실 기록 확인":"\n저격수와의 대치 종료 / 마지막 자료 대조 후 회장실 진입"):"\n다음 층 권한 해금 / 입구 엘리베이터에서 목적 층 선택";
+            string hint=AncientCityLayout.Name(floor)+" / 동쪽으로 이어지는 작전 경로";
+            if((Cleared&(1<<floor))!=0)hint+=floor==3?"\n동쪽 샛길에서 E / 최상층 불법 침입":floor==4?(SecretaryCleared?"\n비서실장 제압 / 회장실 기록 확인":"\n저격수와의 대치 종료 / 동쪽 기록 통로로 계속 이동"):"\n다음 층 권한 해금 / 동쪽 엘리베이터에서 목적 층 선택";
             GUI.Label(new Rect(Screen.width/2-300,95,600,65),hint,label);
             string marker=AncientCityLayout.Name(floor)+" / E: 엘리베이터";
-            Vector2 point=new Vector2(AncientCityLayout.Entry(floor),4.2f);
+            float lift=game.hero.transform.position.x<(AncientCityLayout.Entry(floor)+AncientChapterLayout.ExitLift(floor))*.5f?AncientCityLayout.Entry(floor):AncientChapterLayout.ExitLift(floor);
+            Vector2 point=new Vector2(floor==4?AncientCityLayout.Entry(floor):lift,4.2f);
             if(floor==4)marker="외벽 샛길 / E: 상층 거주구로 귀환";
             var pixel=game.View.WorldToScreenPoint(point);
             GUI.Label(new Rect(pixel.x-180,Screen.height-pixel.y-22,360,70),marker,label);
             if(floor==3)
             {
-                pixel=game.View.WorldToScreenPoint(new Vector2(AncientCityLayout.ArenaRight(3)-2,4.5f));
+                pixel=game.View.WorldToScreenPoint(new Vector2(AncientCityLayout.Right(3)-8,4.5f));
                 GUI.Label(new Rect(pixel.x-180,Screen.height-pixel.y-22,360,70),"외벽 정비 샛길 / E: 최상층 침입\n최상층 승진·엘리베이터 승인 불가",label);
             }
         }
     }
     public sealed class AncientSecurityShutter : MonoBehaviour
     {
-        AncientGame game;SpriteRenderer art;BoxCollider2D solid;Vector2 centre;float phase;int room;bool shown=true;
+        AncientGame game;SpriteRenderer art;BoxCollider2D solid;Vector2 centre;float phase;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point,int index)
         {
-            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);phase=index*1.1f;
+            game=owner;centre=point;phase=index*1.1f;
             var o=game.Box("Telegraphed shutter",point,new Vector2(.35f,3.2f),AncientGame.Cyan,3);o.transform.SetParent(transform,true);
             art=o.GetComponent<SpriteRenderer>();o.layer=8;solid=o.AddComponent<BoxCollider2D>();solid.enabled=false;
         }
         void Update()
         {
-            bool visible=game.Story&&game.Story.CurrentFloor==AncientCityLayout.VisualSector(centre.x)&&game.Campaign.CurrentRoom==room;
+            bool visible=AncientChapterView.NearCamera(game,centre,AncientCityLayout.VisualSector(centre.x));
             if(shown!=visible){shown=visible;art.enabled=visible;if(!visible)solid.enabled=false;}
             if(!visible||game.Paused)return;bool close=AncientCityLayout.ShutterClosed(Time.time,phase);
             // Never materialize a solid shutter inside the character.
@@ -224,16 +249,16 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientCityVent : MonoBehaviour
     {
-        AncientGame game;Vector2 centre;int floor,room;SpriteRenderer plume;bool shown=true;
+        AncientGame game;Vector2 centre;int floor;SpriteRenderer plume;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point,int district)
         {
-            game=owner;centre=point;floor=district;room=AncientCampaignRules.RoomAt(point.x);
+            game=owner;centre=point;floor=district;
             plume=game.Box("Visible ventilation column",point+Vector2.up*2,new Vector2(1.5f,4.5f),new Color(.4f,.9f,.7f,.18f),2).GetComponent<SpriteRenderer>();
             plume.transform.SetParent(transform,true);
         }
         void Update()
         {
-            bool visible=game.Story&&game.Story.CurrentFloor==floor&&game.Campaign.CurrentRoom==room;
+            bool visible=AncientChapterView.NearCamera(game,centre,floor);
             if(shown!=visible){shown=visible;plume.enabled=visible;}
             if(!visible||game.Paused)return;
             plume.color=new Color(.4f,.9f,.7f,.12f+.1f*(.5f+.5f*Mathf.Sin(Time.time*5)));
@@ -244,15 +269,15 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientCrumbleLedge : MonoBehaviour
     {
-        AncientGame game;BoxCollider2D solid;SpriteRenderer art;Vector2 centre;float collapseAt=-1,restoreAt;int room;bool shown=true;
+        AncientGame game;BoxCollider2D solid;SpriteRenderer art;Vector2 centre;float collapseAt=-1,restoreAt;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point)
         {
-            game=owner;centre=point;room=AncientCampaignRules.RoomAt(point.x);var o=game.Box("Collapsible illegal-access scaffold",point,new Vector2(3,.3f),new Color(1,.65f,.2f),3);
+            game=owner;centre=point;var o=game.Box("Collapsible illegal-access scaffold",point,new Vector2(3,.3f),new Color(1,.65f,.2f),3);
             o.transform.SetParent(transform,true);o.layer=8;solid=o.AddComponent<BoxCollider2D>();art=o.GetComponent<SpriteRenderer>();
         }
         void Update()
         {
-            bool visible=game.Story&&game.Story.CurrentFloor==4&&game.Campaign.CurrentRoom==room;
+            bool visible=AncientChapterView.NearCamera(game,centre,4);
             if(shown!=visible){shown=visible;if(!visible){art.enabled=false;solid.enabled=false;}}
             if(!visible||game.Paused)return;
             Vector2 delta=(Vector2)game.hero.transform.position-centre;

@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="FieldExpansionChecks.cs" />
+    <Compile Include="../Assets/Scripts/AncientChapterLayout.cs" />
     <Compile Include="../Assets/Scripts/AncientFieldExpansion.cs" />
     <Compile Include="../Assets/Scripts/AncientFieldLayout.cs" />
     <Compile Include="../Assets/Scripts/AncientTraversalLayout.cs" />

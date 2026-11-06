@@ -23,8 +23,8 @@ namespace Plugin.AncientCivilization
             if(enemy.IsSecretary){clock=gameObject.AddComponent<AncientClockBoss>();clock.Initialize(enemy,world);return;}
             if(enemy.IsDistrictBoss&&enemy.DistrictFloor==4){sniper=gameObject.AddComponent<AncientSniperEncounter>();sniper.Initialize(enemy,world);return;}
             floor=owner.IsDistrictBoss?owner.DistrictFloor:0;
-            left=floor==0?100:AncientCityLayout.ArenaLeft(floor)+1;
-            right=floor==0?114:AncientCityLayout.ArenaRight(floor)-1;
+            left=floor==0?100:AncientCityLayout.BossArenaLeft(floor,enemy.IsSecretary)+1;
+            right=floor==0?114:AncientCityLayout.BossArenaRight(floor,enemy.IsSecretary)-1;
             for(int i=0;i<6;i++)AncientArt.Boss(floor,i);
             for(int i=0;i<3;i++)
             {

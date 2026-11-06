@@ -12,6 +12,7 @@
     <Compile Include="../Assets/Scripts/AncientBossRules.cs" />
     <Compile Include="../Assets/Scripts/AncientEvidenceQuestions.cs" />
     <Compile Include="../Assets/Scripts/AncientCampaignRules.cs" />
+    <Compile Include="../Assets/Scripts/AncientChapterLayout.cs" />
     <Compile Include="../Assets/Scripts/AncientCampaignData.cs" />
     <Compile Include="../Assets/Scripts/AncientFrameRules.cs" />
     <Compile Include="../Assets/Scripts/AncientFinaleRules.cs" />

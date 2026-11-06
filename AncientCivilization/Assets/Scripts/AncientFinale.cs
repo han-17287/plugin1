@@ -40,10 +40,10 @@ namespace Plugin.AncientCivilization
                 game.StaticBox("Cargo shaft district wall",new Vector2((x+end)/2,(y+last)/2+4.8f),new Vector2(end-x,10),tint,-9);
             }
             game.Platform(AncientFinaleRules.Finish,AncientFinaleRules.Finish+22,0);
-            var desk=game.Box("Empty chairman desk",new Vector2(742,1),new Vector2(2.8f,1.1f),new Color(.22f,.15f,.1f),3);
+            var desk=game.Box("Empty chairman desk",new Vector2(AncientChapterLayout.OfficeX,1),new Vector2(2.8f,1.1f),new Color(.22f,.15f,.1f),3);
             desk.transform.SetParent(transform,true);
-            notebook=game.Box("Chairman recovery notebook",new Vector2(742,1.68f),new Vector2(.48f,.15f),new Color(.9f,.8f,.5f),5).GetComponent<SpriteRenderer>();notebook.transform.SetParent(transform,true);
-            windowTruck=AncientArt.Display("Operation truck outside office",AncientArt.Truck(),new Vector2(734,4.8f),-5,transform);
+            notebook=game.Box("Chairman recovery notebook",new Vector2(AncientChapterLayout.OfficeX,1.68f),new Vector2(.48f,.15f),new Color(.9f,.8f,.5f),5).GetComponent<SpriteRenderer>();notebook.transform.SetParent(transform,true);
+            windowTruck=AncientArt.Display("Operation truck outside office",AncientArt.Truck(),new Vector2(AncientChapterLayout.OfficeX-8,4.8f),-5,transform);
             windowTruck.transform.localScale=Vector3.one*.4f;windowTruck.enabled=false;
             for(int i=0;i<boardingCrew.Length;i++)
             {
@@ -60,11 +60,11 @@ namespace Plugin.AncientCivilization
         void Persist(){WriteSave();game.Save();}
         public bool TryInteract()
         {
-            if(game.Story.CurrentFloor!=4||(game.City.Cleared&(1<<4))==0||Mathf.Abs(game.hero.transform.position.x-742)>3)return false;
+            if(game.Story.CurrentFloor!=4||(game.City.Cleared&(1<<4))==0||Mathf.Abs(game.hero.transform.position.x-AncientChapterLayout.OfficeX)>3)return false;
             if(phase==0)
             {
                 if(!game.City.SecretaryCleared){game.Notice("회장실을 지키는 비서실장을 먼저 제압하세요.",3);return true;}
-                if(!game.Campaign.ReadyForFinale){game.Notice("회장실 자료 대조를 먼저 마치세요. 회장실 앞 보관실 관리인 유담에게 현장을 확인하세요.",4);return true;}
+                if(!game.Campaign.ReadyForFinale){game.Notice("동쪽으로 이어지는 기록 통로에서 회장실 자료 대조를 먼저 마치세요.",4);return true;}
                 phase=1;countdown=60;Persist();ShowBoarding(true);
                 game.Story.FinaleBriefing("회장은 없다. 노트에는 최하층 아래에 묻힌 고대 문명이 적혀 있어… 옆에는 회수 계획. C-00 코어는 이 작전에 묶인 물량이었군.",
                     "작전 개시까지 1분. 창밖이다! 회장과 특수부대가 코어 운송 트럭에 타고 있어. 화물 승강로로 내려가면 따라붙을 수 있다.");return true;
@@ -114,8 +114,8 @@ namespace Plugin.AncientCivilization
         }
         public bool Retry()
         {if(phase!=2)return false;BeginChase();return true;}
-        public void HitTruck(Vector2 start,Vector2 end,float damage)
-        {if(truck&&phase==2)truck.HitBeam(start,end,damage);}
+        public void HitTruck(Vector2 start,Vector2 end,float damage,float bodyRadius=0)
+        {if(truck&&phase==2)truck.HitBeam(start,end,damage,bodyRadius);}
         public void TruckArrived()
         {
             phase=3;phaseAt=Time.unscaledTime;game.hero.TravelTo((Vector2)truck.transform.position+new Vector2(.7f,3.65f));ClearChaseBikes();
@@ -187,9 +187,10 @@ namespace Plugin.AncientCivilization
         {
             ClearTruck();
             phase=0;countdown=60;zone=0;game.won=false;game.hero.hp=game.hero.MaxHP;
-            game.hero.TravelTo(new Vector2(AncientCityLayout.Entry(4),1.3f));ClearChaseBikes();
+            Vector2 officeReturn=new Vector2(AncientChapterLayout.OfficeX-3,1.3f);
+            game.hero.TravelTo(officeReturn);ClearChaseBikes();
             foreach(var bike in game.parkedBikes)if(bike)bike.ResetAtSpawn();
-            game.SetLiftCheckpoint(4);game.City.OnEnterFloor();
+            game.CombatCheckpoint(4,officeReturn);game.City.OnEnterFloor();
             Persist();game.BlockGameplayInput();game.SnapCameraToHero();Time.timeScale=1;
         }
         void DrawCaptionBubble()
@@ -222,7 +223,7 @@ namespace Plugin.AncientCivilization
             float scale=Mathf.Min(Screen.width/1280f,Screen.height/720f);GUI.matrix=Matrix4x4.Scale(Vector3.one*scale);GUI.depth=-70;
             float w=Screen.width/scale,h=Screen.height/scale;
             if(phase==0&&game.Story.CurrentFloor==4&&(game.City.Cleared&(1<<4))!=0&&!game.Paused)
-            {GUI.Label(new Rect(w/2-230,h-165,460,50),game.City.SecretaryCleared?"회장실 책상 / E: 노트와 회수 계획 확인":game.Campaign.ReadyForFinale?"비서실장을 제압하고 회장실로 진입":"보관실 관리인 유담 / 마지막 자료 대조",label);}
+            {GUI.Label(new Rect(w/2-230,h-165,460,50),game.City.SecretaryCleared?"회장실 책상 / E: 노트와 회수 계획 확인":game.Campaign.ReadyForFinale?"비서실장을 제압하고 회장실로 진입":"동쪽 기록 통로 / 마지막 자료 대조",label);}
             else if(phase==1&&!game.Story.DialogueOpen)
             {GUI.Label(new Rect(w/2-260,h-145,520,70),"회수 작전 개시까지 "+Mathf.CeilToInt(countdown)+"초\n회장실에서 E: 화물 승강로로 먼저 진입",label);}
             else if(phase==2&&!game.Paused)
@@ -287,13 +288,19 @@ namespace Plugin.AncientCivilization
             Vector2 origin=(Vector2)transform.position+new Vector2(-2,2.8f);
             game.Projectiles.Spawn(origin,((Vector2)game.hero.transform.position-origin).normalized*9,12,true);
         }
-        public void HitBeam(Vector2 start,Vector2 end,float damage)
+        public void HitBeam(Vector2 start,Vector2 end,float damage,float bodyRadius=0)
         {
             Vector2 delta=end-start;if(delta.sqrMagnitude<.01f)return;
             // Use the actual collider, including kinematic interpolation, rather than a separately estimated visual box.
-            var bounds=solid.bounds;bounds.Expand(Vector3.forward);float hit;
-            if(bounds.IntersectRay(new Ray(start,delta.normalized),out hit)&&hit<=delta.magnitude+.01f)
-            {suppressedUntil=Time.time+3;game.Feel.Signal("운송 장치 억제 · 투척 정지",new Color(.6f,.95f,1),1);}
+            var bounds=solid.bounds;Vector2 offset=(Vector2)bounds.center-start;
+            if(!AncientBeamRules.IntersectsBox(delta.x,delta.y,offset.x,offset.y,bodyRadius,bounds.extents.x,bounds.extents.y))return;
+            if(bodyRadius>0)
+            {
+                float angle=Mathf.Atan2(delta.y,delta.x)*Mathf.Rad2Deg;
+                var hit=Physics2D.BoxCast(start,new Vector2(AncientBeamRules.CastDepth,bodyRadius*2),angle,delta.normalized,delta.magnitude+AncientBeamRules.CastDepth,1<<8);
+                if(hit.collider!=solid)return;
+            }
+            suppressedUntil=Time.time+3;game.Feel.Signal("운송 장치 억제 · 투척 정지",new Color(.6f,.95f,1),1);
         }
     }
 }

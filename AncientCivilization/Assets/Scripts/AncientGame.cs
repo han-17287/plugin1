@@ -42,7 +42,12 @@ namespace Plugin.AncientCivilization
         public static readonly Color Orange = new Color(1,.43f,.14f);
         const string SaveRoot="PLUGIN.Ancient.v2.";
         static string SaveKey=SaveRoot;
-        public static readonly string[] ProgressSaveKeys={"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","secretaryCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks","campaignCheckpoint","campaignDefeated"};
+        public static readonly string[] ProgressSaveKeys=BuildProgressSaveKeys();
+        static string[] BuildProgressSaveKeys()
+        {
+            string[] standard={"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","secretaryCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks","campaignCheckpoint","campaignDefeated","campaignChapterStarted"};
+            var all=new string[standard.Length+AncientCampaign.ProgressKeys.Length];standard.CopyTo(all,0);AncientCampaign.ProgressKeys.CopyTo(all,standard.Length);return all;
+        }
         public static bool IsQAProfile {get{return SaveKey!=SaveRoot;}}
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void InitializeSaveProfile()
@@ -54,6 +59,7 @@ namespace Plugin.AncientCivilization
 #endif
         }
         Camera view; Sprite square;GameObject trainingGate;
+        readonly SpriteRenderer[] patrolArenaSeals=new SpriteRenderer[2];readonly BoxCollider2D[] patrolArenaSolids=new BoxCollider2D[2];bool patrolArenaClosed;
         GUIStyle small, title, centered;
         readonly AncientHudText hud=new AncientHudText();
         string message; float messageUntil, shake, runTime;
@@ -89,7 +95,14 @@ namespace Plugin.AncientCivilization
             if(checkpointStage==3)checkpoint=new Vector2(132,1.3f);
             if(checkpointStage==4)checkpoint=new Vector2(115,1.3f);
             int cityFloor=Mathf.Clamp(Saved("cityFloor",Saved("upperCity")!=0?1:0),0,4);
-            if(cityFloor>1)checkpoint=new Vector2(AncientCityLayout.Entry(cityFloor),1.3f);
+            bool migrateRoute=Saved("campaignVersion")<AncientCampaignRules.RouteVersion;
+            if(cityFloor>0||checkpointStage>=3)checkpoint=new Vector2(AncientCityLayout.Entry(cityFloor),1.3f);
+            if(migrateRoute&&Saved("questStage")>=8)
+            {
+                SetSaved("retryActive",0);int count=AncientCampaignRules.FloorCount(Saved("campaignComplete"),cityFloor);
+                if(cityFloor==4&&count>=3)checkpoint=new Vector2(count==3?AncientChapterLayout.SniperLeft-2:AncientChapterLayout.SecretaryLeft-2,1.3f);
+                else if(count==4)checkpoint=new Vector2(AncientChapterLayout.ExitLift(cityFloor),1.3f);
+            }
             if(Saved("retryActive")!=0&&Saved("retryFloor",-1)==cityFloor)
             {
                 float retryX=Saved("retryX")/100f,retryY=Saved("retryY")/100f;
@@ -142,7 +155,7 @@ namespace Plugin.AncientCivilization
             foreach(var ledge in AncientTraversalLayout.LowerFastRoute)Platform(ledge.left,ledge.right,ledge.top);
             Platform(4,7,3.5f);Platform(12,16,3.4f);
             // One unbroken solid ceiling covers the entire level and extends past both camera edges.
-            Ceiling(-40,284,10);
+            Ceiling(-40,AncientChapterLayout.CaseLeft(0),10);
             var westWall=Box("Production district west bulkhead",new Vector2(-5,5),new Vector2(.4f,10),new Color(.06f,.13f,.18f),1);
             westWall.layer=8;westWall.AddComponent<BoxCollider2D>();
             trainingGate=Box("Equipment inspection shutter",new Vector2(20,5),new Vector2(.45f,10),new Color(.12f,.21f,.25f),2);
@@ -153,19 +166,23 @@ namespace Plugin.AncientCivilization
                 strip.transform.SetParent(trainingGate.transform,true);
             }
             trainingGate.SetActive(Saved("questStage")<4);
-            Platform(128,282,0);
+            for(int side=0;side<2;side++)
+            {
+                var seal=Box("Patrol guardian arena seal",new Vector2(side==0?97.55f:117.45f,4.8f),new Vector2(.2f,10.4f),new Color(.9f,.38f,.12f,.55f),5);
+                seal.layer=8;patrolArenaSeals[side]=seal.GetComponent<SpriteRenderer>();patrolArenaSolids[side]=seal.AddComponent<BoxCollider2D>();
+                patrolArenaSeals[side].enabled=patrolArenaSolids[side].enabled=false;
+            }
+            Platform(118,AncientChapterLayout.CaseLeft(0),0);
+            Platform(AncientChapterLayout.CaseEnd(0),AncientChapterLayout.FloorEnd(0),0);
+            Ceiling(AncientChapterLayout.CaseEnd(0),AncientChapterLayout.FloorEnd(0)+2,10);
             Traversal=gameObject.AddComponent<AncientTraversal>();Traversal.Initialize(this);
             City=gameObject.AddComponent<AncientCityCampaign>();City.Initialize(this);
             Finale=gameObject.AddComponent<AncientFinale>();Finale.Build(this);
             Campaign=gameObject.AddComponent<AncientCampaign>();Campaign.Initialize(this);
-            AncientArt.Display("Upper city entry",AncientArt.World(3),new Vector2(132,0),-1);
             AncientArt.Display("Eastern gate",AncientArt.World(3),new Vector2(115,0),-1);
-            BuildLiftTerminal(115);BuildLiftTerminal(132);
-            var courseEnd=Box("Maintenance exit bulkhead",new Vector2(283,5),new Vector2(.4f,10),new Color(.06f,.13f,.18f),1);
+            BuildLiftTerminal(AncientCityLayout.Entry(0));BuildLiftTerminal(AncientChapterLayout.ExitLift(0));
+            var courseEnd=Box("Production route eastern bulkhead",new Vector2(AncientChapterLayout.FloorEnd(0)+1,5),new Vector2(.4f,10),new Color(.06f,.13f,.18f),1);
             courseEnd.layer=8;courseEnd.AddComponent<BoxCollider2D>();
-            // Separate city exits; floors are connected only by the elevator.
-            foreach(float x in new[]{119f,127f})
-            {var boundary=Box("Elevator shaft boundary",new Vector2(x,5),new Vector2(.4f,10),new Color(.05f,.1f,.13f),-2);boundary.layer=8;boundary.AddComponent<BoxCollider2D>();}
             // Story gates hostile encounters until patrol and equipment tutorials are complete.
             var district=gameObject.AddComponent<AncientDistrict>();district.Initialize(this);
             for(int i=0;i<8;i++)SpawnPickup(new Vector2(7+i*12,1.6f),-1);
@@ -288,9 +305,10 @@ namespace Plugin.AncientCivilization
             hero.hp=hero.MaxHP;hero.particles=Mathf.Max(hero.particles,60);Save();
             Burst(checkpoint,Cyan,28);Notice("체크포인트 / 체력을 회복하고 진행을 저장했습니다.",4);
         }
-        public void SetLiftCheckpoint(int floor)
+        public void SetLiftCheckpoint(int floor,Vector2? arrival=null)
         {
-            checkpointStage=floor==0?4:3;checkpoint=new Vector2(AncientCityLayout.Entry(floor),1.3f);SetSaved("cityFloor",floor);SetSaved("retryActive",0);Save();
+            checkpointStage=floor==0?4:3;checkpoint=arrival??new Vector2(AncientCityLayout.Entry(floor),1.3f);SetSaved("cityFloor",floor);
+            SetSaved("retryActive",1);SetSaved("retryFloor",floor);SetSaved("retryX",Mathf.RoundToInt(checkpoint.x*100));SetSaved("retryY",Mathf.RoundToInt(checkpoint.y*100));Save();
         }
         public void CombatCheckpoint(int floor,Vector2 point)
         {
@@ -330,6 +348,9 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             smoothFrameTime=Mathf.Lerp(smoothFrameTime,Mathf.Max(.001f,Time.unscaledDeltaTime),.05f);
+            bool guardian=ArenaActive&&!boss.IsDistrictBoss;
+            if(guardian!=patrolArenaClosed)
+            {patrolArenaClosed=guardian;for(int side=0;side<2;side++)patrolArenaSeals[side].enabled=patrolArenaSolids[side].enabled=guardian;}
             if(trainingGate&&Story&&trainingGate.activeSelf!=(Story.Stage<4))trainingGate.SetActive(Story.Stage<4);
             if(MainMenu){Time.timeScale=0;return;}
             if(Story&&(Story.DialogueOpen||Story.LiftBusy)||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic)){Time.timeScale=0;return;}
@@ -352,15 +373,16 @@ namespace Plugin.AncientCivilization
             float arenaLeft=0,arenaRight=0;bool arena=ArenaActive&&!(Finale&&Finale.Active);
             if(arena)
             {
-                arenaLeft=boss.IsDistrictBoss?AncientCityLayout.ArenaLeft(boss.DistrictFloor):98;
-                arenaRight=boss.IsDistrictBoss?AncientCityLayout.ArenaRight(boss.DistrictFloor):117;
+                arenaLeft=boss.IsDistrictBoss?AncientCityLayout.BossArenaLeft(boss.DistrictFloor,boss.IsSecretary):98;
+                arenaRight=boss.IsDistrictBoss?AncientCityLayout.BossArenaRight(boss.DistrictFloor,boss.IsSecretary):117;
                 zoom=Mathf.Max(5.8f,(arenaRight-arenaLeft+3)/(2*Mathf.Max(.5f,view.aspect)));
             }
             Vector2 dialogueFocus=Vector2.zero;float dialogueZoom=5.8f;bool dialogue=Story&&Story.TryDialogueFrame(out dialogueFocus,out dialogueZoom);
             if(dialogue)zoom=dialogueZoom;
             view.orthographicSize=Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
             float lead=hero.Facing*Mathf.Lerp(2.5f,4,Mathf.Clamp01(speed/25));
-            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Story&&Story.InUpperCity?AncientCityLayout.Left(Story.CurrentFloor)+5:5,Story&&Story.InUpperCity?AncientCityLayout.Right(Story.CurrentFloor)-6:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
+            bool chapter=Story&&Story.Stage>=8;
+            Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,chapter?AncientCityLayout.Left(Story.CurrentFloor)+5:5,chapter?AncientCityLayout.Right(Story.CurrentFloor)-6:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
             if(arena)target=new Vector3((arenaLeft+arenaRight)*.5f,4.6f,-10);
             if(Campaign&&Campaign.Active)target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,Campaign.CameraLeft,Campaign.CameraRight),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
             if(Finale&&Finale.Active)target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,AncientFinaleRules.Start+5,AncientFinaleRules.Finish+12),Mathf.Max(1.5f,hero.transform.position.y+2),-10);
@@ -899,7 +921,7 @@ namespace Plugin.AncientCivilization
             if(!wired||!wireZip)velocity.y=Mathf.Max(velocity.y,-25);body.linearVelocity=velocity;
             if(g.ArenaActive)
             {
-                Vector2 p=body.position;p.x=Mathf.Clamp(p.x,g.boss.IsDistrictBoss?AncientCityLayout.ArenaLeft(g.boss.DistrictFloor):98,g.boss.IsDistrictBoss?AncientCityLayout.ArenaRight(g.boss.DistrictFloor):117);body.position=p;
+                Vector2 p=body.position;p.x=Mathf.Clamp(p.x,g.boss.IsDistrictBoss?AncientCityLayout.BossArenaLeft(g.boss.DistrictFloor,g.boss.IsSecretary):98,g.boss.IsDistrictBoss?AncientCityLayout.BossArenaRight(g.boss.DistrictFloor,g.boss.IsSecretary):117);body.position=p;
             }
         }
         Vector2 ZipGoal()
@@ -1295,7 +1317,7 @@ namespace Plugin.AncientCivilization
         {
             // A wire impact on a moving guard stays on that truck's deck, never its old world-space home.
             if(IsSecretary)
-            {transform.position=new Vector2(Mathf.Clamp(transform.position.x+distance,AncientCityLayout.ArenaLeft(4)+1,AncientCityLayout.ArenaRight(4)-1),transform.position.y);return true;}
+            {transform.position=new Vector2(Mathf.Clamp(transform.position.x+distance,AncientCityLayout.BossArenaLeft(4,true)+1,AncientCityLayout.BossArenaRight(4,true)-1),transform.position.y);return true;}
             if(carrier)
             {
                 Vector3 local=transform.localPosition;local.x=Mathf.Clamp(local.x+distance,-1.7f,1.7f);
@@ -1303,7 +1325,7 @@ namespace Plugin.AncientCivilization
                 if(Physics2D.Linecast(AimPoint,next+Vector2.up*.95f,1<<8))return false;
                 transform.localPosition=local;return true;
             }
-            float x=Mathf.Clamp(transform.position.x+distance,IsDistrictBoss?AncientCityLayout.ArenaLeft(DistrictFloor)+1:kind==3?100:home.x-2,IsDistrictBoss?AncientCityLayout.ArenaRight(DistrictFloor)-1:kind==3?114:home.x+2);
+            float x=Mathf.Clamp(transform.position.x+distance,IsDistrictBoss?AncientCityLayout.BossArenaLeft(DistrictFloor,IsSecretary)+1:kind==3?100:home.x-2,IsDistrictBoss?AncientCityLayout.BossArenaRight(DistrictFloor,IsSecretary)-1:kind==3?114:home.x+2);
             if(Physics2D.Linecast(AimPoint,new Vector2(x,AimPoint.y),1<<8))return false;
             if(kind!=3&&kind!=4&&!Physics2D.Raycast(new Vector2(x,home.y+.2f),Vector2.down,.5f,1<<8))return false;
             if(kind==4)home.x=x;else transform.position=new Vector2(x,home.y);return true;

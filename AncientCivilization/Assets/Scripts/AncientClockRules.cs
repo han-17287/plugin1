@@ -13,6 +13,11 @@ namespace Plugin.AncientCivilization
         }
         public static bool BroadHit(float relativeX,float relativeY,float radius)
         {return relativeX*relativeX+relativeY*relativeY<=radius*radius&&!(Math.Abs(relativeX)<=UnderSafeHalfWidth&&relativeY<-.75f);}
+        public static float BroadRadius(float arenaWidth)
+        {
+            if(float.IsNaN(arenaWidth)||float.IsInfinity(arenaWidth)||arenaWidth<=0)return 11;
+            return Math.Max(11,(float)Math.Sqrt(arenaWidth*arenaWidth*.25f+100));
+        }
         public static bool ThirdVectorShot(int index){return index%3==2;}
     }
 }

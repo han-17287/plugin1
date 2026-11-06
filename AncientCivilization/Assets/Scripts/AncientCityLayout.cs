@@ -4,23 +4,28 @@ namespace Plugin.AncientCivilization
     {
         public const int LastFloor=4;
         public static string Name(int floor)
-        {return floor==0?"하층 생산구":floor==1?"하부 생활구":floor==2?"중층 행정구":floor==3?"상층 거주구":"최상층 통제구";}
+        {floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));return floor==0?"하층 생산구":floor==1?"하부 생활구":floor==2?"중층 행정구":floor==3?"상층 거주구":"최상층 통제구";}
         public static int VisualSector(float x)
         {
-            int room=AncientCampaignRules.RoomAt(x);if(room>=0)return room/4;
-            if(x>=790)return 5;
-            for(int floor=LastFloor;floor>=1;floor--)if(x>=Left(floor)-3&&x<=Right(floor)+3)return floor;
+            if(float.IsNaN(x)||float.IsInfinity(x))return 0;
+            int floor=AncientChapterLayout.FloorAt(x);if(floor>=0)return floor;
+            if(x>=AncientFinaleRules.Start)return 5;
             return 0;
         }
-        public static float Left(int floor){return floor==0?-5:floor==1?128:floor==2?300:floor==3?460:620;}
-        public static float Right(int floor){return floor==0?118:floor==1?282:Left(floor)+126;}
-        public static float Entry(int floor){return floor==0?115:Left(floor)+4;}
-        public static float ArenaLeft(int floor){return floor==1?258:Left(floor)+106;}
-        public static float ArenaRight(int floor){return floor==1?280:Left(floor)+124;}
+        public static float Left(int floor){return floor<=0?-5:AncientChapterLayout.FloorStart(floor);}
+        public static float Right(int floor){return AncientChapterLayout.FloorEnd(floor);}
+        public static float Entry(int floor){return AncientChapterLayout.FloorStart(floor)+4;}
+        public static float ArenaLeft(int floor){return floor>=LastFloor?AncientChapterLayout.SniperLeft:AncientChapterLayout.CaseEnd(floor)+16;}
+        public static float ArenaRight(int floor){return floor>=LastFloor?AncientChapterLayout.SniperRight:AncientChapterLayout.CaseEnd(floor)+48;}
+        public static float BossArenaLeft(int floor,bool secretary)
+        {floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));return secretary&&floor==LastFloor?AncientChapterLayout.SecretaryLeft:ArenaLeft(floor);}
+        public static float BossArenaRight(int floor,bool secretary)
+        {floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));return secretary&&floor==LastFloor?AncientChapterLayout.SecretaryRight:ArenaRight(floor);}
         public static AncientTraversalLayout.Ledge StreetRoad(int floor)
-        {floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));return new AncientTraversalLayout.Ledge(Left(floor),Right(floor),0);}
+        {floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));return new AncientTraversalLayout.Ledge(Left(floor),AncientChapterLayout.CaseLeft(floor*4),0);}
         public static AncientTraversalLayout.Ledge[] Route(int floor)
         {
+            floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));
             float x=Left(floor);
             if(floor==3)return new[]{new AncientTraversalLayout.Ledge(x,x+14,0),
                 new AncientTraversalLayout.Ledge(x+18,x+27,1.5f),new AncientTraversalLayout.Ledge(x+31,x+39,3),
@@ -39,7 +44,7 @@ namespace Plugin.AncientCivilization
                 new AncientTraversalLayout.Ledge(x+89,x+98,1),new AncientTraversalLayout.Ledge(x+103,x+126,0)};
         }
         public static bool SafeResume(int floor,float x,float y)
-        {return floor>=0&&floor<=LastFloor&&x>Left(floor)&&x<Right(floor)&&y>=.5f&&y<8.5f;}
+        {return floor>=0&&floor<=LastFloor&&!float.IsNaN(x)&&!float.IsInfinity(x)&&!float.IsNaN(y)&&!float.IsInfinity(y)&&x>Left(floor)&&x<Right(floor)&&y>=.5f&&y<8.5f;}
         public static bool CanLift(int stage,int points,int cleared,int current,int target)
         {
             if(current<0||current>LastFloor||target<0||target>=LastFloor||current==target)return false;

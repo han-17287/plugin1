@@ -22,10 +22,10 @@ namespace Plugin.AncientCivilization
             bool chase=game.Finale&&game.Finale.Active;
             int district=chase?Mathf.Clamp(4-AncientFinaleRules.Zone(game.hero.transform.position.x),0,4):game.Story.CurrentFloor;
             if(floor!=district){floor=district;art.sprite=AncientArt.DistrictBackdrop(floor);}
-            float reference=game.Campaign&&game.Campaign.Active?AncientCampaignRules.Left(game.Campaign.CurrentRoom):
-                chase?AncientFinaleRules.Checkpoint(AncientFinaleRules.Zone(game.hero.transform.position.x)):AncientCityLayout.Left(floor);
+            float reference=chase?AncientFinaleRules.Start:AncientChapterLayout.FloorStart(floor);
             Vector3 camera=view.transform.position;
-            float offset=Mathf.Clamp((game.hero.transform.position.x-reference)*.01f,-3,3);
+            float length=chase?AncientFinaleRules.Finish-AncientFinaleRules.Start:AncientChapterLayout.FloorEnd(floor)-reference;
+            float offset=Mathf.Lerp(-3,3,Mathf.Clamp01((game.hero.transform.position.x-reference)/Mathf.Max(1,length)));
             // Overscan also covers the widest supported window and fast wire camera zooms.
             float height=Mathf.Max(20,view.orthographicSize*2+6);
             height=Mathf.Max(height,(view.orthographicSize*view.aspect*2+8)*9/16f);

@@ -162,19 +162,14 @@ class RulesChecks
         for(int floor=1;floor<=4;floor++)
         {
             var street=AncientCityLayout.StreetRoad(floor);
-            Check(street.left<=AncientCityLayout.Entry(floor)&&street.right>=AncientCityLayout.ArenaRight(floor)&&street.top==0,"Ordinary city streets provide continuous ground from the entrance through the boss approach");
-        }
-        for(int floor=2;floor<=4;floor++)
-        {
-            var route=AncientCityLayout.Route(floor);
-            Check(route[0].left<=AncientCityLayout.Entry(floor)&&route[0].right>=AncientCityLayout.Entry(floor),"New district entry rests on safe ground");
-            Check(route[route.Length-1].left<=AncientCityLayout.ArenaLeft(floor),"Boss approach joins final stable floor");
-            Check(route[route.Length-1].right>=AncientCityLayout.ArenaRight(floor),"Boss arena has full solid floor");
-            for(int i=0;i<route.Length;i++)
+            Check(street.left<=AncientCityLayout.Entry(floor)&&street.right==AncientChapterLayout.CaseLeft(floor*4)&&street.top==0,"The entry road connects directly to the first case without filling authored jump pits");
+            Check(AncientCityLayout.Right(floor)>AncientChapterLayout.ExitLift(floor)&&AncientChapterLayout.ExitLift(floor)>AncientChapterLayout.CaseEnd(floor),"The forward lift is reached after traversing the chapter");
+            if(floor<4)
+                Check(AncientCityLayout.ArenaLeft(floor)>AncientChapterLayout.CaseEnd(floor)&&AncientCityLayout.ArenaRight(floor)<AncientChapterLayout.ExitLift(floor),"The chapter boss guards the onward destination before its lift");
+            else
             {
-                Check(route[i].right-route[i].left>=7,"New district basic route has broad landings");
-                Check(route[i].top+2.1f<10,"New district platforms fit under continuous ceiling");
-                if(i>0)Check(route[i].left-route[i-1].right<=5,"New district basic route uses short wire gaps");
+                Check(AncientCityLayout.ArenaLeft(4)>AncientChapterLayout.CaseRight(18)&&AncientCityLayout.ArenaRight(4)<AncientChapterLayout.CaseLeft(19),"The sniper occupies the physical bridge before the final record");
+                Check(AncientCityLayout.BossArenaLeft(4,true)>AncientChapterLayout.CaseRight(19)&&AncientCityLayout.BossArenaRight(4,true)<AncientChapterLayout.OfficeX,"The secretary guards a separate arena before the chairman's office");
             }
         }
         Check(!AncientCityLayout.ShutterClosed(1.8f,0)&&AncientCityLayout.ShutterWarning(1.8f,0),"Shutter warns before becoming solid");
@@ -269,20 +264,20 @@ class RulesChecks
         Check(AncientProgressRules.KnowsEvidence(1,5,0),"Confirmed theft evidence appears in journal");
         Check(!AncientProgressRules.KnowsEvidence(4,9,0),"Top-floor access clue is not spoiled early");
         Check(AncientProgressRules.KnowsEvidence(4,9,8),"Denied promotion clue follows the residential encounter");
-        Check(AncientProgressRules.KnowsEvidence(5,9,16),"Friend recognition note follows the sniper encounter");
-        Check(AncientFinaleRules.Road(800)==60,"Final chase starts at the top cargo road");
-        Check(AncientFinaleRules.Road(1400)==0,"Final chase reaches the lowest city floor");
-        Check(AncientFinaleRules.Road(1500)==0,"There is no playable ancient road below the endpoint");
+        Check(AncientProgressRules.KnowsEvidence(5,9,16),"Shared-status note follows the sniper encounter");
+        Check(AncientFinaleRules.Road(AncientFinaleRules.Start)==60,"Final chase starts at the top cargo road");
+        Check(AncientFinaleRules.Road(AncientFinaleRules.Finish)==0,"Final chase reaches the lowest city floor");
+        Check(AncientFinaleRules.Road(AncientFinaleRules.Finish+100)==0,"There is no playable ancient road below the endpoint");
         for(int section=0;section<5;section++)
         {
             float x=AncientFinaleRules.Checkpoint(section);
             Check(AncientFinaleRules.Zone(x)==section,"Every chase checkpoint restores its matching section");
             Check(AncientFinaleRules.Road(x)>=0&&AncientFinaleRules.Road(x)<=60,"Checkpoint remains on the city descent");
         }
-        Check(!AncientFinaleRules.CanBoardEnd(1393,1393,4.25f,false),"Jumping near the last truck cannot skip physically boarding its roof");
-        Check(!AncientFinaleRules.CanBoardEnd(1393,1396,4.25f,true),"A neighbouring ledge cannot trigger the truck roof encounter");
+        Check(!AncientFinaleRules.CanBoardEnd(AncientFinaleRules.Finish-7,AncientFinaleRules.Finish-7,4.25f,false),"Jumping near the last truck cannot skip physically boarding its roof");
+        Check(!AncientFinaleRules.CanBoardEnd(AncientFinaleRules.Finish-7,AncientFinaleRules.Finish-4,4.25f,true),"A neighbouring ledge cannot trigger the truck roof encounter");
         bool continuous=true,clearance=true;
-        for(float x=800;x<1400;x+=12)
+        for(float x=AncientFinaleRules.Start;x<AncientFinaleRules.Finish;x+=12)
         {
             float y0=AncientFinaleRules.Road(x),y1=AncientFinaleRules.Road(x+12);
             continuous&=Math.Abs((y0-y1)-1.2f)<.00002f;
@@ -290,11 +285,11 @@ class RulesChecks
         }
         Check(continuous,"Descending road segments meet without height gaps");
         Check(clearance,"Stepped cargo ceiling leaves full character headroom");
-        Check(AncientFinaleRules.TruckSpeed(800,900)==5,"Distant truck slows so the player can catch up");
-        Check(AncientFinaleRules.TruckSpeed(1000,900)==15,"Leading player cannot accelerate the truck without bound");
-        Check(!AncientFinaleRules.CanBoardEnd(900,900,54,true),"Support-shot climax cannot start halfway down");
-        Check(!AncientFinaleRules.CanBoardEnd(1393,1393,1.75f,true),"Running beside the truck is not boarding it");
-        Check(AncientFinaleRules.CanBoardEnd(1393,1393,4.25f,true),"Standing on the final truck roof triggers the climax");
+        Check(AncientFinaleRules.TruckSpeed(AncientFinaleRules.Start,AncientFinaleRules.Start+100)==5,"Distant truck slows so the player can catch up");
+        Check(AncientFinaleRules.TruckSpeed(AncientFinaleRules.Start+200,AncientFinaleRules.Start+100)==15,"Leading player cannot accelerate the truck without bound");
+        Check(!AncientFinaleRules.CanBoardEnd(AncientFinaleRules.Start+100,AncientFinaleRules.Start+100,54,true),"Support-shot climax cannot start halfway down");
+        Check(!AncientFinaleRules.CanBoardEnd(AncientFinaleRules.Finish-7,AncientFinaleRules.Finish-7,1.75f,true),"Running beside the truck is not boarding it");
+        Check(AncientFinaleRules.CanBoardEnd(AncientFinaleRules.Finish-7,AncientFinaleRules.Finish-7,4.25f,true),"Standing on the final truck roof triggers the climax");
         Check(!AncientProgressRules.KnowsEvidence(6,9,31,0),"Optional clinic evidence stays unknown until earned");
         Check(AncientProgressRules.KnowsEvidence(6,9,31,1),"Clinic job records its discovered evidence");
         Check(!AncientProgressRules.KnowsEvidence(7,9,31,1),"Clinic job cannot unlock the administrative evidence");
@@ -311,8 +306,8 @@ class RulesChecks
             Check(AncientCityLayout.VisualSector(AncientCityLayout.Entry(floor))==floor,"Lift entry displays its own scenery and lights");
             Check(AncientCityLayout.VisualSector(AncientCityLayout.ArenaRight(floor)-1)==floor,"Boss arena remains in its visible sector");
         }
-        Check(AncientCityLayout.VisualSector(799)==5,"Final cargo road uses its separate render sector");
-        Check(AncientCityLayout.VisualSector(1400)==5,"Final truck and its ceiling stay visible at the lowest endpoint");
+        Check(AncientCityLayout.VisualSector(AncientFinaleRules.Start)==5,"Final cargo road uses its separate render sector");
+        Check(AncientCityLayout.VisualSector(AncientFinaleRules.Finish)==5,"Final truck and its ceiling stay visible at the lowest endpoint");
         Check(AncientCityLayout.VisualSector(0)==0,"Patrol station keeps lower-city scenery");
         Check(AncientFrameRules.ValidSample(1f/240),"Fast active frames are measured");
         Check(AncientFrameRules.ValidSample(1.5f),"A severe active-play stall is included, never hidden from statistics");
@@ -337,9 +332,9 @@ class RulesChecks
             Check(AncientCampaignRules.CanStart(campaignMask,id,floor,9,31),"Ordered field case is playable after its story prerequisites");
             Check(!AncientCampaignRules.CanStart(campaignMask,id,floor,0,31),"Field cases cannot bypass the opening tutorial");
             Check(mission.Tasks.Length==3&&AncientCampaignData.Details[id].Length==3,"Every case has three concrete objectives and evidence details");
-            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+6)==id,"Each interior entry maps to the correct room");
+            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+6)==id,"Each continuous case entry maps to the correct objective owner");
             Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+AncientCampaignRules.RoomWidth-1)==id,"Each field exit remains in its room");
-            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+AncientCampaignRules.RoomWidth+(AncientCampaignRules.RoomStride-AncientCampaignRules.RoomWidth)*.5f)==-1,"Inter-room void cannot be mistaken for another field");
+            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+AncientCampaignRules.RoomWidth+(AncientCampaignRules.RoomStride-AncientCampaignRules.RoomWidth)*.5f)==-1,"A physical connecting bridge is not mistaken for an active objective room");
             Check(AncientCityLayout.VisualSector(AncientCampaignRules.Left(id)+42)==floor,"Field scenery displays on its actual city floor");
             campaignMask=AncientCampaignRules.Claim(campaignMask,id);
             Check(AncientCampaignRules.Claim(campaignMask,id)==campaignMask,"Field reward claim is idempotent");
@@ -349,27 +344,71 @@ class RulesChecks
             Check(AncientCampaignRules.FloorCount(campaignMask,floor)==4,"Each floor records exactly four resolved field cases");
             Check(AncientCampaignRules.Next(campaignMask,floor)==-1,"Completed chapter has no duplicate next case");
         }
+        Check(AncientCampaignRules.RestoreChapters(0,0,-1)==0,"A new game has not accepted any chapter mission");
+        Check(AncientCampaignRules.RestoreChapters(63,0,-1)==31,"Unknown chapter bits are discarded when loading");
+        Check(AncientCampaignRules.RestoreChapters(0,0,20)==0,"An invalid legacy active case cannot accept a chapter");
+        Check(AncientCampaignRules.ResumeCase(0,0,-1,0,9,31)==-1,"Loading a fresh profile never auto-accepts its first mission");
+        Check(AncientCampaignRules.ResumeCase(0,0,20,0,9,31)==-1,"An invalid legacy preference cannot auto-start the new route");
+        Check(AncientCampaignRules.ResumeCase(0,31,0,-1,9,31)==-1&&AncientCampaignRules.ResumeCase(0,31,0,5,9,31)==-1,"A corrupt saved floor cannot resume any city chapter");
+        for(int floor=0;floor<5;floor++)
+        {
+            int first=floor*4,mask=0,chapterBit=1<<floor;
+            Check(AncientCampaignRules.RestoreChapters(chapterBit,0,-1)==chapterBit,"An accepted chapter with no completed objectives survives a save");
+            Check(AncientCampaignRules.ResumeCase(0,chapterBit,-1,floor,9,31)==first,"An accepted but uncompleted chapter resumes its first case");
+            Check(AncientCampaignRules.ResumeCase(0,0,first,floor,9,31)==first,"A legacy active case restores the corresponding route without another briefing");
+            Check(AncientCampaignRules.ResumeCase(0,0,((floor+1)%5)*4,floor,9,31)==-1,"A preferred case on another floor does not accept this chapter");
+            Check(AncientCampaignRules.ResumeCase(0,chapterBit,first,floor,floor==0?7:8,31)==-1,"Accepted route data cannot bypass its tutorial or floor prerequisites");
+            for(int step=0;step<4;step++)
+            {
+                int id=first+step;
+                Check(AncientCampaignRules.RestoreChapters(0,0,id)==chapterBit,"A legacy active case restores only its own accepted chapter");
+                Check(AncientCampaignRules.ForwardCase(mask,id,9,31)==-1,"An unfinished case cannot hand off the road to its successor");
+                mask=AncientCampaignRules.Claim(mask,id);
+                Check(AncientCampaignRules.RestoreChapters(0,mask,-1)==chapterBit,"Legacy completed evidence restores its chapter without granting other floors");
+                int next=AncientCampaignRules.ForwardCase(mask,id,9,31);
+                Check(next==(step==3?-1:id+1),"Finishing a case advances along the same chapter and never changes floors");
+                Check(AncientCampaignRules.Next(mask,floor)==next,"Quitting after a handoff restores the same first unfinished objective");
+                Check(AncientCampaignRules.ResumeCase(mask,chapterBit,id,floor,9,31)==next,"A save whose old active case is already complete resumes its successor rather than becoming stranded");
+                Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id))==id&&AncientCampaignRules.RoomAt(AncientChapterLayout.CaseRight(id))==id,"Case ownership includes both physical endpoints");
+                if(step<3)
+                {
+                    float bridge=(AncientChapterLayout.CaseRight(id)+AncientChapterLayout.CaseLeft(id+1))*.5f;
+                    Check(AncientCampaignRules.RoomAt(bridge)==-1,"The linking road does not manufacture an objective room");
+                    Check(AncientCityLayout.VisualSector(bridge)==floor,"The linking road remains scenery on the same floor");
+                }
+            }
+            Check(AncientCampaignRules.ForwardCase(mask,first+3,9,31)==-1,"A completed chapter waits at its destination instead of entering another floor");
+            Check(AncientCampaignRules.RoomAt(AncientChapterLayout.FloorEnd(floor)+1)==-1,"The separation between city floors is never a case");
+        }
+        Check(AncientCampaignRules.ForwardCase(7<<16,18,9,0)==-1,"Forward travel waits for the sniper before assigning the office record");
+        Check(AncientCampaignRules.ForwardCase(7<<16,18,9,16)==19,"The cleared sniper bridge permits the final record without a new chapter mission");
+        Check(AncientCampaignRules.RestoreChapters(0,7<<16,18)==16,"Quitting on the sniper bridge preserves the accepted top-floor chapter");
+        Check(AncientCampaignRules.ResumeCase(7<<16,16,18,4,9,0)==-1,"Reloading on the sniper bridge cannot skip its undefeated boss");
+        Check(AncientCampaignRules.ResumeCase(7<<16,16,18,4,9,16)==19,"Reloading after the sniper dialogue resumes the office record on the same chapter");
+        foreach(float invalid in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity,float.MaxValue,float.MinValue})
+            Check(AncientCampaignRules.RoomAt(invalid)==-1,"Non-world coordinates cannot select a case during loading or rendering");
         Check(!AncientCampaignRules.ReadyForBoss(0,1),"New campaign boss cannot skip all investigation");
         Check(AncientCampaignRules.ReadyForBoss(7<<16,4),"Top sniper follows the first three infiltration cases");
         Check(!AncientCampaignRules.CanStart(7<<16,19,4,9,0),"Office comparison waits for the sniper encounter");
         Check(AncientCampaignRules.CanStart(7<<16,19,4,9,16),"Office comparison follows the unnamed sniper encounter");
         Check(!AncientCampaignRules.AllTasks(3),"Two tasks cannot finish a three-objective field case");
-        Check(AncientCampaignRules.AllTasks(7),"All three objectives permit reporting subject to actual threat clearance");
+        Check(AncientCampaignRules.AllTasks(7),"All three objectives permit onward movement subject to actual threat clearance");
         Check(AncientCampaignRules.Objective(1,0)==1,"Repeating a field interaction does not duplicate an objective");
         Check(AncientCampaignRules.RoomAt(float.NaN)==-1,"Invalid room coordinate never alters chapter rendering");
-        Check(AncientCampaignRules.RoomAt(1400)==-1,"Final descent remains separate from city field interiors");
+        Check(AncientCampaignRules.RoomAt(AncientFinaleRules.Finish)==-1,"Final descent remains separate from city field interiors");
         foreach(var citizen in AncientCampaignData.Citizens)
         {
             Check(citizen.Before.Length>=2&&citizen.After.Length>=1,"Each resident has early and later dialogue");
             Check(citizen.Floor==citizen.Id/5,"Resident identity stays on its assigned floor");
-            bool supported=false;
-            if(citizen.Floor==0)supported=Math.Abs(citizen.Y-(citizen.X>=43&&citizen.X<=58?1:0))<.01f;
-            else
-            {
-                var street=AncientCityLayout.StreetRoad(citizen.Floor);
-                supported=citizen.X>=street.left&&citizen.X<=street.right&&Math.Abs(citizen.Y-street.top)<.01f;
-            }
-            Check(supported,"Every resident stands on an actual safe city ledge");
+            var street=AncientCityLayout.StreetRoad(citizen.Floor);
+            bool supported=citizen.X>=street.left&&citizen.X<=street.right;
+            for(int id=citizen.Floor*4;id<citizen.Floor*4+3;id++)
+                supported|=citizen.X>AncientChapterLayout.CaseRight(id)+2&&citizen.X<AncientChapterLayout.CaseLeft(id+1)-2;
+            supported|=citizen.X>=AncientChapterLayout.CaseEnd(citizen.Floor)+50&&citizen.X<AncientCityLayout.Right(citizen.Floor);
+            if(citizen.Id==23)supported=citizen.X>AncientChapterLayout.CaseRight(18)-28&&citizen.X<AncientChapterLayout.CaseRight(18)-2;
+            if(citizen.Id==24)supported=citizen.X>AncientChapterLayout.CaseLeft(19)+3&&citizen.X<AncientChapterLayout.CaseLeft(19)+14;
+            Check(supported&&Math.Abs(citizen.Y)<.01f,"Every resident stands on an actual intro road, rest bridge or protected landing");
+            Check(AncientChapterLayout.FloorAt(citizen.X)==citizen.Floor,"Residents are physically spread along their assigned chapter");
         }
         Check(AncientCampaignRules.RepeatableEnergyNode(3,0,0),"Power case panel supplies particles before initial collection");
         Check(AncientCampaignRules.RepeatableEnergyNode(3,1,0),"Broken power panel can refill energy after death clears motes");
@@ -436,6 +475,13 @@ class RulesChecks
         Check(AncientClockRules.BroadHit(2,-5,11),"Moving outside underfoot safe lane enters broad attack");
         Check(AncientClockRules.BroadHit(0,0,11),"Boss centre is not an accidental safe spot");
         Check(!AncientClockRules.BroadHit(12,0,11),"Broad attack does not damage outside its displayed radius");
+        foreach(float width in new[]{16f,22f,32f,48f,64f})
+        {
+            float radius=AncientClockRules.BroadRadius(width);
+            foreach(float edge in new[]{-width*.5f,width*.5f})foreach(float height in new[]{-8f,0f,8f})
+                Check(AncientClockRules.BroadHit(edge,height,radius),"The broad clock sweep still covers the arena edges after chapter migration");
+            Check(!AncientClockRules.BroadHit(0,-5,radius),"A wider arena preserves the intended under-boss safe lane");
+        }
         Check(AncientFieldLayout.Routes.Length==20,"Every field mission has authored route data");
         foreach(var route in AncientFieldLayout.Routes)
         {

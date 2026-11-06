@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace Plugin.AncientCivilization
 {
-    // Same-floor investigation interiors; only the actual city elevator changes floors.
+    // A chapter is one physical road. Case milestones advance without moving the player.
     public sealed class AncientCampaign : MonoBehaviour
     {
-        AncientGame game;int completed,seen,beforeSeen,afterSeen,active=-1,restoreId=-1,taskMission=-1,tasks,checkpoint,defeated,encounterSector=-1;bool restored,legacy;
+        AncientGame game;int completed,seen,beforeSeen,afterSeen,chapters,active=-1,restoreId=-1,taskMission=-1,tasks,checkpoint,defeated,encounterSector=-1;bool restored,legacy;
         readonly SpriteRenderer[,] nodes=new SpriteRenderer[20,3];readonly SpriteRenderer[] citizens=new SpriteRenderer[25];
         readonly SpriteRenderer[,] fieldGates=new SpriteRenderer[20,2],terminals=new SpriteRenderer[20,3],powerStations=new SpriteRenderer[20,3];
         readonly BoxCollider2D[,] fieldGateSolids=new BoxCollider2D[20,2];
@@ -16,7 +16,17 @@ namespace Plugin.AncientCivilization
         bool fieldGuideVisible;Rect fieldGuideRect;
         string fieldTitle="",fieldNext="",fieldHint="",guideCaption="",edgeText="";
         readonly string[] fieldNodeLabels=new string[3];
-        static readonly string[] terminalLabels={"안전 거점 1 / E: 도시 복귀","안전 거점 2 / E: 도시 복귀","안전 거점 3 / E: 도시 복귀"};
+        static readonly string[] terminalLabels={"안전 거점 1 / 자동 저장 · E: 확인","안전 거점 2 / 자동 저장 · E: 확인","안전 거점 3 / 자동 저장 · E: 확인"};
+        readonly SpriteRenderer[] caseExits=new SpriteRenderer[20];readonly BoxCollider2D[] caseExitSolids=new BoxCollider2D[20];
+        readonly SpriteRenderer[] chapterEntries=new SpriteRenderer[5];readonly BoxCollider2D[] chapterEntrySolids=new BoxCollider2D[5];
+        readonly int[] routeTasks=new int[20],routeCheckpoints=new int[20],routeDefeated=new int[20];
+        public static readonly string[] ProgressKeys=BuildProgressKeys();
+        static string[] BuildProgressKeys()
+        {
+            var keys=new string[60];for(int id=0;id<20;id++)
+            {keys[id*3]="routeTask"+id;keys[id*3+1]="routeCheckpoint"+id;keys[id*3+2]="routeDefeated"+id;}
+            return keys;
+        }
         static readonly string[] guideArrows={"← ","→ ","↑ ","↓ "};
         public bool Active {get{return active>=0;}}
         public int CurrentRoom {get{return active;}}
@@ -52,8 +62,9 @@ namespace Plugin.AncientCivilization
         }
         static float DialogueHeadOffset(SpriteRenderer view)
         {return Mathf.Clamp(view.bounds.max.y-view.transform.position.y,.9f,2.4f);}
-        public float CameraLeft {get{return AncientCampaignRules.Left(active)+5;}}
-        public float CameraRight {get{return AncientCampaignRules.Left(active)+AncientCampaignRules.RoomWidth-6;}}
+        public float CameraLeft {get{return AncientCityLayout.Left(game.Story.CurrentFloor)+5;}}
+        public float CameraRight {get{return AncientCityLayout.Right(game.Story.CurrentFloor)-6;}}
+        public bool ChapterStarted(int floor){return (chapters&(1<<floor))!=0;}
         static readonly int[] givers={3,5,10,15,20};
         readonly SpriteRenderer[] gates=new SpriteRenderer[5];readonly BoxCollider2D[] gateSolids=new BoxCollider2D[5];readonly bool[] gateShown=new bool[5];
         static int GiverFor(int floor,int mission){return floor==4&&mission==19?24:givers[floor];}
@@ -62,8 +73,17 @@ namespace Plugin.AncientCivilization
             game=owner;completed=AncientCampaignRules.SanitizeMask(AncientGame.Saved("campaignComplete"));seen=AncientGame.Saved("campaignSeen");beforeSeen=AncientGame.Saved("campaignBeforeSeen");afterSeen=AncientGame.Saved("campaignAfterSeen");
             restoreId=AncientGame.Saved("campaignActive",-1);taskMission=AncientGame.Saved("campaignTaskMission",-1);tasks=AncientGame.Saved("campaignTasks")&7;
             checkpoint=AncientGame.Saved("campaignCheckpoint");defeated=AncientFieldExpansion.SanitizeEnemies(AncientGame.Saved("campaignDefeated"));
+            chapters=AncientCampaignRules.RestoreChapters(AncientGame.Saved("campaignChapterStarted"),completed,restoreId);
+            for(int id=0;id<20;id++)
+            {
+                routeTasks[id]=AncientGame.Saved(ProgressKeys[id*3])&7;
+                routeDefeated[id]=AncientFieldExpansion.SanitizeEnemies(AncientGame.Saved(ProgressKeys[id*3+2]));
+                routeCheckpoints[id]=AncientFieldExpansion.ResolveCheckpoint(AncientGame.Saved(ProgressKeys[id*3+1]),routeTasks[id],routeDefeated[id]);
+            }
+            if(taskMission>=0&&taskMission<20&&!AncientCampaignRules.Complete(completed,taskMission))
+            {routeTasks[taskMission]=tasks;routeDefeated[taskMission]=defeated;routeCheckpoints[taskMission]=checkpoint;}
             legacy=AncientGame.Saved("campaignLegacy")!=0||(AncientGame.Saved("campaignVersion")==0&&AncientGame.Saved("questStage")>0);
-            AncientGame.SetSaved("campaignVersion",1);AncientGame.SetSaved("campaignLegacy",legacy?1:0);
+            AncientGame.SetSaved("campaignVersion",AncientCampaignRules.RouteVersion);AncientGame.SetSaved("campaignLegacy",legacy?1:0);
             foreach(var mission in AncientCampaignData.Missions)BuildRoom(mission);
             for(int floor=1;floor<=4;floor++)
             {
@@ -81,6 +101,11 @@ namespace Plugin.AncientCivilization
         void BuildRoom(AncientMission mission)
         {
             float left=AncientCampaignRules.Left(mission.Id),right=left+AncientCampaignRules.RoomWidth;
+            if(mission.Id%4==0)
+            {
+                var start=game.Box("Chapter assignment checkpoint",new Vector2(left-2,4.8f),new Vector2(.2f,10.4f),new Color(.2f,.7f,.8f,.35f),5);
+                start.layer=8;chapterEntries[mission.Floor]=start.GetComponent<SpriteRenderer>();chapterEntrySolids[mission.Floor]=start.AddComponent<BoxCollider2D>();
+            }
             game.Ceiling(left,right,10);game.Platform(left,right,-4.5f);
             Color tint=mission.Floor==0?new Color(.12f,.17f,.2f):mission.Floor==1?new Color(.13f,.21f,.2f):mission.Floor==2?new Color(.12f,.18f,.28f):mission.Floor==3?new Color(.24f,.23f,.19f):new Color(.19f,.13f,.24f);
             Color facade=tint;facade.a=.68f;Color window=tint*1.55f;window.a=.30f;
@@ -142,10 +167,13 @@ namespace Plugin.AncientCivilization
                     {var buoy=new GameObject("Field blade rebound buoy").AddComponent<AncientAirTarget>();buoy.Initialize(game,new Vector2(x,6));buoys.Add(buoy);}
                 }
             }
-            foreach(float x in new[]{left-.2f,right+.2f})
-            {var wall=game.Box("Field boundary",new Vector2(x,4),new Vector2(.4f,12),tint,0);wall.layer=8;wall.AddComponent<BoxCollider2D>();}
-            AncientArt.Display("Field return doorway",AncientArt.World(3),new Vector2(left+3,0),1,transform).transform.localScale=Vector3.one*.65f;
-            AncientArt.Display("Field evidence exit",AncientArt.World(3),new Vector2(right-5,0),1,transform).transform.localScale=Vector3.one*.65f;
+            var exit=game.Box("Forward route security seal",new Vector2(right-.2f,4.8f),new Vector2(.2f,10.4f),new Color(.2f,.7f,.8f,.35f),5);
+            exit.layer=8;caseExits[mission.Id]=exit.GetComponent<SpriteRenderer>();caseExitSolids[mission.Id]=exit.AddComponent<BoxCollider2D>();
+            if(mission.Id%4<3)
+            {
+                game.Platform(right,AncientCampaignRules.Left(mission.Id+1),0);game.Ceiling(right,AncientCampaignRules.Left(mission.Id+1),10);
+                AncientFieldScenery.Build(game,mission.Floor,right,mission.Id%4,AncientChapterLayout.BridgeWidth);
+            }
             for(int i=0;i<3;i++)
             {
                 var p=NodePoint(mission.Id,i);
@@ -177,10 +205,20 @@ namespace Plugin.AncientCivilization
         public bool ReadyForFinale {get{return legacy||AncientCampaignRules.FloorCount(completed,4)==4;}}
         public void WriteSave()
         {
+            StoreProgress();
             AncientGame.SetSaved("campaignComplete",completed);AncientGame.SetSaved("campaignSeen",seen);AncientGame.SetSaved("campaignBeforeSeen",beforeSeen);AncientGame.SetSaved("campaignAfterSeen",afterSeen);AncientGame.SetSaved("campaignActive",active);
             AncientGame.SetSaved("campaignTaskMission",taskMission);AncientGame.SetSaved("campaignTasks",tasks);
             AncientGame.SetSaved("campaignCheckpoint",checkpoint);AncientGame.SetSaved("campaignDefeated",defeated);
+            AncientGame.SetSaved("campaignChapterStarted",chapters);
+            if(active>=0)
+            {
+                AncientGame.SetSaved(ProgressKeys[active*3],routeTasks[active]);
+                AncientGame.SetSaved(ProgressKeys[active*3+1],routeCheckpoints[active]);
+                AncientGame.SetSaved(ProgressKeys[active*3+2],routeDefeated[active]);
+            }
         }
+        void StoreProgress()
+        {if(active>=0){routeTasks[active]=tasks;routeCheckpoints[active]=checkpoint;routeDefeated[active]=defeated;}}
         void Persist(){WriteSave();game.Save();}
         void ClearFoes()
         {
@@ -217,24 +255,73 @@ namespace Plugin.AncientCivilization
             escort.transform.position=new Vector2(x,0);following=true;
         }
         void Begin(int id)
+        {ActivateCase(id,true);}
+        void ActivateCase(int id,bool relocate)
         {
             if(!AncientCampaignRules.CanStart(completed,id,game.Story.CurrentFloor,game.Story.Stage,game.City.Cleared))return;
-            if(active==id)RecordDefeats();
+            if(Active){RecordDefeats();StoreProgress();}ClearFoes();
             active=id;escortCycle=0;escortFrame=-1;escort.sprite=AncientCitizenArt.ForCitizen(AncientCampaignRules.Witness(id));
-            if(taskMission!=id){taskMission=id;tasks=0;checkpoint=defeated=0;}
+            chapters|=1<<(id/4);
+            if(taskMission!=id){taskMission=id;tasks=routeTasks[id];checkpoint=routeCheckpoints[id];defeated=routeDefeated[id];}
             checkpoint=AncientFieldExpansion.ResolveCheckpoint(checkpoint,tasks,defeated);following=false;
-            ClearFoes();game.City.OnEnterFloor();game.hero.TravelTo(CheckpointPoint());ActivateSector(checkpoint);RestoreEscort();
-            Refresh();Persist();game.SnapCameraToHero();game.BlockGameplayInput();game.Notice("현장 진입 / "+AncientCampaignData.Missions[id].Title+" · 안전 거점 E로 중단/복귀",4);
+            if(relocate){game.City.OnEnterFloor();game.hero.TravelTo(CheckpointPoint());}
+            ActivateSector(checkpoint);RestoreEscort();Refresh();Persist();
+            if(relocate){game.SnapCameraToHero();game.BlockGameplayInput();}
         }
-        void ReturnCity()
+        void StartChapter(int id)
         {
-            int floor=game.Story.CurrentFloor,previous=active;RecordDefeats();ClearFoes();active=-1;following=false;escort.enabled=false;
-            var citizen=AncientCampaignData.Citizens[GiverFor(floor,previous)];game.hero.TravelTo(new Vector2(citizen.X-1.4f,citizen.Y+1.3f));
-            game.City.OnEnterFloor();Refresh();Persist();game.SnapCameraToHero();game.BlockGameplayInput();
+            game.City.OnEnterFloor();ActivateCase(id,false);
+            game.Feel.Signal(ChapterTitle(id/4),AncientGame.Cyan,2);
+        }
+        public void ContinueAfterSniper()
+        {
+            if(game.Story.CurrentFloor==4&&ChapterStarted(4)&&AncientCampaignRules.Next(completed,4)==19)
+                ActivateCase(19,false);
+        }
+        public void LeaveFloor()
+        {
+            if(Active){RecordDefeats();StoreProgress();Persist();}
+            ClearFoes();active=-1;following=false;escort.enabled=false;Refresh();
+        }
+        public void EnterFloor()
+        {
+            restored=true;restoreId=-1;
+            int floor=game.Story.CurrentFloor,next=AncientCampaignRules.Next(completed,floor);
+            if(ChapterStarted(floor)&&next>=0&&AncientCampaignRules.CanStart(completed,next,floor,game.Story.Stage,game.City.Cleared))ActivateCase(next,false);
+            else Refresh();
+        }
+        void FinishCase()
+        {
+            if(!Active||!AncientFieldExpansion.ExitReady(tasks,defeated)||ThreatsAlive())return;
+            int id=active;var mission=AncientCampaignData.Missions[id];
+            StoreProgress();
+            completed=AncientCampaignRules.Claim(completed,id);game.credits+=5;
+            ClearFoes();active=-1;following=false;escort.enabled=false;taskMission=-1;tasks=checkpoint=defeated=0;
+            int next=AncientCampaignRules.ForwardCase(completed,id,game.Story.Stage,game.City.Cleared);
+            if(next>=0)ActivateCase(next,false);else{Refresh();Persist();}
+            game.CombatCheckpoint(mission.Floor,new Vector2(game.hero.transform.position.x,1.3f));
+            game.Story.RadioBark("백 경위",mission.Result);
+            game.Story.RadioBark(mission.Speaker,AncientCampaignData.Reactions[id]);
+            game.Story.RadioBark("통신관",mission.Clue);
+            game.Feel.Signal(next>=0?"기록 전송 · 동쪽으로 계속 이동":id==18?"관제실 전방 · 미등록 사격 신호":"목적지 도착 · 동쪽 통로로",new Color(.55f,1,.85f),1.6f);
+        }
+        static string ChapterTitle(int floor)
+        {return floor==0?"회수 운송로의 끝":floor==1?"끊긴 배급선":floor==2?"지워진 승인":floor==3?"보류된 승진":"중앙 관제의 침묵";}
+        static string ChapterBrief(int floor)
+        {
+            return floor==0?"회수품의 운송로를 끝까지 따라가라. 작업장과 봉쇄 구역을 지나 동쪽 인계선까지 조사해 줘. 확보한 기록은 무전으로 받겠다.":
+                floor==1?"배급이 끊긴 길을 따라 동쪽 경비 구역까지 가 주세요. 진료선과 막힌 운송로에 아직 사람이 남아 있어요.":
+                floor==2?"신고 접수로부터 원본 보관소까지 기록이 같은 승인선으로 묶였습니다. 동쪽 통제구까지 따라가면 누가 기록을 막는지 확인할 수 있습니다.":
+                floor==3?"공용 전력의 분기선을 따라 동쪽 외벽까지 가 보죠. 계약과 이송 명단도 그 길에 있습니다. 제 계측 기록을 보내겠습니다.":
+                "정비로를 따라 중앙 관제실 너머 회장실까지 갈 수 있어요. 감시 회선을 피하면서 지워진 기록을 찾아 주세요. 전방의 사격 신호는 경비망에 등록돼 있지 않습니다.";
         }
         public bool Retry(){if(!Active)return false;Begin(active);return true;}
         void Refresh()
         {
+            for(int floor=0;floor<5;floor++)if(chapterEntries[floor])
+            {bool closed=!ChapterStarted(floor);chapterEntries[floor].enabled=chapterEntrySolids[floor].enabled=closed;}
+            for(int id=0;id<20;id++)if(caseExits[id])
+            {bool closed=!AncientCampaignRules.Complete(completed,id);caseExits[id].enabled=caseExitSolids[id].enabled=closed;}
             for(int id=0;id<20;id++)for(int i=0;i<3;i++)
             {
                 bool refill=AncientCampaignRules.RepeatableEnergyNode(AncientCampaignData.Missions[id].Kind,tasks,i);
@@ -284,27 +371,26 @@ namespace Plugin.AncientCivilization
             }
             return false;
         }
-        public void OnLaser(Vector2 start,Vector2 end)
+        public void OnLaser(Vector2 start,Vector2 end,float bodyRadius=0)
         {
             if(!Active||AncientCampaignData.Missions[active].Kind!=3||(tasks&3)!=3)return;
             Vector2 p=NodePoint(active,2),delta=end-start;
-            float t=delta.sqrMagnitude>.001f?Mathf.Clamp01(Vector2.Dot(p-start,delta)/delta.sqrMagnitude):0;
-            if((p-start-delta*t).sqrMagnitude<1&&!Physics2D.Linecast(start,p,1<<8))Mark(2);
+            Vector2 target=p-start;
+            if(AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,bodyRadius,1)&&!Physics2D.Linecast(start,p,1<<8))Mark(2);
         }
         public bool TryInteract()
         {
             if(!game.Story||game.hero.bike||game.ArenaActive||(game.Finale&&game.Finale.Phase!=0))return false;
-            if(Active)return InteractRoom();
-            int id=NearestCitizen();if(id<0)return false;
+            int id=NearestCitizen();if(id<0)return Active&&InteractRoom();
             if(!game.hero.IsOnGround){game.Notice("착지한 뒤 주민과 대화하세요.");return true;}
             var npc=AncientCampaignData.Citizens[id];seen|=1<<id;Persist();
             int next=AncientCampaignRules.Next(completed,npc.Floor);
-            if(next>=0&&id==GiverFor(npc.Floor,next)&&AncientCampaignRules.CanStart(completed,next,npc.Floor,game.Story.Stage,game.City.Cleared))
+            if(next>=0&&!ChapterStarted(npc.Floor)&&id==givers[npc.Floor]&&AncientCampaignRules.CanStart(completed,next,npc.Floor,game.Story.Stage,game.City.Cleared))
             {
                 var m=AncientCampaignData.Missions[next];
-                game.Story.Conversation(()=>Begin(next),npc.Role,
-                    new string[]{m.Speaker,"백명"},
-                    new string[]{m.Brief,m.Reply});
+                game.Story.Conversation(()=>StartChapter(next),npc.Role,
+                    new string[]{npc.Name,"백명","통신관"},
+                    new string[]{ChapterBrief(npc.Floor),m.Reply,"확보한 기록은 이동하면서 전송해라. 나는 무전으로 확인하겠다. 동쪽 끝까지 따라가 보자."});
             }
             else
             {
@@ -323,13 +409,11 @@ namespace Plugin.AncientCivilization
             var m=AncientCampaignData.Missions[active];float left=AncientCampaignRules.Left(active);Vector2 hero=game.hero.transform.position;
             RecordDefeats();
             for(int sector=0;sector<=checkpoint;sector++)if(Mathf.Abs(hero.x-left-AncientFieldExpansion.EntranceOf(sector))<2.5f&&Mathf.Abs(hero.y-1.3f)<1.5f)
-            {ReturnCity();game.Notice("현장 중단 / 조사 항목과 안전 거점은 저장됩니다.");return true;}
+            {Persist();game.Notice("안전 거점 / 확보한 기록과 수사 진행을 저장했습니다.",2);return true;}
             if(hero.x>left+AncientCampaignRules.RoomWidth-10)
             {
-                if(!AncientFieldExpansion.ExitReady(tasks,defeated)||ThreatsAlive()){game.Notice("조사 세 항목과 각 구간의 위협을 확인한 뒤 출구에서 E로 보고하세요.",3);return true;}
-                int id=active;completed=AncientCampaignRules.Claim(completed,id);game.credits+=5;taskMission=-1;tasks=0;Persist();
-                game.Story.Conversation(ReturnCity,3,new string[]{"백명",m.Speaker,"통신관"},
-                    new string[]{m.Result,AncientCampaignData.Reactions[id],m.Clue});return true;
+                if(!AncientFieldExpansion.ExitReady(tasks,defeated)||ThreatsAlive())game.Notice("남아 있는 기록과 위협을 확인하면 동쪽 통로가 열립니다.",2);
+                else FinishCase();return true;
             }
             for(int i=0;i<3;i++)
             {
@@ -345,7 +429,7 @@ namespace Plugin.AncientCivilization
                 if(m.Kind==2&&i==1){escort.transform.position=NodePoint(active,1)-Vector2.up*1.2f;following=true;Refresh();}
                 game.Story.Conversation(null,m.Kind==2?2:3,new string[]{m.Speaker,"백명"},new string[]{AncientCampaignData.Details[active][i],"확인했습니다. 사본을 남기겠습니다."});return true;
             }
-            return true;
+            return false;
         }
         void CompareEvidence()
         {
@@ -366,6 +450,7 @@ namespace Plugin.AncientCivilization
             int nearest=-1;float best=1.9f*1.9f;Vector2 hero=game.hero.transform.position;
             foreach(var npc in AncientCampaignData.Citizens)
             {
+                if(npc.Id==3&&game.Story.Stage<8)continue;
                 if(npc.Floor!=game.Story.CurrentFloor)continue;float d=(hero-new Vector2(npc.X,npc.Y+1)).sqrMagnitude;
                 if(d<best){best=d;nearest=npc.Id;}
             }
@@ -380,18 +465,26 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             if(!game.Story||!game.hero||!game.HasSession)return;
+            foreach(var resident in AncientCampaignData.Citizens)
+                citizens[resident.Id].enabled=resident.Floor==game.Story.CurrentFloor&&(resident.Id!=3||game.Story.Stage>=8);
+            if(game.Finale&&game.Finale.Phase!=0)return;
             for(int floor=1;floor<=4;floor++)
             {
                 bool closed=!Active&&game.Story.CurrentFloor==floor&&!ReadyForBoss(floor);
                 if(gateShown[floor]!=closed){gateShown[floor]=closed;gates[floor].enabled=gateSolids[floor].enabled=closed;}
             }
             if(!restored)
-            {restored=true;if(restoreId>=0&&restoreId<20&&!AncientCampaignRules.Complete(completed,restoreId))Begin(restoreId);}
+            {
+                restored=true;int resume=AncientCampaignRules.ResumeCase(completed,chapters,restoreId,game.Story.CurrentFloor,game.Story.Stage,game.City.Cleared);
+                if(resume>=0)Begin(resume);
+            }
             if(!Active||game.Paused)return;
             RecordDefeats();
             float left=AncientCampaignRules.Left(active);Vector2 p=game.hero.transform.position;
-            if(p.y<-2.5f||p.x<left-1||p.x>left+AncientCampaignRules.RoomWidth+1)
+            if(p.y<-2.5f||p.x<AncientCityLayout.Left(game.Story.CurrentFloor)-1||p.x>left+AncientCampaignRules.RoomWidth+1)
             {RecoverToCheckpoint();return;}
+            if(p.x>=left+AncientCampaignRules.RoomWidth-10&&AncientFieldExpansion.ExitReady(tasks,defeated)&&!ThreatsAlive())
+            {FinishCase();return;}
             int sector=AncientFieldExpansion.SectorAt(p.x-left),allowed=AncientFieldExpansion.MaximumCheckpoint(tasks,defeated);
             if(sector>allowed){RecoverToCheckpoint();return;}
             if(sector>checkpoint)
@@ -464,12 +557,12 @@ namespace Plugin.AncientCivilization
             if(uiMission!=active)for(int i=0;i<3;i++)
                 fieldNodeLabels[i]=(UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
             uiMission=active;uiSector=sector;uiNext=next;uiGuideKind=kind;uiGuideId=id;uiFollowing=following;edgeMetres=-1;
-            fieldTitle=(sector+1)+" / 3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 와이어 구간":" · 지상 통로");
-            guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"E · 조사 보고":kind==5?"베기 · 입자 재채취":
+            fieldTitle=ChapterTitle(mission.Floor)+" · "+(active%4+1)+"/4 · "+(sector+1)+"/3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 와이어":"");
+            guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"동쪽 통로로 계속 이동":kind==5?"베기 · 입자 재채취":
                 mission.Kind==2&&next==2?"보호 대상과 출구로":fieldNodeLabels[next];
             fieldNext="다음 / "+guideCaption;
-            fieldHint=kind==5?"패널을 베고 우클릭으로 수집 · 길게 눌러 레이저":kind==1?"위협이 없는 통로에서는 주민이 뒤따라옵니다.":mission.Kind==2&&following?"주민을 보호하며 이동 · 거점/출구 E":
-                kind==2||kind==3?"위협을 제압하세요 · 안전 거점 E: 복귀":"안전 거점 E: 복귀 · 동쪽 출구 E: 보고";
+            fieldHint=kind==5?"패널을 베고 우클릭으로 수집 · 길게 눌러 레이저":kind==1?"위협이 없는 통로에서는 주민이 뒤따라옵니다.":mission.Kind==2&&following?"주민을 보호하며 동쪽 출구로 이동":
+                kind==2||kind==3?"위협을 제압하세요 · 안전 거점 자동 저장":"기록은 무전으로 전송 · 계속 동쪽으로 이동";
         }
         static bool InView(Vector3 point)
         {return point.z>0&&point.x>=0&&point.x<=Screen.width&&point.y>=0&&point.y<=Screen.height;}
@@ -542,16 +635,16 @@ namespace Plugin.AncientCivilization
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;
             if(Active){GUI.depth=-8;DrawFieldGui();}
-            else if(!(game.Finale&&game.Finale.Phase!=0))
+            if(!(game.Finale&&game.Finale.Phase!=0))
             {
                 int nearest=NearestCitizen();
                 if(nearest>=0)
                 {
                     var npc=AncientCampaignData.Citizens[nearest];var p=game.View.WorldToScreenPoint(new Vector2(npc.X,npc.Y+2.2f));
-                    GUI.Label(new Rect(p.x-170,Screen.height-p.y-25,340,55),npc.Name+" / E: 대화·현장 조사",label);
+                    GUI.Label(new Rect(p.x-170,Screen.height-p.y-25,340,55),npc.Name+" / E: 대화",label);
                 }
                 int floor=game.Story.CurrentFloor;
-                if(game.Story.Stage>=8)
+                if(!Active&&game.Story.Stage>=8&&!ChapterStarted(floor))
                 {
                     int nextCase=AncientCampaignRules.Next(completed,floor);
                     if(nextCase>=0)
@@ -563,8 +656,14 @@ namespace Plugin.AncientCivilization
                             GUI.Label(new Rect(x-100,Screen.height-195,200,30),(giver.X<game.hero.transform.position.x?"← ":"→ ")+giver.Name,label);
                     }
                 }
-                if(game.Story.Stage>=8)
-                {int next=AncientCampaignRules.Next(completed,floor);GUI.Label(new Rect(Screen.width/2-330,Screen.height-145,660,50),next==19&&(game.City.Cleared&16)==0?"전방 저격수와 대치 / 동결된 통행 심사의 단서 확인":next>=0?"구역 사건 "+AncientCampaignRules.FloorCount(completed,floor)+" / 4 · "+AncientCampaignData.Citizens[GiverFor(floor,next)].Name+"에게 다음 현장 확인":"구역 조사 완료 / 전투와 출입 권한 확인",label);}
+                if(!Active&&game.Story.Stage>=8)
+                {
+                    int next=AncientCampaignRules.Next(completed,floor);
+                    string hint=next==19&&(game.City.Cleared&16)==0?"전방 저격수와 대치 / 동결된 통행 심사의 단서 확인":
+                        next>=0&&!ChapterStarted(floor)?AncientCampaignData.Citizens[givers[floor]].Name+"에게 긴 수사로의 임무 확인":
+                        next>=0?"동쪽 수사로를 따라 계속 이동":"수사로 끝 / 동쪽 목적지와 이동 엘리베이터 확인";
+                    GUI.Label(new Rect(Screen.width/2-330,Screen.height-145,660,50),hint,label);
+                }
             }
             GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;
         }
@@ -588,7 +687,7 @@ namespace Plugin.AncientCivilization
                     var npc=AncientCampaignData.Citizens[journalFloor*5+i];bool known=(seen&(1<<npc.Id))!=0;
                     GUI.enabled=known;if(GUI.Button(new Rect(area.x+700,area.y+85+i*63,145,23),"대화 기록",AncientHUD.Button))journalCitizen=npc.Id;GUI.enabled=true;
                     GUI.Label(new Rect(area.x,area.y+85+i*63,680,23),known?npc.Name:"아직 만나지 않은 주민",small);
-                    GUI.Label(new Rect(area.x,area.y+109+i*63,area.width,38),known?((afterSeen&(1<<npc.Id))!=0?npc.After[0]:(beforeSeen&(1<<npc.Id))!=0?npc.Before[0]:"현장 안내를 들었다. 다음 현장은 이 주민에게 확인한다."):"해당 구역에서 주민과 대화하면 기록됩니다.",small);
+                    GUI.Label(new Rect(area.x,area.y+109+i*63,area.width,38),known?((afterSeen&(1<<npc.Id))!=0?npc.After[0]:(beforeSeen&(1<<npc.Id))!=0?npc.Before[0]:"수사로 안내를 들었다. 동쪽 길을 따라 기록을 확인한다."):"해당 구역에서 주민과 대화하면 기록됩니다.",small);
                 }
             }
             else if(journalMission>=0&&journalMission/4==journalFloor&&AncientCampaignRules.Complete(completed,journalMission))

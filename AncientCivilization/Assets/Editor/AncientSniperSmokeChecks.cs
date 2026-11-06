@@ -39,8 +39,8 @@ namespace Plugin.AncientCivilization.EditorChecks
             SetTime("Started",Now);SetStage(0);
             Set(profile,"questStage",9);Set(profile,"cityFloor",4);Set(profile,"storyBoss",1);Set(profile,"storyCores",7);
             Set(profile,"residencePoints",5000);Set(profile,"started",1);Set(profile,"cityCleared",14);
-            Set(profile,"campaignVersion",1);Set(profile,"campaignComplete",(1<<19)-1);
-            Set(profile,"retryActive",1);Set(profile,"retryFloor",4);Set(profile,"retryX",72800);Set(profile,"retryY",130);
+            Set(profile,"campaignVersion",AncientCampaignRules.RouteVersion);Set(profile,"campaignComplete",(1<<19)-1);
+            Set(profile,"retryActive",1);Set(profile,"retryFloor",4);Set(profile,"retryX",Mathf.RoundToInt((AncientCityLayout.ArenaLeft(4)+2)*100));Set(profile,"retryY",130);
             PlayerPrefs.Save();Append("START: isolated sniper smoke. Leave Space/mouse/game controls untouched during automatic checks.");
             Append("Normal profile: "+NormalPrefix+"; test profile: "+profile);
             EditorApplication.isPlaying=true;

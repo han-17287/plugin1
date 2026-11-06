@@ -12,7 +12,7 @@ class FieldExpansionChecks
     {
         Check(AncientFieldExpansion.SectorCount==3&&AncientFieldExpansion.RouteCount==27,"Each expanded field contains three nine-ledge sections");
         Check(AncientFieldExpansion.Width>=600&&AncientFieldExpansion.Width==AncientFieldExpansion.SectorCount*AncientFieldExpansion.SectorSpan,"Fields are longer than the former432-unit interiors and cover all three complete sectors");
-        Check(AncientFieldExpansion.Stride>AncientFieldExpansion.Width,"Full field boundaries leave a gap before the next field");
+        Check(AncientFieldExpansion.Stride>AncientFieldExpansion.Width,"Consecutive case sections leave room for a physical connecting road");
         Check(AncientFieldExpansion.Names.Length==20,"All twenty existing cases retain section names");
         var names=new HashSet<string>();var jumpSignatures=new HashSet<string>();int jumpSectors=0;var floorsWithJump=new HashSet<int>();
         for(int mission=0;mission<20;mission++)
@@ -92,7 +92,7 @@ class FieldExpansionChecks
         Check(Near(clamped.left,valid.left)&&Near(clamped.right,valid.right)&&Near(clamped.top,valid.top),"Invalid mission, section and ledge identifiers clamp safely");
         Check(AncientFieldExpansion.NodeSegment(-1)==5&&AncientFieldExpansion.NodeSegment(9)==23,"Required-objective route indices cannot escape section bounds");
         Check(AncientFieldExpansion.EnemySegment(-1,-1)==2&&AncientFieldExpansion.EnemySegment(9,9)==24,"Encounter route indices cannot escape section bounds");
-        Check(AncientFieldExpansion.Stride-AncientFieldExpansion.Width==32,"Expanded fields retain a full thirty-two-unit inter-room void");
+        Check(AncientFieldExpansion.Stride-AncientFieldExpansion.Width==AncientChapterLayout.BridgeWidth&&AncientChapterLayout.BridgeWidth==64,"Each consecutive case joins the authored sixty-four-unit connecting road");
         Check(AncientFieldExpansion.MaximumCheckpoint(0)==0,"No objective progress cannot unlock a later checkpoint");
         Check(AncientFieldExpansion.MaximumCheckpoint(1)==1,"First objective authorizes the second-section checkpoint");
         Check(AncientFieldExpansion.MaximumCheckpoint(3)==2,"First two objectives authorize the final-section checkpoint");

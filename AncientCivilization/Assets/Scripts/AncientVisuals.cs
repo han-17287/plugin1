@@ -12,7 +12,7 @@ namespace Plugin.AncientCivilization
         readonly List<SpriteRenderer> lights=new List<SpriteRenderer>();
         readonly List<Color> colours=new List<Color>();
         readonly List<Vector2> lightPositions=new List<Vector2>();
-        readonly List<int> lightSectors=new List<int>(),lightRooms=new List<int>();
+        readonly List<int> lightSectors=new List<int>();
         readonly List<bool> lightAttached=new List<bool>(),lightVisible=new List<bool>();
         const int RainCount=72;
         Mesh rainMesh;MeshRenderer rainRenderer;Material rainMaterial;
@@ -92,12 +92,12 @@ namespace Plugin.AncientCivilization
             if(slot>=0)
             {
                 lights[slot]=glow;colours[slot]=glow.color;lightPositions[slot]=p;
-                lightAttached[slot]=parent!=null;lightVisible[slot]=true;lightSectors[slot]=AncientCityLayout.VisualSector(p.x);lightRooms[slot]=AncientCampaignRules.RoomAt(p.x);
+                lightAttached[slot]=parent!=null;lightVisible[slot]=true;lightSectors[slot]=AncientCityLayout.VisualSector(p.x);
             }
             else
             {
                 lights.Add(glow);colours.Add(glow.color);lightPositions.Add(p);lightAttached.Add(parent!=null);
-                lightVisible.Add(true);lightSectors.Add(AncientCityLayout.VisualSector(p.x));lightRooms.Add(AncientCampaignRules.RoomAt(p.x));
+                lightVisible.Add(true);lightSectors.Add(AncientCityLayout.VisualSector(p.x));
             }
             return glow;
         }
@@ -116,7 +116,7 @@ namespace Plugin.AncientCivilization
             int sector=game.Finale&&game.Finale.Active?5:game.Story.CurrentFloor;
             for(int i=0;i<lights.Count;i++)
             {
-                if(!fullEffects||(!lightAttached[i]&&(lightSectors[i]!=sector||lightRooms[i]!=(game.Campaign?game.Campaign.CurrentRoom:-1))))
+                if(!fullEffects||(!lightAttached[i]&&lightSectors[i]!=sector))
                 {
                     if(lightVisible[i]){if(lights[i])lights[i].enabled=false;lightVisible[i]=false;}
                     continue;

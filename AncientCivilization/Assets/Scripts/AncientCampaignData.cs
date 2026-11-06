@@ -10,11 +10,24 @@ namespace Plugin.AncientCivilization
     {
         public readonly int Id,Floor,Role;public readonly float X,Y;public readonly string Name;public readonly string[] Before,After;
         public AncientCitizen(int id,int floor,float x,float y,string name,int role,string[] before,string[] after)
-        {Id=id;Floor=floor;X=x;Y=y;Name=name;Role=role;Before=before;After=after;}
+        {Id=id;Floor=floor;X=AncientCampaignData.ResidentX(id,floor,x);Y=id<3?y:0;Name=name;Role=role;Before=before;After=after;}
     }
     public static class AncientCampaignData
     {
         public const string HeroName="백명";
+        // The opening residents stay on the original patrol street. Later residents
+        // are encountered along the same road as the chapter, including its rest bridges.
+        public static float ResidentX(int id,int floor,float openingX)
+        {
+            if(floor==0)return id<3?openingX:id==3?108:AncientChapterLayout.CaseRight(2)+24;
+            int first=floor*4,slot=id%5;
+            if(slot==0)return AncientChapterLayout.FloorStart(floor)+24;
+            if(id==24)return AncientChapterLayout.CaseLeft(19)+10;
+            if(slot==1)return AncientChapterLayout.CaseRight(first)+24;
+            if(slot==2)return AncientChapterLayout.CaseRight(first+1)+24;
+            if(slot==3)return AncientChapterLayout.CaseRight(first+2)+(floor==4?-24:24);
+            return AncientChapterLayout.CaseEnd(floor)+64;
+        }
         public static readonly AncientMission[] Missions={
             new AncientMission(0,0,"사라진 야간 배정","야간 작업반장","코어 절도는 끝났는데 생산소 계량기는 아직 비어 있습니다. 야간 출고가 따로 있었어요.","도난량과 야간 출고량을 따로 확인하겠습니다.","일반 출고와 C-00 예비분은 서로 다른 계량기를 쓴다.","도난 이전에도 코어가 빠져나갔습니다. 절도 사건 하나로 설명되지 않는군요.",new string[]{"작업반 증언","야간 계량기","출고 전표"}),
             new AncientMission(1,3,"끊어진 작업장","정비사 한석","압력 배전함이 봉인됐어요. 작업반이 안에 남았는데 원격 복구도 차단됐습니다.","파손부를 잘라내고 입자를 모아 수동으로 전력을 넣겠습니다.","비상 전력은 주민용이지만 봉인 명령은 최상층 직할이다.","비상선을 복구했습니다. 주민 전력을 누가 먼저 끊었는지 기록해 두겠습니다.",new string[]{"파손 절연판 베기","복구 회로 확인","수광부에 입자 레이저"}),

@@ -253,12 +253,20 @@ namespace Plugin.AncientCivilization
             }
             return found;
         }
-        public void OnLaser(Vector2 start,Vector2 end)
+        public void OnLaser(Vector2 start,Vector2 end,float bodyRadius=0)
         {
+            Vector2 delta=end-start;
             if(phase==4&&!clashing)for(int i=0;i<2;i++)
-            {var t=turrets[i];if(!t.broken&&DistanceToSegment(t.position+Vector2.up,start,end)<1.1f)HitTurret(i,100);}
-            foreach(var s in objects)if(s.live&&DistanceToSegment(s.position,start,end)<.7f)
-            {game.hero.Combat.EmitParticles(s.position,18);RemoveObject(s);}
+            {
+                var t=turrets[i];Vector2 point=t.position+Vector2.up,target=point-start;
+                if(!t.broken&&AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,bodyRadius,1.1f)&&!Physics2D.Linecast(start,point,1<<8))HitTurret(i,100);
+            }
+            foreach(var s in objects)if(s.live)
+            {
+                Vector2 target=s.position-start;
+                if(!AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,bodyRadius,.7f)||Physics2D.Linecast(start,s.position,1<<8))continue;
+                game.hero.Combat.EmitParticles(s.position,18);RemoveObject(s);
+            }
         }
         void HitTurret(int i,float damage)
         {

@@ -6,7 +6,7 @@ namespace Plugin.AncientCivilization
     // Coordinates are local to the full field room; existing city/boss coordinates stay unchanged.
     public static class AncientFieldExpansion
     {
-        public const int SectorCount=3,SectorSpan=208,Width=SectorCount*SectorSpan,Stride=Width+32,RouteCount=27;
+        public const int SectorCount=3,SectorSpan=208,Width=SectorCount*SectorSpan,Stride=Width+64,RouteCount=27;
         public const int EnemiesPerSector=2,EnemyMask=(1<<(SectorCount*EnemiesPerSector))-1;
         public static readonly string[][] Names={
             new[]{"야간 하역장","분리 계량실","밀봉 출고로"},

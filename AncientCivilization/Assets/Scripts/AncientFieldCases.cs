@@ -6,9 +6,9 @@ namespace Plugin.AncientCivilization
     {
         AncientGame game;int started;bool relayOpen,recordTaken;GUIStyle label;
         public int CompleteMask {get;private set;}
-        readonly Vector2[] terminals={Vector2.zero,new Vector2(154.5f,0),new Vector2(344,0),new Vector2(548.5f,0)};
+        readonly Vector2[] terminals={Vector2.zero,new Vector2(AncientChapterLayout.CaseRight(4)+40,0),new Vector2(AncientChapterLayout.CaseRight(8)+40,0),new Vector2(AncientChapterLayout.CaseRight(14)+40,0)};
         readonly SpriteRenderer[] displays=new SpriteRenderer[4];
-        SpriteRenderer relay,record;readonly Vector2 relayPoint=new Vector2(185,1.4f),recordPoint=new Vector2(333.5f,1.3f);
+        SpriteRenderer relay,record;readonly Vector2 relayPoint=new Vector2(AncientChapterLayout.CaseRight(4)+12,1.4f),recordPoint=new Vector2(AncientChapterLayout.CaseRight(8)+12,1.3f);
         public void Initialize(AncientGame owner)
         {
             game=owner;started=AncientGame.Saved("caseStarted");CompleteMask=AncientGame.Saved("caseComplete");
@@ -65,7 +65,7 @@ namespace Plugin.AncientCivilization
             if(floor==1)
             {
                 if(relayOpen){Complete(1);game.Story.FieldDialogue("진료소 기록","예비 전력 복구 확인. 정기 배정 물량은 이미 줄어 있었다. 도난 사건 이전에도 코어가 도착하지 않았다.");}
-                else game.Story.FieldDialogue("통신관","진료소 주배전망과 별개인 예비선이 끊겨 있다. 동쪽 배전함의 파손된 절연판을 블레이드로 제거해 봐라. 복구되면 배정 기록을 받을 수 있다.");
+                else game.Story.FieldDialogue("통신관","진료소 주배전망과 별개인 예비선이 끊겨 있다. 가까운 배전함의 파손된 절연판을 블레이드로 제거해 봐라. 복구되면 배정 기록을 받을 수 있다.");
             }
             else if(floor==2)
             {
@@ -89,7 +89,7 @@ namespace Plugin.AncientCivilization
         {
             if(Done(floor))return "현장 기록 보관 완료 / E: 확인";
             if(!Started(floor))return "E: 현장 단말 조사 (선택)";
-            if(floor==1)return relayOpen?"E: 배정 기록 확인":"동쪽 절연판을 블레이드로 제거";
+            if(floor==1)return relayOpen?"E: 배정 기록 확인":"가까운 절연판을 블레이드로 제거";
             if(floor==2)return recordTaken?"E: 원본과 사본 대조":"서쪽 보관함의 원본 기록 회수";
             return "단말 주변 경비 제압 → E: 기록 확보";
         }

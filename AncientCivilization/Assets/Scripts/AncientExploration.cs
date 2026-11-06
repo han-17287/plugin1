@@ -10,10 +10,18 @@ namespace Plugin.AncientCivilization
             for(int floor=0;floor<=4;floor++)for(int i=0;i<2;i++)
             {
                 int id=floor*2+i;if(AncientProgressRules.HasCache(CacheMask,id))continue;
-                Vector2 point=floor==0?new Vector2(i==0?35:79,7.2f):floor==1?new Vector2(i==0?167:212,7.05f):new Vector2(AncientCityLayout.Left(floor)+22.25f+i*46,7.05f);
+                Vector2 point=CachePoint(floor,i);
                 var o=new GameObject("Optional high-route supply "+id);o.transform.SetParent(transform,false);
                 o.AddComponent<AncientRouteCache>().Initialize(game,this,id,floor,point);
             }
+        }
+        static Vector2 CachePoint(int floor,int index)
+        {
+            if(floor==0)return new Vector2(index==0?35:79,7.2f);
+            if(index==0)return new Vector2(AncientChapterLayout.CaseRight(floor*4)-36,7.05f);
+            int jumpCase=floor==1?6:floor==2?9:floor==3?15:18;
+            var landing=AncientFieldExpansion.Segment(jumpCase,1,4);
+            return new Vector2(AncientChapterLayout.CaseLeft(jumpCase)+landing.left+2.1f,Mathf.Max(6.2f,landing.top+2.2f)+1);
         }
         public bool Claim(int id)
         {
