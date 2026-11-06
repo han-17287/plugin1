@@ -509,7 +509,7 @@ namespace Plugin.AncientCivilization
         {
             if(!ready)return;UpdateBoardingMast();bool shown=sequence.Phase==AncientProductionPhase.Approach&&boardingReady||sequence.Phase==AncientProductionPhase.Boarding;hook.enabled=shown;
             if(hookSlot>=0)game.anchors[hookSlot]=shown?BoardingHook:new Vector2(-100000,-100000);
-            if(shown){Vector2 p=BoardingHook+Vector2.up*.15f;for(int i=0;i<4;i++){float a=i*Mathf.PI*.5f;hook.SetPosition(i,p+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.38f);}}
+            if(shown){Vector2 p=BoardingHook;for(int i=0;i<4;i++){float a=i*Mathf.PI*.5f;hook.SetPosition(i,p+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.38f);}}
         }
         void OnGUI()
         {

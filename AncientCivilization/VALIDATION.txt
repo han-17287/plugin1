@@ -1,4 +1,4 @@
-v0.20.0 lower production district source release — 2026-11-06
+v0.20.1 lower production district source release — 2026-11-06
 PASS: .NET SDK8.0.416 built and ran20 independently isolated rule-check projects
 PASS: BeamChecks = 11591
 PASS: BladeChecks = 1563
@@ -8,7 +8,7 @@ PASS: ChapterVisibilityChecks = 13661
 PASS: FieldExpansionChecks = 28597
 PASS: MovementChecks = 106
 PASS: ProductionHazardChecks = 744
-PASS: ProductionLayoutChecks = 521969
+PASS: ProductionLayoutChecks = 522114
 PASS: ProductionMotionChecks = 48172
 PASS: ProductionSequenceChecks = 192993
 PASS: ProjectileOrderingChecks = 7024
@@ -20,13 +20,13 @@ PASS: SpeechLayoutChecks = 3997
 PASS: SwingChecks = 596
 PASS: ThreatChecks = 359
 PASS: ZipChecks = 28917
-TOTAL: 876092 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
+TOTAL: 876237 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
 PASS: 1574 source/asset checks, no skipped optional dependencies in this run.
 PASS: all89 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors; compiled snapshots match current source except the declared velocity alias.
 LIMIT: supplemental compilation uses UnityEngine.Modules NuGet package2021.3.33, temporary linearVelocity-to-velocity aliases and minimal Editor stubs. It does not establish native Unity6000.6.7f1 import, shaders, physics or Play.
 PASS: metadata GUIDs, PNG integrity/alpha/native-grid crops, C# syntax, first-run secrecy and unchanged original weapon/wire references.
 FONT: bundled NeoDunggeunmo cmap covers580 runtime non-ASCII literal codepoints; unsupported direction arrows were replaced by supported pixel triangles. This does not validate Unity font rasterization or layout.
-REVIEW: safe staged training; optional worker art/anchors; thin expert ledges; arrest-to-investigation continuation; rescued Reha; moving-anchor completed-step release and carrier velocity; truck latch underside/mast; chase/deck camera margins; separate three-core cargo; physical/visible roof alignment; frame-hitch blade contact; grounded factory artwork and paused industry motion; bounded64 anchor halos.
+REVIEW: display-aligned boarding-latch picking with480p..8K numerical coverage; safe staged training; optional worker art/anchors; thin expert ledges; arrest-to-investigation continuation; rescued Reha; moving-anchor completed-step release and carrier velocity; truck latch underside/mast; chase/deck camera margins; separate three-core cargo; physical/visible roof alignment; frame-hitch blade contact; grounded factory artwork and paused industry motion; bounded64 anchor halos.
 NUMERICAL MODEL LIMIT: route/cinematic/camera and moving-target traces use declared geometry and assumptions. They do not run the Unity collision solver or measure real keyboard/mouse input, rendering or camera feel.
 NATIVE FIXTURES WRITTEN/COMPILED, NOT RUN: PLUGIN/검사 production, movement, blade and continuous-chapter menus use isolated QA profiles, actual components and directed Physics2D simulations. Added probes cover8..14m boarding without a clock timeout, static/moving zip finish, stationary end-of-tunnel boarding, worker feet/heads, three-core cargo, actual camera viewports, halo capacity/tracking, late-finisher retry and arrest handoff.
 AUDIO:18 generated waveforms checked offline for finite samples, clipping and endpoint smoothing; real listening/Unity playback unverified.

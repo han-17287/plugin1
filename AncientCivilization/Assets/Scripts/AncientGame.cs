@@ -1098,7 +1098,9 @@ namespace Plugin.AncientCivilization
                 float distance=(point-hand).sqrMagnitude;if(distance<1||distance>AncientZipRules.Range*AncientZipRules.Range)continue;
                 Vector3 screen=camera.WorldToScreenPoint(point);if(screen.z<=0)continue;
                 float candidate=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
-                if(candidate>=snap||candidate>=score||!VisibleAnchor(point))continue;
+                float pointSnap=snap;var production=AncientGame.Instance.Production;
+                if(production&&production.CanBoardWire(point))pointSnap=Mathf.Max(pointSnap,AncientProductionLayout.BoardingPickPixels(Screen.height,camera.orthographicSize));
+                if(candidate>=pointSnap||candidate>=score||!VisibleAnchor(point))continue;
                 score=candidate;selected=point;normal=Vector2.zero;found=true;
             }
             foreach(var candidateEnemy in AncientGame.Instance.enemies)

@@ -140,6 +140,16 @@ class ProductionLayoutChecks
     }
     static void CheckRoadCamera()
     {
+        foreach(float height in new[]{480f,720,1080,1440,2160,4320})
+        foreach(float aspect in new[]{4/3f,16/10f,16/9f,21/9f})
+        foreach(float gap in new[]{8f,14,22})
+        {
+            float zoom=AncientProductionLayout.RoadCameraZoom(gap,aspect),ppu=height/(2*zoom);
+            float pixels=Math.Max(24*Math.Max(.8f,Math.Min(1.4f,height/900)),AncientProductionLayout.BoardingPickPixels(height,zoom));
+            Check(.475f*ppu<pixels,"The complete visible boarding latch and hover rim remain clickable from480p through8K without depending on the capped general snap radius");
+            Check(2*ppu>pixels,"A separate point two metres away cannot claim the boarding-latch click area");
+        }
+        Check(AncientProductionLayout.BoardingPickPixels(0,7.8f)==0&&AncientProductionLayout.BoardingPickPixels(720,0)==0,"A missing viewport cannot create an unlimited boarding pick radius");
         foreach(float aspect in new[]{4/3f,16/10f,16/9f,21/9f})
         foreach(int rate in new[]{30,60,120,144,240})
         foreach(float physicsOffset in new[]{-.34f,0,.34f})

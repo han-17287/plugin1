@@ -59,6 +59,13 @@ namespace Plugin.AncientCivilization
         {return float.IsNaN(gap)||float.IsInfinity(gap)?22:Math.Max(0,Math.Min(32,gap));}
         public static float RoadCameraLead(float truckGap)
         {return Math.Max(7,Math.Min(11.5f,CameraGap(truckGap)*.5f+.5f));}
+        public static float BoardingPickPixels(float viewportHeight,float zoom)
+        {
+            if(viewportHeight<=0||zoom<=0||float.IsNaN(viewportHeight)||float.IsInfinity(viewportHeight)||float.IsNaN(zoom)||float.IsInfinity(zoom))return 0;
+            // The visible latch/hover rim reaches .475m. Preserve its full click
+            // area when a high-DPI display exceeds the general pixel-snap cap.
+            return viewportHeight*.5f/(2*zoom);
+        }
         public static float RoadCameraZoom(float truckGap,float aspect)
         {
             float gap=CameraGap(truckGap),lead=RoadCameraLead(gap);
