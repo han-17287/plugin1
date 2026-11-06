@@ -184,7 +184,7 @@ namespace Plugin.AncientCivilization
 #endif
                 }
                 Label(new Rect(x+2,top+564,410,24),"F6 효과   F7 소리   F8 프레임 목표",caption,new Color(.48f,.61f,.67f));
-                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v0.17.0",eyebrow,new Color(.38f,.50f,.57f));
+                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v0.17.1",eyebrow,new Color(.38f,.50f,.57f));
                 Label(new Rect(w-334,h-39,280,22),backdropCaption,caption,new Color(.55f,.68f,.73f));
                 if(controls||confirmNew)DrawModal(w,h);
             }

@@ -316,6 +316,11 @@ namespace Plugin.AncientCivilization
             checkpoint=point;SetSaved("retryActive",1);SetSaved("retryFloor",floor);
             SetSaved("retryX",Mathf.RoundToInt(point.x*100));SetSaved("retryY",Mathf.RoundToInt(point.y*100));Save();
         }
+        public void ClearBattleProjectiles()
+        {
+            // Remove returns pooled shots and mutates this list; victory does not cancel the player's attack.
+            for(int i=shots.Count-1;i>=0;i--){var shot=shots[i];if(shot)shot.Remove();else shots.RemoveAt(i);}
+        }
         public void HeroDied()
         {
             if(Campaign&&Campaign.Retry())return;
@@ -1549,7 +1554,7 @@ namespace Plugin.AncientCivilization
             }
             g.SpawnPickup(drop,-1,true);g.Burst(AimPoint,AncientGame.Orange,kind==3?55:18);g.enemies.Remove(this);
             if(IsDistrictBoss){g.City.BossDefeated(DistrictFloor);}
-            else if(kind==3){g.bossDefeated=true;g.boss=null;g.Save();g.Notice("화물 수호 장치 제압\n동쪽 통로가 열렸습니다.",7);}
+            else if(kind==3){g.bossDefeated=true;g.boss=null;g.ClearBattleProjectiles();g.Save();g.Notice("화물 수호 장치 제압\n동쪽 통로가 열렸습니다.",7);}
             Destroy(gameObject);
         }
         public void CompleteSniperDuel()

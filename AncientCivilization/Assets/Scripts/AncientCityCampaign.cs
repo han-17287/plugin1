@@ -157,6 +157,7 @@ namespace Plugin.AncientCivilization
         }
         public void BossDefeated(int floor)
         {
+            game.ClearBattleProjectiles();
             var speaker=activeBoss;
             activeBoss=null;game.boss=null;
             if((Cleared&(1<<floor))!=0)return;
@@ -171,6 +172,7 @@ namespace Plugin.AncientCivilization
         }
         public void SecretaryRetreated(AncientEnemy secretary)
         {
+            game.ClearBattleProjectiles();
             retiringSecretary=secretary;if(secretary&&game.hero)secretary.FaceToward(game.hero.transform.position.x);
             activeBoss=null;game.boss=null;SecretaryCleared=true;AncientGame.SetSaved("secretaryCleared",1);game.Save();
             game.Story.Conversation(()=>FinishRetirement(secretary,true),3,new[]{"비서실장","백명","비서실장"},new[]{"시계를 멈추셨군요. 오늘은 여기까지 하지요. 회장님은 이곳에 계시지 않습니다.","도망치겠다는 건가. 기록을 확인한 뒤 네가 막아 온 일도 묻겠다.","살아 계신다면 다시 뵙겠지요. 그때는 제 시간도 달라져 있을 겁니다."});

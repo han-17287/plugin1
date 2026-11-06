@@ -1,4 +1,4 @@
-v0.17.0 gameplay source checkpoint — 2026-11-06 UTC
+v0.17.1 gameplay source checkpoint — 2026-11-06 UTC
 PASS: .NET SDK 8.0.416 built and executed all 16 shipped rule-check projects in Release configuration
 PASS: 11591 thick-laser geometry, charge and presentation checks
 PASS: 432 blade timing, sequence and trail checks
@@ -17,12 +17,13 @@ PASS: 596 swing presentation rule checks
 PASS: 359 combat threat visibility and stagger safety checks
 PASS: 3179 straight-wire movement and collision-budget checks
 TOTAL: 79629 standalone checks. These do not execute the Unity scene or prove playability/FPS/playtime.
+PASS: unchanged standalone rules from v0.17.0 retain the same 79629 passing SDK checks
 PASS: final supplemental runtime compatibility compilation, warnings as errors
 PASS: final supplemental Editor fixture compatibility compilation, warnings as errors
 LIMIT: supplemental compilation uses Unity2021 reference DLLs, temporary linearVelocity-to-velocity aliases and minimal Editor stubs. It does not verify Unity6000.6.7f1 import/API/rendering/physics execution.
 PASS: original high-quality arm/blade and double-helix reference PNG SHA256 values unchanged
 REVIEW: once-per-pulse laser damage, target entry during pulse, fixed release power/direction, live emitter/terrain clipping, cancellation, physics landing buffer, ramp support, wire target lifetime, checkpoint/cache anti-farming, rescued resident positions, first-contact projectile ordering and thin-wall protection.
-EDITOR FIXTURES INCLUDED, NOT RUN: real Hero landing/coyote/ramp/moving support/wire attachment/dead target; real laser emitter/terrain/late target/truck/turret/F energy/tutorial handoff; checkpoint/cache awards/rescue interactions; projectile wall/hero and floor/clock ordering. They use isolated QA preferences and directed state changes, not a full player traversal.
+EDITOR FIXTURES INCLUDED, NOT RUN: real Hero landing/coyote/ramp/moving support/wire attachment/dead target; real laser emitter/terrain/late target/truck/turret/F energy/tutorial handoff; checkpoint/cache awards/rescue interactions; projectile wall/hero and floor/clock ordering; actual guardian/district/secretary victory callbacks and pooled-shot cleanup. They use isolated QA preferences and directed state changes, not a full player traversal.
 PASS: Tools/run_checks.py completed source/assets plus all 16 SDK rule suites. Runtime-only and absent SDK failures produce explicit diagnostics.
 NOT RUN: actual Unity6000.6.7f1 compile/import/shaders/PlayMode/physics/UI, physical input timing, full playthrough, measuredFPS, player build.
 SCOPE: this is an improved source checkpoint, not a claim of measured nine-hour gameplay,90%completion or release-ready commercial quality.

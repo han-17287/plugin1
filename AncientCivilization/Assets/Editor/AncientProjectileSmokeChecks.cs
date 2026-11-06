@@ -27,6 +27,38 @@ namespace Plugin.AncientCivilization.EditorChecks
             var shot=game.Projectiles.Spawn(start,(end-start)/Time.deltaTime,18,false,0,0,ricochets);
             if(!shot)throw new InvalidOperationException("The projectile pool is full.");shot.enabled=false;Field(typeof(AncientProjectile),"age").SetValue(shot,.1f);return shot;
         }
+        static AncientEnemy VictoryProbe(AncientGame game,int kind)
+        {
+            var enemy=new GameObject("QA victory cleanup enemy").AddComponent<AncientEnemy>();enemy.Initialize(kind);enemy.enabled=false;
+            enemy.transform.position=new Vector2(8,80);game.enemies.Add(enemy);return enemy;
+        }
+        static void CheckVictoryCallbacks(AncientGame game)
+        {
+            // Deliberately advances only the temporary profile; this must be the final QA stage.
+            AncientEnemy ordinary=null,guardian=null,secretary=null;AncientProjectile probe=null;
+            try
+            {
+                probe=Shot(game,new Vector2(2,80),new Vector2(3,80));ordinary=VictoryProbe(game,1);ordinary.Hit(100000,true);
+                Assert(!probe.Available,"An ordinary criminal defeat does not erase live encounter projectiles");
+                var pulse=(AncientLaserPulse<AncientEnemy>)Field(typeof(AncientCombat),"laserPulse").GetValue(game.hero.Combat);
+                Assert(pulse.Begin(Time.time,.38f,1,0,50)&&game.hero.Combat.Firing,"The follow-through cleanup probe uses the actual active player pulse");
+                guardian=VictoryProbe(game,3);game.boss=guardian;guardian.Hit(100000,true);
+                Assert(probe.Available&&game.shots.Count==0&&game.bossDefeated,"The actual introductory guardian victory returns every live pooled shot");
+                Assert(game.hero.Combat.Firing,"Projectile cleanup preserves the player's current follow-through pulse");probe.enabled=true;probe=null;
+                Field(typeof(AncientCityCampaign),"<Cleared>k__BackingField").SetValue(game.City,game.City.Cleared&~(1<<1));
+                probe=Shot(game,new Vector2(2,80),new Vector2(3,80));game.City.BossDefeated(1);
+                Assert(probe.Available&&game.shots.Count==0&&game.Story.DialogueOpen,"District victory clears actual pooled shots before its dialogue opens");probe.enabled=true;probe=null;
+                probe=Shot(game,new Vector2(2,80),new Vector2(3,80));secretary=VictoryProbe(game,3);secretary.ConfigureDistrict(4,true);secretary.ConfigureSecretary();
+                Field(typeof(AncientEnemy),"warning").SetValue(secretary,game.Line("QA secretary defeat tell",AncientGame.Cyan,.03f));secretary.Hit(100000,true);
+                Assert(probe.Available&&game.shots.Count==0&&game.City.SecretaryCleared,"The actual secretary retreat callback also clears pooled shots");
+                Assert(secretary&&secretary.HealthRatio>0&&!secretary.IsAlive,"The secretary remains present with positive health for her retreat dialogue");probe.enabled=true;probe=null;
+            }
+            finally
+            {
+                if(probe){probe.Remove();probe.enabled=true;}game.hero.Combat.CancelAttacks();
+                foreach(var enemy in new[]{ordinary,guardian,secretary})if(enemy){game.enemies.Remove(enemy);UnityEngine.Object.Destroy(enemy.gameObject);}
+            }
+        }
         public static void RunInQAProfile(AncientGame game)
         {
             if(!EditorApplication.isPlaying||!AncientGame.IsQAProfile||!game||game!=AncientGame.Instance||game.Paused)
@@ -62,6 +94,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Assert(hero.hp==1000&&!spear.Available&&(bool)Field(typeof(AncientClockSpear),"stuck").GetValue(spear),"The floor still blocks a clock hand and leaves it breakable as particles");
                 MoveHero(hero,new Vector2(2,79.9f));spear.Play(new Vector2(2,80.5f),Vector2.down*(.2f/Time.deltaTime),0);Tick(spear);
                 Assert(hero.hp==1000&&!spear.Available&&!(bool)Field(typeof(AncientClockSpear),"stuck").GetValue(spear),"An upcoming floor only occludes and cannot make a hand stick before it arrives");
+                CheckVictoryCallbacks(game);
             }
             finally
             {
