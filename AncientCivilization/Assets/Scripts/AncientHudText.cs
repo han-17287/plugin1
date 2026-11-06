@@ -9,18 +9,20 @@ namespace Plugin.AncientCivilization
         int bladeStep=-1;bool bladeActive,bladeQueued;
         int hp=-1,energy=-1,credits=-1,cores=-1,stage=-1,floor=-1,chain=-1,capture=-1,speed=-1,metres=-1;
         bool bike,running,attack,quality,enraged,wired,finale;AncientEnemy boss;AncientPickup core;
-        string performance;
+        string performance,productionGoal="";
         public void Refresh(AncientGame game)
         {
             var hero=game.hero;int h=Mathf.CeilToInt(hero.hp),e=Mathf.FloorToInt(hero.CaptureEnergy);
             if(h!=hp||e!=energy||game.credits!=credits)
             {hp=h;energy=e;credits=game.credits;Resources="체력 "+h+"   입자 "+e+"   재화 "+credits;}
             bool chase=game.Finale&&game.Finale.Active;
-            if(game.Cores!=cores||game.Story.Stage!=stage||game.Story.CurrentFloor!=floor||chase!=finale)
+            string currentProduction=game.Production&&(game.Production.Active||game.Production.InChaseLane)?game.Production.Objective:"";
+            if(game.Cores!=cores||game.Story.Stage!=stage||game.Story.CurrentFloor!=floor||chase!=finale||productionGoal!=currentProduction)
             {
                 cores=game.Cores;stage=game.Story.Stage;floor=game.Story.CurrentFloor;finale=chase;
-                string goal=chase?"하강 화물차 추격":stage<4?"순찰 훈련 완료":stage<=5?"도난 코어 회수":stage==6?"용의자 확보":AncientCityLayout.Name(floor)+" 현장 조사";
-                Objective="에너지 코어 "+cores+" / 3\n"+goal;
+                productionGoal=currentProduction;
+                string goal=chase?"하강 화물차 추격":currentProduction.Length>0?currentProduction:stage<=4?"코어 재고 점검 / 생산장 단말로 이동":stage==5?"도난 코어 회수":stage==6?"용의자 확보":stage==7?"탈취 코어 확보 · 용의자 검거":AncientCityLayout.Name(floor)+" 현장 조사";
+                Objective=(stage<=4?"재고 확인 임무":"에너지 코어 "+cores+" / 3")+"\n"+goal;
             }
             if(Movement.Length==0||bike!=hero.bike||running!=hero.running||chain!=hero.WireChain||wired!=hero.Wired)
             {bike=hero.bike;running=hero.running;chain=hero.WireChain;wired=hero.Wired;Movement=(bike?"오토바이":running?"달리기":"걷기")+(chain>0?" · 와이어 연결 "+chain:"")+" · K 정비";}

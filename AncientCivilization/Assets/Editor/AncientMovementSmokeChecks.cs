@@ -97,8 +97,8 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Prepare(hero,(Vector2)support.transform.position+Vector2.up*5,Vector2.zero);
                 Attach(hero,(Vector2)support.transform.position+local,null,Vector2.up);Tick(hero,"FixedUpdate");
                 Assert(hero.Wired&&!Read<Transform>(hero,"wireMovingAnchor")&&object.ReferenceEquals(Read<AncientEnemy>(hero,"wireEnemy"),null),"Ordinary static terrain keeps its wire when no enemy target reference exists");
-                Prepare(hero,new Vector2(2,40),new Vector2(18,7));
-                deadTarget=new GameObject("Movement QA destroyed wire enemy");deadTarget.transform.position=new Vector2(8,40);
+                Prepare(hero,new Vector2(2,80),new Vector2(18,7));
+                deadTarget=new GameObject("Movement QA destroyed wire enemy");deadTarget.transform.position=new Vector2(8,80);
                 var enemy=deadTarget.AddComponent<AncientEnemy>();enemy.Initialize(0);enemy.enabled=false;
                 Set(hero,"wireEnemy",enemy);Set(hero,"wired",true);Set(hero,"wireZip",true);Set(hero,"anchor",enemy.AimPoint);Set(hero,"wireAttachedAt",Time.time);
                 // Synchronous destruction is restricted to this temporary Editor fixture.
@@ -106,8 +106,8 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Assert(!enemy&&!object.ReferenceEquals(enemy,null),"The real destroyed enemy exercises Unity's fake-null reference semantics");
                 Tick(hero,"FixedUpdate");
                 Assert(!hero.Wired&&object.ReferenceEquals(Read<AncientEnemy>(hero,"wireEnemy"),null)&&Near(body.linearVelocity.x,18)&&Near(body.linearVelocity.y,7),"Destroying the target releases its wire without a ghost destination or lost air momentum");
-                Prepare(hero,new Vector2(2,40),new Vector2(4,1));
-                lethalTarget=new GameObject("Movement QA lethal wire enemy");lethalTarget.transform.position=new Vector2(8,40);
+                Prepare(hero,new Vector2(2,80),new Vector2(4,1));
+                lethalTarget=new GameObject("Movement QA lethal wire enemy");lethalTarget.transform.position=new Vector2(8,80);
                 var fragile=lethalTarget.AddComponent<AncientEnemy>();fragile.Initialize(0);fragile.enabled=false;Field(typeof(AncientEnemy),"hp").SetValue(fragile,1f);game.enemies.Add(fragile);
                 Attach(hero,fragile.AimPoint,fragile,Vector2.zero);
                 Assert(!fragile.IsAlive&&!hero.Wired&&object.ReferenceEquals(Read<AncientEnemy>(hero,"wireEnemy"),null)&&Near(body.linearVelocity.x,4)&&Near(body.linearVelocity.y,1),"A lethal initial wire hit releases synchronously before assigning zip velocity toward a dead target");
@@ -129,40 +129,41 @@ namespace Plugin.AncientCivilization.EditorChecks
             try
             {
                 hero.enabled=false;hero.hp=10000;
-                support=new GameObject("Movement QA support");support.layer=8;support.transform.position=new Vector2(2,29.75f);
+                // Keep probes above the tutorial ceiling solid (y10..42).
+                support=new GameObject("Movement QA support");support.layer=8;support.transform.position=new Vector2(2,69.75f);
                 var platform=support.AddComponent<Rigidbody2D>();platform.bodyType=RigidbodyType2D.Kinematic;
                 support.AddComponent<BoxCollider2D>().size=new Vector2(8,.5f);
-                Prepare(hero,new Vector2(2,31.1f),new Vector2(0,-8));
+                Prepare(hero,new Vector2(2,71.1f),new Vector2(0,-8));
                 Set(hero,"airJumpUsed",true);Queue(hero,false);Tick(hero,"FixedUpdate");
                 Assert(Near(body.linearVelocity.y,7.7f),"A released press buffered before landing creates one short hop in the real Hero physics path");
                 Assert(!Read<bool>(hero,"airJumpUsed")&&Read<float>(hero,"jumpBufferedUntil")<Time.time,"Landing refreshes the air jump and consumes the queued press");
                 Queue(hero,true);Tick(hero,"FixedUpdate");
                 Assert(Read<float>(hero,"lastGrounded")<0&&Read<float>(hero,"jumpBufferedUntil")>Time.time,"An upward capsule near the floor cannot rearm a second ground jump");
-                Prepare(hero,new Vector2(2,31.1f),new Vector2(0,-8));Queue(hero,true);Tick(hero,"FixedUpdate");
+                Prepare(hero,new Vector2(2,71.1f),new Vector2(0,-8));Queue(hero,true);Tick(hero,"FixedUpdate");
                 Assert(Near(body.linearVelocity.y,14),"A held landing buffer preserves the full ground-jump speed");
-                Prepare(hero,new Vector2(2,40),new Vector2(0,-2));hero.doubleJump=true;Queue(hero,false);Tick(hero,"FixedUpdate");
+                Prepare(hero,new Vector2(2,80),new Vector2(0,-2));hero.doubleJump=true;Queue(hero,false);Tick(hero,"FixedUpdate");
                 Assert(Near(body.linearVelocity.y,6.6f)&&Read<bool>(hero,"airJumpUsed"),"The real air-jump path respects a released buffered press");
                 Queue(hero,true);Tick(hero,"FixedUpdate");
                 Assert(Read<float>(hero,"jumpBufferedUntil")>Time.time&&Near(body.linearVelocity.y,6.6f),"An already spent air jump cannot consume another press");
-                Prepare(hero,new Vector2(2,31.1f),new Vector2(0,5));platform.linearVelocity=Vector2.up*5;Queue(hero,true);Tick(hero,"FixedUpdate");
+                Prepare(hero,new Vector2(2,71.1f),new Vector2(0,5));platform.linearVelocity=Vector2.up*5;Queue(hero,true);Tick(hero,"FixedUpdate");
                 Assert(Near(body.linearVelocity.y,14),"A rider moving with a rising support can still use a ground jump");
                 platform.linearVelocity=Vector2.zero;support.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan(.1f)*Mathf.Rad2Deg);
-                Prepare(hero,new Vector2(2,31.1f),new Vector2(9,.9f));Queue(hero,true);Tick(hero,"FixedUpdate");
+                Prepare(hero,new Vector2(2,71.1f),new Vector2(9,.9f));Queue(hero,true);Tick(hero,"FixedUpdate");
                 Assert(Read<Vector2>(hero,"groundNormal").x<-.05f,"The foot probe retains the actual uphill ramp normal instead of an initial-overlap normal");
                 Assert(Near(body.linearVelocity.y,14),"Running uphill on a physical ramp preserves ground-jump eligibility");
-                Prepare(hero,new Vector2(2,40),new Vector2(0,-2));Set(hero,"lastGrounded",Time.time-.06f);Queue(hero,true);Tick(hero,"FixedUpdate");
+                Prepare(hero,new Vector2(2,80),new Vector2(0,-2));Set(hero,"lastGrounded",Time.time-.06f);Queue(hero,true);Tick(hero,"FixedUpdate");
                 Assert(Near(body.linearVelocity.y,14),"A recent ledge departure can use coyote time in the real physics path");
-                Prepare(hero,new Vector2(2,40),new Vector2(0,-2));Queue(hero,true);Set(hero,"cutJump",true);game.skills=true;Tick(hero,"Update");
+                Prepare(hero,new Vector2(2,80),new Vector2(0,-2));Queue(hero,true);Set(hero,"cutJump",true);game.skills=true;Tick(hero,"Update");
                 Assert(Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld")&&!Read<bool>(hero,"cutJump"),"Opening a pause discards the queued jump and release flags");
                 game.skills=false;Tick(hero,"FixedUpdate");Assert(Near(body.linearVelocity.y,-2),"Unpausing cannot replay a queued jump");
-                Prepare(hero,new Vector2(2,40),Vector2.zero);Set(hero,"wired",true);Set(hero,"wireZip",true);
-                Set(hero,"anchor",new Vector2(2,45));Set(hero,"wireSurfaceNormal",Vector2.down);Set(hero,"wireAttachedAt",Time.time);Tick(hero,"FixedUpdate");
+                Prepare(hero,new Vector2(2,80),Vector2.zero);Set(hero,"wired",true);Set(hero,"wireZip",true);
+                Set(hero,"anchor",new Vector2(2,85));Set(hero,"wireSurfaceNormal",Vector2.down);Set(hero,"wireAttachedAt",Time.time);Tick(hero,"FixedUpdate");
                 Assert(hero.Wired&&Near(body.linearVelocity.x,0)&&Near(body.linearVelocity.y,AncientZipRules.Speed),"The existing active zip still pulls immediately in a straight line without gravity or a tangent kick");
                 Set(hero,"wireZip",false);body.linearVelocity=new Vector2(18,7);var release=typeof(AncientHero).GetMethod("StopWire",PrivateInstance);release.Invoke(hero,new object[]{false});
                 Assert(!hero.Wired&&Near(body.linearVelocity.x,18)&&Near(body.linearVelocity.y,7),"Releasing a wire without launch preserves the actual Rigidbody momentum");
                 Tick(hero,"FixedUpdate");Assert(Near(body.linearVelocity.x,18),"The post-wire air-control path carries released horizontal momentum");
                 CheckWireAttachments(game,support);
-                Prepare(hero,new Vector2(2,40),Vector2.zero);
+                Prepare(hero,new Vector2(2,80),Vector2.zero);
                 Field(typeof(AncientHero),"<ZipMode>k__BackingField").SetValue(hero,true);Attach(hero,new Vector2(2,46),null,Vector2.down);
                 Field(typeof(AncientHero),"<ZipMode>k__BackingField").SetValue(hero,false);Attach(hero,new Vector2(4,46),null,Vector2.down);
                 Assert(hero.Wired&&!hero.ZipMode&&!Read<bool>(hero,"wireZip"),"Replacing a zip with a middle-click swing preserves the requested swing mode through wire release");
@@ -170,7 +171,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Assert(hero.Wired&&!hero.ZipMode&&(body.linearVelocity-previewVelocity).sqrMagnitude<.00001f&&body.position==previewPosition,"A normal Hero Update keeps an active swing preview without changing its physical movement");
                 release.Invoke(hero,new object[]{false});Tick(hero,"Update");
                 Assert(!hero.Wired&&hero.ZipMode&&(body.linearVelocity-previewVelocity).sqrMagnitude<.00001f&&body.position==previewPosition,"After swing release the normal Hero Update restores the primary left-click zip preview without changing momentum");
-                Queue(hero,true);Set(hero,"cutJump",true);hero.TravelTo(new Vector2(2,40));
+                Queue(hero,true);Set(hero,"cutJump",true);hero.TravelTo(new Vector2(2,80));
                 Assert(Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld")&&!Read<bool>(hero,"cutJump"),"Travel clears queued jump input before arriving in another area");
                 Queue(hero,true);game.BlockGameplayInput();Tick(hero,"Update");
                 Assert(Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld"),"The post-dialogue input guard cannot retain the Space press that closed dialogue");

@@ -182,7 +182,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             Assert(!story.DialogueOpen&&!combat.Firing,"The tutorial handoff probe begins outside dialogue with an idle arm");
             var stage=Field(typeof(AncientStory),"<Stage>k__BackingField");var flags=Field(typeof(AncientStory),"flags");
             int savedStage=story.Stage,savedFlags=(int)flags.GetValue(story),savedInput=(int)Field(typeof(AncientGame),"inputReadyFrame").GetValue(game);float savedEnergy=hero.CaptureEnergy;
-            string[] fields={"choiceOpen","choiceAction","lineIndex","revealedChars","pageStart","pageEnd","pageReady","pageWidth","pageHeight","nextLetterAt","showFull","visibleChars","shownText","bubbleNameLine","afterDialogue","dialogueFocusReady","nextTrainingShot"};
+            string[] fields={"choiceOpen","choiceAction","lineIndex","revealedChars","pageStart","pageEnd","pageReady","pageWidth","pageHeight","nextLetterAt","showFull","visibleChars","shownText","bubbleNameLine","afterDialogue","dialogueFocusReady","nextTrainingShot","reportPending"};
             var values=new object[fields.Length];for(int i=0;i<fields.Length;i++)values[i]=Field(typeof(AncientStory),fields[i]).GetValue(story);
             var dialogue=(System.Collections.IList)Field(typeof(AncientStory),"lines").GetValue(story);
             try
@@ -194,12 +194,14 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Assert(story.Stage==3&&!story.DialogueOpen,"Completed training waits for an active charge to resolve");combat.CancelInput();
                 hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);Assert(combat.Firing,"The completed tutorial has a real released laser pulse");int projectiles=game.shots.Count;
                 Invoke(story,"Update");
-                Assert(story.Stage==3&&!story.DialogueOpen&&combat.Firing,"The theft report waits until the final tutorial laser's visible pulse finishes");
+                Assert(story.Stage==3&&!story.DialogueOpen&&combat.Firing,"Finishing weapon practice does not interrupt the visible pulse or begin the stock report");
                 Assert(game.shots.Count==projectiles,"Completed objectives stop the training projectile feeder during the final pulse");
                 // Expire the actual release deadline instead of cancelling the pulse or sleeping the Editor.
                 var pulse=Field(typeof(AncientCombat),"laserPulse").GetValue(combat);Field(pulse.GetType(),"<Until>k__BackingField").SetValue(pulse,Time.time-.01f);
                 Field(typeof(AncientCombat),"laserUntil").SetValue(combat,Time.time-.01f);Invoke(story,"Update");
-                Assert(story.Stage==4&&story.DialogueOpen&&!combat.Firing,"The theft report starts immediately once the real pulse expires, without an extra delay");
+                Assert(story.Stage==3&&!story.DialogueOpen&&!combat.Firing,"Expired practice effects leave the inventory objective active until the player reaches its terminal");
+                MoveProbeHero(hero,new Vector2(AncientProductionLayout.StockX,1.3f));story.TryProductionStock();
+                Assert(story.Stage==4&&story.DialogueOpen,"An explicit stock-terminal interaction starts the inventory discrepancy report after practice");
             }
             finally
             {

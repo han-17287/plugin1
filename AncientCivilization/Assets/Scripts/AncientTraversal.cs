@@ -9,10 +9,11 @@ namespace Plugin.AncientCivilization
         bool lowerRunning,lowerFinished;float lowerElapsed,lowerBest;
         int shownElapsed=-1,shownBest=-2;string timerText="",elapsedText="",bestText="";
         System.Globalization.CultureInfo timerCulture;
-        AncientMovingAnchor[] cranes;
-        public void Initialize(AncientGame owner)
+        AncientMovingAnchor[] cranes;bool classicEnabled=true;
+        public void Initialize(AncientGame owner,bool classicRoute=true)
         {
-            game=owner;
+            game=owner;classicEnabled=classicRoute;
+            if(!classicRoute){cranes=new AncientMovingAnchor[0];targets=new AncientAirTarget[0];return;}
             lowerBest=AncientGame.Saved("factoryBestMs")/1000f;
             cranes=new AncientMovingAnchor[3];
             for(int i=0;i<cranes.Length;i++)
@@ -51,7 +52,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!game||!game.hero||!game.Story||game.Paused||(game.Campaign&&game.Campaign.Active))return;
+            if(!classicEnabled||!game||!game.hero||!game.Story||game.Paused||(game.Campaign&&game.Campaign.Active))return;
             if(!game.Story.InUpperCity)UpdateLower();
         }
 
@@ -89,7 +90,7 @@ namespace Plugin.AncientCivilization
         }
         public bool TryInteract()
         {
-            if(!game||!game.hero||game.Story.CurrentFloor>1)return false;
+            if(!classicEnabled||!game||!game.hero||game.Story.CurrentFloor>1)return false;
             if(game.City&&game.City.ArenaActive)return false;
             float x=game.hero.transform.position.x;
             if(!game.Story.InUpperCity)
@@ -121,7 +122,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1||(game.Campaign&&game.Campaign.Active)||Event.current.type!=EventType.Repaint)return;
+            if(!classicEnabled||!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1||(game.Campaign&&game.Campaign.Active)||Event.current.type!=EventType.Repaint)return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=15,alignment=TextAnchor.MiddleCenter,wordWrap=true};
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;GUI.depth=-10;
             if(!game.Story.InUpperCity)

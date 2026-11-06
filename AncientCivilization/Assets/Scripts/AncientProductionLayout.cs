@@ -1,0 +1,48 @@
+using System;
+
+namespace Plugin.AncientCivilization
+{
+    // Authored opening: a safe work route, a clearly optional wire shortcut, then the stock hall.
+    // The transport tunnel lives outside the five-city and finale coordinate ranges.
+    public static class AncientProductionLayout
+    {
+        public const float TutorialLeft=-244,TutorialSpawn=-234,TutorialRight=118,StockX=92;
+        public const float ChaseStart=30000,ChaseEnd=31600,RoadY=0,Ceiling=10,TunnelCeiling=11;
+        public const float BreachX=104,ConveyorLeft=-175,ConveyorRight=-159;
+        public const float JumpCrateX=-185,JumpCrateWidth=1.4f,JumpCrateHeight=.55f;
+        public struct Span
+        {
+            public readonly float Left,Right,Top;
+            public Span(float left,float right,float top){Left=left;Right=right;Top=top;}
+        }
+        public struct Ramp
+        {
+            public readonly float Left,Right,Low,High;
+            public Ramp(float left,float right,float low,float high){Left=left;Right=right;Low=low;High=high;}
+            public float Height(float x){return Low+(High-Low)*Math.Max(0,Math.Min(1,(x-Left)/(Right-Left)));}
+        }
+        public static readonly Ramp[] GentleRamps={new Ramp(-158,-150,0,.8f),new Ramp(-136,-128,.8f,0)};
+        public static readonly Span[] RaisedRoad={new Span(-150,-136,.8f)};
+        public static readonly Span[] WireShortcut={new Span(-120,-112,3.2f),new Span(-100,-92,4.2f),new Span(-80,-72,4.2f),new Span(-60,-52,3.2f)};
+        public static readonly float[] WireHookX={-120.55f,-100.55f,-80.55f,-60.55f};
+        public const float WireHookY=8.8f,CatwalkThickness=.18f;
+        public static readonly float[] SectionStarts={TutorialLeft,-194,-128,-52,38};
+        public static readonly string[] SectionNames={"교대 통로","운송 벨트","검수 회랑","장비 검수실","코어 재고 관리실"};
+        public static float GroundHeight(float x)
+        {
+            foreach(var ramp in GentleRamps)if(x>=ramp.Left&&x<=ramp.Right)return ramp.Height(x);
+            foreach(var span in RaisedRoad)if(x>=span.Left&&x<=span.Right)return span.Top;
+            if(Math.Abs(x-JumpCrateX)<=JumpCrateWidth*.5f)return JumpCrateHeight;
+            return RoadY;
+        }
+        public static int SectionAt(float x)
+        {
+            if(float.IsNaN(x)||float.IsInfinity(x)||x<TutorialLeft||x>TutorialRight)return -1;
+            for(int i=SectionStarts.Length-1;i>=0;i--)if(x>=SectionStarts[i])return i;
+            return -1;
+        }
+        public static bool InTutorial(float x){return SectionAt(x)>=0;}
+        public static bool InChaseLane(float x)
+        {return !float.IsNaN(x)&&!float.IsInfinity(x)&&x>=ChaseStart&&x<=ChaseEnd;}
+    }
+}

@@ -92,7 +92,7 @@ namespace Plugin.AncientCivilization
         }
         void LateUpdate()
         {
-            int floor=game&&game.Finale&&game.Finale.Active?5:game&&game.Story?game.Story.CurrentFloor:0;
+            int floor=game&&game.Production&&game.Production.InChaseLane?5:game&&game.Finale&&game.Finale.Active?5:game&&game.Story?game.Story.CurrentFloor:0;
             var view=game?game.View:null;
             int visibleCases=view?AncientChapterVisibility.VisibleCases(floor,view.transform.position.x,view.orthographicSize*view.aspect):0;
             if(floor!=shownFloor||visibleCases!=shownCases)UpdateVisibility(floor,visibleCases);

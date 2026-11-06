@@ -21,7 +21,7 @@ namespace Plugin.AncientCivilization
         public void Close(){Open=false;game.BlockGameplayInput();Time.timeScale=game.Paused?0:1;}
         void Update()
         {
-            if(game.MainMenu||game.skills||game.Story.DialogueOpen||game.Story.LiftBusy||(game.Finale&&game.Finale.Cinematic))return;
+            if(game.MainMenu||game.skills||game.Story.DialogueOpen||game.Story.LiftBusy||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic))return;
             if(Input.GetKeyDown(KeyCode.Tab))
             {Open=!Open;game.BlockGameplayInput();Time.timeScale=game.Paused?0:1;}
             else if(Open&&Input.GetKeyDown(KeyCode.Escape))Close();
