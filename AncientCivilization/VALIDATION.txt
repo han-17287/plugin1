@@ -1,4 +1,4 @@
-v0.18.0 production inventory route and moving boss checkpoint — 2026-11-06
+v0.18.1 production inventory route and moving boss checkpoint — 2026-11-06
 PASS: .NET SDK8.0.416 built and ran19 independently isolated rule-check projects
 PASS: 11591 thick-laser geometry, charge and presentation checks
 PASS: 432 blade timing, sequence and trail checks

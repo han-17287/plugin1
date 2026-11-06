@@ -75,7 +75,7 @@ namespace Plugin.AncientCivilization
             else
             {
                 GUI.Label(new Rect(x+28,y+145,880,350),
-                    "이동 A/D · 점프 Space · 달리기 Ctrl 토글\n휠 위 공격 / 휠 아래 와이어\n와이어 좌클릭 견인 · 가운데 클릭 스윙\n공격 좌클릭 짧게 베기 · 길게 조준 후 놓아 레이저\n우클릭은 파괴된 물체의 입자 수집\n공중 부유체를 베면 반동 · 보스의 금색 빈틈에는 피해 증가\nE 오토바이 / 엘리베이터 / 현장 상호작용\nK/Esc 정비 메뉴 · Tab 순찰 기록\nF6 효과 품질 · F7 소리 · F8 프레임 목표 · F9 성능 표시",text);
+                    "이동 A/D · 점프 Space · 달리기 Ctrl 토글\n휠 위 공격 / 휠 아래 와이어\n와이어 좌클릭 견인 · 가운데 클릭 스윙\n공격 좌클릭 짧게 베기 · 길게 조준 후 놓아 레이저\n우클릭은 파괴된 물체의 입자 수집\n공중 부유체를 베면 반동 · 보스의 금색 빈틈에는 피해 증가\n초반 추격: 자동 전진 · Space 점프 · 좌클릭 승선\n마지막 추격: E 오토바이 · S/↓ 제동 · X 폭발 도약\nE 엘리베이터 / 현장 상호작용\nK/Esc 정비 메뉴 · Tab 순찰 기록\nF6 효과 품질 · F7 소리 · F8 프레임 목표 · F9 성능 표시",text);
             }
             GUI.color=Color.white;
             if(GUI.Button(new Rect(x+24,y+545,890,36),"닫기 / Tab 또는 Esc",AncientHUD.Button))Close();
