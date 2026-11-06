@@ -10,5 +10,6 @@ UserSettings/
 
 !Tools/RulesChecks.csproj
 !Tools/WireBenchmark.csproj
+!Tools/*Checks.csproj
 Tools/bin/
 Tools/obj/

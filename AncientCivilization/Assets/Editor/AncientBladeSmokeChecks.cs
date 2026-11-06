@@ -64,6 +64,150 @@ namespace Plugin.AncientCivilization.EditorChecks
         }
         static AncientEnergyMote[] Motes(AncientCombat combat)
         {return (AncientEnergyMote[])Field(typeof(AncientCombat),"motes").GetValue(combat);}
+        static void Invoke(object owner,string method)
+        {var call=owner.GetType().GetMethod(method,PrivateInstance);if(call==null)throw new MissingMethodException(owner.GetType().Name,method);call.Invoke(owner,null);}
+        static void MoveProbeHero(AncientHero hero,Vector2 point)
+        {hero.GetComponent<Rigidbody2D>().position=point;hero.transform.position=point;Physics2D.SyncTransforms();}
+        static void FireRight(AncientGame game)
+        {
+            // The existing no-camera fallback gives a deterministic release direction without mouse synthesis.
+            var field=Field(typeof(AncientGame),"view");var camera=field.GetValue(game);
+            game.hero.AimWeaponAt((Vector2)game.hero.transform.position+Vector2.right*10);
+            try {field.SetValue(game,null);game.hero.Combat.FireLaser();}
+            finally {field.SetValue(game,camera);}
+        }
+        static AncientEnemy LaserProbeEnemy(AncientGame game,Vector2 aimPoint)
+        {
+            var enemy=new GameObject("QA surviving laser target").AddComponent<AncientEnemy>();
+            enemy.Initialize(0);enemy.enabled=false;enemy.transform.position=aimPoint-Vector2.up*.95f;
+            Field(typeof(AncientEnemy),"hp").SetValue(enemy,1000f);Field(typeof(AncientEnemy),"maxHP").SetValue(enemy,1000f);game.enemies.Add(enemy);return enemy;
+        }
+        static float MoteEnergy(AncientCombat combat)
+        {float total=0;foreach(var mote in Motes(combat))if(mote.gameObject.activeSelf)total+=(float)Field(typeof(AncientEnergyMote),"energy").GetValue(mote);return total;}
+        static void CheckLaserPulse(AncientGame game)
+        {
+            var hero=game.hero;var combat=hero.Combat;var body=hero.GetComponent<Rigidbody2D>();var original=(Vector2)hero.transform.position;
+            AncientEnemy late=null,replacement=null;var wall=new GameObject("QA moving laser obstruction");
+            try
+            {
+                combat.ResetCombat();hero.SpendCapturedEnergy();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;SetAttackMode(hero);
+                Vector2 initialOrigin=(Vector2)hero.transform.position+new Vector2(.14f,.55f);
+                wall.layer=8;var solid=wall.AddComponent<BoxCollider2D>();solid.size=new Vector2(1,8);wall.transform.position=initialOrigin+Vector2.right*9;Physics2D.SyncTransforms();
+                late=LaserProbeEnemy(game,initialOrigin+new Vector2(5,8));hero.AddCapturedEnergy(50);FireRight(game);
+                Assert(combat.Firing&&hero.CaptureEnergy==0,"A pulse consumes its release energy exactly once");
+                Vector2 start=(Vector2)Field(typeof(AncientCombat),"beamStart").GetValue(combat),end=(Vector2)Field(typeof(AncientCombat),"beamEnd").GetValue(combat);
+                Assert(Mathf.Abs(end.x-solid.bounds.min.x)<.03f&&Mathf.Abs(end.y-start.y)<.001f,"The released thick beam clips to the actual solid face");
+                MoveProbeHero(hero,(Vector2)hero.transform.position+new Vector2(2,1));hero.AddCapturedEnergy(30);
+                Vector2 movedOrigin=(Vector2)hero.transform.position+new Vector2(.14f,.55f);late.transform.position=movedOrigin+Vector2.right*5-Vector2.up*.95f;
+                Invoke(combat,"LateUpdate");start=(Vector2)Field(typeof(AncientCombat),"beamStart").GetValue(combat);end=(Vector2)Field(typeof(AncientCombat),"beamEnd").GetValue(combat);
+                Assert((start-movedOrigin).sqrMagnitude<.00001f&&Mathf.Abs(end.y-start.y)<.001f,"The emitter follows movement while the release direction stays fixed with the real camera restored");
+                Assert(Mathf.Abs(late.HealthRatio-.89f)<.0001f&&hero.CaptureEnergy==30,"A late entering actor takes the original 50-energy damage without spending newly collected energy");
+                Invoke(combat,"LateUpdate");Invoke(combat,"LateUpdate");
+                Assert(Mathf.Abs(late.HealthRatio-.89f)<.0001f,"Repeated visible-beam updates cannot damage the same surviving actor twice");
+                wall.transform.position=movedOrigin+Vector2.right*4;Physics2D.SyncTransforms();Invoke(combat,"LateUpdate");end=(Vector2)Field(typeof(AncientCombat),"beamEnd").GetValue(combat);
+                Assert(Mathf.Abs(end.x-solid.bounds.min.x)<.03f,"A moving obstruction clips the already active beam on the next render update");
+                // Dead actors are removed from the world list. A new Unity object is a fresh ledger identity.
+                Field(typeof(AncientEnemy),"dead").SetValue(late,true);game.enemies.Remove(late);
+                replacement=LaserProbeEnemy(game,movedOrigin+Vector2.right*2);Invoke(combat,"LateUpdate");
+                Assert(Mathf.Abs(replacement.HealthRatio-.89f)<.0001f,"Removing a dead actor does not suppress a new object's hit within the same pulse");
+                Field(typeof(AncientHero),"<AttackMode>k__BackingField").SetValue(hero,false);TickCombat(combat);
+                Assert(!combat.Firing&&!((LineRenderer)Field(typeof(AncientCombat),"beam").GetValue(combat)).enabled,"Switching to wire mode immediately cancels the player pulse");
+                SetAttackMode(hero);hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);
+                Assert(Mathf.Abs(replacement.HealthRatio-.78f)<.0001f,"A surviving target can be hit again by the next pulse");
+                game.skills=true;Invoke(combat,"LateUpdate");Assert(combat.Firing,"An ordinary pause menu preserves the current pulse");game.skills=false;
+                var focus=typeof(AncientCombat).GetMethod("OnApplicationFocus",PrivateInstance);focus.Invoke(combat,new object[]{false});
+                Assert(!combat.Firing,"Losing application focus cancels the live player pulse");
+                hero.AddCapturedEnergy(50);FireRight(game);Field(typeof(AncientHero),"invulnerableUntil").SetValue(hero,0f);hero.Hurt(1);TickCombat(combat);
+                Assert(!combat.Firing,"Real hurt recovery cancels the pulse before its next damage or rendering update");
+                Field(typeof(AncientHero),"hurtUntil").SetValue(hero,0f);
+                wall.transform.position=movedOrigin;Physics2D.SyncTransforms();hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);int shots=combat.LaserShots;FireRight(game);
+                Assert(!combat.Firing&&combat.LaserShots==shots&&hero.CaptureEnergy==50,"An obstructed muzzle neither spends energy nor starts a pulse");
+            }
+            finally
+            {
+                game.skills=false;combat.ResetCombat();if(late){game.enemies.Remove(late);UnityEngine.Object.Destroy(late.gameObject);}if(replacement){game.enemies.Remove(replacement);UnityEngine.Object.Destroy(replacement.gameObject);}
+                wall.SetActive(false);UnityEngine.Object.Destroy(wall);MoveProbeHero(hero,original);SetAttackMode(hero);
+            }
+        }
+        static void CheckCaptureEnergy(AncientGame game)
+        {
+            var hero=game.hero;var combat=hero.Combat;
+            combat.ResetCombat();hero.particles=0;Field(typeof(AncientHero),"absorbAt").SetValue(hero,Time.time-.05f);
+            var perfect=game.Projectiles.Spawn((Vector2)hero.transform.position+Vector2.right*5,Vector2.zero,20,false,1);hero.AbsorbShot(perfect);
+            Assert(perfect.Available&&Mathf.Abs(MoteEnergy(combat)-30)<.001f&&Mathf.Abs(hero.particles-18)<.001f,"Perfect F decomposition produces 50 percent more actual blue energy and the matching legacy-resource bonus");
+            combat.ResetCombat();hero.particles=0;Field(typeof(AncientHero),"absorbAt").SetValue(hero,Time.time-1);
+            var ordinary=game.Projectiles.Spawn((Vector2)hero.transform.position+Vector2.right*5,Vector2.zero,20,false,1);hero.AbsorbShot(ordinary);
+            Assert(ordinary.Available&&Mathf.Abs(MoteEnergy(combat)-20)<.001f&&Mathf.Abs(hero.particles-12)<.001f,"An ordinary F decomposition retains its original collectible energy and resource amount");combat.ResetCombat();
+        }
+        static void CheckPulseCallbacks(AncientGame game)
+        {
+            var transport=new GameObject("QA pulse cargo truck").AddComponent<AncientTruck>();AncientFinalTruck finalTransport=null;AncientSniperEncounter encounter=null;
+            try
+            {
+                transport.Initialize(game,8);transport.enabled=false;transport.transform.position=new Vector2(8,80);
+                Vector2 start=new Vector2(2,81.4f),end=new Vector2(20,81.4f);var health=Field(typeof(AncientTruck),"health");
+                transport.HitByLaser(start,end,20,.5f,71);transport.HitByLaser(start,end,20,.5f,71);
+                Assert(Mathf.Abs((float)health.GetValue(transport)-160)<.001f,"A real truck receives one damage event for repeated callbacks from one pulse");
+                transport.HitByLaser(start,end,20,.5f,72);Assert(Mathf.Abs((float)health.GetValue(transport)-140)<.001f,"The next pulse can damage the truck again");
+                transport.HitByLaser(start+Vector2.up*10,end+Vector2.up*10,20,.5f,73);transport.HitByLaser(start,end,20,.5f,73);
+                Assert(Mathf.Abs((float)health.GetValue(transport)-120)<.001f,"A missed callback does not reserve the truck's pulse identity");
+                transport.HitByLaser(start,end,20,.5f);transport.HitByLaser(start,end,20,.5f);
+                Assert(Mathf.Abs((float)health.GetValue(transport)-80)<.001f,"Legacy direct truck calls without a pulse ID retain their original per-call behavior");
+                finalTransport=new GameObject("QA final transport collider").AddComponent<AncientFinalTruck>();finalTransport.Initialize(game,game.Finale,8);finalTransport.enabled=false;
+                finalTransport.transform.position=new Vector2(8,80);Physics2D.SyncTransforms();var suppression=Field(typeof(AncientFinalTruck),"suppressedUntil");
+                finalTransport.HitBeam(start,end,20,.5f,91);Assert((float)suppression.GetValue(finalTransport)>Time.time,"The final truck's real kinematic collider accepts a pulse through its visible body");
+                suppression.SetValue(finalTransport,-1f);finalTransport.HitBeam(start,end,20,.5f,91);
+                Assert((float)suppression.GetValue(finalTransport)==-1,"A duplicate final-truck callback cannot refresh suppression or repeat its effect");
+                finalTransport.HitBeam(start,end,20,.5f,92);Assert((float)suppression.GetValue(finalTransport)>Time.time,"A new pulse can suppress the final truck again");
+                finalTransport.gameObject.SetActive(false);Physics2D.SyncTransforms();
+                encounter=new GameObject("QA pulse turret encounter").AddComponent<AncientSniperEncounter>();
+                Field(typeof(AncientSniperEncounter),"game").SetValue(encounter,game);Field(typeof(AncientSniperEncounter),"phase").SetValue(encounter,4);
+                var turretType=typeof(AncientSniperEncounter).GetNestedType("Turret",BindingFlags.NonPublic);var turrets=(Array)Field(typeof(AncientSniperEncounter),"turrets").GetValue(encounter);
+                for(int i=0;i<2;i++)
+                {
+                    var turret=Activator.CreateInstance(turretType,true);turrets.SetValue(turret,i);turretType.GetField("root").SetValue(turret,new GameObject("QA turret root"));
+                    turretType.GetField("position").SetValue(turret,new Vector2(i==0?8:100,80));turretType.GetField("hp").SetValue(turret,1000f);
+                }
+                var objects=(Array)Field(typeof(AncientSniperEncounter),"objects").GetValue(encounter);var objectType=typeof(AncientSniperEncounter).GetNestedType("ObjectShot",BindingFlags.NonPublic);
+                for(int i=0;i<objects.Length;i++)objects.SetValue(Activator.CreateInstance(objectType,true),i);
+                var hp=turretType.GetField("hp");encounter.OnLaser(start,end,.5f,81);encounter.OnLaser(start,end,.5f,81);
+                Assert(Mathf.Abs((float)hp.GetValue(turrets.GetValue(0))-900)<.001f,"A physical turret callback applies its laser damage once per pulse");
+                encounter.OnLaser(start,end,.5f,82);Assert(Mathf.Abs((float)hp.GetValue(turrets.GetValue(0))-800)<.001f,"A later pulse can damage the surviving turret again");
+            }
+            finally {UnityEngine.Object.Destroy(transport.gameObject);if(finalTransport)UnityEngine.Object.Destroy(finalTransport.gameObject);if(encounter){Field(typeof(AncientSniperEncounter),"game").SetValue(encounter,null);UnityEngine.Object.Destroy(encounter.gameObject);}game.hero.Combat.ResetCombat();}
+        }
+        static void CheckTutorialLaser(AncientGame game)
+        {
+            var story=game.Story;var hero=game.hero;var combat=hero.Combat;var original=(Vector2)hero.transform.position;
+            Assert(!story.DialogueOpen&&!combat.Firing,"The tutorial handoff probe begins outside dialogue with an idle arm");
+            var stage=Field(typeof(AncientStory),"<Stage>k__BackingField");var flags=Field(typeof(AncientStory),"flags");
+            int savedStage=story.Stage,savedFlags=(int)flags.GetValue(story),savedInput=(int)Field(typeof(AncientGame),"inputReadyFrame").GetValue(game);float savedEnergy=hero.CaptureEnergy;
+            string[] fields={"choiceOpen","choiceAction","lineIndex","revealedChars","pageStart","pageEnd","pageReady","pageWidth","pageHeight","nextLetterAt","showFull","visibleChars","shownText","bubbleNameLine","afterDialogue","dialogueFocusReady","nextTrainingShot"};
+            var values=new object[fields.Length];for(int i=0;i<fields.Length;i++)values[i]=Field(typeof(AncientStory),fields[i]).GetValue(story);
+            var dialogue=(System.Collections.IList)Field(typeof(AncientStory),"lines").GetValue(story);
+            try
+            {
+                stage.SetValue(story,3);flags.SetValue(story,224);combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));SetAttackMode(hero);
+                combat.StrikeBlade();Assert(combat.BladeAnimating,"The handoff probe starts a real active blade cut");Invoke(story,"Update");
+                Assert(story.Stage==3&&!story.DialogueOpen,"Completed training cannot interrupt an active blade cut");combat.CancelBlade();
+                Field(typeof(AncientCombat),"heldAt").SetValue(combat,Time.time-.4f);Assert(combat.Charging,"The handoff probe enters the existing held laser charge state");Invoke(story,"Update");
+                Assert(story.Stage==3&&!story.DialogueOpen,"Completed training waits for an active charge to resolve");combat.CancelInput();
+                hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);Assert(combat.Firing,"The completed tutorial has a real released laser pulse");int projectiles=game.shots.Count;
+                Invoke(story,"Update");
+                Assert(story.Stage==3&&!story.DialogueOpen&&combat.Firing,"The theft report waits until the final tutorial laser's visible pulse finishes");
+                Assert(game.shots.Count==projectiles,"Completed objectives stop the training projectile feeder during the final pulse");
+                // Expire the actual release deadline instead of cancelling the pulse or sleeping the Editor.
+                var pulse=Field(typeof(AncientCombat),"laserPulse").GetValue(combat);Field(pulse.GetType(),"<Until>k__BackingField").SetValue(pulse,Time.time-.01f);
+                Field(typeof(AncientCombat),"laserUntil").SetValue(combat,Time.time-.01f);Invoke(story,"Update");
+                Assert(story.Stage==4&&story.DialogueOpen&&!combat.Firing,"The theft report starts immediately once the real pulse expires, without an extra delay");
+            }
+            finally
+            {
+                combat.ResetCombat();dialogue.Clear();stage.SetValue(story,savedStage);flags.SetValue(story,savedFlags);
+                for(int i=0;i<fields.Length;i++)Field(typeof(AncientStory),fields[i]).SetValue(story,values[i]);
+                Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,savedInput);Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,savedEnergy);MoveProbeHero(hero,original);Invoke(story,"Persist");
+            }
+        }
         static bool HasBluePixels(Texture2D texture)
         {
             // Runtime mote textures discard their CPU copy; read the displayed texture back explicitly.
@@ -231,7 +375,11 @@ namespace Plugin.AncientCivilization.EditorChecks
                     if(StageAge<.12)return;
                     Assert(recoveryProbe&&!recoveryProbe.Available&&game.shots.Contains(recoveryProbe)&&combat.BrokenObjects==SessionState.GetInt(Root+"RecoveryBroken",-1),"The recovery plate remains intact through subsequent scene updates");
                     recoveryProbe.Remove();recoveryProbe=null;combat.ResetCombat();
-                    Finish(true,"Structural blade, late physical-object break, one-rebound-per-cut and particle checks completed. Physical hold/release, wheel switching, airborne wire transitions, frame pacing and visual alignment still need manual playtesting.");
+                    CheckLaserPulse(game);CheckCaptureEnergy(game);CheckPulseCallbacks(game);CheckTutorialLaser(game);
+                    // Conversation is last because it deliberately acquires the gameplay input guard.
+                    MoveProbeHero(hero,new Vector2(2,80));hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);Assert(combat.Firing,"The dialogue cancellation probe starts with a live pulse");
+                    game.Story.Conversation(null,0,new[]{"QA 통신관"},new[]{"레이저 중단 확인."});Assert(game.Story.DialogueOpen&&!combat.Firing,"Opening a real conversation cancels the arm's active pulse");
+                    Finish(true,"Structural blade, active moving laser, once-per-pulse actor/truck/turret damage, interruption and actual blue-energy checks completed. Physical hold/release, wheel switching, airborne wire transitions, frame pacing and visual alignment still need manual playtesting.");
                 }
             }
             catch(Exception error){Finish(false,error.ToString());}

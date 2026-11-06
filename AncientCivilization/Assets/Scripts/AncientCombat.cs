@@ -13,7 +13,7 @@ namespace Plugin.AncientCivilization
         public bool BladeAnimating {get{return hero&&Time.time<bladeUntil;}}
         public bool BladeBuffered {get{return bladeBufferedUntil>Time.time;}}
         public int NextBladeStep {get{return AncientBladeRules.NextStep(combo,bladeReady,Time.time);}}
-        public bool Firing {get{return Time.time<laserUntil;}}
+        public bool Firing {get{return laserPulse.IsActive(Time.time);}}
         public float ChargeProgress {get{return heldAt<0?0:Mathf.Clamp01((Time.time-heldAt-TapThreshold)/(ReadyDelay-TapThreshold));}}
         public bool Charging {get{return heldAt>=0&&Time.time-heldAt>=TapThreshold;}}
         public float ArmActivity {get{return Charging?ChargeProgress:Mathf.Clamp01((laserUntil-Time.time)/.18f);}}
@@ -22,6 +22,7 @@ namespace Plugin.AncientCivilization
         AncientHero hero;AncientGame game;LineRenderer slashTrail,slashGlow,aim,beam,beamGlow,beamCore;
         AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,bladeBufferedUntil;bool bladeHitPending,bladeRebounded,readySignal;
         Vector2 bladeDirection,bufferedDirection,beamStart,beamEnd;float beamWidth;
+        readonly AncientLaserPulse<AncientEnemy> laserPulse=new AncientLaserPulse<AncientEnemy>();
         readonly Vector3[] slashPoints=new Vector3[9];
         static readonly Color Yellow=new Color(1,.88f,.18f);
         public void Initialize(AncientHero owner)
@@ -54,9 +55,12 @@ namespace Plugin.AncientCivilization
             return game.View.ScreenToWorldPoint(Input.mousePosition);
         }
         bool ControlsReady {get{return hero&&game&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted;}}
+        bool PulseInterrupted {get{return !hero||!game||!hero.AttackMode||hero.Wired||hero.MeleeInterrupted||game.won||(game.Sniper&&game.Sniper.InputLocked)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Finale&&game.Finale.Cinematic);}}
         public void CancelInput(){heldAt=-1;readySignal=false;bladeBufferedUntil=0;if(aim)aim.enabled=false;}
         public void CancelAttacks()
-        {CancelInput();CancelBlade();laserUntil=0;if(beam)beam.enabled=false;if(beamGlow)beamGlow.enabled=false;if(beamCore)beamCore.enabled=false;if(beamProfile!=null)beamProfile.HideEndpoints();}
+        {CancelInput();CancelBlade();CancelLaser();}
+        void CancelLaser()
+        {laserPulse.Cancel();laserUntil=0;if(beam)beam.enabled=false;if(beamGlow)beamGlow.enabled=false;if(beamCore)beamCore.enabled=false;if(beamProfile!=null)beamProfile.HideEndpoints();}
         public void CancelBlade()
         {
             bladeHitPending=bladeRebounded=false;bladeUntil=bladeBufferedUntil=bladeReady=0;combo=0;
@@ -66,9 +70,11 @@ namespace Plugin.AncientCivilization
         public void HandleInput()
         {
             if(!hero)return;
+            if(PulseInterrupted)CancelLaser();
             if(!ControlsReady){CancelInput();CancelBlade();return;}
             if(!hero.AttackMode)
             {CancelInput();CancelBlade();return;}
+            if(Firing){hero.AimWeaponAt((Vector2)hero.transform.position+new Vector2(laserPulse.DirectionX,laserPulse.DirectionY)*AncientBeamRules.Range);CancelInput();return;}
             if(Input.GetMouseButtonDown(0)){heldAt=Time.time;readySignal=false;}
             if(Input.GetMouseButtonUp(0)&&heldAt>=0)
             {
@@ -110,6 +116,7 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             if(!hero)return;
+            if(PulseInterrupted)CancelLaser();
             if(!ControlsReady){CancelInput();CancelBlade();return;}
             if(!hero.AttackMode){CancelInput();CancelBlade();return;}
             if(Charging)bladeBufferedUntil=0;
@@ -195,31 +202,47 @@ namespace Plugin.AncientCivilization
         }
         public void FireLaser()
         {
-            if(!ControlsReady||!hero.AttackMode||hero.Wired)return;
+            if(!ControlsReady||!hero.AttackMode||hero.Wired||Firing)return;
             if(hero.CaptureEnergy<=0){game.Notice("입자가 없습니다. 물체를 베고 나온 입자를 우클릭으로 수집하세요.",2);return;}
             float energy=hero.CaptureEnergy,power=AncientBeamRules.Power(energy);
-            hero.AimWeaponAt(AimPoint());beamStart=Origin;beamEnd=ResolveBeam(beamStart,AimPoint(),energy);Vector2 delta=beamEnd-beamStart;
+            Vector2 target=AimPoint();hero.AimWeaponAt(target);beamStart=Origin;beamEnd=ResolveBeam(beamStart,target,energy);Vector2 delta=beamEnd-beamStart;
             if(delta.sqrMagnitude<AncientBeamRules.MinimumLength*AncientBeamRules.MinimumLength)
             {game.Notice("발사구가 지형에 막혔습니다. 빈 공간을 겨냥하세요.",1.2f);return;}
-            CancelBlade();hero.SpendCapturedEnergy();
-            beamWidth=AncientBeamRules.BodyWidth(energy);float radius=beamWidth*.5f,damage=30+energy*1.6f;
-            for(int i=game.enemies.Count-1;i>=0;i--)
-            {
-                var enemy=game.enemies[i];if(!enemy)continue;
-                Vector2 target=enemy.AimPoint-beamStart;
-                if(AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,radius,.6f)&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8))enemy.Hit(damage,true);
-            }
-            if(game.Sniper)game.Sniper.OnLaser(beamStart,beamEnd,radius);
-            if(game.Campaign)game.Campaign.OnLaser(beamStart,beamEnd,radius);
-            if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage,radius);
-            if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage,radius);
-            laserUntil=Time.time+AncientBeamRules.Duration;beam.startWidth=beam.endWidth=beamWidth;
+            if(!laserPulse.Begin(Time.time,AncientBeamRules.Duration,delta.x,delta.y,energy))return;
+            CancelBlade();CancelInput();hero.SpendCapturedEnergy();
+            laserUntil=laserPulse.Until;beamWidth=AncientBeamRules.BodyWidth(energy);beam.startWidth=beam.endWidth=beamWidth;
             beamCore.startWidth=beamCore.endWidth=AncientBeamRules.CoreWidth(energy);
             beamGlow.startWidth=beamGlow.endWidth=AncientBeamRules.SheathWidth(energy);
             LaserShots++;game.Story.OnTraining(7);game.Sound(4);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
-            // Defeating an actor can open its dialogue inside Hit above. Do not
-            // restart a wide beam after that dialogue has already cancelled it.
-            if(game.Paused)CancelAttacks();
+            ResolveLaserHits();
+            if(PulseInterrupted)CancelLaser();
+        }
+        void FollowLaser()
+        {
+            // The arm follows the actor, but mouse movement cannot steer a released shot.
+            Vector2 direction=new Vector2(laserPulse.DirectionX,laserPulse.DirectionY);
+            hero.AimWeaponAt((Vector2)hero.transform.position+direction*AncientBeamRules.Range);
+            beamStart=Origin;beamEnd=ResolveBeam(beamStart,beamStart+direction*AncientBeamRules.Range,laserPulse.Energy);
+            ResolveLaserHits();
+        }
+        void ResolveLaserHits()
+        {
+            Vector2 delta=beamEnd-beamStart;
+            if(delta.sqrMagnitude<AncientBeamRules.MinimumLength*AncientBeamRules.MinimumLength)return;
+            float radius=beamWidth*.5f,damage=30+laserPulse.Energy*1.6f;int pulseId=laserPulse.Id;
+            for(int i=game.enemies.Count-1;i>=0;i--)
+            {
+                if(i>=game.enemies.Count)continue;
+                var enemy=game.enemies[i];if(!enemy||!enemy.IsAlive)continue;
+                Vector2 target=enemy.AimPoint-beamStart;
+                if(AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,radius,.6f)&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8)&&laserPulse.TryHit(enemy,Time.time))enemy.Hit(damage,true);
+                // Hit can synchronously open dialogue or start the automatic sniper finale.
+                if(PulseInterrupted||!Firing){CancelLaser();return;}
+            }
+            if(game.Sniper)game.Sniper.OnLaser(beamStart,beamEnd,radius,pulseId);
+            if(game.Campaign)game.Campaign.OnLaser(beamStart,beamEnd,radius);
+            if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage,radius,pulseId);
+            if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage,radius,pulseId);
         }
         void LateUpdate()
         {
@@ -237,7 +260,9 @@ namespace Plugin.AncientCivilization
                 }
                 slashTrail.SetPositions(slashPoints);slashGlow.SetPositions(slashPoints);
             }
-            bool firing=Firing&&!game.won;beam.enabled=beamGlow.enabled=beamCore.enabled=firing;
+            if(PulseInterrupted)CancelLaser();
+            if(Firing&&!game.Paused)FollowLaser();
+            bool firing=Firing&&!game.won&&(beamEnd-beamStart).sqrMagnitude>=AncientBeamRules.MinimumLength*AncientBeamRules.MinimumLength;beam.enabled=beamGlow.enabled=beamCore.enabled=firing;
             if(firing)
             {
                 // All three beam layers span the entire ray immediately. No flying projectile or particle trail.
@@ -251,9 +276,9 @@ namespace Plugin.AncientCivilization
             }
             beamProfile.ShowEndpoints(beamStart,beamEnd,beamWidth,AncientBeamRules.Opacity(laserUntil-Time.time),firing);
         }
-        void OnApplicationFocus(bool focus){if(!focus){CancelInput();CancelBlade();}}
+        void OnApplicationFocus(bool focus){if(!focus)CancelAttacks();}
         public void ResetCombat()
-        {CancelInput();laserUntil=0;CancelBlade();slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;beamProfile.HideEndpoints();foreach(var mote in motes)mote.gameObject.SetActive(false);}
+        {CancelAttacks();slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;beamProfile.HideEndpoints();foreach(var mote in motes)mote.gameObject.SetActive(false);}
         void OnDestroy()
         {
             if(beamProfile!=null)beamProfile.Dispose();

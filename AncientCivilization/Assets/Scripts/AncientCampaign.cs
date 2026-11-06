@@ -342,6 +342,20 @@ namespace Plugin.AncientCivilization
                 for(int i=0;i<3;i++)objective+=((tasks&(1<<i))!=0?"[완료] ":"[ ] ")+m.Tasks[i]+(i<2?" · ":"");
             }
             else objective="";
+            RefreshResidents();
+        }
+        void RefreshResidents()
+        {
+            if(!game||!game.Story)return;
+            foreach(var resident in AncientCampaignData.Citizens)
+            {
+                var view=citizens[resident.Id];if(!view)continue;
+                int mission=AncientCampaignRules.ResidentEscortMission(resident.Id);
+                int savedTasks=mission==active?tasks:mission>=0?routeTasks[mission]:0;
+                bool rescued=AncientCampaignRules.ResidentRescued(resident.Id,completed,savedTasks);
+                view.transform.position=new Vector2(AncientCampaignRules.ResidentPositionX(resident.Id,resident.X,completed,savedTasks),rescued?0:resident.Y);
+                view.enabled=resident.Floor==game.Story.CurrentFloor&&(resident.Id!=3||game.Story.Stage>=8)&&AncientCampaignRules.ResidentVisible(resident.Id,active,tasks);
+            }
         }
         void Mark(int index)
         {
@@ -450,8 +464,8 @@ namespace Plugin.AncientCivilization
             int nearest=-1;float best=1.9f*1.9f;Vector2 hero=game.hero.transform.position;
             foreach(var npc in AncientCampaignData.Citizens)
             {
-                if(npc.Id==3&&game.Story.Stage<8)continue;
-                if(npc.Floor!=game.Story.CurrentFloor)continue;float d=(hero-new Vector2(npc.X,npc.Y+1)).sqrMagnitude;
+                var view=citizens[npc.Id];if(!view||!view.enabled||!view.gameObject.activeInHierarchy)continue;
+                if(npc.Floor!=game.Story.CurrentFloor)continue;float d=(hero-((Vector2)view.transform.position+Vector2.up)).sqrMagnitude;
                 if(d<best){best=d;nearest=npc.Id;}
             }
             return nearest;
@@ -465,8 +479,7 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             if(!game.Story||!game.hero||!game.HasSession)return;
-            foreach(var resident in AncientCampaignData.Citizens)
-                citizens[resident.Id].enabled=resident.Floor==game.Story.CurrentFloor&&(resident.Id!=3||game.Story.Stage>=8);
+            RefreshResidents();
             if(game.Finale&&game.Finale.Phase!=0)return;
             for(int floor=1;floor<=4;floor++)
             {
@@ -488,7 +501,15 @@ namespace Plugin.AncientCivilization
             int sector=AncientFieldExpansion.SectorAt(p.x-left),allowed=AncientFieldExpansion.MaximumCheckpoint(tasks,defeated);
             if(sector>allowed){RecoverToCheckpoint();return;}
             if(sector>checkpoint)
-            {checkpoint=sector;Refresh();Persist();game.Notice("안전 거점 확보 / "+AncientFieldExpansion.Names[active][sector],2);}
+            {
+                int previous=checkpoint;checkpoint=sector;float before=game.hero.hp;
+                game.hero.hp=AncientProgressRules.RecoverAtCheckpoint(before,game.hero.MaxHP,previous,checkpoint);
+                float gained=game.hero.hp-before;
+                Refresh();Persist();
+                string recovery=gained>0?" · 체력 +"+gained.ToString("0.#",System.Globalization.CultureInfo.InvariantCulture):"";
+                game.Notice("안전 거점 저장 / "+AncientFieldExpansion.Names[active][sector]+recovery,2);
+                game.Sound(2);if(gained>0)game.Impact(game.hero.transform.position,new Color(.45f,1,.75f),false);
+            }
             ActivateSector(sector);
             if(AncientCampaignData.Missions[active].Floor==0&&game.hero.IsOnGround)
             {
@@ -640,7 +661,7 @@ namespace Plugin.AncientCivilization
                 int nearest=NearestCitizen();
                 if(nearest>=0)
                 {
-                    var npc=AncientCampaignData.Citizens[nearest];var p=game.View.WorldToScreenPoint(new Vector2(npc.X,npc.Y+2.2f));
+                    var npc=AncientCampaignData.Citizens[nearest];var p=game.View.WorldToScreenPoint(citizens[nearest].transform.position+Vector3.up*2.2f);
                     GUI.Label(new Rect(p.x-170,Screen.height-p.y-25,340,55),npc.Name+" / E: 대화",label);
                 }
                 int floor=game.Story.CurrentFloor;
@@ -650,10 +671,10 @@ namespace Plugin.AncientCivilization
                     if(nextCase>=0)
                     {
                         var giver=AncientCampaignData.Citizens[GiverFor(floor,nextCase)];
-                        var pixel=game.View.WorldToScreenPoint(new Vector2(giver.X,giver.Y+2));
+                        var position=citizens[giver.Id].transform.position;var pixel=game.View.WorldToScreenPoint(position+Vector3.up*2);
                         float x=Mathf.Clamp(pixel.x,100,Mathf.Max(100,Screen.width-100));
-                        if(Mathf.Abs(game.hero.transform.position.x-giver.X)>4)
-                            GUI.Label(new Rect(x-100,Screen.height-195,200,30),(giver.X<game.hero.transform.position.x?"← ":"→ ")+giver.Name,label);
+                        if(Mathf.Abs(game.hero.transform.position.x-position.x)>4)
+                            GUI.Label(new Rect(x-100,Screen.height-195,200,30),(position.x<game.hero.transform.position.x?"← ":"→ ")+giver.Name,label);
                     }
                 }
                 if(!Active&&game.Story.Stage>=8)

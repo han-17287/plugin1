@@ -12,7 +12,7 @@ namespace Plugin.AncientCivilization
         sealed class Turret
         {
             public GameObject root;public SpriteRenderer body,barrel;public LineRenderer tell;
-            public Vector2 position,aim;public bool broken,charging;public float until,started,riseAt,hp=65;
+            public Vector2 position,aim;public bool broken,charging;public float until,started,riseAt,hp=65;public int lastLaserPulse;
         }
         sealed class ObjectShot
         {public SpriteRenderer art;public Vector2 position,velocity;public bool live,friendly,grenade;public float age;}
@@ -253,13 +253,14 @@ namespace Plugin.AncientCivilization
             }
             return found;
         }
-        public void OnLaser(Vector2 start,Vector2 end,float bodyRadius=0)
+        public void OnLaser(Vector2 start,Vector2 end,float bodyRadius=0,int pulseId=0)
         {
             Vector2 delta=end-start;
             if(phase==4&&!clashing)for(int i=0;i<2;i++)
             {
                 var t=turrets[i];Vector2 point=t.position+Vector2.up,target=point-start;
-                if(!t.broken&&AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,bodyRadius,1.1f)&&!Physics2D.Linecast(start,point,1<<8))HitTurret(i,100);
+                if(!t.broken&&(pulseId==0||t.lastLaserPulse!=pulseId)&&AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,bodyRadius,1.1f)&&!Physics2D.Linecast(start,point,1<<8))
+                {if(pulseId!=0)t.lastLaserPulse=pulseId;HitTurret(i,100);}
             }
             foreach(var s in objects)if(s.live)
             {

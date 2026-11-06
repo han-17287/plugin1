@@ -114,8 +114,8 @@ namespace Plugin.AncientCivilization
         }
         public bool Retry()
         {if(phase!=2)return false;BeginChase();return true;}
-        public void HitTruck(Vector2 start,Vector2 end,float damage,float bodyRadius=0)
-        {if(truck&&phase==2)truck.HitBeam(start,end,damage,bodyRadius);}
+        public void HitTruck(Vector2 start,Vector2 end,float damage,float bodyRadius=0,int pulseId=0)
+        {if(truck&&phase==2)truck.HitBeam(start,end,damage,bodyRadius,pulseId);}
         public void TruckArrived()
         {
             phase=3;phaseAt=Time.unscaledTime;game.hero.TravelTo((Vector2)truck.transform.position+new Vector2(.7f,3.65f));ClearChaseBikes();
@@ -252,7 +252,7 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientFinalTruck : MonoBehaviour
     {
-        AncientGame game;AncientFinale finale;Rigidbody2D body;BoxCollider2D solid;SpriteRenderer core,casing;bool coreActive;float nextThrow,suppressedUntil;
+        AncientGame game;AncientFinale finale;Rigidbody2D body;BoxCollider2D solid;SpriteRenderer core,casing;bool coreActive;float nextThrow,suppressedUntil;int lastLaserPulse;
         public void Initialize(AncientGame owner,AncientFinale story,float x)
         {
             game=owner;finale=story;gameObject.layer=8;transform.position=new Vector2(x,AncientFinaleRules.Road(x));
@@ -288,8 +288,9 @@ namespace Plugin.AncientCivilization
             Vector2 origin=(Vector2)transform.position+new Vector2(-2,2.8f);
             game.Projectiles.Spawn(origin,((Vector2)game.hero.transform.position-origin).normalized*9,12,true);
         }
-        public void HitBeam(Vector2 start,Vector2 end,float damage,float bodyRadius=0)
+        public void HitBeam(Vector2 start,Vector2 end,float damage,float bodyRadius=0,int pulseId=0)
         {
+            if(pulseId!=0&&lastLaserPulse==pulseId)return;
             Vector2 delta=end-start;if(delta.sqrMagnitude<.01f)return;
             // Use the actual collider, including kinematic interpolation, rather than a separately estimated visual box.
             var bounds=solid.bounds;Vector2 offset=(Vector2)bounds.center-start;
@@ -300,7 +301,7 @@ namespace Plugin.AncientCivilization
                 var hit=Physics2D.BoxCast(start,new Vector2(AncientBeamRules.CastDepth,bodyRadius*2),angle,delta.normalized,delta.magnitude+AncientBeamRules.CastDepth,1<<8);
                 if(hit.collider!=solid)return;
             }
-            suppressedUntil=Time.time+3;game.Feel.Signal("운송 장치 억제 · 투척 정지",new Color(.6f,.95f,1),1);
+            if(pulseId!=0)lastLaserPulse=pulseId;suppressedUntil=Time.time+3;game.Feel.Signal("운송 장치 억제 · 투척 정지",new Color(.6f,.95f,1),1);
         }
     }
 }

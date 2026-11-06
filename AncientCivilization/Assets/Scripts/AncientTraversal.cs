@@ -7,6 +7,8 @@ namespace Plugin.AncientCivilization
     {
         AncientGame game;AncientAirTarget[] targets;GUIStyle label;
         bool lowerRunning,lowerFinished;float lowerElapsed,lowerBest;
+        int shownElapsed=-1,shownBest=-2;string timerText="",elapsedText="",bestText="";
+        System.Globalization.CultureInfo timerCulture;
         AncientMovingAnchor[] cranes;
         public void Initialize(AncientGame owner)
         {
@@ -104,6 +106,19 @@ namespace Plugin.AncientCivilization
             if(p.z<=0||p.x<-width||p.x>Screen.width+width)return;
             GUI.Label(new Rect(p.x-width/2,Screen.height-p.y-18,width,65),text,label);
         }
+        string TrialTimer()
+        {
+            // Repaint can run far faster than the displayed hundredths. A stopped
+            // timer also keeps its text while the player moves around the roof.
+            int elapsed=Mathf.RoundToInt(lowerElapsed*100),best=lowerBest>0?Mathf.RoundToInt(lowerBest*100):-1;
+            var culture=System.Globalization.CultureInfo.CurrentCulture;bool cultureChanged=!object.ReferenceEquals(timerCulture,culture);
+            bool elapsedChanged=elapsed!=shownElapsed,bestChanged=best!=shownBest;
+            if(!cultureChanged&&!elapsedChanged&&!bestChanged)return timerText;
+            if(cultureChanged||elapsedChanged)elapsedText=(elapsed/100f).ToString("F2",culture);
+            if(cultureChanged||bestChanged)bestText=best<0?"—":(best/100f).ToString("F2",culture)+"초";
+            shownElapsed=elapsed;shownBest=best;timerCulture=culture;
+            timerText="공장 옥상 "+elapsedText+"초\n최고 "+bestText;return timerText;
+        }
         void OnGUI()
         {
             if(!game||!game.Story||game.Paused||game.MainMenu||game.Story.CurrentFloor>1||(game.Campaign&&game.Campaign.Active)||Event.current.type!=EventType.Repaint)return;
@@ -116,7 +131,7 @@ namespace Plugin.AncientCivilization
                 Sign(new Vector2(75,6.5f),"역방향 벨트 ←\n스윙으로 넘거나 높은 금색 발판으로 우회");
                 Sign(new Vector2(96,5.7f),"공장 운송로 끝 / E: 다시 도전");
                 if(game.hero.transform.position.y>2.5f)
-                    GUI.Label(new Rect(Screen.width-350,90,330,70),"공장 옥상 "+lowerElapsed.ToString("F2")+"초\n최고 "+(lowerBest>0?lowerBest.ToString("F2")+"초":"—"),label);
+                    GUI.Label(new Rect(Screen.width-350,90,330,70),TrialTimer(),label);
                 GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;return;
             }
             // The living district is a normal street; dedicated field sectors carry the wire trials.

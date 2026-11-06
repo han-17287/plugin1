@@ -12,6 +12,9 @@ namespace Plugin.AncientCivilization
             Game=owner;
             // Force sprite decoding during loading, never on the first incoming attack.
             AncientArt.Scrap();for(int i=0;i<3;i++)AncientArt.MetalProjectile(i);
+            // Enemy slices scan their atlas alpha once. Warm all six here so a
+            // newly introduced guard does not decode the sheet midway through a run.
+            for(int kind=0;kind<6;kind++)AncientArt.Enemy(kind);
             for(int floor=0;floor<6;floor++)for(int pose=0;pose<6;pose++)AncientArt.Boss(floor,pose);
             for(int i=0;i<slots.Length;i++)
             {

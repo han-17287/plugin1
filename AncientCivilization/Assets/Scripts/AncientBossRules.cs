@@ -27,6 +27,8 @@ namespace Plugin.AncientCivilization
             if(move==AncientBossMove.FloorRoll)return phaseTwo?4:2;
             return 1;
         }
+        public static float FloorRollHeight(int projectileIndex){return .5f+Math.Max(0,projectileIndex)/2*.7f;}
+        public static float FloorRollVelocity(int projectileIndex){return projectileIndex%2==0?-8:8;}
         public static float BankHeight(float originX,float originY,float targetX,float targetY,float wallX)
         {
             float mirror=2*wallX-targetX,denominator=mirror-originX;

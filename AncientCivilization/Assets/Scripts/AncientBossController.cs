@@ -112,14 +112,41 @@ namespace Plugin.AncientCivilization
                 for(int i=0;i<3;i++)
                 {
                     drops[i]=new Vector2(Mathf.Clamp(aim.x+(i-1)*4,left+1,right-1),8.7f);
-                    var line=marks[i];line.enabled=true;
+                    var line=marks[i];line.enabled=true;line.loop=true;line.positionCount=16;
+                    line.startColor=line.endColor=AncientGame.Orange;
                     for(int j=0;j<16;j++){float a=j*Mathf.PI*2/16;line.SetPosition(j,new Vector2(drops[i].x+Mathf.Cos(a)*.7f,.12f+Mathf.Sin(a)*.08f));}
                 }
             }
+            if(move==AncientBossMove.FloorRoll)
+            {
+                game.Notice("지면 양방향 · 점프로 회피",seconds);
+                DrawFloorRollWarning();
+            }
+        }
+        void DrawFloorRollWarning()
+        {
+            int rows=AncientBossRules.Count(move,phaseTwo)/2;
+            Color color=AncientGame.Cyan;color.a=.45f+.5f*WindupProgress;
+            for(int row=0;row<rows;row++)
+            {
+                // The arrowheads show both travel directions at the actual slab heights.
+                float y=AncientBossRules.FloorRollHeight(row*2);var line=marks[row];
+                line.enabled=true;line.loop=false;line.positionCount=8;line.startColor=line.endColor=color;
+                line.SetPosition(0,new Vector2(left+.35f,y+.18f));line.SetPosition(1,new Vector2(left,y));
+                line.SetPosition(2,new Vector2(left+.35f,y-.18f));line.SetPosition(3,new Vector2(left,y));
+                line.SetPosition(4,new Vector2(right,y));line.SetPosition(5,new Vector2(right-.35f,y+.18f));
+                line.SetPosition(6,new Vector2(right,y));line.SetPosition(7,new Vector2(right-.35f,y-.18f));
+            }
+            float cueX=Mathf.Clamp(aim.x,left+.5f,right-.5f),cueY=AncientBossRules.FloorRollHeight((rows-1)*2)+1.8f;
+            var jump=marks[2];jump.enabled=true;jump.loop=false;jump.positionCount=5;jump.startColor=jump.endColor=color;
+            jump.SetPosition(0,new Vector2(cueX-.35f,cueY));jump.SetPosition(1,new Vector2(cueX,cueY+.45f));
+            jump.SetPosition(2,new Vector2(cueX+.35f,cueY));jump.SetPosition(3,new Vector2(cueX,cueY+.45f));
+            jump.SetPosition(4,new Vector2(cueX,cueY-.15f));
         }
         void DrawWarning()
         {
-            warning.enabled=move!=AncientBossMove.CeilingDebris;
+            warning.enabled=move!=AncientBossMove.CeilingDebris&&move!=AncientBossMove.FloorRoll;
+            if(move==AncientBossMove.FloorRoll){DrawFloorRollWarning();return;}
             warning.startColor=warning.endColor=Physical?AncientGame.Orange:AncientGame.Cyan;
             Vector2 begin=owner.AimPoint;
             if(move==AncientBossMove.BankShot)
@@ -160,7 +187,7 @@ namespace Plugin.AncientCivilization
             if(move==AncientBossMove.FloorRoll)
             {
                 int count=AncientBossRules.Count(move,phaseTwo);
-                for(int i=0;i<count;i++)Shot(new Vector2(owner.transform.position.x,.5f+i/2*.7f),Vector2.right*(i%2==0?-8:8),1);
+                for(int i=0;i<count;i++)Shot(new Vector2(owner.transform.position.x,AncientBossRules.FloorRollHeight(i)),Vector2.right*AncientBossRules.FloorRollVelocity(i),1);
                 return;
             }
             if(move==AncientBossMove.ArcCrate||move==AncientBossMove.CoreLob)

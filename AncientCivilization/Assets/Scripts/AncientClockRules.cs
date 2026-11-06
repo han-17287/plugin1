@@ -20,4 +20,13 @@ namespace Plugin.AncientCivilization
         }
         public static bool ThirdVectorShot(int index){return index%3==2;}
     }
+    // A sweep is one attack even when its visual hands keep rotating for several frames.
+    public struct AncientClockAreaDamage
+    {
+        bool spent;
+        public bool CanHit {get{return !spent;}}
+        public void Begin(){spent=false;}
+        public void RecordHealth(float hpBefore,float hpAfter,float bikeBefore,float bikeAfter)
+        {if(hpAfter<hpBefore||bikeAfter<bikeBefore)spent=true;}
+    }
 }

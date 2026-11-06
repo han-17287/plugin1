@@ -260,6 +260,30 @@ class RulesChecks
         }
         for(int floor=0;floor<=4;floor++)Check(AncientProgressRules.CachesOnFloor(cacheMask,floor)==2,"Each floor has two optional rewards");
         Check(AncientProgressRules.ClaimCache(cacheMask,99)==cacheMask,"Invalid cache cannot corrupt progression mask");
+        foreach(float maximum in new[]{100f,125f})foreach(float health in new[]{1f,47f,91f,99.6f,100f,124f,125f,10000f})
+        {
+            float recovered=AncientProgressRules.RecoverHealth(health,maximum,18);
+            Check(recovered>=health,"A supply recovery never lowers health, including isolated QA overheal");
+            Check(health>=maximum?recovered==health:recovered<=maximum,"Ordinary recovery is capped while existing overheal is preserved");
+            Check(health==AncientProgressRules.RecoverAtCheckpoint(health,maximum,1,1),"Revisiting a saved checkpoint cannot grant its reward again");
+        }
+        Check(AncientProgressRules.RecoverHealth(40,100,18)==58,"An optional route supply recovers its stated eighteen health");
+        Check(AncientProgressRules.RecoverAtCheckpoint(40,100,0,1)==60,"Earning the second entrance awards twenty health without a return trip");
+        Check(AncientProgressRules.RecoverAtCheckpoint(40,100,1,2)==60,"Earning the final entrance awards its one-time recovery");
+        Check(AncientProgressRules.RecoverAtCheckpoint(91,100,0,1)==100,"Earned checkpoint recovery stops at maximum health");
+        Check(AncientProgressRules.RecoverAtCheckpoint(10000,100,0,1)==10000,"Checkpoint recovery never reduces an isolated QA health override");
+        foreach(int previous in new[]{-1,0,1,2,3})foreach(int next in new[]{-1,0,1,2,3})
+        {
+            bool earned=previous>=0&&previous<=2&&next>=1&&next<=2&&next>previous;
+            Check(AncientProgressRules.RecoverAtCheckpoint(40,100,previous,next)==(earned?60:40),"Only a newly earned valid entrance can heal; initial, backward and invalid transitions cannot");
+        }
+        foreach(float invalid in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity,-1f,0f})
+        {
+            Check(AncientProgressRules.RecoverHealth(40,100,invalid)==40,"Invalid recovery amounts cannot manufacture a refill");
+            Check(AncientProgressRules.RecoverHealth(40,invalid,20)==40,"Invalid maximum health cannot manufacture a refill");
+        }
+        Check(AncientProgressRules.RecoverHealth(0,100,20)==0&&AncientProgressRules.RecoverHealth(-5,100,20)==-5,"A checkpoint does not revive a dead actor");
+        Check(float.IsNaN(AncientProgressRules.RecoverHealth(float.NaN,100,20)),"Invalid current health is not silently replaced with a gameplay reward");
         Check(!AncientProgressRules.KnowsEvidence(1,4,0),"Theft evidence is not revealed before its dialogue ends");
         Check(AncientProgressRules.KnowsEvidence(1,5,0),"Confirmed theft evidence appears in journal");
         Check(!AncientProgressRules.KnowsEvidence(4,9,0),"Top-floor access clue is not spoiled early");
@@ -410,6 +434,38 @@ class RulesChecks
             Check(supported&&Math.Abs(citizen.Y)<.01f,"Every resident stands on an actual intro road, rest bridge or protected landing");
             Check(AncientChapterLayout.FloorAt(citizen.X)==citizen.Floor,"Residents are physically spread along their assigned chapter");
         }
+        foreach(var citizen in AncientCampaignData.Citizens)
+        {
+            int mission=AncientCampaignRules.ResidentEscortMission(citizen.Id);
+            int expected=citizen.Id==6?5:citizen.Id==14?11:citizen.Id==18?14:-1;
+            Check(mission==expected,"Only Sora, Joowan and Haesol share their resident identity with a rescued witness");
+            if(mission<0)
+            {
+                Check(AncientCampaignRules.ResidentVisible(citizen.Id,2,3),"An unrelated resident remains present during Reha's escort");
+                Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,(1<<20)-1,7)==citizen.X,"Completing rescues never relocates an unrelated resident");
+                continue;
+            }
+            Check(AncientCampaignData.Missions[mission].Kind==2&&AncientCampaignRules.Witness(mission)==citizen.Id,"A relocated resident belongs to the exact matching escort case");
+            foreach(int pendingTasks in new[]{0,1,3})
+            {
+                Check(!AncientCampaignRules.ResidentVisible(citizen.Id,mission,pendingTasks),"An active rescue has one witness, before and after the escort begins");
+                Check(!AncientCampaignRules.ResidentRescued(citizen.Id,0,pendingTasks),"Meeting or releasing the witness does not prematurely place them at safety");
+                Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,0,pendingTasks)==citizen.X,"An unfinished rescue retains its authored home when the case is inactive");
+            }
+            Check(AncientCampaignRules.ResidentVisible(citizen.Id,mission,7),"The static resident replaces the moving escort as soon as the rescue finishes");
+            Check(AncientCampaignRules.ResidentVisible(citizen.Id,-1,0)&&AncientCampaignRules.ResidentVisible(citizen.Id,mission+1,3),"Other cases and elevator travel do not hide an available resident");
+            float exit=AncientCampaignRules.Left(mission)+AncientCampaignRules.RoomWidth-16;
+            Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,0,7)==exit,"Finishing escort tasks moves optional dialogue to the actual rescue exit before case handoff");
+            Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,0,4)==exit,"Saved rescue task progress keeps the resident at the exit after floor travel or reload");
+            Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,1<<mission,0)==exit,"Completed-case saves restore the rescued resident even without cached task progress");
+            Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,1<<(mission+1),0)==citizen.X,"Another completed case cannot relocate the witness");
+            var landing=AncientFieldExpansion.TerminalPlatform(2);float localExit=exit-AncientCampaignRules.Left(mission);
+            Check(localExit>=landing.left&&localExit<=landing.right&&landing.top==0,"Rescued residents wait on the protected ground-level exit landing");
+            Check(AncientChapterLayout.FloorAt(exit)==citizen.Floor,"Rescue dialogue remains on the witness's original floor");
+            Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,0,0)==citizen.X,"A new campaign restores the witness's initial placement");
+        }
+        Check(AncientCampaignRules.ResidentEscortMission(4)==-1&&AncientCampaignRules.ResidentVisible(4,2,3),"The production foreman is a different person from Reha and must remain visible");
+        Check(AncientCampaignRules.ResidentEscortMission(-1)==-1&&AncientCampaignRules.ResidentEscortMission(25)==-1,"Invalid resident identities never alias a rescued witness");
         Check(AncientCampaignRules.RepeatableEnergyNode(3,0,0),"Power case panel supplies particles before initial collection");
         Check(AncientCampaignRules.RepeatableEnergyNode(3,1,0),"Broken power panel can refill energy after death clears motes");
         Check(AncientCampaignRules.RepeatableEnergyNode(3,3,0),"Energy expiry cannot soft-lock the unfinished laser receiver");

@@ -9,6 +9,7 @@ namespace Plugin.AncientCivilization
         int vectorIndex,areaIndex,rainIndex,cursor,lastTick=-1;
         AncientClockDial face;Vector2 centre,destination;float left,right;
         LineRenderer dial,hourHand,minuteHand,landing;
+        AncientClockAreaDamage areaDamage;
         readonly AncientClockSpear[] spears=new AncientClockSpear[24];
         public bool Telegraphing {get{return state==State.Vector||state==State.AreaWindup||state==State.RainTell||state==State.TeleportTell;}}
         public bool Recovering {get{return state==State.Rest;}}
@@ -104,13 +105,18 @@ namespace Plugin.AncientCivilization
                 if(state==State.AreaWindup)
                 {
                     dial.startColor=dial.endColor=new Color(1,.8f,.3f,.25f+.35f*WindupProgress);
-                    if(Time.time>=until){Enter(State.AreaActive,areaIndex==2?1.3f:.3f);dial.startColor=dial.endColor=new Color(1,.6f,.2f);game.Sound(8);}
+                    if(Time.time>=until){areaDamage.Begin();Enter(State.AreaActive,areaIndex==2?1.3f:.3f);dial.startColor=dial.endColor=new Color(1,.6f,.2f);game.Sound(8);}
                 }
                 else
                 {
                     Vector2 relative=target-centre;
                     bool hit=areaIndex==2?AncientClockRules.BroadHit(relative.x,relative.y,radius):relative.sqrMagnitude<radius*radius;
-                    if(hit)game.hero.Hurt(areaIndex==2?28:22);
+                    if(hit&&areaDamage.CanHit)
+                    {
+                        float hpBefore=game.hero.hp,bikeBefore=game.hero.bikeHP;
+                        game.hero.Hurt(areaIndex==2?28:22);
+                        areaDamage.RecordHealth(hpBefore,game.hero.hp,bikeBefore,game.hero.bikeHP);
+                    }
                     if(Time.time>=until)
                     {
                         Hide();if(++areaIndex<3)BeginTeleport();
@@ -207,16 +213,20 @@ namespace Plugin.AncientCivilization
             if(!live||game.Paused)return;if(game.won){Remove();return;}age+=Time.deltaTime;
             if(age>9){Remove();return;}if(stuck)return;
             Vector2 previous=transform.position,next=previous+velocity*Time.deltaTime;
-            var terrain=Physics2D.Linecast(previous,next,1<<8);
-            if(terrain)
+            Vector2 segment=next-previous,target=game.hero.transform.position,offset=target-previous;float entry,length=segment.magnitude;
+            Vector2 travel=length>0?segment/length:offset.normalized;
+            var terrain=Physics2D.Linecast(previous,next+travel*.65f,1<<8);
+            float surfaceFraction=terrain?(length>0?terrain.distance/length:terrain.distance>0?float.MaxValue:0):0;
+            Vector2 fromSurface=terrain?target-terrain.point:Vector2.zero;
+            if(AncientProjectileRules.CircleEntry(segment.x,segment.y,offset.x,offset.y,.65f,out entry)&&
+                (!terrain||AncientProjectileRules.BeforeSurface(entry,surfaceFraction,fromSurface.x,fromSurface.y,terrain.normal.x,terrain.normal.y)))
+            {game.hero.Hurt(18);Remove();return;}
+            if(terrain&&terrain.distance<=length)
             {
                 if(terrain.normal.y>.5f)
                 {stuck=true;transform.position=terrain.point+Vector2.up*.5f;transform.rotation=Quaternion.Euler(0,0,-90);age=0;return;}
                 Remove();return;
             }
-            Vector2 segment=next-previous,target=game.hero.transform.position;
-            float t=segment.sqrMagnitude>.001f?Mathf.Clamp01(Vector2.Dot(target-previous,segment)/segment.sqrMagnitude):0;
-            if(Vector2.Distance(target,previous+segment*t)<.65f){game.hero.Hurt(18);Remove();return;}
             transform.position=next;
         }
         void OnDestroy(){if(shape)Destroy(shape.gameObject);}

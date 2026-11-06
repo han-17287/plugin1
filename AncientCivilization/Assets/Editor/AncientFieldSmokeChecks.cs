@@ -92,11 +92,79 @@ namespace Plugin.AncientCivilization.EditorChecks
         {foreach(var enemy in game.enemies.ToArray())if(enemy&&enemy.IsAlive)enemy.Hit(100000,true);}
         static int LiveMotes(AncientHero hero)
         {
-            var motes=(AncientEnergyMote[])typeof(AncientCombat).GetField("motes",PrivateInstance).GetValue(hero.Combat);int count=0;
-            foreach(var mote in motes)if(mote&&mote.gameObject.activeSelf)count++;return count;
+            int count=0;foreach(var mote in Motes(hero))if(mote&&mote.gameObject.activeSelf)count++;return count;
         }
+        static AncientEnergyMote[] Motes(AncientHero hero)
+        {return (AncientEnergyMote[])typeof(AncientCombat).GetField("motes",PrivateInstance).GetValue(hero.Combat);}
+        static SpriteRenderer Resident(AncientCampaign campaign,int id)
+        {return ((SpriteRenderer[])typeof(AncientCampaign).GetField("citizens",PrivateInstance).GetValue(campaign))[id];}
+        static int NearestResident(AncientCampaign campaign)
+        {return (int)typeof(AncientCampaign).GetMethod("NearestCitizen",PrivateInstance).Invoke(campaign,null);}
         static void MoveToSector(AncientGame game,int sector)
         {game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(game.Campaign.CurrentRoom)+AncientFieldExpansion.EntranceOf(sector),1.3f));}
+        static void CheckCheckpointCrossing(AncientGame game,int sector,float before,float expected)
+        {
+            game.hero.hp=before;MoveToSector(game,sector);Call(game.Campaign,"Update");
+            Assert(game.Campaign.EarnedCheckpoint==sector&&Mathf.Abs(game.hero.hp-expected)<.001f,"Crossing earned entrance "+sector+" gives one capped health reward");
+            Assert(AncientGame.Saved("campaignCheckpoint")==sector,"The rewarded entrance is already persisted");
+        }
+        static void CheckCheckpointRevisit(AncientGame game)
+        {
+            game.hero.hp=40;MoveToSector(game,0);Call(game.Campaign,"Update");MoveToSector(game,1);Call(game.Campaign,"Update");
+            Assert(game.hero.hp==40&&game.Campaign.EarnedCheckpoint==1,"Backtracking and revisiting an earned entrance cannot farm healing");
+        }
+        static void CheckCacheMotes(AncientGame game,Vector2 source)
+        {
+            float energy=0;int count=0;
+            foreach(var mote in Motes(game.hero))if(mote&&mote.gameObject.activeSelf)
+            {
+                count++;energy+=(float)typeof(AncientEnergyMote).GetField("energy",PrivateInstance).GetValue(mote);
+                var sprite=mote.GetComponent<SpriteRenderer>();
+                Assert(sprite&&sprite.sprite&&sprite.sprite.name=="Blue particle crystal"&&((Vector2)mote.transform.position-source).sqrMagnitude<.001f,"A cache releases actual pooled blue motes at its source");
+            }
+            Assert(count==3&&Mathf.Abs(energy-24)<.001f&&game.hero.CaptureEnergy==0,"Cache motes hold twenty-four collectible energy instead of auto-filling the collector");
+        }
+        static void CheckCacheReward(AncientGame game)
+        {
+            Assert(game.Exploration,"Route exploration exists in the real scene");game.hero.Combat.ResetCombat();game.hero.SpendCapturedEnergy();
+            int mask=game.Exploration.CacheMask,credits=game.credits;Vector2 source=(Vector2)game.hero.transform.position+Vector2.up;
+            game.hero.hp=40;Assert(game.Exploration.Claim(9,source),"An unclaimed optional cache can be collected");
+            Assert(game.Exploration.CacheMask==(mask|(1<<9))&&AncientGame.Saved("routeCaches")==game.Exploration.CacheMask&&game.credits==credits+4&&AncientGame.Saved("credits")==game.credits&&game.hero.hp==58,"The actual cache saves its bit and TECH reward and restores eighteen health");
+            CheckCacheMotes(game,source);game.hero.hp=40;
+            Assert(!game.Exploration.Claim(9,source)&&game.Exploration.CacheMask==(mask|(1<<9))&&game.credits==credits+4&&game.hero.hp==40,"Claiming the same cache again awards no currency or healing");
+            CheckCacheMotes(game,source);game.hero.Combat.ResetCombat();
+            game.hero.hp=game.hero.MaxHP-5;Assert(game.Exploration.Claim(8,source)&&game.hero.hp==game.hero.MaxHP,"Cache recovery stops at the player's actual maximum health");
+            game.hero.Combat.ResetCombat();game.hero.hp=10000;
+            Assert(game.Exploration.Claim(7,source)&&game.hero.hp==10000,"Cache recovery preserves existing isolated QA overheal");game.hero.Combat.ResetCombat();
+        }
+        static void CheckIndependentForeman(AncientGame game)
+        {
+            var view=Resident(game.Campaign,4);Vector2 previous=game.hero.transform.position;
+            Assert(game.Campaign.CurrentRoom==2&&view&&view.enabled,"The production foreman remains present while the different witness Reha awaits rescue");
+            game.hero.TravelTo(view.transform.position+Vector3.up*1.3f);
+            Assert(NearestResident(game.Campaign)==4,"The independent foreman remains an actual visible interaction target");game.hero.TravelTo(previous);
+        }
+        static void CheckNamedResidentRescue(AncientGame game)
+        {
+            var campaign=game.Campaign;Call(campaign,"LeaveFloor");
+            typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true).Invoke(game.Story,new object[]{1});
+            typeof(AncientCampaign).GetField("completed",PrivateInstance).SetValue(campaign,campaign.CompletedMask|(1<<4));
+            Call(campaign,"Begin",5);var view=Resident(campaign,6);
+            Assert(campaign.CurrentRoom==5&&view&&!view.enabled,"Sora's static resident is hidden during her own active rescue");
+            game.hero.TravelTo(new Vector2(AncientCampaignData.Citizens[6].X,1.3f));
+            Assert(NearestResident(campaign)!=6,"A hidden duplicate cannot remain an invisible interaction target");
+            // Seed only objective progress; the probe checks real renderers and actor lookup, not human escort pacing.
+            Call(campaign,"Mark",0);Call(campaign,"Mark",1);Call(campaign,"RestoreEscort");Call(campaign,"Refresh");
+            var escort=(SpriteRenderer)typeof(AncientCampaign).GetField("escort",PrivateInstance).GetValue(campaign);Transform actor;float offset;
+            Assert(escort&&escort.enabled&&!view.enabled&&campaign.TryDialogueActor("배달원 소라",out actor,out offset)&&actor==escort.transform,"The rescued speaker uses one moving escort renderer and its real dialogue anchor");
+            Call(campaign,"Mark",2);float exit=AncientCampaignRules.Left(5)+AncientCampaignRules.RoomWidth-16;
+            Assert(!escort.enabled&&view.enabled&&Mathf.Abs(view.transform.position.x-exit)<.001f&&Mathf.Abs(view.transform.position.y)<.001f,"Completing rescue swaps Sora to the protected ground-level exit in the same transition");
+            game.hero.TravelTo(view.transform.position+Vector3.up*1.3f);
+            Assert(NearestResident(campaign)==6&&campaign.TryDialogueActor("배달원 소라",out actor,out offset)&&actor==view.transform,"Interaction and speech anchors follow the rescued resident's rendered exit position");
+            game.hero.TravelTo(new Vector2(AncientCampaignData.Citizens[6].X,1.3f));Assert(NearestResident(campaign)!=6,"The rescued resident no longer interacts from her old authored bridge");
+            Call(campaign,"LeaveFloor");Call(campaign,"EnterFloor");
+            Assert(AncientGame.Saved("routeTask5")==7&&view.enabled&&Mathf.Abs(view.transform.position.x-exit)<.001f&&!escort.enabled,"Existing saved rescue tasks preserve the single exit resident after floor re-entry");
+        }
         static void Update()
         {
             if(!SessionState.GetBool(Root+"Running",false))return;
@@ -116,6 +184,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==0)
                 {
                     if(!game.GameplayInputReady||game.Paused)return;
+                    CheckCacheReward(game);
                     var body=game.hero.GetComponent<Rigidbody2D>();Vector2 position=body.position,motion=new Vector2(4,0);body.linearVelocity=motion;
                     Call(campaign,"StartChapter",0);
                     Assert(body.position==position&&body.linearVelocity==motion,"Accepting the chapter mission preserves the player's actual position and movement");
@@ -141,21 +210,22 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     Assert(campaign.CurrentSector==0&&campaign.EarnedCheckpoint==0&&campaign.DefeatedMask==0,"Bypassing a closed sector gate recovers without granting progress");
                     Assert(LiveEnemies(game)==2,"Illegal sector entry does not duplicate the initial encounter");
-                    DefeatCurrent(game);Call(campaign,"Mark",0);MoveToSector(game,1);SetStage(2);return;
+                    DefeatCurrent(game);Call(campaign,"Mark",0);CheckCheckpointCrossing(game,1,40,60);CheckCheckpointRevisit(game);SetStage(2);return;
                 }
                 if(stage==2)
                 {
                     Assert(campaign.CurrentSector==1&&campaign.EarnedCheckpoint==1,"Cleared first objective/encounter earns the second entrance");
                     Assert(campaign.DefeatedMask==3&&LiveEnemies(game)==2,"Only second-sector criminals replace the defeated first pair");
                     Assert(AncientGame.Saved("campaignCheckpoint")==1&&AncientGame.Saved("campaignDefeated")==3,"Earned checkpoint and defeat bits are persisted");
-                    Assert(campaign.Retry(),"Retry is accepted in the active field");SetStage(3);return;
+                    game.hero.hp=40;Assert(campaign.Retry()&&game.hero.hp==40,"Retry is accepted without awarding another checkpoint heal");SetStage(3);return;
                 }
                 if(stage==3)
                 {
                     Assert(campaign.CurrentSector==1&&campaign.EarnedCheckpoint==1&&campaign.DefeatedMask==3,"Retry preserves the earned entrance and previous defeats");
                     Assert(LiveEnemies(game)==2,"Retry does not duplicate the active encounter");
-                    Vector2 position=game.hero.transform.position;
+                    Vector2 position=game.hero.transform.position;game.hero.hp=40;
                     Assert(campaign.TryInteract()&&campaign.Active&&((Vector2)game.hero.transform.position-position).sqrMagnitude<.001f,"The earned safety terminal saves in place without returning to a chief");
+                    Assert(game.hero.hp==40,"Using the safety terminal cannot farm its earned recovery reward");
                     Assert(AncientGame.Saved("campaignActive")==0&&AncientGame.Saved("campaignTasks")==1,"The checkpoint keeps the active case and its partial goals");
                     Call(campaign,"LeaveFloor");
                     Assert(!campaign.Active,"Leaving a floor releases its active encounter without granting completion");
@@ -164,14 +234,15 @@ namespace Plugin.AncientCivilization.EditorChecks
                 }
                 if(stage==4)
                 {
-                    Vector2 position=game.hero.transform.position;Call(campaign,"EnterFloor");
+                    Vector2 position=game.hero.transform.position;game.hero.hp=40;Call(campaign,"EnterFloor");
                     Assert(((Vector2)game.hero.transform.position-position).sqrMagnitude<.001f,"Returning by the lift keeps its arrival position instead of teleporting to the field");
+                    Assert(game.hero.hp==40,"Floor re-entry restores progress without awarding checkpoint healing again");
                     SetStage(5);return;
                 }
                 if(stage==5)
                 {
                     Assert(campaign.CurrentSector==1&&campaign.DefeatedMask==3&&Tasks(campaign)==1,"Re-entering the same floor resumes its saved objective and defeat state");
-                    DefeatCurrent(game);Call(campaign,"Mark",1);MoveToSector(game,2);SetStage(6);return;
+                    DefeatCurrent(game);Call(campaign,"Mark",1);CheckCheckpointCrossing(game,2,game.hero.MaxHP-5,game.hero.MaxHP);SetStage(6);return;
                 }
                 if(stage==6)
                 {
@@ -231,6 +302,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==12)
                 {
                     Assert(campaign.CurrentRoom==2,"The escort case starts after the power case");Physics2D.SyncTransforms();
+                    CheckIndependentForeman(game);
                     float left=AncientCampaignRules.Left(2);
                     for(int i=1;i<AncientCampaignRules.RoomWidth/10;i++)Assert(Physics2D.OverlapPoint(new Vector2(left+i*10,-.1f),1<<8),"Escort ground remains continuous at local x="+(i*10));
                     DefeatCurrent(game);Call(campaign,"Mark",0);MoveToSector(game,1);SetStage(14);return;
@@ -241,6 +313,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {Assert(campaign.Retry(),"An escort retry is accepted at the final entrance");SetStage(16);return;}
                 if(stage==16)
                 {
+                    if(game.Paused||game.hero.bike||Time.deltaTime<=0||Input.GetKey(KeyCode.F))return;
                     var escort=(SpriteRenderer)typeof(AncientCampaign).GetField("escort",PrivateInstance).GetValue(campaign);
                     Assert(escort&&escort.enabled&&Mathf.Abs(escort.transform.position.x-game.hero.transform.position.x)<3,"A rescued witness resumes near the earned safe entrance instead of becoming stranded behind the player");
                     Assert(Tasks(campaign)==3,"Witness recovery does not grant escort completion");
@@ -251,7 +324,10 @@ namespace Plugin.AncientCivilization.EditorChecks
                     floorSetter.Invoke(game.Story,new object[]{0});game.hero.TravelTo(arrival);Call(campaign,"EnterFloor");
                     Assert(campaign.CurrentRoom==2&&Tasks(campaign)==3&&campaign.EarnedCheckpoint==2&&campaign.DefeatedMask==15,"Returning to the escort chapter restores its own goals, checkpoint and defeat bits");
                     Assert(((Vector2)game.hero.transform.position-arrival).sqrMagnitude<.001f,"The floor resume never replaces the lift's actual arrival with a field teleport");
-                    Finish(true,"Continuous-chapter structural smoke completed. Human traversal, live escort pacing, boss transitions, exact shutter timing and wire shortcuts still need manual playtesting.");
+                    CheckNamedResidentRescue(game);
+                    AncientProjectileSmokeChecks.RunInQAProfile(game);
+                    Append("PASS: isolated real-object projectile wall/hero ordering and clock-hand floor probes completed.");
+                    Finish(true,"Continuous-chapter structural smoke completed, including one-time checkpoint/cache recovery, rescued resident interactions and projectile collision ordering. Human traversal, live escort pacing, boss transitions, exact shutter timing and wire shortcuts still need manual playtesting.");
                 }
             }
             catch(Exception error){Finish(false,error.ToString());}

@@ -180,12 +180,19 @@ namespace Plugin.AncientCivilization
                 new Line("통신관","파란 입자는 우클릭으로 모아라. 좌클릭을 길게 눌러 조준하고, 금색 준비 표시가 뜨면 놓아서 레이저를 쏴라.",1));}
             else if(Stage==3)
             {
-                if(Time.time>=nextTrainingShot&&game.shots.Count<4)
+                if(AncientRules.TutorialReady(Stage,flags))
+                {
+                    // The final shot marks completion at release. Let its visible pulse
+                    // (or an already active cut/charge) finish before radio dialogue takes control.
+                    var combat=hero.Combat;
+                    if(!combat||(!combat.Firing&&!combat.BladeAnimating&&!combat.Charging))
+                    {SetStage(4);foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();TheftReport();}
+                }
+                else if(Time.time>=nextTrainingShot&&game.shots.Count<4)
                 {
                     nextTrainingShot=Time.time+1.5f;float side=hero.transform.position.x>12?-1:1;
                     game.Projectiles.Spawn((Vector2)hero.transform.position+new Vector2(side*5,.35f),Vector2.left*side*4,4,true);
                 }
-                if(AncientRules.TutorialReady(Stage,flags)){SetStage(4);foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();TheftReport();}
             }
             else if(Stage==4)TheftReport();
             else if(Stage==5)
@@ -431,7 +438,7 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientTruck : MonoBehaviour
     {
-        AncientGame game;float nextThrow,health=180,suppressedUntil;bool dropped;
+        AncientGame game;float nextThrow,health=180,suppressedUntil;bool dropped;int lastLaserPulse;
         public bool Stopped {get{return transform.position.x>=105.9f;}}
         public void Initialize(AncientGame owner,float x)
         {game=owner;transform.position=new Vector2(x,AncientDistrict.RoadHeight(x));AncientArt.Display("Core theft cargo truck",AncientArt.Truck(),Vector2.zero,7,transform);}
@@ -453,12 +460,13 @@ namespace Plugin.AncientCivilization
             else if(!dropped)
             {dropped=true;for(int i=0;i<3;i++)game.SpawnPickup(new Vector2(98+i*4,1.3f),i);game.Notice("트럭 정지 / 도난 코어를 회수하고 용의자를 확보하세요.",5);}
         }
-        public void HitByLaser(Vector2 start,Vector2 end,float damage,float bodyRadius=0)
+        public void HitByLaser(Vector2 start,Vector2 end,float damage,float bodyRadius=0,int pulseId=0)
         {
+            if(pulseId!=0&&lastLaserPulse==pulseId)return;
             if(Stopped)return;Vector2 delta=end-start;if(delta.sqrMagnitude<.01f)return;
             Vector2 center=(Vector2)transform.position+Vector2.up*1.4f,offset=center-start;
             if(AncientBeamRules.IntersectsBox(delta.x,delta.y,offset.x,offset.y,bodyRadius,3,1.4f)&&!Physics2D.Linecast(start,center,1<<8))
-            {health=Mathf.Max(0,health-damage);suppressedUntil=Time.time+3;game.Burst(transform.position+Vector3.up,AncientGame.Orange,12);}
+            {if(pulseId!=0)lastLaserPulse=pulseId;health=Mathf.Max(0,health-damage);suppressedUntil=Time.time+3;game.Burst(transform.position+Vector3.up,AncientGame.Orange,12);}
         }
     }
 }

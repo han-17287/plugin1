@@ -3,6 +3,18 @@ namespace Plugin.AncientCivilization
     public static class AncientProgressRules
     {
         public const int CacheCount=10;
+        public const float CheckpointRecovery=20;
+        public static float RecoverHealth(float current,float maximum,float amount)
+        {
+            if(!Finite(current)||!Finite(maximum)||!Finite(amount)||current<=0||maximum<=current||amount<=0)return current;
+            return System.Math.Min(maximum,current+System.Math.Min(amount,maximum-current));
+        }
+        public static float RecoverAtCheckpoint(float current,float maximum,int previousCheckpoint,int newCheckpoint)
+        {
+            if(previousCheckpoint<0||previousCheckpoint>2||newCheckpoint<1||newCheckpoint>2||newCheckpoint<=previousCheckpoint)return current;
+            return RecoverHealth(current,maximum,CheckpointRecovery);
+        }
+        static bool Finite(float value){return !float.IsNaN(value)&&!float.IsInfinity(value);}
         public static bool HasCache(int mask,int id){return id>=0&&id<CacheCount&&(mask&(1<<id))!=0;}
         public static int ClaimCache(int mask,int id){return id<0||id>=CacheCount?mask:mask|(1<<id);}
         public static int CachesOnFloor(int mask,int floor)

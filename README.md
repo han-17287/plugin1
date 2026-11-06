@@ -2,7 +2,9 @@
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**v0.16.0 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/raw/refs/heads/ancient-civilization-prototype/PLUGIN_v0.16.0_ContinuousChapters_ThickLaser_Unity_6000.6.7f1.zip)
+**v0.17.0 Unity 소스:** [다운로드 ZIP](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/PLUGIN_v0.17.0_GameplayFlow_Unity_6000.6.7f1.zip)
+
+이번 버전은 이동 중 레이저·한 발당 중복 피해, 착지 점프·이동 앵커·사라진 적 견인, 저격탄/시계 창 충돌 순서를 보완했습니다. 새 거점과 높은 샛길의 일회용 보급, 구조 주민의 출구 배치, 바닥 공격 예고도 정리했습니다.
 
 - 와이어 좌클릭은 충돌을 검사하며 즉시 직선 견인, 가운데 클릭은 기존 스윙.
 - 캐릭터 곁의 작은 말풍선과 한국어 순차 표시. 긴 대사는 페이지로 나누고 통신관은 무전기 아이콘으로 표시합니다.
