@@ -13,3 +13,6 @@ UserSettings/
 !Tools/*Checks.csproj
 Tools/bin/
 Tools/obj/
+Tools/work/
+__pycache__/
+*.pyc

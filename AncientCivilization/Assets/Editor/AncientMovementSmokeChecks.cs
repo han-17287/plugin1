@@ -120,6 +120,45 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(deadTarget)UnityEngine.Object.Destroy(deadTarget);if(lethalTarget){var enemy=lethalTarget.GetComponent<AncientEnemy>();game.enemies.Remove(enemy);UnityEngine.Object.Destroy(lethalTarget);}
             }
         }
+        static void CheckCompletedZip(AncientGame game,GameObject support)
+        {
+            var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();var platform=support.GetComponent<Rigidbody2D>();var collider=support.GetComponent<BoxCollider2D>();
+            var simulation=Physics2D.simulationMode;Vector3 oldPosition=support.transform.position;Vector2 size=collider.size,platformVelocity=platform.linearVelocity;var kind=platform.bodyType;
+            var cranes=Field(typeof(AncientTraversal),"cranes");object registered=cranes.GetValue(game.Traversal);GameObject freeCrane=null;
+            try
+            {
+                Physics2D.simulationMode=SimulationMode2D.Script;float dt=Time.fixedDeltaTime;
+                Field(typeof(AncientHero),"<ZipMode>k__BackingField").SetValue(hero,true);
+                Prepare(hero,new Vector2(1.6f,83.905f),Vector2.zero);Attach(hero,new Vector2(2,85),null,Vector2.down);
+                Vector2 before=body.position;Tick(hero,"FixedUpdate");
+                Assert(hero.Wired&&Read<bool>(hero,"wireFinishPending")&&body.position==before&&body.linearVelocity.x>0,"A static final zip step plans completion without releasing or teleporting before physics moves");
+                Physics2D.SyncTransforms();Physics2D.Simulate(dt);Tick(hero,"FixedUpdate");
+                Assert(!hero.Wired&&!Read<bool>(hero,"wireFinishPending")&&Near(body.position.x,2)&&Near(body.linearVelocity.x,0)&&Near(body.linearVelocity.y,0),"The completed static zip stops at its physical destination without carrying its final fast step into an unwanted drift");
+
+                platform.bodyType=RigidbodyType2D.Kinematic;collider.size=new Vector2(8,.3f);support.transform.position=new Vector2(2,84);platform.linearVelocity=new Vector2(7,0);Physics2D.SyncTransforms();
+                Prepare(hero,new Vector2(1.7f,85.245f),Vector2.zero);Attach(hero,new Vector2(2.1f,84.15f),null,Vector2.up);Tick(hero,"FixedUpdate");
+                Assert(hero.Wired&&Read<bool>(hero,"wireFinishPending")&&Read<Transform>(hero,"wireMovingAnchor")==support.transform,"The final moving-roof step stays attached while targeting the actual selected collider point");
+                Physics2D.SyncTransforms();Physics2D.Simulate(dt);Tick(hero,"FixedUpdate");
+                Assert(!hero.Wired&&!Read<bool>(hero,"wireFinishPending")&&Near(body.linearVelocity.x,7)&&Near(Read<float>(hero,"airborneSurface"),7),"Moving-roof completion uses the completed step and inherits the carrier's seven-unit speed even after its latch has moved ahead");
+
+                platform.linearVelocity=Vector2.zero;platform.bodyType=RigidbodyType2D.Static;support.transform.position=oldPosition;Physics2D.SyncTransforms();
+                freeCrane=new GameObject("Movement QA transform-only crane");freeCrane.transform.position=new Vector2(2,85);
+                var crane=freeCrane.AddComponent<AncientMovingAnchor>();crane.enabled=false;cranes.SetValue(game.Traversal,new[]{crane});
+                Prepare(hero,new Vector2(1.6f,83.905f),Vector2.zero);Attach(hero,new Vector2(2,85),null,Vector2.down);Tick(hero,"FixedUpdate");
+                Assert(hero.Wired&&Read<bool>(hero,"wireFinishPending"),"A transform-only crane can plan a real final wire step without a rigidbody");
+                Physics2D.SyncTransforms();Physics2D.Simulate(dt);freeCrane.transform.position+=Vector3.right*(3*dt);Physics2D.SyncTransforms();Tick(hero,"FixedUpdate");
+                Assert(!hero.Wired&&Mathf.Abs(body.linearVelocity.x-3)<.01f&&Mathf.Abs(Read<float>(hero,"airborneSurface")-3)<.01f,"A completed transform-crane zip preserves measured horizontal carrier motion instead of a stale zip velocity");
+
+                Prepare(hero,new Vector2(1.6f,83.905f),Vector2.zero);Attach(hero,new Vector2(2,85),null,Vector2.down);Tick(hero,"FixedUpdate");
+                Assert(Read<bool>(hero,"wireFinishPending"),"The interruption probe begins with a pending physical finish");
+                hero.TravelTo(new Vector2(2,80));Assert(!hero.Wired&&!Read<bool>(hero,"wireFinishPending"),"Travel or retry clears a pending wire finish before another destination can inherit it");
+            }
+            finally
+            {
+                cranes.SetValue(game.Traversal,registered);hero.TravelTo(new Vector2(2,80));if(freeCrane)UnityEngine.Object.Destroy(freeCrane);
+                platform.bodyType=kind;if(kind!=RigidbodyType2D.Static)platform.linearVelocity=platformVelocity;collider.size=size;support.transform.position=oldPosition;Physics2D.SyncTransforms();Physics2D.simulationMode=simulation;
+            }
+        }
         static void CheckRealHero(AncientGame game)
         {
             var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
@@ -162,7 +201,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Set(hero,"wireZip",false);body.linearVelocity=new Vector2(18,7);var release=typeof(AncientHero).GetMethod("StopWire",PrivateInstance);release.Invoke(hero,new object[]{false});
                 Assert(!hero.Wired&&Near(body.linearVelocity.x,18)&&Near(body.linearVelocity.y,7),"Releasing a wire without launch preserves the actual Rigidbody momentum");
                 Tick(hero,"FixedUpdate");Assert(Near(body.linearVelocity.x,18),"The post-wire air-control path carries released horizontal momentum");
-                CheckWireAttachments(game,support);
+                CheckWireAttachments(game,support);CheckCompletedZip(game,support);
                 Prepare(hero,new Vector2(2,80),Vector2.zero);
                 Field(typeof(AncientHero),"<ZipMode>k__BackingField").SetValue(hero,true);Attach(hero,new Vector2(2,46),null,Vector2.down);
                 Field(typeof(AncientHero),"<ZipMode>k__BackingField").SetValue(hero,false);Attach(hero,new Vector2(4,46),null,Vector2.down);

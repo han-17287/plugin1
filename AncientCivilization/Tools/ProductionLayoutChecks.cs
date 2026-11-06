@@ -138,8 +138,71 @@ class ProductionLayoutChecks
             Check(plan.Age<groundRun*.85,"The optional linked route beats direct ground running by at least fifteen percent without a double jump");
         }
     }
+    static void CheckRoadCamera()
+    {
+        foreach(float aspect in new[]{4/3f,16/10f,16/9f,21/9f})
+        foreach(int rate in new[]{30,60,120,144,240})
+        foreach(float physicsOffset in new[]{-.34f,0,.34f})
+        {
+            double dt=1.0/rate,hero=0,truck=22+physicsOffset;
+            // Production entry and retry hard-cut into this framing, including zoom.
+            double camera=AncientProductionLayout.RoadCameraLead((float)(truck-hero));
+            double zoom=AncientProductionLayout.RoadCameraZoom((float)(truck-hero),aspect);
+            for(int frame=0;frame<=rate*20;frame++)
+            {
+                double time=frame*dt;
+                if(frame>0)
+                {
+                    hero+=17*dt;
+                    double gap=22-14*Math.Min(1,Math.Max(0,(time-16)/3));
+                    truck=hero+gap+physicsOffset;
+                    double focus=hero+AncientProductionLayout.RoadCameraLead((float)(truck-hero));
+                    double targetZoom=AncientProductionLayout.RoadCameraZoom((float)(truck-hero),aspect);
+                    camera+=(focus-camera)*(1-Math.Exp(-7*dt));
+                    zoom+=(targetZoom-zoom)*(1-Math.Exp(-3*dt));
+                }
+                double left=camera-zoom*aspect,right=camera+zoom*aspect;
+                Check(left<=hero-1.6-.8&&right>=hero+1.6+.8,"The whole motorcycle remains visible from the actual cut through exponential follow and the moving approach");
+                Check(left<=truck-3.3-.8&&right>=truck+3.3+.8,"The whole moving truck has a readable margin at every frame, including high FPS follow lag and a20ms physics offset");
+                if(time<=16)Check(right>=hero+18+.8+.8,"New road hazards enter inside the visible forward road instead of offscreen");
+            }
+        }
+        foreach(float bad in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+        {
+            float zoom=AncientProductionLayout.RoadCameraZoom(bad,bad);
+            Check(zoom>=7.8f&&!float.IsInfinity(zoom)&&!float.IsNaN(zoom),"A transient invalid viewport or gap cannot poison the production camera");
+        }
+    }
+    static void CheckDeckCamera()
+    {
+        foreach(float aspect in new[]{4/3f,16/10f,16/9f,21/9f})
+        foreach(int rate in new[]{30,60,120,144,240})
+        {
+            double dt=1.0/rate,hero=0,truck=0,camera=0;
+            double zoom=AncientProductionLayout.DeckCameraZoom(0,aspect);
+            for(int frame=0;frame<=rate*13;frame++)
+            {
+                double time=frame*dt;
+                if(frame>0)
+                {
+                    // Leave the roof in both directions at the actual30m/s wire cap,
+                    // reverse in midair, then return to ordinary moving-deck control.
+                    double speed=time<2?30:time<6?-30:time<8?30:7;
+                    hero+=speed*dt;truck+=7*dt;
+                    double target=(hero+truck)*.5;
+                    double wanted=AncientProductionLayout.DeckCameraZoom((float)(hero-truck),aspect);
+                    camera+=(target-camera)*(1-Math.Exp(-7*dt));
+                    zoom=wanted>zoom?wanted:zoom+(wanted-zoom)*(1-Math.Exp(-3*dt));
+                }
+                double left=camera-zoom*aspect,right=camera+zoom*aspect;
+                Check(left<=hero-1.6-.8&&right>=hero+1.6+.8,"The airborne officer remains visible during a full-speed roof-to-ceiling wire in either direction");
+                Check(left<=truck-4.5-.8&&right>=truck+4.5+.8,"The moving deck and captain's extended poses stay in the same frame as the airborne officer");
+            }
+        }
+    }
     static void Main()
     {
+        CheckRoadCamera();CheckDeckCamera();
         Check(AncientProductionLayout.TutorialLeft<AncientProductionLayout.TutorialSpawn-6,"The opening spawn has a safe margin from its retaining wall");
         Check(AncientProductionLayout.StockX>AncientProductionLayout.SectionStarts[4]&&AncientProductionLayout.StockX<AncientProductionLayout.BreachX-6,"The stock console stands in the inventory hall before the breach wall");
         Check(AncientProductionLayout.TutorialRight<=AncientChapterLayout.CaseLeft(0),"The production route leaves the established continuous chapter entrance intact");

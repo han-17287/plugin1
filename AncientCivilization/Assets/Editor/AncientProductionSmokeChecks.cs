@@ -92,22 +92,34 @@ namespace Plugin.AncientCivilization.EditorChecks
         static void CheckOptionalWorkers(AncientGame game)
         {
             Assert(game.ProductionResidents,"The opening scene creates its optional production workers");
+            Physics2D.SyncTransforms();
             string[] names={"교대 작업자","압연기 조작원","재고 관리원"};float[] positions={-211,-145,66};
+            var sprites=new System.Collections.Generic.HashSet<Sprite>();
             for(int i=0;i<names.Length;i++)
             {
                 Transform actor;float head;
                 Assert(game.ProductionResidents.TryDialogueActor(names[i],out actor,out head)&&actor,"Each anonymous worker has a real in-world speech anchor: "+names[i]);
                 Assert(Mathf.Abs(actor.position.x-positions[i])<.001f&&Mathf.Abs(actor.position.y-AncientProductionLayout.GroundHeight(positions[i]))<.001f,"The worker's feet meet the actual road or press foundation");
+                var art=actor.GetComponentInChildren<SpriteRenderer>();
+                Assert(art&&art.sprite==AncientArt.ProductionWorker(i)&&art.sprite.texture.filterMode==FilterMode.Point,"The worker role selects its own original pixel sprite: "+names[i]);sprites.Add(art.sprite);
+                var floor=Physics2D.Raycast((Vector2)actor.position+Vector2.up*.4f,Vector2.down,.6f,1<<8);
+                Assert(floor.collider&&Mathf.Abs(art.bounds.min.y-floor.point.y)<.02f&&Mathf.Abs(head-(art.bounds.max.y-actor.position.y))<.01f,"The displayed worker's feet meet the physical floor and speech height follows the actual sprite bounds");
                 Assert(actor.GetComponentsInChildren<Collider2D>().Length==0,"The worker and their work props cannot obstruct a fast traversal route");
             }
-            Vector2 original=game.hero.transform.position;int stage=game.Story.Stage,cores=game.Cores;
+            Assert(sprites.Count==3,"The shift worker, press technician and stock clerk use three distinct original worker sprites");
+            Transform unrelated;float unrelatedHead;Assert(!game.ProductionResidents.TryDialogueActor("생산소 작업반장",out unrelated,out unrelatedHead),"Anonymous production workers do not replace the named production foreman's identity");
+            Vector2 original=game.hero.transform.position;int stage=game.Story.Stage,cores=game.Cores,flags=(int)Field(typeof(AncientStory),"flags").GetValue(game.Story),credits=game.credits,points=game.Story.ResidencePoints;
             int input=(int)Field(typeof(AncientGame),"inputReadyFrame").GetValue(game);
             try
             {
-                MoveHero(game.hero,new Vector2(-211,1.06f));Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
-                Assert(game.ProductionResidents.TryInteract()&&game.Story.DialogueOpen,"An actual optional worker interaction opens the Korean in-game conversation");
-                FinishDialogue(game,6);
-                Assert(game.Story.Stage==stage&&game.Cores==cores&&!game.Production.Active,"A workplace conversation cannot advance inventory, grant recovery or start the pursuit");
+                for(int i=0;i<names.Length;i++)
+                {
+                    MoveHero(game.hero,new Vector2(positions[i],AncientProductionLayout.GroundHeight(positions[i])+1.06f));Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
+                    Assert(game.ProductionResidents.TryInteract()&&game.Story.DialogueOpen,"An actual optional worker interaction opens the Korean in-game conversation: "+names[i]);
+                    var lines=(System.Collections.IList)Field(typeof(AncientStory),"lines").GetValue(game.Story);var first=lines[0];
+                    Assert((string)first.GetType().GetField("speaker").GetValue(first)==names[i],"The conversation keeps the selected worker's own role and speaker identity");FinishDialogue(game,6);
+                }
+                Assert(game.Story.Stage==stage&&game.Cores==cores&&(int)Field(typeof(AncientStory),"flags").GetValue(game.Story)==flags&&game.credits==credits&&game.Story.ResidencePoints==points&&!game.Production.Active,"The three optional workplace conversations cannot advance inventory, tutorial flags, rewards or the mandatory pursuit");
             }
             finally {MoveHero(game.hero,original);Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,input);}
         }
@@ -157,6 +169,93 @@ namespace Plugin.AncientCivilization.EditorChecks
             hero.TravelTo(new Vector2(AncientProductionLayout.StockX,1.06f));Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);
             Assert(!hero.Wired&&hero.IsOnGround,"Releasing the wire and reaching the real floor leaves the stock terminal ready for a grounded request");
         }
+        static bool InCamera(Camera camera,Vector3 point)
+        {Vector3 view=camera.WorldToViewportPoint(point);return view.z>0&&view.x>.001f&&view.x<.999f&&view.y>.001f&&view.y<.999f;}
+        static bool InCamera(Camera camera,Bounds bounds)
+        {
+            return InCamera(camera,new Vector3(bounds.min.x,bounds.min.y,bounds.center.z))&&InCamera(camera,new Vector3(bounds.min.x,bounds.max.y,bounds.center.z))&&
+                InCamera(camera,new Vector3(bounds.max.x,bounds.min.y,bounds.center.z))&&InCamera(camera,new Vector3(bounds.max.x,bounds.max.y,bounds.center.z));
+        }
+        static Bounds TruckBounds(AncientProductionPursuit director)
+        {
+            Bounds bounds=((BoxCollider2D)Field(typeof(AncientProductionPursuit),"deck").GetValue(director)).bounds;
+            bounds.Encapsulate(((SpriteRenderer)Field(typeof(AncientProductionPursuit),"truckArt").GetValue(director)).bounds);bounds.Encapsulate(((SpriteRenderer)Field(typeof(AncientEnemy),"art").GetValue(director.Commander)).bounds);return bounds;
+        }
+        static void CheckTruckArtwork(AncientGame game)
+        {
+            var director=game.Production;var art=(SpriteRenderer)Field(typeof(AncientProductionPursuit),"truckArt").GetValue(director);var deck=(BoxCollider2D)Field(typeof(AncientProductionPursuit),"deck").GetValue(director);Physics2D.SyncTransforms();
+            Assert(art.sprite==AncientArt.ProductionTruck()&&art.sprite!=AncientArt.Truck()&&art.sprite.name=="production-pursuit-empty-truck","The actual pursuit vehicle uses the original empty chassis rather than the legacy truck with baked cargo");
+            // The authored native-grid rectangle has three clear pixels on every side.
+            float padding=3/art.sprite.pixelsPerUnit;Bounds visible=art.bounds;
+            Assert(Mathf.Abs(visible.min.y+padding-AncientProductionLayout.RoadY)<.002f&&Mathf.Abs(visible.max.y-padding-deck.bounds.max.y)<.002f,"The displayed opaque wheels rest on the road and the opaque cargo roof meets the real walkable roof");
+            var roof=(SpriteRenderer)Field(typeof(AncientProductionPursuit),"truckRoofArt").GetValue(director);
+            Assert(Mathf.Abs(roof.bounds.max.y-deck.bounds.max.y)<.002f,"The walkable roof plate's visible top matches the collider instead of covering the officer's boots");
+            Assert(visible.min.x+padding<deck.bounds.min.x&&visible.max.x-padding>deck.bounds.max.x&&visible.size.x-deck.bounds.size.x<.4f,"The original chassis covers the whole physical deck with only its small authored bumper overhang");
+            CheckCargoArtwork(director,false);
+        }
+        static void CheckCargoArtwork(AncientProductionPursuit director,bool detached)
+        {
+            var cargo=(Transform)Field(typeof(AncientProductionPursuit),"cargo").GetValue(director);var cores=(SpriteRenderer[])Field(typeof(AncientProductionPursuit),"coreArt").GetValue(director);
+            var distinct=new System.Collections.Generic.HashSet<SpriteRenderer>();bool shown=true;
+            foreach(var renderer in cores)
+            {
+                shown&=renderer&&renderer.enabled&&renderer.gameObject.activeInHierarchy&&renderer.transform.parent==cargo&&renderer.color==AncientGame.Cyan&&renderer.bounds.size.x>.4f&&renderer.bounds.size.y>.8f;
+                if(renderer)distinct.Add(renderer);
+            }
+            Assert(cores.Length==3&&distinct.Count==3&&shown&&(!detached||cargo.parent==null),"The "+(detached?"detached":"mounted")+" cargo contains exactly three separate visible cyan energy cores"+(detached?" under an independent world root":""));
+        }
+        static void CheckDeckCamera(AncientGame game)
+        {
+            var director=game.Production;var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();var view=game.View;
+            var truck=(Rigidbody2D)Field(typeof(AncientProductionPursuit),"truck").GetValue(director);Vector2 position=body.position,velocity=body.linearVelocity;
+            float aspect=view.aspect,zoom=view.orthographicSize;Vector3 camera=view.transform.position,follow=(Vector3)Field(typeof(AncientGame),"cameraFollow").GetValue(game);
+            try
+            {
+                foreach(float ratio in new[]{4/3f,16/10f,16/9f,21/9f})foreach(float offset in new[]{-36f,-18f,18f,36f})
+                {
+                    MoveHero(hero,new Vector2(truck.position.x+offset,8.7f));view.aspect=ratio;game.SnapCameraToHero();
+                    Bounds actor=hero.GetComponent<CapsuleCollider2D>().bounds;var art=(SpriteRenderer)Field(typeof(AncientHero),"art").GetValue(hero);actor.Encapsulate(art.bounds);
+                    Assert(InCamera(view,actor)&&InCamera(view,TruckBounds(director)),"The actual deck camera retains the ceiling-height officer and complete truck at offset "+offset+" / aspect "+ratio);
+                }
+            }
+            finally
+            {
+                MoveHero(hero,position);body.linearVelocity=velocity;view.aspect=aspect;view.orthographicSize=zoom;view.transform.position=camera;Field(typeof(AncientGame),"cameraFollow").SetValue(game,follow);
+            }
+        }
+        static void CheckRoadCamera(AncientGame game,string context)
+        {
+            var director=game.Production;var view=game.View;var hero=game.hero;
+            float aspect=view.aspect,zoom=view.orthographicSize;Vector3 position=view.transform.position,follow=(Vector3)Field(typeof(AncientGame),"cameraFollow").GetValue(game);
+            int cursor=(int)Field(typeof(AncientProductionPursuit),"hazardCursor").GetValue(director),volley=(int)Field(typeof(AncientProductionPursuit),"volley").GetValue(director);
+            bool road=director.Sequence.Phase==AncientProductionPhase.Chase;
+            try
+            {
+                Assert(LiveHazards(director)==0,"The "+context+" camera probe begins without altering an existing live road hazard");
+                if(road)for(int i=0;i<3;i++)Call(director,"SpawnHazard");Physics2D.SyncTransforms();
+                Bounds rider=hero.GetComponent<BoxCollider2D>().bounds;
+                foreach(var art in hero.GetComponentsInChildren<SpriteRenderer>())if(art.enabled&&art.gameObject.activeInHierarchy)rider.Encapsulate(art.bounds);
+                Bounds vehicle=TruckBounds(director);
+                foreach(float ratio in new[]{4/3f,16/10f,16/9f,21/9f})
+                {
+                    view.aspect=ratio;game.SnapCameraToHero();Vector2 focus;float targetZoom;
+                    Assert(director.TryCamera(out focus,out targetZoom)&&((Vector2)view.transform.position-focus).sqrMagnitude<.00001f&&Near(view.orthographicSize,targetZoom),"The "+context+" snap applies the actual production focus and zoom immediately at aspect "+ratio);
+                    Assert(InCamera(view,rider)&&InCamera(view,vehicle),"The actual camera projection contains the complete rider and transport truck at "+context+" / aspect "+ratio);
+                    bool hazardsVisible=true;var pool=(Array)Field(typeof(AncientProductionPursuit),"hazards").GetValue(director);
+                    foreach(var hazard in pool)if(hazard!=null&&(bool)hazard.GetType().GetField("live").GetValue(hazard))
+                    {
+                        var art=(SpriteRenderer)hazard.GetType().GetField("art").GetValue(hazard);var footprint=(LineRenderer)hazard.GetType().GetField("footprint").GetValue(hazard);
+                        hazardsVisible&=InCamera(view,art.bounds);for(int i=0;i<footprint.positionCount;i++)hazardsVisible&=InCamera(view,footprint.GetPosition(i));
+                    }
+                    if(road)Assert(hazardsVisible,"The actual forward debris, bomb and full danger footprints remain inside the "+context+" camera at aspect "+ratio);
+                }
+            }
+            finally
+            {
+                if(road)Call(director,"ClearHazards");Field(typeof(AncientProductionPursuit),"hazardCursor").SetValue(director,cursor);Field(typeof(AncientProductionPursuit),"volley").SetValue(director,volley);
+                view.aspect=aspect;view.orthographicSize=zoom;view.transform.position=position;Field(typeof(AncientGame),"cameraFollow").SetValue(game,follow);
+            }
+        }
         static void CheckAutomaticBike(AncientGame game)
         {
             var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();var director=game.Production;bool enabled=hero.enabled;
@@ -174,27 +273,79 @@ namespace Plugin.AncientCivilization.EditorChecks
             }
             finally {hero.enabled=enabled;}
         }
+        static void BoardStationaryRoof(AncientGame game)
+        {
+            var director=game.Production;var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
+            var truck=(Rigidbody2D)Field(typeof(AncientProductionPursuit),"truck").GetValue(director);
+            Vector2 original=truck.position,velocity=truck.linearVelocity;float truckX=(float)Field(typeof(AncientProductionPursuit),"truckX").GetValue(director),speed=(float)Field(typeof(AncientProductionPursuit),"kinematicSpeed").GetValue(director);
+            float health=director.Commander.HealthRatio;
+            try
+            {
+                Vector2 stop=new Vector2(AncientProductionLayout.ChaseEnd-24,0);Call(director,"PlaceTruck",stop);
+                Field(typeof(AncientProductionPursuit),"truckX").SetValue(director,stop.x);Field(typeof(AncientProductionPursuit),"kinematicSpeed").SetValue(director,0f);truck.linearVelocity=Vector2.zero;
+                Call(director,"ReturnToBike",false);body.linearVelocity=Vector2.zero;Field(typeof(AncientHero),"axis").SetValue(hero,0f);
+                for(int i=0;i<3;i++)Step(director,.25f);Call(director,"LateUpdate");
+                Field(typeof(AncientHero),"wireReady").SetValue(hero,Time.time-1);Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
+                Assert(hero.bike&&Near(director.DriveSpeed,0)&&Near(truck.position.x,stop.x),"The tunnel-end probe starts on a stopped motorcycle beside the actually clamped truck");
+                Assert(hero.TryProductionBoard(director.BoardingHook),"The deployed stopped-truck latch accepts a real wire board after the mast's ceasefire wait");
+                float dt=Time.fixedDeltaTime;int frames=0;bool released=false;
+                for(;frames<150&&director.Sequence.Phase==AncientProductionPhase.Boarding;frames++)
+                {
+                    Call(director,"FixedUpdate");Call(hero,"FixedUpdate");Physics2D.SyncTransforms();Physics2D.Simulate(dt);Step(director,dt);
+                    if(!hero.Wired)
+                    {released=true;Assert(Mathf.Abs(body.linearVelocity.x)<.01f,"A released wire inherits zero stopped-truck speed instead of receiving a fallback road-driving velocity");}
+                }
+                Assert(released&&director.DeckCombat&&frames*dt<2&&Mathf.Abs(hero.transform.position.x-truck.position.x)<3.1f&&hero.IsOnGround,"Actual capsule physics boards the stationary tunnel-end roof without drifting off, timing out or teleporting");
+                Assert(Near(truck.position.x,stop.x)&&Near(director.Commander.HealthRatio,health),"The stationary boarding probe does not move the clamped truck or grant boss damage");
+            }
+            finally
+            {
+                if(director.Sequence.AbortBoarding())Call(director,"ApplyPhase");
+                Call(director,"PlaceTruck",original);Field(typeof(AncientProductionPursuit),"truckX").SetValue(director,truckX);Field(typeof(AncientProductionPursuit),"kinematicSpeed").SetValue(director,speed);truck.linearVelocity=velocity;
+                Call(director,"ReturnToBike",false);Physics2D.SyncTransforms();
+            }
+        }
         static void BoardRoof(AncientGame game)
         {
             var director=game.Production;var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
-            // Fast-forwarding the director does not advance Unity's input clock. Discard only
-            // the previous round's elapsed cooldown before making the next directed request.
-            Field(typeof(AncientHero),"wireReady").SetValue(hero,Time.time-1);
-            Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
-            Vector2 hook=director.BoardingHook;MoveHero(hero,new Vector2(hook.x-6.5f,.84f));body.linearVelocity=new Vector2(director.DriveSpeed,0);
-            Assert(hero.TryProductionBoard(hook)&&director.Sequence.Phase==AncientProductionPhase.Boarding,"The real Hero boarding action accepts the moving roof latch only during the ceasefire window");
-            Assert(hero.Wired&&!hero.bike,"The actual action dismounts the motorcycle and starts its physical straight wire");
             bool enabled=hero.enabled,directorEnabled=director.enabled;var simulation=Physics2D.simulationMode;
             try
             {
                 hero.enabled=director.enabled=false;Physics2D.simulationMode=SimulationMode2D.Script;
                 float dt=Time.fixedDeltaTime;
-                for(int i=0;i<260&&director.Sequence.Phase==AncientProductionPhase.Boarding;i++)
+                BoardStationaryRoof(game);
+                // Every real boarding distance is probed. Physics2D.Simulate does not
+                // advance Time.time here, so none can succeed via the 3.5s age fallback.
+                for(int gap=8;gap<=14;gap++)
                 {
-                    Call(director,"FixedUpdate");Call(hero,"FixedUpdate");Physics2D.SyncTransforms();Physics2D.Simulate(dt);Step(director,dt);
+                    if(director.DeckCombat)
+                    {Assert(director.Sequence.AbortBoarding(),"A completed boarding probe can reopen its own ceasefire without awarding damage");Call(director,"ApplyPhase");}
+                    Assert(director.Sequence.Phase==AncientProductionPhase.Approach,"The "+gap+"m probe begins in the actual safe boarding phase");
+                    Call(director,"ReturnToBike",false);
+                    var truck=(Rigidbody2D)Field(typeof(AncientProductionPursuit),"truck").GetValue(director);
+                    MoveHero(hero,new Vector2(truck.position.x-gap,.84f));body.linearVelocity=new Vector2(director.DriveSpeed,0);
+                    Field(typeof(AncientHero),"axis").SetValue(hero,0f);
+                    for(int i=0;i<3;i++)Step(director,.25f);
+                    Call(director,"LateUpdate");var mast=(SpriteRenderer)Field(typeof(AncientProductionPursuit),"boardingMast").GetValue(director);var cap=(SpriteRenderer)Field(typeof(AncientProductionPursuit),"boardingMastCap").GetValue(director);
+                    Assert(mast.enabled&&cap.enabled&&((Vector2)cap.transform.position-director.BoardingHook).sqrMagnitude<.00001f&&mast.GetComponentsInChildren<Collider2D>().Length==0,"The deployed latch has a visible mast up to its real wire point without adding a collision blocker");
+                    Field(typeof(AncientHero),"wireReady").SetValue(hero,Time.time-1);
+                    Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
+                    Vector2 hook=director.BoardingHook;
+                    Assert(hero.TryProductionBoard(hook)&&director.Sequence.Phase==AncientProductionPhase.Boarding,"The real Hero action accepts the deployed moving latch at "+gap+"m");
+                    Assert(hero.Wired&&!hero.bike,"The actual action dismounts the motorcycle and starts its physical straight wire");
+                    Assert((Vector2)Field(typeof(AncientHero),"wireSurfaceNormal").GetValue(hero)==Vector2.down,"Boarding pulls below the visible latch with capsule clearance");
+                    int frames=0;bool sawPending=false;
+                    for(;frames<150&&director.Sequence.Phase==AncientProductionPhase.Boarding;frames++)
+                    {
+                        Call(director,"FixedUpdate");Call(hero,"FixedUpdate");
+                        if((bool)Field(typeof(AncientHero),"wireFinishPending").GetValue(hero))
+                        {sawPending=true;Assert(hero.Wired,"The final planned zip step keeps its wire until physics has actually moved the capsule");}
+                        Physics2D.SyncTransforms();Physics2D.Simulate(dt);Step(director,dt);
+                    }
+                    Assert(sawPending&&director.DeckCombat&&!hero.bike&&hero.AttackMode&&!hero.Wired,"Actual capsule casts, moving-truck physics and completed-step release deliver the "+gap+"m probe to deck combat");
+                    Assert(frames*dt<2&&!(bool)Field(typeof(AncientHero),"wireFinishPending").GetValue(hero),"The "+gap+"m boarding finishes before any age fallback without retaining a stale finish request");
+                    Assert(Mathf.Abs(hero.transform.position.x-director.Commander.transform.position.x)<5.5f&&hero.transform.position.y>3.4f,"The moving roof remains under the physically boarded officer");
                 }
-                Assert(director.DeckCombat&&!hero.bike&&hero.AttackMode,"Actual capsule casts, moving truck physics and wire release deliver the hero to deck combat without a roof teleport");
-                Assert(Mathf.Abs(hero.transform.position.x-director.Commander.transform.position.x)<5.5f&&hero.transform.position.y>3.4f,"The moving roof remains under the hero after physical boarding");
             }
             finally {Physics2D.simulationMode=simulation;hero.enabled=enabled;director.enabled=directorEnabled;}
         }
@@ -271,6 +422,8 @@ namespace Plugin.AncientCivilization.EditorChecks
             Assert(game.hero.transform.position.x>=AncientProductionLayout.ChaseStart&&game.hero.transform.position.x<AncientProductionLayout.ChaseEnd,"The playable chase starts on its dedicated tunnel instead of the stock-room coordinates");
             Assert(!game.ArenaActive,"The moving commander cannot activate the old stationary guardian clamp");
             director.TickCommander(commander);Assert(((SpriteRenderer)Field(typeof(AncientEnemy),"art").GetValue(commander)).sprite==AncientArt.ProductionCaptain(0),"The road phase displays the original transport captain's idle pose");
+            CheckTruckArtwork(game);
+            CheckRoadCamera(game,"chase entry");
             CheckAutomaticBike(game);
             float initial=commander.HealthRatio;commander.Hit(100000,true);
             Assert(Near(commander.HealthRatio,initial),"The captain cannot lose deck-phase health from an early road attack");
@@ -279,20 +432,23 @@ namespace Plugin.AncientCivilization.EditorChecks
             Advance(director,AncientProductionPhase.Approach);
             Assert(!sequence.AttackersEnabled&&director.AutoDrive,"Timed approach stops attacks while automatic riding continues");
             Assert(LiveHazards(director)==0&&game.shots.Count==0,"The ceasefire removes actual road hazards and flying attack objects");
+            CheckRoadCamera(game,"ceasefire approach");
             Step(director,1);Step(director,1);
             Assert(sequence.Phase==AncientProductionPhase.Approach,"The wire-boarding opportunity stays open instead of timing out");
-            BoardRoof(game);CheckMovingRoofJump(game);CheckCaptainPresentation(game);commander.Hit(100000,true);
+            BoardRoof(game);CheckMovingRoofJump(game);CheckDeckCamera(game);CheckCaptainPresentation(game);commander.Hit(100000,true);
             Assert(sequence.Phase==AncientProductionPhase.Knockback&&Near(commander.HealthRatio,AncientProductionRules.FirstHealthGate)&&commander.IsAlive,"An actual captain hit stops at the first health gate and begins the knockback transition");
             Advance(director,AncientProductionPhase.Chase);
             Assert(sequence.Round==1&&sequence.MountCount==2&&game.hero.bike,"The first knockback automatically returns to the second bike mount");
             Assert(AncientGame.Saved("productionRound")==1,"The second chase checkpoint is persisted at its actual phase entry");
             Assert(director.Retry()&&sequence.Round==1&&sequence.MountCount==2&&Near(commander.HealthRatio,AncientProductionRules.FirstHealthGate),"Retry resumes the second round and its captain-health checkpoint instead of restarting inventory or round one");
+            CheckRoadCamera(game,"second-round retry");
             Advance(director,AncientProductionPhase.Approach);BoardRoof(game);commander.Hit(100000,true);
             Assert(sequence.Phase==AncientProductionPhase.Knockback&&Near(commander.HealthRatio,AncientProductionRules.SecondHealthGate)&&commander.IsAlive,"The second real deck hit clamps at its health gate without killing the captain");
             Advance(director,AncientProductionPhase.Finisher);
             Assert(sequence.MountCount==3&&director.Cinematic,"The third bike mount starts the directed finisher instead of a third combat loop");
             for(int i=0;i<20&&sequence.Elapsed<3;i++)Step(director);
             Assert(director.CargoSecured&&!director.TruckDestroyed&&game.Cores==0,"The blade separates and secures the visible cargo before the truck can explode or award recovery");
+            CheckCargoArtwork(director,true);
             for(int i=0;i<80&&sequence.Elapsed<7.35f;i++)Step(director,.1f);
             var beam=(LineRenderer)Field(typeof(AncientProductionPursuit),"beam").GetValue(director);
             Assert(beam.enabled&&beam.startWidth>=2&&!director.TruckDestroyed,"The backflip finisher shows a real thick continuous beam before the impact explosion");

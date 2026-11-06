@@ -128,8 +128,8 @@ namespace Plugin.AncientCivilization
             if(!game.Story.InUpperCity)
             {
                 Sign(new Vector2(24,5.7f),"하층 공장 운송로 / 점프·와이어로 옥상 진입\nE: 기록 초기화 · 도로: 안전 경로");
-                Sign(new Vector2(33,6.5f),"운송 벨트 → 가속 후 와이어 연결\n움직이는 크레인에 연결해 다음 옥상으로");
-                Sign(new Vector2(75,6.5f),"역방향 벨트 ←\n스윙으로 넘거나 높은 금색 발판으로 우회");
+                Sign(new Vector2(33,6.5f),"운송 벨트 ▶ 가속 후 와이어 연결\n움직이는 크레인에 연결해 다음 옥상으로");
+                Sign(new Vector2(75,6.5f),"역방향 벨트 ◀\n스윙으로 넘거나 높은 금색 발판으로 우회");
                 Sign(new Vector2(96,5.7f),"공장 운송로 끝 / E: 다시 도전");
                 if(game.hero.transform.position.y>2.5f)
                     GUI.Label(new Rect(Screen.width-350,90,330,70),TrialTimer(),label);
@@ -141,22 +141,24 @@ namespace Plugin.AncientCivilization
     }
     public sealed class AncientMovingAnchor : MonoBehaviour
     {
-        AncientGame game;Vector2 centre;int slot,index;LineRenderer rail;SpriteRenderer node;bool shown=true;
+        AncientGame game;Vector2 centre;int slot,index;LineRenderer rail;SpriteRenderer node,latch;bool shown=true;
         public void Initialize(AncientGame owner,Vector2 point,int number)
         {
             game=owner;centre=point;index=number;slot=game.anchors.Count;game.anchors.Add(point);
             transform.position=point;
-            node=AncientArt.Display("Moving crane hook",AncientArt.WireParticle(),Vector2.zero,5,transform);
-            node.transform.localScale=Vector3.one*.55f;node.color=new Color(1,.8f,.2f);
+            node=AncientArt.Display("Moving crane mechanism",AncientArt.ProductionProp(4),Vector2.zero,5,transform);
+            node.transform.localScale=Vector3.one*.3f;node.color=new Color(.8f,.88f,.92f);
+            latch=AncientArt.Display("Moving crane wire latch",AncientArt.WireParticle(),Vector2.zero,6,transform);
+            latch.transform.localScale=Vector3.one*.17f;latch.color=new Color(1,.8f,.2f);
             rail=game.Line("Crane overhead rail",new Color(.3f,.45f,.5f),.045f,2);
-            rail.SetPosition(0,point+new Vector2(-3,.6f));rail.SetPosition(1,point+new Vector2(3,.6f));
+            rail.SetPosition(0,point+new Vector2(-3,1.55f));rail.SetPosition(1,point+new Vector2(3,1.55f));
         }
         void Update()
         {
             if(!game||!game.Story)return;
             int floor=AncientCityLayout.VisualSector(centre.x);
             bool visible=AncientChapterView.NearCamera(game,centre,floor);
-            if(shown!=visible){shown=visible;node.enabled=rail.enabled=visible;}
+            if(shown!=visible){shown=visible;node.enabled=latch.enabled=rail.enabled=visible;}
             // Visibility only controls drawing. A wire can remain attached beyond
             // the camera margin, so its crane must keep moving on the current floor.
             if(game.Paused||game.Story.CurrentFloor!=floor)return;

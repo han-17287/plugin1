@@ -1,36 +1,39 @@
-v0.19.0 lower production district polish — 2026-11-06
+v0.20.0 lower production district source release — 2026-11-06
 PASS: .NET SDK8.0.416 built and ran20 independently isolated rule-check projects
 PASS: BeamChecks = 11591
-PASS: BladeChecks = 432
+PASS: BladeChecks = 1563
 PASS: BossReadabilityChecks = 1748
 PASS: ChapterRouteChecks = 9891
-PASS: ChapterVisibilityChecks = 11914
-PASS: FieldExpansionChecks = 24635
+PASS: ChapterVisibilityChecks = 13661
+PASS: FieldExpansionChecks = 28597
 PASS: MovementChecks = 106
 PASS: ProductionHazardChecks = 744
-PASS: ProductionLayoutChecks = 60802
+PASS: ProductionLayoutChecks = 521969
 PASS: ProductionMotionChecks = 48172
 PASS: ProductionSequenceChecks = 192993
 PASS: ProjectileOrderingChecks = 7024
 PASS: PulseChecks = 137
 PASS: RouteRadioChecks = 106
-PASS: RulesChecks = 3838
+PASS: RulesChecks = 3845
 PASS: SniperChecks = 76
 PASS: SpeechLayoutChecks = 3997
 PASS: SwingChecks = 596
 PASS: ThreatChecks = 359
-PASS: ZipChecks = 3179
-TOTAL: 382340 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
-PASS: all84 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors.
+PASS: ZipChecks = 28917
+TOTAL: 876092 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
+PASS: 1574 source/asset checks, no skipped optional dependencies in this run.
+PASS: all89 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors; compiled snapshots match current source except the declared velocity alias.
 LIMIT: supplemental compilation uses UnityEngine.Modules NuGet package2021.3.33, temporary linearVelocity-to-velocity aliases and minimal Editor stubs. It does not establish native Unity6000.6.7f1 import, shaders, physics or Play.
-PASS: metadata GUIDs, PNG integrity/alpha, C# syntax, retained first-run secrecy and original reference hashes.
-REVIEW: fixed-emitter safe tutorial; optional workers; lower wire/swing route; scaled playable chase clock; captain tells/recovery; moving support takeoff; retry renderer restoration; cargo/hero/captain motion; Stage8 broken-wall restore; handoff; story/elevator consistency; focus and cinematic clocks.
-NUMERICAL MODEL LIMIT: route/cinematic checks use declared geometry and assumptions. They do not run the Unity collision solver or measure real keyboard/mouse input, rendering or camera feel.
-NATIVE FIXTURES WRITTEN/COMPILED, NOT RUN: PLUGIN/검사/생산구 재고와 추격 보스 and blade/movement fixtures use isolated QA profiles, actual Hero/colliders, directed actions and manual Physics2D simulation. New cases include harmless training vs reused combat projectiles, optional worker anchors, roof takeoff support velocity, late-finisher retry and actual arrest-advance handoff.
+PASS: metadata GUIDs, PNG integrity/alpha/native-grid crops, C# syntax, first-run secrecy and unchanged original weapon/wire references.
+FONT: bundled NeoDunggeunmo cmap covers580 runtime non-ASCII literal codepoints; unsupported direction arrows were replaced by supported pixel triangles. This does not validate Unity font rasterization or layout.
+REVIEW: safe staged training; optional worker art/anchors; thin expert ledges; arrest-to-investigation continuation; rescued Reha; moving-anchor completed-step release and carrier velocity; truck latch underside/mast; chase/deck camera margins; separate three-core cargo; physical/visible roof alignment; frame-hitch blade contact; grounded factory artwork and paused industry motion; bounded64 anchor halos.
+NUMERICAL MODEL LIMIT: route/cinematic/camera and moving-target traces use declared geometry and assumptions. They do not run the Unity collision solver or measure real keyboard/mouse input, rendering or camera feel.
+NATIVE FIXTURES WRITTEN/COMPILED, NOT RUN: PLUGIN/검사 production, movement, blade and continuous-chapter menus use isolated QA profiles, actual components and directed Physics2D simulations. Added probes cover8..14m boarding without a clock timeout, static/moving zip finish, stationary end-of-tunnel boarding, worker feet/heads, three-core cargo, actual camera viewports, halo capacity/tracking, late-finisher retry and arrest handoff.
 AUDIO:18 generated waveforms checked offline for finite samples, clipping and endpoint smoothing; real listening/Unity playback unverified.
-CI: .github/workflows/source-checks.yml runs source/assets and portable rule suites only. It cannot run the native Unity fixtures.
+CI: .github/workflows/source-checks.yml runs source/assets and portable rules with pinned Python dependencies. It cannot run native Unity fixtures.
+PACKAGING: Tools/package_project.py creates a source/reference ZIP, excludes Unity/build/tool caches, checks CRC and file-byte equality, and writes a separate SHA256. It does not build a player.
 NOT RUN: native Unity6000.6.7f1 compile/import/shaders, PlayMode, physical controls, audio audition, full playthrough, measuredFPS or player build.
-SCOPE: source project lower-district improvement. No claim of measured nine-hour gameplay,90%completion or commercial-release quality.
+SCOPE: lower-district source improvement. No claim of measured nine-hour gameplay,90%completion or commercial-release quality.
 
 Source/asset checks follow:
 PASS: required builtin Unity modules declared
@@ -102,6 +105,7 @@ PASS: metadata target Assets/Scripts/AncientProductionHazardRules.cs.meta
 PASS: 32-character GUID AncientProductionHazardRules.cs.meta
 PASS: metadata target Assets/Scripts/SniperEquipmentArt.cs.meta
 PASS: 32-character GUID SniperEquipmentArt.cs.meta
+PASS: metadata coverage AncientProductionPropAtlas.cs
 PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
 PASS: 32-character GUID AncientCameraFX.cs.meta
 PASS: metadata coverage AncientBeamRules.cs
@@ -112,6 +116,7 @@ PASS: metadata target Assets/Scripts/AncientSwingMotion.cs.meta
 PASS: 32-character GUID AncientSwingMotion.cs.meta
 PASS: metadata target Assets/Scripts/AncientChapterVisibility.cs.meta
 PASS: 32-character GUID AncientChapterVisibility.cs.meta
+PASS: metadata coverage AncientAnchorLightSelection.cs
 PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
 PASS: 32-character GUID AncientAudio.cs.meta
 PASS: metadata coverage AncientCityLayout.cs
@@ -119,6 +124,8 @@ PASS: metadata coverage AncientSpeechLayout.cs
 PASS: metadata target Assets/Scripts/AncientCampaignRules.cs.meta
 PASS: 32-character GUID AncientCampaignRules.cs.meta
 PASS: metadata coverage AncientSwingAtlas.cs
+PASS: metadata target Assets/Scripts/AncientProductionCaptainAtlas.cs.meta
+PASS: 32-character GUID AncientProductionCaptainAtlas.cs.meta
 PASS: metadata target Assets/Scripts/AncientPulseRules.cs.meta
 PASS: 32-character GUID AncientPulseRules.cs.meta
 PASS: metadata coverage AncientFrameRules.cs
@@ -144,6 +151,7 @@ PASS: metadata target Assets/Scripts/AncientProductionResidents.cs.meta
 PASS: 32-character GUID AncientProductionResidents.cs.meta
 PASS: metadata target Assets/Scripts/AncientProjectileRules.cs.meta
 PASS: 32-character GUID AncientProjectileRules.cs.meta
+PASS: metadata coverage AncientProductionTruckAtlas.cs
 PASS: metadata coverage AncientProductionLayout.cs
 PASS: metadata target Assets/Scripts/AncientParkedBike.cs.meta
 PASS: 32-character GUID AncientParkedBike.cs.meta
@@ -188,6 +196,7 @@ PASS: 32-character GUID AncientTraversal.cs.meta
 PASS: metadata coverage AncientProductionPursuit.cs
 PASS: metadata target Assets/Scripts/AncientTraversalLayout.cs.meta
 PASS: 32-character GUID AncientTraversalLayout.cs.meta
+PASS: metadata coverage AncientProductionCaptainAtlas.cs
 PASS: metadata target Assets/Scripts/AncientBossAtlas.cs.meta
 PASS: 32-character GUID AncientBossAtlas.cs.meta
 PASS: metadata target Assets/Scripts/AncientRules.cs.meta
@@ -215,13 +224,18 @@ PASS: 32-character GUID AncientHUD.cs.meta
 PASS: metadata coverage AncientMainMenu.cs
 PASS: metadata target Assets/Scripts/AncientHudText.cs.meta
 PASS: 32-character GUID AncientHudText.cs.meta
+PASS: metadata coverage AncientProductionWorkerAtlas.cs
 PASS: metadata target Assets/Scripts/AncientCityLayout.cs.meta
 PASS: 32-character GUID AncientCityLayout.cs.meta
+PASS: metadata target Assets/Scripts/AncientProductionWorkerAtlas.cs.meta
+PASS: 32-character GUID AncientProductionWorkerAtlas.cs.meta
 PASS: metadata target Assets/Scripts/AncientBeamVisuals.cs.meta
 PASS: 32-character GUID AncientBeamVisuals.cs.meta
 PASS: metadata coverage AncientProgressRules.cs
 PASS: metadata coverage AncientBossAtlas.cs
 PASS: metadata coverage AncientAudio.cs
+PASS: metadata target Assets/Scripts/AncientAnchorLightSelection.cs.meta
+PASS: 32-character GUID AncientAnchorLightSelection.cs.meta
 PASS: metadata target Assets/Scripts/AncientClockBoss.cs.meta
 PASS: 32-character GUID AncientClockBoss.cs.meta
 PASS: metadata target Assets/Scripts/AncientFinaleRules.cs.meta
@@ -259,6 +273,8 @@ PASS: metadata coverage AncientRouteRadio.cs
 PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
 PASS: 32-character GUID AncientClockRules.cs.meta
 PASS: metadata coverage AncientDistrict.cs
+PASS: metadata target Assets/Scripts/AncientProductionTruckAtlas.cs.meta
+PASS: 32-character GUID AncientProductionTruckAtlas.cs.meta
 PASS: metadata coverage AncientDistrictBackdrop.cs
 PASS: metadata target Assets/Scripts/AncientProgressRules.cs.meta
 PASS: 32-character GUID AncientProgressRules.cs.meta
@@ -266,6 +282,8 @@ PASS: metadata target Assets/Scripts/AncientBackdropAtlas.cs.meta
 PASS: 32-character GUID AncientBackdropAtlas.cs.meta
 PASS: metadata target Assets/Scripts/AncientSpeechBubble.cs.meta
 PASS: 32-character GUID AncientSpeechBubble.cs.meta
+PASS: metadata target Assets/Scripts/AncientProductionPropAtlas.cs.meta
+PASS: 32-character GUID AncientProductionPropAtlas.cs.meta
 PASS: metadata coverage AncientPerformance.cs
 PASS: metadata coverage AncientBackdropAtlas.cs
 PASS: metadata coverage AncientThreatRules.cs
@@ -331,6 +349,8 @@ PASS: metadata target Assets/Resources/Fonts.meta
 PASS: 32-character GUID Fonts.meta
 PASS: metadata target Assets/Resources/Art/BladeHorizontal.png.meta
 PASS: 32-character GUID BladeHorizontal.png.meta
+PASS: metadata target Assets/Resources/Art/ProductionWorkers.png.meta
+PASS: 32-character GUID ProductionWorkers.png.meta
 PASS: metadata target Assets/Resources/Art/Citizens3.png.meta
 PASS: 32-character GUID Citizens3.png.meta
 PASS: metadata coverage MenuBlade.png
@@ -343,6 +363,8 @@ PASS: metadata coverage Citizens1.png
 PASS: metadata coverage StudioLogos.png
 PASS: metadata coverage Citizens0.png
 PASS: metadata coverage Boss0.png
+PASS: metadata target Assets/Resources/Art/ProductionMachinery.png.meta
+PASS: 32-character GUID ProductionMachinery.png.meta
 PASS: metadata coverage HeroSwing.png
 PASS: metadata target Assets/Resources/Art/MenuSlash.png.meta
 PASS: 32-character GUID MenuSlash.png.meta
@@ -351,6 +373,7 @@ PASS: metadata target Assets/Resources/Art/Citizens1.png.meta
 PASS: 32-character GUID Citizens1.png.meta
 PASS: metadata target Assets/Resources/Art/City.png.meta
 PASS: 32-character GUID City.png.meta
+PASS: metadata coverage ProductionMachinery.png
 PASS: metadata coverage Citizens3.png
 PASS: metadata target Assets/Resources/Art/MenuStandoff.png.meta
 PASS: 32-character GUID MenuStandoff.png.meta
@@ -360,6 +383,8 @@ PASS: 32-character GUID Citizens4.png.meta
 PASS: metadata coverage CitizensWalk.png
 PASS: metadata target Assets/Resources/Art/Truck.png.meta
 PASS: 32-character GUID Truck.png.meta
+PASS: metadata target Assets/Resources/Art/ProductionTruck.png.meta
+PASS: 32-character GUID ProductionTruck.png.meta
 PASS: metadata target Assets/Resources/Art/Dialogue.png.meta
 PASS: 32-character GUID Dialogue.png.meta
 PASS: metadata coverage Dialogue.png
@@ -397,15 +422,19 @@ PASS: metadata target Assets/Resources/Art/MenuBlade.png.meta
 PASS: 32-character GUID MenuBlade.png.meta
 PASS: metadata target Assets/Resources/Art/SniperEquipment.png.meta
 PASS: 32-character GUID SniperEquipment.png.meta
+PASS: metadata coverage ProductionWorkers.png
 PASS: metadata coverage Hero.png
 PASS: metadata target Assets/Resources/Art/BladeVertical.png.meta
 PASS: 32-character GUID BladeVertical.png.meta
+PASS: metadata coverage ProductionCaptain.png
 PASS: metadata coverage Actions.png
 PASS: metadata target Assets/Resources/Art/DialogueRadio.png.meta
 PASS: 32-character GUID DialogueRadio.png.meta
 PASS: metadata coverage Enemies.png
 PASS: metadata target Assets/Resources/Art/MenuOfficer.png.meta
 PASS: 32-character GUID MenuOfficer.png.meta
+PASS: metadata target Assets/Resources/Art/ProductionCaptain.png.meta
+PASS: 32-character GUID ProductionCaptain.png.meta
 PASS: metadata coverage Motorcycle.png
 PASS: metadata target Assets/Resources/Art/Boss1.png.meta
 PASS: 32-character GUID Boss1.png.meta
@@ -416,6 +445,7 @@ PASS: 32-character GUID Boss5.png.meta
 PASS: metadata target Assets/Resources/Art/Motorcycle.png.meta
 PASS: 32-character GUID Motorcycle.png.meta
 PASS: metadata coverage DistrictBackdrops.png
+PASS: metadata coverage ProductionTruck.png
 PASS: metadata coverage Boss5.png
 PASS: metadata coverage Boss3.png
 PASS: metadata coverage Boss1.png
@@ -507,6 +537,24 @@ PASS: Dialogue.png PNG chunk integrity
 PASS: Dialogue expected image dimensions
 PASS: Dialogue has RGBA channel
 PASS: Dialogue readable point-filtered uncompressed import
+PASS: ProductionMachinery.png PNG signature
+PASS: ProductionMachinery.png PNG chunk integrity
+PASS: original factory machinery atlas keeps its exact 1774x887 RGBA source
+PASS: factory source import preserves point filtering, readable pixels, full dimensions and no compression
+PASS: ProductionCaptain.png PNG signature
+PASS: ProductionCaptain.png PNG chunk integrity
+PASS: original captain combat atlas keeps its exact 1536x1024 RGBA source
+PASS: captain source import preserves native point pixels, readable alpha and full dimensions
+PASS: ProductionWorkers.png PNG signature
+PASS: ProductionWorkers.png PNG chunk integrity
+PASS: original padded worker atlas keeps its exact 2172x724 RGBA source
+PASS: worker source import preserves point pixels, readable alpha and non-power-of-two dimensions
+PASS: worker importer and default platform both allow 4096px so the 2172px atlas is never downscaled
+PASS: ProductionTruck.png PNG signature
+PASS: ProductionTruck.png PNG chunk integrity
+PASS: original empty production truck keeps its exact 1962x801 RGBA source
+PASS: production truck import keeps point pixels, readable alpha and its measured full dimensions
+PASS: production truck import limits cannot shrink its measured source width
 PASS: eight explicit world asset slices
 PASS: world slice in texture bounds 0
 PASS: world slice in texture bounds 1
@@ -531,6 +579,156 @@ PASS: motorcycle component in texture bounds 3
 PASS: shader resource and program delimiters ParticleGlow
 PASS: shader resource and program delimiters CharacterRim
 PASS: shader resource and program delimiters Presentation
+PASS: factory alpha measurement respects the 887px bottom-up grid and partial top row
+PASS: factory grid retains its partial rightmost column
+PASS: factory prop atlas has eight measured original machinery slices
+PASS: factory source has a clear vertical cell gutter at 444
+PASS: factory source has a clear vertical cell gutter at 887
+PASS: factory source has a clear vertical cell gutter at 1330
+PASS: factory source has a clear horizontal cell gutter
+PASS: factory prop retains an opaque silhouette and transparent source gutter 0
+PASS: factory prop survives the real four-pixel opacity sampling 0
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 0
+PASS: factory crop cannot bleed into a neighbouring prop cell 0
+PASS: factory machinery has substantial visible opaque grid coverage 0
+PASS: factory prop retains an opaque silhouette and transparent source gutter 1
+PASS: factory prop survives the real four-pixel opacity sampling 1
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 1
+PASS: factory crop cannot bleed into a neighbouring prop cell 1
+PASS: factory machinery has substantial visible opaque grid coverage 1
+PASS: factory prop retains an opaque silhouette and transparent source gutter 2
+PASS: factory prop survives the real four-pixel opacity sampling 2
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 2
+PASS: factory crop cannot bleed into a neighbouring prop cell 2
+PASS: factory machinery has substantial visible opaque grid coverage 2
+PASS: factory prop retains an opaque silhouette and transparent source gutter 3
+PASS: factory prop survives the real four-pixel opacity sampling 3
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 3
+PASS: factory crop cannot bleed into a neighbouring prop cell 3
+PASS: factory machinery has substantial visible opaque grid coverage 3
+PASS: factory prop retains an opaque silhouette and transparent source gutter 4
+PASS: factory prop survives the real four-pixel opacity sampling 4
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 4
+PASS: factory crop cannot bleed into a neighbouring prop cell 4
+PASS: factory machinery has substantial visible opaque grid coverage 4
+PASS: factory prop retains an opaque silhouette and transparent source gutter 5
+PASS: factory prop survives the real four-pixel opacity sampling 5
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 5
+PASS: factory crop cannot bleed into a neighbouring prop cell 5
+PASS: factory machinery has substantial visible opaque grid coverage 5
+PASS: factory prop retains an opaque silhouette and transparent source gutter 6
+PASS: factory prop survives the real four-pixel opacity sampling 6
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 6
+PASS: factory crop cannot bleed into a neighbouring prop cell 6
+PASS: factory machinery has substantial visible opaque grid coverage 6
+PASS: factory prop retains an opaque silhouette and transparent source gutter 7
+PASS: factory prop survives the real four-pixel opacity sampling 7
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 7
+PASS: factory crop cannot bleed into a neighbouring prop cell 7
+PASS: factory machinery has substantial visible opaque grid coverage 7
+PASS: all eight factory props have distinct packed silhouettes
+PASS: captain measured poses share the authored 200 pixels-per-unit scale
+PASS: captain atlas provides six measured crops, boot roots and foot baselines
+PASS: captain pose has a complete source silhouette and clear cell gutters 0
+PASS: captain pose survives native eight-pixel alpha sampling 0
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 0
+PASS: captain crop cannot include a neighbouring pose 0
+PASS: captain planted-root measurement contains two substantial separate boots 0
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 0
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 0
+PASS: captain planted pivot remains inside its own sprite rectangle 0
+PASS: captain pose has a complete source silhouette and clear cell gutters 1
+PASS: captain pose survives native eight-pixel alpha sampling 1
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 1
+PASS: captain crop cannot include a neighbouring pose 1
+PASS: captain planted-root measurement contains two substantial separate boots 1
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 1
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 1
+PASS: captain planted pivot remains inside its own sprite rectangle 1
+PASS: captain pose has a complete source silhouette and clear cell gutters 2
+PASS: captain pose survives native eight-pixel alpha sampling 2
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 2
+PASS: captain crop cannot include a neighbouring pose 2
+PASS: captain planted-root measurement contains two substantial separate boots 2
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 2
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 2
+PASS: captain planted pivot remains inside its own sprite rectangle 2
+PASS: captain pose has a complete source silhouette and clear cell gutters 3
+PASS: captain pose survives native eight-pixel alpha sampling 3
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 3
+PASS: captain crop cannot include a neighbouring pose 3
+PASS: captain planted-root measurement contains two substantial separate boots 3
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 3
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 3
+PASS: captain planted pivot remains inside its own sprite rectangle 3
+PASS: captain pose has a complete source silhouette and clear cell gutters 4
+PASS: captain pose survives native eight-pixel alpha sampling 4
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 4
+PASS: captain crop cannot include a neighbouring pose 4
+PASS: captain planted-root measurement contains two substantial separate boots 4
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 4
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 4
+PASS: captain planted pivot remains inside its own sprite rectangle 4
+PASS: captain pose has a complete source silhouette and clear cell gutters 5
+PASS: captain pose survives native eight-pixel alpha sampling 5
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 5
+PASS: captain crop cannot include a neighbouring pose 5
+PASS: captain planted-root measurement contains two substantial separate boots 5
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 5
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 5
+PASS: captain planted pivot remains inside its own sprite rectangle 5
+PASS: all six captain combat poses have distinct packed silhouettes
+PASS: captain boots keep one world baseline despite different source-row foot heights
+PASS: captain recovery retains its actual crouched height instead of stretching to idle height
+PASS: worker native alpha measurement preserves both four-pixel partial edge blocks
+PASS: worker atlas supplies three measured poses, planted roots and the authored 240ppu scale
+PASS: worker source frame guide remains faint and below native opacity threshold 0
+PASS: worker actual packed output removes every guide pixel 0
+PASS: worker source frame guide remains faint and below native opacity threshold 1
+PASS: worker actual packed output removes every guide pixel 1
+PASS: worker source frame guide remains faint and below native opacity threshold 2
+PASS: worker actual packed output removes every guide pixel 2
+PASS: worker source frame guide remains faint and below native opacity threshold 3
+PASS: worker actual packed output removes every guide pixel 3
+PASS: worker source frame guide remains faint and below native opacity threshold 4
+PASS: worker actual packed output removes every guide pixel 4
+PASS: worker body remains visible after native alpha sampling 0
+PASS: worker packed body keeps generous inner gutters without frame contamination 0
+PASS: worker measured crop retains its complete packed body and three-pixel margins 0
+PASS: worker planted pivot samples a plausible complete boot span 0
+PASS: worker horizontal pivot matches actual lower-boot alpha instead of carried equipment 0
+PASS: worker foot baseline retains the same three-pixel transparent lower margin 0
+PASS: worker sprite preserves its measured human height at the shared pixel scale 0
+PASS: worker crop contains substantial opaque body pixels rather than faint padding 0
+PASS: worker body remains visible after native alpha sampling 1
+PASS: worker packed body keeps generous inner gutters without frame contamination 1
+PASS: worker measured crop retains its complete packed body and three-pixel margins 1
+PASS: worker planted pivot samples a plausible complete boot span 1
+PASS: worker horizontal pivot matches actual lower-boot alpha instead of carried equipment 1
+PASS: worker foot baseline retains the same three-pixel transparent lower margin 1
+PASS: worker sprite preserves its measured human height at the shared pixel scale 1
+PASS: worker crop contains substantial opaque body pixels rather than faint padding 1
+PASS: worker body remains visible after native alpha sampling 2
+PASS: worker packed body keeps generous inner gutters without frame contamination 2
+PASS: worker measured crop retains its complete packed body and three-pixel margins 2
+PASS: worker planted pivot samples a plausible complete boot span 2
+PASS: worker horizontal pivot matches actual lower-boot alpha instead of carried equipment 2
+PASS: worker foot baseline retains the same three-pixel transparent lower margin 2
+PASS: worker sprite preserves its measured human height at the shared pixel scale 2
+PASS: worker crop contains substantial opaque body pixels rather than faint padding 2
+PASS: all three production workers retain distinct packed silhouettes
+PASS: all production worker boots share one stable world baseline
+PASS: production truck native sampling keeps its one-row and two-column partial edge blocks
+PASS: production truck has a substantial native opaque silhouette
+PASS: production truck crop encloses complete actual native alpha with three-pixel gutters
+PASS: production truck retains clear outer source gutters
+PASS: production truck metadata aligns its measured body centre and wheel contact edge
+PASS: production truck ground contact comes from two substantial wheel tread spans
+PASS: production truck pivot removes the transparent bottom margin from its wheel baseline
+PASS: production truck actual opaque wheels rest at world ground zero
+PASS: production truck actual opaque roof aligns with the 2.7m playable deck
+PASS: production truck bumper overhang stays below twenty centimetres per side
+PASS: production truck cargo bay has no baked bright cyan cores after the live cradle is detached
 PASS: hero pose has opaque silhouette and clear gutters 0
 PASS: hero pose has opaque silhouette and clear gutters 1
 PASS: hero pose has opaque silhouette and clear gutters 2
@@ -1317,8 +1515,10 @@ PASS: C# syntax AncientWireParticleBatch.cs
 PASS: C# syntax AncientProductionRules.cs
 PASS: C# syntax AncientMovementRules.cs
 PASS: C# syntax AncientPulseRules.cs
+PASS: C# syntax AncientProductionPropAtlas.cs
 PASS: C# syntax AncientBeamRules.cs
 PASS: C# syntax AncientBossRules.cs
+PASS: C# syntax AncientAnchorLightSelection.cs
 PASS: C# syntax AncientCityLayout.cs
 PASS: C# syntax AncientSpeechLayout.cs
 PASS: C# syntax AncientSwingAtlas.cs
@@ -1331,6 +1531,7 @@ PASS: C# syntax AncientSniperGround.cs
 PASS: C# syntax AncientProductionMap.cs
 PASS: C# syntax AncientPointer.cs
 PASS: C# syntax AncientArt.cs
+PASS: C# syntax AncientProductionTruckAtlas.cs
 PASS: C# syntax AncientProductionLayout.cs
 PASS: C# syntax AncientCityCampaign.cs
 PASS: C# syntax AncientRules.cs
@@ -1345,6 +1546,7 @@ PASS: C# syntax AncientWireMath.cs
 PASS: C# syntax AncientProductionMotion.cs
 PASS: C# syntax AncientSniperRules.cs
 PASS: C# syntax AncientProductionPursuit.cs
+PASS: C# syntax AncientProductionCaptainAtlas.cs
 PASS: C# syntax AncientFieldCases.cs
 PASS: C# syntax AncientProjectilePool.cs
 PASS: C# syntax AncientClockBoss.cs
@@ -1352,6 +1554,7 @@ PASS: C# syntax AncientClockRules.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientBossController.cs
 PASS: C# syntax AncientMainMenu.cs
+PASS: C# syntax AncientProductionWorkerAtlas.cs
 PASS: C# syntax AncientProgressRules.cs
 PASS: C# syntax AncientBossAtlas.cs
 PASS: C# syntax AncientAudio.cs
@@ -1395,6 +1598,9 @@ PASS: C# syntax AncientZipRules.cs
 PASS: C# syntax AncientHudText.cs
 PASS: C# syntax AncientBladeAtlas.cs
 PASS: C# syntax AncientWorldBatch.cs
+PASS: runtime glyph inspection includes Korean dialogue
+PASS: bundled font covers runtime non-ASCII literal glyphs: 580
+PASS: direction hints use glyphs present in the bundled pixel font
 PASS: active project avoids obsolete numeric Unity instance IDs
 PASS: bootstrap uses unsorted supported Unity object lookup
 PASS: first-run script withholds friendship reveal: 옛 친구

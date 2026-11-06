@@ -55,5 +55,28 @@ namespace Plugin.AncientCivilization
         {return rack>=0&&rack<4&&row>=0&&row<3&&slot>=0&&slot<3&&!(rack==3&&row==2);}
         public static bool InChaseLane(float x)
         {return !float.IsNaN(x)&&!float.IsInfinity(x)&&x>=ChaseStart&&x<=ChaseEnd;}
+        static float CameraGap(float gap)
+        {return float.IsNaN(gap)||float.IsInfinity(gap)?22:Math.Max(0,Math.Min(32,gap));}
+        public static float RoadCameraLead(float truckGap)
+        {return Math.Max(7,Math.Min(11.5f,CameraGap(truckGap)*.5f+.5f));}
+        public static float RoadCameraZoom(float truckGap,float aspect)
+        {
+            float gap=CameraGap(truckGap),lead=RoadCameraLead(gap);
+            if(float.IsNaN(aspect)||float.IsInfinity(aspect))aspect=16/9f;
+            // Include the whole rider, the forward road hazards and the whole truck.
+            // The extra right margin covers exponential follow lag and one20ms
+            // fixed physics step; framing the target alone clips a moving truck.
+            float lag=17/7f+17*.02f;
+            float halfSpan=Math.Max(lead+2.4f,gap+4.1f-lead+lag);
+            return Math.Max(7.8f,halfSpan/Math.Max(.5f,aspect));
+        }
+        public static float DeckCameraZoom(float heroOffset,float aspect)
+        {
+            if(float.IsNaN(heroOffset)||float.IsInfinity(heroOffset))heroOffset=0;
+            if(float.IsNaN(aspect)||float.IsInfinity(aspect))aspect=16/9f;
+            // Focus is halfway between the rider and the truck. Include the captain's
+            // extended throw pose and the follow lag at full wire speed in either direction.
+            return Math.Max(6.5f,(Math.Abs(heroOffset)*.5f+8.2f)/Math.Max(.5f,aspect));
+        }
     }
 }

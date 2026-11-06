@@ -61,6 +61,11 @@ namespace Plugin.AncientCivilization
             // Bottom-pivoted, original factory art stays behind actors and objectives.
             // The atlas cells fit within 6.5 by 5.6 metres at their authored 64 PPU.
             int kind=((variant%4)+4)%4;float side=index%2==0?1:-1;
+            // These are rear-wall machine stands, not traversable platforms. Their feet
+            // meet the street so the bottom-pivoted machinery does not appear to float.
+            B(game,x,1.15f,7.4f,.3f,FactorySteel,-6);
+            B(game,x-3,.575f,.24f,1.15f,FactorySteel,-6);
+            B(game,x+3,.575f,.24f,1.15f,FactorySteel,-6);
             game.WorldBatch.Sprite(AncientArt.ProductionProp(kind),new Vector2(x,1.25f),Vector2.one,FactoryTint,-5);
             B(game,x,8.2f,8.5f,.24f,FactorySteel);
             B(game,x+side*4.05f,5.15f,.16f,5.7f,FactorySteel);

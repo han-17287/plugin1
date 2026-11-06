@@ -84,6 +84,44 @@ namespace Plugin.AncientCivilization.EditorChecks
         }
         static float MoteEnergy(AncientCombat combat)
         {float total=0;foreach(var mote in Motes(combat))if(mote.gameObject.activeSelf)total+=(float)Field(typeof(AncientEnergyMote),"energy").GetValue(mote);return total;}
+        static void CheckScheduledBladeHitches(AncientGame game)
+        {
+            var hero=game.hero;var combat=hero.Combat;var body=hero.GetComponent<Rigidbody2D>();Vector2 original=hero.transform.position;
+            AncientEnemy enemy=null;var constraints=body.constraints;float gravity=body.gravityScale;
+            try
+            {
+                combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;SetAttackMode(hero);
+                enemy=LaserProbeEnemy(game,(Vector2)hero.transform.position+new Vector2(1.84f,.55f));
+                combat.StrikeBlade();Field(typeof(AncientCombat),"bladeDirection").SetValue(combat,Vector2.right);
+                Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-.13f);TickCombat(combat);
+                Assert(Mathf.Abs(enemy.HealthRatio-1)<.00001f&&(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"A real blade keeps its accepted contact pending immediately before the first impact");
+                Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-.23f);TickCombat(combat);
+                Assert(Mathf.Abs(enemy.HealthRatio-.972f)<.00001f&&!(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"A real Combat.Update crossing .13 to .23 resolves the first cut once even after the visible active window");
+                TickCombat(combat);TickCombat(combat);
+                Assert(Mathf.Abs(enemy.HealthRatio-.972f)<.00001f,"Later recovery updates cannot repeat that scheduled enemy contact");
+
+                combat.ResetCombat();Field(typeof(AncientEnemy),"hp").SetValue(enemy,1000f);combat.StrikeBlade();
+                Field(typeof(AncientCombat),"bladeDirection").SetValue(combat,Vector2.right);
+                Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-.43f);
+                Field(typeof(AncientCombat),"bladeReady").SetValue(combat,Time.time-.07f);
+                Field(typeof(AncientCombat),"bladeUntil").SetValue(combat,Time.time-.07f);
+                int uses=combat.BladeUses;combat.StrikeBlade();
+                Assert(Mathf.Abs(enemy.HealthRatio-.972f)<.00001f&&combat.BladeUses==uses+1&&combat.BladeStep==2&&(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"A following real tap flushes the old overdue hit before creating the second cut's independent anticipation");
+                TickCombat(combat);Assert(Mathf.Abs(enemy.HealthRatio-.972f)<.00001f,"The fresh second cut cannot inherit an immediate duplicate contact");
+                Field(typeof(AncientCombat),"bladeDirection").SetValue(combat,Vector2.right);
+                Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-.24f);TickCombat(combat);TickCombat(combat);
+                Assert(Mathf.Abs(enemy.HealthRatio-.944f)<.00001f,"Both accepted cuts apply exactly one contact across a late-input handoff");
+
+                combat.ResetCombat();Field(typeof(AncientEnemy),"hp").SetValue(enemy,1000f);combat.StrikeBlade();game.skills=true;TickCombat(combat);game.skills=false;
+                Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-.23f);TickCombat(combat);
+                Assert(Mathf.Abs(enemy.HealthRatio-1)<.00001f&&!(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"A cut canceled by the actual pause path stays canceled when its old impact time passes");
+            }
+            finally
+            {
+                game.skills=false;combat.ResetCombat();if(enemy){game.enemies.Remove(enemy);UnityEngine.Object.Destroy(enemy.gameObject);}
+                body.constraints=constraints;body.gravityScale=gravity;MoveProbeHero(hero,original);SetAttackMode(hero);
+            }
+        }
         static void CheckLaserPulse(AncientGame game)
         {
             var hero=game.hero;var combat=hero.Combat;var body=hero.GetComponent<Rigidbody2D>();var original=(Vector2)hero.transform.position;
@@ -386,17 +424,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(recoveryProbe&&!recoveryProbe.Available,"A third physical plate enters during recovery");
                     Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ActiveEnd(1)-.005f);TickCombat(combat);
                     Assert(!recoveryProbe.Available&&combat.BrokenObjects==broken+2,"Recovery frames cannot break a newly arriving object");
-                    var missedContact=new GameObject("QA missed blade contact enemy").AddComponent<AncientEnemy>();
-                    missedContact.Initialize(0);missedContact.enabled=false;missedContact.transform.position=objectPoint-Vector2.up*.95f;game.enemies.Add(missedContact);
-                    try
-                    {
-                        // A stalled render can skip from anticipation straight into recovery.
-                        // A pending contact flag must expire rather than damaging a fresh target late.
-                        Field(typeof(AncientCombat),"bladeHitPending").SetValue(combat,true);
-                        Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ActiveEnd(1)-.01f);TickCombat(combat);
-                        Assert(Mathf.Abs(missedContact.HealthRatio-1)<.00001f&&!(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"Skipping the visible contact window clears pending enemy damage without an invisible recovery hit");
-                    }
-                    finally {game.enemies.Remove(missedContact);UnityEngine.Object.Destroy(missedContact.gameObject);}
+                    Assert(!(bool)Field(typeof(AncientCombat),"bladeHitPending").GetValue(combat),"The already consumed enemy contact remains consumed during the physical-object recovery probe");
                     SessionState.SetInt(Root+"RecoveryBroken",combat.BrokenObjects);
                     body.linearVelocity=Vector2.zero;body.constraints=RigidbodyConstraints2D.FreezeAll;SetStage(11);return;
                 }
@@ -405,7 +433,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     if(StageAge<.12)return;
                     Assert(recoveryProbe&&!recoveryProbe.Available&&game.shots.Contains(recoveryProbe)&&combat.BrokenObjects==SessionState.GetInt(Root+"RecoveryBroken",-1),"The recovery plate remains intact through subsequent scene updates");
                     recoveryProbe.Remove();recoveryProbe=null;combat.ResetCombat();
-                    CheckLaserPulse(game);CheckCaptureEnergy(game);CheckTrainingObjectReuse(game);CheckPulseCallbacks(game);CheckTutorialLaser(game);
+                    CheckScheduledBladeHitches(game);CheckLaserPulse(game);CheckCaptureEnergy(game);CheckTrainingObjectReuse(game);CheckPulseCallbacks(game);CheckTutorialLaser(game);
                     // Conversation is last because it deliberately acquires the gameplay input guard.
                     MoveProbeHero(hero,new Vector2(2,80));hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);Assert(combat.Firing,"The dialogue cancellation probe starts with a live pulse");
                     game.Story.Conversation(null,0,new[]{"QA 통신관"},new[]{"레이저 중단 확인."});Assert(game.Story.DialogueOpen&&!combat.Firing,"Opening a real conversation cancels the arm's active pulse");

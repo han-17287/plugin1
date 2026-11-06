@@ -28,7 +28,7 @@ namespace Plugin.AncientCivilization
             {keys[id*3]="routeTask"+id;keys[id*3+1]="routeCheckpoint"+id;keys[id*3+2]="routeDefeated"+id;}
             return keys;
         }
-        static readonly string[] guideArrows={"← ","→ ","↑ ","↓ "};
+        static readonly string[] guideArrows={"◀ ","▶ ","▲ ","▼ "};
         public bool Active {get{return active>=0;}}
         public int CurrentRoom {get{return active;}}
         public int CurrentSector {get{return Active&&game.hero?AncientFieldExpansion.SectorAt(game.hero.transform.position.x-AncientCampaignRules.Left(active)):-1;}}
@@ -706,7 +706,7 @@ namespace Plugin.AncientCivilization
             if(mission.Floor==0)for(int index=3;index<=6;index+=3)
             {
                 var segment=AncientFieldExpansion.Segment(active,sector,index);float x=AncientCampaignRules.Left(active)+(segment.left+segment.right)*.5f,top=mission.Kind==2?0:segment.top;
-                FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(x,top+.7f)),index==3?"운송 벨트 →":"← 역방향 벨트",180,28,scale);
+                FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(x,top+.7f)),index==3?"운송 벨트 ▶":"◀ 역방향 벨트",180,28,scale);
             }
             for(int i=0;i<3;i++)if((tasks&(1<<i))==0)FieldWorldLabel(game.View.WorldToScreenPoint(NodePoint(active,i)),fieldNodeLabels[i],260,44,scale);
             if(next<0&&kind==4)FieldWorldLabel(game.View.WorldToScreenPoint(target),guideCaption,220,36,scale);
@@ -742,7 +742,7 @@ namespace Plugin.AncientCivilization
                         var position=citizens[giver.Id].transform.position;var pixel=game.View.WorldToScreenPoint(position+Vector3.up*2);
                         float x=Mathf.Clamp(pixel.x,100,Mathf.Max(100,Screen.width-100));
                         if(Mathf.Abs(game.hero.transform.position.x-position.x)>4)
-                            GUI.Label(new Rect(x-100,Screen.height-195,200,30),(position.x<game.hero.transform.position.x?"← ":"→ ")+giver.Name,label);
+                            GUI.Label(new Rect(x-100,Screen.height-195,200,30),(position.x<game.hero.transform.position.x?"◀ ":"▶ ")+giver.Name,label);
                     }
                 }
                 if(!Active&&game.Story.Stage>=8)

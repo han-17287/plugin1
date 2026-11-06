@@ -2,11 +2,11 @@
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**v0.19.0 Unity 소스:** [다운로드 ZIP](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/PLUGIN_v0.19.0_LowerDistrict_Unity_6000.6.7f1.zip)
+**v0.20.0 Unity 소스:** [다운로드 ZIP](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/PLUGIN_v0.20.0_LowerDistrict_Unity_6000.6.7f1.zip)
 
 생산구 도입을 **재고 점검 → 보고 중 벽 돌파 → 자동주행 오토바이/트럭 위 전투 두 차례 → 세 번째 탑승 회수 컷신**으로 바꿨습니다. 생산장까지362단위의 안전한 이동 튜토리얼과 별도1,600단위 수송 터널을 구성했습니다. 코어를 담은 짐칸을 먼저 분리하고, 높은 백덤블링 뒤 굵은 입자 레이저로 트럭을 폭파합니다. 새 도입부는 **새 게임**으로 확인하세요.
 
-v0.19.0에서는 베기→수집→레이저 훈련을 한 단계씩 안내하고, 익명 작업자 세 명·공장 생활 소품·낮은 스윙 고리를 추가했습니다. 위험물과 대장 공격의 전조, 움직이는 지붕 점프, 세 번째 탑승의 블레이드·백덤블링·코어 분리·생존 검거 연출을 다듬었습니다. 재접속 후 닫히던 격벽과 재도전 때 사라지던 지붕도 수정했습니다.
+v0.20.0은 하층 개선본입니다. 움직이는 트럭에 도착해도 풀리지 않던 와이어, 긴 프레임에 빠지던 베기 피해와 추격 카메라를 수정했습니다. 전용 작업자·운송대장 도트, 빈 트럭과 분리되는 코어 세 개, 움직이는 공장 설비를 추가했습니다. 검거 뒤 무전 지시로 수사로를 바로 이어 가며, 와이어 고리 빛은 화면 주변64개 풀로 표시합니다.
 
 [생산구 맵 구조도](AncientCivilization/ProductionMapOverview.svg)는 설계도이며 실제 Unity 실행 화면은 아닙니다.
 

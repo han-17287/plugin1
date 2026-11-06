@@ -6,6 +6,20 @@ class BladeChecks
     static int count;
     static void Check(bool condition,string description){if(!condition)throw new Exception(description);count++;}
     static bool Near(float a,float b){return Math.Abs(a-b)<.0001f;}
+    static void ScheduledImpactRun(int step,float[] samples,float cancelAt=-1)
+    {
+        bool pending=true;int hits=0;float previous=-1,accepted=-1;
+        foreach(float elapsed in samples)
+        {
+            if(cancelAt>=0&&elapsed>=cancelAt)pending=false;
+            if(AncientBladeRules.ConsumeScheduledImpact(step,elapsed,ref pending))
+            {hits++;accepted=elapsed;Check(previous<AncientBladeRules.ImpactTime(step),"A scheduled cut resolves on the first available update after contact, never a later retry");}
+            Check(hits<=1,"A cut cannot apply enemy/interactive damage twice across animation and recovery updates");previous=elapsed;
+        }
+        bool canceledBeforeContact=cancelAt>=0&&cancelAt<AncientBladeRules.ImpactTime(step);
+        Check(hits==(canceledBeforeContact?0:1),"A valid cut survives irregular pacing, while a canceled cut never revives");
+        if(hits!=0)Check(accepted>=AncientBladeRules.ImpactTime(step),"Hitch recovery cannot move contact into anticipation");
+    }
 
     static void Main()
     {
@@ -62,6 +76,17 @@ class BladeChecks
                 Check(AncientBladeRules.IsActive(step,hitSample),"Even at 30 Hz the first impact update is inside the visible sweep");
             }
 
+            float before=impact-.01f,after=end+.02f;
+            ScheduledImpactRun(step,new[]{0f,before,after,duration+.1f,duration+1});
+            ScheduledImpactRun(step,new[]{0f,duration+.2f,duration+.5f,duration+1});
+            ScheduledImpactRun(step,new[]{0f,before,after,duration+1},impact-.005f);
+            foreach(float[] frames in new[]{new[]{1/30f},new[]{1/60f},new[]{1/144f},new[]{.013f,.09f,.14f,.033f,.3f}})
+            {
+                var samples=new System.Collections.Generic.List<float>();float elapsed=0;int frame=0;
+                while(elapsed<1.4f){samples.Add(elapsed);elapsed+=frames[frame++%frames.Length];}
+                ScheduledImpactRun(step,samples.ToArray());
+            }
+
         }
 
         Check(AncientBladeRules.Duration(3)>AncientBladeRules.Duration(1),"The heavier finisher keeps a longer readable recovery");
@@ -70,8 +95,15 @@ class BladeChecks
         Check(Near(AncientBladeRules.TrailFrame(.5f),8),"Atlas trail lookup matches the middle active animation pose");
         Check(Near(AncientBladeRules.TrailFrame(.25f),6.5f),"Atlas trail lookup retains fractional positions for interpolation");
 
+        bool overdue=true;
+        Check(AncientBladeRules.ConsumeScheduledImpact(1,.43f,ref overdue)&&!overdue,"A new tap can flush the previous cut's overdue contact before replacing its timestamp");
+        overdue=true;
+        Check(!AncientBladeRules.ConsumeScheduledImpact(2,0,ref overdue)&&overdue,"The replacement cut retains its own anticipation instead of inheriting old damage");
+        Check(AncientBladeRules.ConsumeScheduledImpact(2,.24f,ref overdue)&&!AncientBladeRules.ConsumeScheduledImpact(2,.6f,ref overdue),"Flushing an old cut never duplicates the next cut's contact");
+
         foreach(float bad in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
         {
+            bool pending=true;Check(!AncientBladeRules.ConsumeScheduledImpact(1,bad,ref pending)&&pending,"Invalid clock samples cannot consume or resolve an accepted cut");
             Check(!AncientBladeRules.CanBuffer(bad),"Invalid time cannot queue input");
             Check(!AncientBladeRules.IsActive(1,bad),"Invalid elapsed time cannot resolve damage");
             Check(AncientBladeRules.NextStep(2,bad,1)==1&&AncientBladeRules.NextStep(2,1,bad)==1,"Invalid clock data clears sequence links");
@@ -81,6 +113,6 @@ class BladeChecks
         }
         Check(Near(AncientBladeRules.Duration(-1),AncientBladeRules.Duration(1)),"Low invalid step clamps to the first cut");
         Check(Near(AncientBladeRules.Duration(99),AncientBladeRules.Duration(3)),"High invalid step clamps to the last cut");
-        Console.WriteLine("PASS: "+count+" blade timing, sequence and trail checks");
+        Console.WriteLine("PASS: "+count+" blade timing, sequence, hitch-safe scheduled contact and trail checks");
     }
 }

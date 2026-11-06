@@ -8,8 +8,8 @@ namespace Plugin.AncientCivilization
     {
         sealed class Worker
         {
-            public string name;public int role;public Transform root,tool;public SpriteRenderer art,indicator;
-            public bool spoken;public float workPhase;
+            public string name,prompt;public int role;public Transform root;public SpriteRenderer art;
+            public bool spoken;
         }
         static readonly string[] Names={"교대 작업자","압연기 조작원","재고 관리원"};
         static readonly float[] Places={-211,-145,66};
@@ -21,24 +21,12 @@ namespace Plugin.AncientCivilization
             game=owner;
             for(int i=0;i<workers.Length;i++)
             {
-                var worker=new Worker{name=Names[i],role=Roles[i],workPhase=i*1.7f};
+                var worker=new Worker{name=Names[i],role=Roles[i],prompt="E / "+Names[i]+(i==0?"와":"과")+" 대화"};
                 worker.root=new GameObject("Production worker / "+worker.name).transform;worker.root.SetParent(transform,false);
                 worker.root.position=new Vector2(Places[i],AncientProductionLayout.GroundHeight(Places[i]));
-                worker.art=AncientArt.Display(worker.name,AncientCitizenArt.Sprite(worker.role),Vector2.zero,6,worker.root);
-                Color hat=i==0?new Color(.9f,.64f,.25f):i==1?new Color(.79f,.85f,.78f):new Color(.25f,.66f,.73f);
-                Detail(worker,"Work helmet crown",new Vector2(0,1.79f),new Vector2(.46f,.18f),hat,7);
-                Detail(worker,"Work helmet brim",new Vector2(0,1.71f),new Vector2(.6f,.07f),hat,7);
-                worker.tool=new GameObject("Work instrument pivot").transform;worker.tool.SetParent(worker.root,false);worker.tool.localPosition=new Vector2(.33f,1.08f);
-                var casing=Detail(worker,i==1?"Press inspection handset":"Production tally board",Vector2.zero,new Vector2(.29f,.37f),new Color(.19f,.29f,.32f),7);
-                casing.transform.SetParent(worker.tool,false);casing.transform.localPosition=Vector2.zero;
-                var face=Detail(worker,"Work tool display",Vector2.zero,new Vector2(.2f,.25f),i==0?new Color(.74f,.77f,.65f):AncientGame.Cyan,8);
-                face.transform.SetParent(worker.tool,false);face.transform.localPosition=Vector2.zero;worker.indicator=face.GetComponent<SpriteRenderer>();
+                worker.art=AncientArt.Display(worker.name,AncientArt.ProductionWorker(i),Vector2.zero,6,worker.root);
                 worker.root.gameObject.SetActive(false);workers[i]=worker;
             }
-        }
-        GameObject Detail(Worker worker,string name,Vector2 point,Vector2 size,Color color,int order)
-        {
-            var item=game.Box(name,Vector2.zero,size,color,order);item.transform.SetParent(worker.root,false);item.transform.localPosition=point;return item;
         }
         bool Opening
         {get{return game&&game.HasSession&&!game.MainMenu&&game.Story&&game.Story.CurrentFloor==0&&game.Story.Stage<5;}}
@@ -53,11 +41,6 @@ namespace Plugin.AncientCivilization
                 if(worker==null)continue;
                 float dx=game.hero.transform.position.x-worker.root.position.x;
                 if(Mathf.Abs(dx)<7)worker.art.flipX=dx<0;
-                worker.workPhase+=Time.deltaTime;
-                // Feet stay planted. A small instrument adjustment reads as work,
-                // rather than sliding a stationary citizen sprite along the road.
-                worker.tool.localRotation=Quaternion.Euler(0,0,Mathf.Sin(worker.workPhase*.9f)*3);
-                if(worker.role!=0)worker.indicator.color=Color.Lerp(new Color(.42f,.72f,.77f),Color.white,(Mathf.Sin(worker.workPhase*1.3f)+1)*.12f);
             }
         }
         int Nearest()
@@ -106,7 +89,8 @@ namespace Plugin.AncientCivilization
         {
             actor=null;headOffset=1.95f;
             if(!Opening)return false;
-            foreach(var worker in workers)if(worker!=null&&speaker==worker.name){actor=worker.root;return true;}
+            foreach(var worker in workers)if(worker!=null&&speaker==worker.name)
+            {actor=worker.root;headOffset=Mathf.Clamp(worker.art.bounds.max.y-worker.root.position.y,.9f,2.4f);return true;}
             return false;
         }
         void OnGUI()
@@ -120,7 +104,7 @@ namespace Plugin.AncientCivilization
             try
             {
                 GUI.matrix=Matrix4x4.identity;GUI.color=AncientGame.Cyan;GUI.depth=-6;
-                GUI.Label(new Rect(point.x-120,Screen.height-point.y-22,240,24),"E / "+worker.name+"와 대화",prompt);
+                GUI.Label(new Rect(point.x-120,Screen.height-point.y-22,240,24),worker.prompt,prompt);
             }
             finally {GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;}
         }

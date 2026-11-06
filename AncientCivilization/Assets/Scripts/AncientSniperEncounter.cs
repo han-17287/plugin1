@@ -344,7 +344,7 @@ namespace Plugin.AncientCivilization
                 AncientHUD.Panel(new Rect(Screen.width/2-210,Screen.height*.18f+85,420,16),new Color(.3f,.08f,.13f));
                 AncientHUD.Panel(new Rect(Screen.width/2-210,Screen.height*.18f+85,420*clash.Progress,16),AncientGame.Cyan);
             }
-            else if(phase==4)GUI.Label(new Rect(Screen.width/2-300,95,600,60),"파이널 / 보스 충전 중 무적\n포탑 2개 파괴 → 우클릭 입자 수집 → 자동 레이저 충돌",label);
+            else if(phase==4)GUI.Label(new Rect(Screen.width/2-300,95,600,60),"파이널 / 보스 충전 중 무적\n포탑 2개 파괴 ▶ 우클릭 입자 수집 ▶ 자동 레이저 충돌",label);
             else
             {
                 GUI.Label(new Rect(Screen.width/2-300,95,600,55),phaseHints[Mathf.Clamp(phase,1,3)],label);

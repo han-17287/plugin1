@@ -75,7 +75,7 @@ namespace Plugin.AncientCivilization
             Quad(2,1.3f,1.8f,2.6f,new Color(.02f,.07f,.1f));
             Quad(2,2.9f,2,.12f,Teal);
             Plate("하층 치안 순찰소",1.5f,5.6f,4.8f,Teal);
-            Plate("순찰로  →",4.8f,1.8f,2.2f,Warm);
+            Plate("순찰로  ▶",4.8f,1.8f,2.2f,Warm);
             // Open garage frontage leaves the bike and vertical wire practice space readable.
             Building(8,19.5f,0,7.9f,2);
             Quad(12.4f,1.35f,7,2.7f,new Color(.03f,.045f,.055f));
@@ -118,7 +118,7 @@ namespace Plugin.AncientCivilization
             Building(85,97,0,8.5f,6);
             Plate("동쪽 검문소",90.5f,6.1f,6.5f,Teal);
             Quad(94,1.7f,.18f,3.4f,Edge);Quad(95.2f,3.35f,2.6f,.18f,Edge);
-            Plate("화물 도로  →",94,4.7f,4.8f,Warm);
+            Plate("화물 도로  ▶",94,4.7f,4.8f,Warm);
             Plate("예비 동력 배정 / C-00",54,3.2f,5.2f,Teal);
             Building(99,118,0,8.9f,7);Plate("화물 승강장",109,6.6f,7.4f,Warm);
             for(float x=101;x<117;x+=2)

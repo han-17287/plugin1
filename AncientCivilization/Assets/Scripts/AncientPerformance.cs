@@ -63,7 +63,7 @@ namespace Plugin.AncientCivilization
             if(!details)return;
             long bytes=allocations.Valid?allocations.LastValue:-1;
             diagnostics="프레임 평균 "+mean.ToString("F2")+"ms · P95 "+p95.ToString("F2")+"ms\n최대 "+peak.ToString("F2")+"ms / 최근 GC "+(bytes>=0?(bytes/1024f).ToString("F1")+"KB":"미지원")+
-                "\n정적 장식 "+game.WorldBatch.QuadCount+"개 → 묶음 "+game.WorldBatch.RendererCount+"개 / 현재 "+game.WorldBatch.ActiveRendererCount+"개\n활성 적 "+game.enemies.Count+" / 투척물 "+game.shots.Count+" / 풀 "+game.Projectiles.Capacity+" (누락 "+game.Projectiles.DroppedSpawns+")"+(game.Sniper?"\n저격수 물체 "+game.Sniper.LiveObjects+" / 풀 "+game.Sniper.ObjectCapacity+" · 누락 "+game.Sniper.DroppedSpawns:"")+"\nF8 프레임 목표 · F9 닫기 · F10 CSV 저장";
+                "\n정적 장식 "+game.WorldBatch.QuadCount+"개 ▶ 묶음 "+game.WorldBatch.RendererCount+"개 / 현재 "+game.WorldBatch.ActiveRendererCount+"개\n활성 적 "+game.enemies.Count+" / 투척물 "+game.shots.Count+" / 풀 "+game.Projectiles.Capacity+" (누락 "+game.Projectiles.DroppedSpawns+")"+(game.Sniper?"\n저격수 물체 "+game.Sniper.LiveObjects+" / 풀 "+game.Sniper.ObjectCapacity+" · 누락 "+game.Sniper.DroppedSpawns:"")+"\nF8 프레임 목표 · F9 닫기 · F10 CSV 저장";
         }
         void Export()
         {

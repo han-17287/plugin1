@@ -14,6 +14,11 @@ namespace Plugin.AncientCivilization
         readonly List<Vector2> lightPositions=new List<Vector2>();
         readonly List<int> lightSectors=new List<int>();
         readonly List<bool> lightAttached=new List<bool>(),lightVisible=new List<bool>();
+        const int AnchorHaloCapacity=64;
+        readonly SpriteRenderer[] anchorHalos=new SpriteRenderer[AnchorHaloCapacity];
+        readonly AncientAnchorLightSelection anchorSelection=new AncientAnchorLightSelection(AnchorHaloCapacity);
+        bool anchorSelectionDirty=true;int anchorSourceCount=-1,anchorFloor=-1;
+        float anchorRefreshAt,anchorHalfWidth,anchorHalfHeight;Vector2 anchorCamera;
         const int RainCount=72;
         Mesh rainMesh;MeshRenderer rainRenderer;Material rainMaterial;
         readonly Vector3[] rainVertices=new Vector3[RainCount*4];
@@ -40,7 +45,12 @@ namespace Plugin.AncientCivilization
         {
             game=AncientGame.Instance;
             districtBackdrop=new AncientDistrictBackdrop(game,transform);
-            foreach(var anchor in game.anchors)Glow(anchor,AncientGame.Cyan,2.3f,4);
+            for(int i=0;i<anchorHalos.Length;i++)
+            {
+                var halo=AncientArt.Display("Pooled nearby wire anchor light",softSprite,Vector2.zero,4,transform);
+                halo.transform.localScale=Vector3.one*2.3f;halo.color=new Color(AncientGame.Cyan.r,AncientGame.Cyan.g,AncientGame.Cyan.b,.48f);
+                if(glowMaterial)halo.sharedMaterial=glowMaterial;halo.enabled=false;anchorHalos[i]=halo;
+            }
             Glow(new Vector2(46,1.65f),AncientGame.Cyan,3,4);Glow(new Vector2(86,.65f),AncientGame.Cyan,3,4);
             Glow(new Vector2(115,2.5f),AncientGame.Cyan,5,-1);
             armGlow=Glow(new Vector2(.4f,.1f),new Color(.2f,.65f,1),1.2f,11,game.hero.transform);
@@ -106,6 +116,42 @@ namespace Plugin.AncientCivilization
             if(Input.GetKeyDown(KeyCode.F6))
             {HighQuality=!HighQuality;AncientGame.SetSaved("graphics",HighQuality?1:0);PlayerPrefs.Save();game.Notice(HighQuality?"효과 / 고품질":"효과 / 가볍게");}
         }
+        void UpdateAnchorHalos(Vector2 camera,int sector,float halfWidth,float halfHeight,bool visible)
+        {
+            if(!visible)
+            {
+                if(!anchorSelectionDirty)foreach(var halo in anchorHalos)if(halo)halo.enabled=false;
+                anchorSelectionDirty=true;return;
+            }
+            var anchors=game.anchors;
+            if(anchorSelectionDirty||anchorSourceCount!=anchors.Count||anchorFloor!=sector||Time.unscaledTime>=anchorRefreshAt||
+                (camera-anchorCamera).sqrMagnitude>4||Mathf.Abs(halfWidth-anchorHalfWidth)>.5f||Mathf.Abs(halfHeight-anchorHalfHeight)>.5f)
+            {
+                anchorSelection.Begin();
+                for(int slot=0;slot<anchors.Count;slot++)
+                {
+                    Vector2 point=anchors[slot];
+                    // Cheap rectangle rejection avoids classifying thousands of distant
+                    // floor indices just to prepare a few nearby soft lights.
+                    if(Mathf.Abs(point.x-camera.x)>halfWidth||Mathf.Abs(point.y-camera.y)>halfHeight)continue;
+                    anchorSelection.Consider(slot,AncientCityLayout.VisualSector(point.x),sector,point.x,point.y,camera.x,camera.y,halfWidth,halfHeight,0);
+                }
+                anchorSelectionDirty=false;anchorSourceCount=anchors.Count;anchorFloor=sector;
+                anchorCamera=camera;anchorHalfWidth=halfWidth;anchorHalfHeight=halfHeight;anchorRefreshAt=Time.unscaledTime+.1f;
+            }
+            for(int i=0;i<anchorHalos.Length;i++)
+            {
+                var halo=anchorHalos[i];if(!halo)continue;int slot=anchorSelection.SlotAt(i);
+                if(slot<0||slot>=anchors.Count){if(halo.enabled)halo.enabled=false;continue;}
+                // Keep only indices in the selection. Current positions follow a crane
+                // or the truck immediately, including hidden/sentinel latch changes.
+                Vector2 point=anchors[slot];bool shown=AncientChapterVisibility.PointVisible(AncientCityLayout.VisualSector(point.x),sector,
+                    point.x,point.y,camera.x,camera.y,halfWidth,halfHeight,0);
+                if(halo.enabled!=shown)halo.enabled=shown;if(!shown)continue;
+                halo.transform.position=point;float pulse=.93f+Mathf.Sin(Time.time*3+slot*1.7f)*.07f;
+                halo.color=new Color(AncientGame.Cyan.r,AncientGame.Cyan.g,AncientGame.Cyan.b,.48f*pulse);
+            }
+        }
         void LateUpdate()
         {
             if(!game||!game.hero||!game.View)return;
@@ -113,7 +159,8 @@ namespace Plugin.AncientCivilization
             bool fullEffects=HighQuality&&!game.MainMenu;
             float halfHeight=view.orthographicSize+4,halfWidth=view.orthographicSize*view.aspect+4;
             if(armGlow)armGlow.transform.localPosition=new Vector2(game.hero.Facing*.4f,.15f);
-            int sector=game.Finale&&game.Finale.Active?5:game.Story.CurrentFloor;
+            int sector=game.Production&&game.Production.InChaseLane?5:game.Finale&&game.Finale.Active?5:game.Story.CurrentFloor;
+            UpdateAnchorHalos(camera,sector,halfWidth,halfHeight,fullEffects);
             for(int i=0;i<lights.Count;i++)
             {
                 if(!fullEffects||(!lightAttached[i]&&lightSectors[i]!=sector))
@@ -127,8 +174,12 @@ namespace Plugin.AncientCivilization
                 if(lightVisible[i]!=visible){lights[i].enabled=visible;lightVisible[i]=visible;}if(!visible)continue;
                 Color c=colours[i];c.a*=.93f+Mathf.Sin(Time.time*3+i*1.7f)*.07f;lights[i].color=c;
             }
-            rainRenderer.enabled=fullEffects;
-            if(fullEffects&&!game.Paused)
+            // The lower production floors and its freight chase are sealed interiors.
+            // Keep the existing rain treatment for other districts without drawing it through this roof.
+            bool lowerInterior=game.Story.CurrentFloor==0||(game.Production&&game.Production.InChaseLane);
+            bool rainEffects=fullEffects&&!lowerInterior;
+            rainRenderer.enabled=rainEffects;
+            if(rainEffects&&!game.Paused)
             {
                 rainRenderer.transform.position=camera;
                 for(int i=0;i<RainCount;i++)
@@ -153,6 +204,7 @@ namespace Plugin.AncientCivilization
             if(districtBackdrop!=null)districtBackdrop.Dispose();
             if(rainMesh)Destroy(rainMesh);if(rainMaterial)Destroy(rainMaterial);
             foreach(var light in lights)if(light)Destroy(light.gameObject);
+            foreach(var halo in anchorHalos)if(halo)Destroy(halo.gameObject);
             if(haze!=null)foreach(var fog in haze)if(fog)Destroy(fog.gameObject);
             if(glowMaterial)Destroy(glowMaterial);if(rimMaterial)Destroy(rimMaterial);
             if(softSprite)Destroy(softSprite);if(softTexture)Destroy(softTexture);

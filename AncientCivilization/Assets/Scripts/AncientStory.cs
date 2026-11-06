@@ -344,9 +344,10 @@ namespace Plugin.AncientCivilization
             for(int floor=0;floor<=4;floor++)
             {
                 bool current=CurrentFloor==floor;
-                bool allowed=AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,floor)&&game.Campaign.ReadyForLift(floor);
+                bool permission=AncientCityLayout.CanLift(Stage,ResidencePoints,game.City.Cleared,CurrentFloor,floor),routeReady=game.Campaign.ReadyForLift(floor);
+                bool allowed=permission&&routeReady;
                 string text=AncientCityLayout.Name(floor);
-                if(current)text+="  [현재 층]";else if(floor==4)text+="  [특별 승인: 승진으로 진입 불가]";else if(!allowed)text+="  [잠김: 해당 구역의 현장 조사·사건 해결 필요]";
+                if(current)text+="  [현재 층]";else if(floor==4)text+="  [특별 승인: 승진으로 진입 불가]";else if(permission&&!routeReady)text+="  [통행 승인 / 하층 운송로 조사 중]";else if(!allowed)text+="  [잠김: 해당 구역의 현장 조사·사건 해결 필요]";
                 GUI.enabled=allowed;
                 if(GUI.Button(new Rect(x+28,y+120+floor*57,544,48),text,nextButton))StartLiftTravel(floor);
                 GUI.enabled=true;
@@ -445,10 +446,10 @@ namespace Plugin.AncientCivilization
             {
                 int step=TrainingPracticeStep();
                 if(step==0&&TooCloseToTrainingEmitter())return "장비 확인 / 배출구에서 두 걸음 물러나 빈 하우징을 베세요";
-                if(step==0)return "장비 확인 1 / 휠 위 → 짧은 좌클릭으로 빈 하우징 베기";
+                if(step==0)return "장비 확인 1 / 휠 위 ▶ 짧은 좌클릭으로 빈 하우징 베기";
                 if(step==1&&TooCloseToTrainingEmitter())return "장비 확인 2 / 파란 입자 우클릭 수집 · 새 물체는 배출구에서 두 걸음 뒤로";
                 if(step==1)return "장비 확인 2 / 파란 입자 근처에서 우클릭 유지 · 놓쳤다면 다시 베기";
-                if(step==2)return "장비 확인 3 / 좌클릭 유지 → 금색 조준선 확인 → 놓아서 레이저";
+                if(step==2)return "장비 확인 3 / 좌클릭 유지 ▶ 금색 조준선 확인 ▶ 놓아서 레이저";
                 return "장비 확인 완료 / 동쪽 재고 단말 앞에서 E로 수량 확인";
             }
             if(Stage==4)return "생산장 재고 보고 / 장부 120기 · 실제 117기";
@@ -527,8 +528,12 @@ namespace Plugin.AncientCivilization
             {
                 if(!game.skills)
                 {
-                    AncientHUD.Panel(new Rect(w/2-250,16,500,64),new Color(.015f,.045f,.065f,.94f));
-                    GUI.Label(new Rect(w/2-236,24,472,52),game.Campaign.Active?game.Campaign.ObjectiveText:cachedObjective,small);
+                    bool controllerGuide=(game.Campaign&&game.Campaign.Active)||(game.Production&&(game.Production.Active||game.Production.InChaseLane));
+                    if(!controllerGuide)
+                    {
+                        AncientHUD.Panel(new Rect(w/2-250,16,500,64),new Color(.015f,.045f,.065f,.94f));
+                        GUI.Label(new Rect(w/2-236,24,472,52),cachedObjective,small);
+                    }
                     GUI.Label(new Rect(28,200,285,42),cachedResidence,small);
                     if(Stage>=8&&CurrentFloor<4&&Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
                 }

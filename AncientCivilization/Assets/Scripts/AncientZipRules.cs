@@ -13,6 +13,17 @@ namespace Plugin.AncientCivilization
         }
         public static bool Arrived(float dx,float dy)
         {return Finite(dx)&&Finite(dy)&&dx*dx+dy*dy<=Arrival*Arrival;}
+        // Test the actual collision-clipped planned physics segment, not just its
+        // starting gap. A moving carrier advances again before the next FixedUpdate;
+        // testing only that later gap can chase it forever at carrierSpeed*deltaTime.
+        public static bool ReachesThisStep(float dx,float dy,float stepX,float stepY)
+        {
+            if(!Finite(dx)||!Finite(dy)||!Finite(stepX)||!Finite(stepY))return false;
+            double x=dx,y=dy,sx=stepX,sy=stepY,length=sx*sx+sy*sy;
+            double t=length>0?Math.Max(0,Math.Min(1,(x*sx+y*sy)/length)):0;
+            double remainingX=x-sx*t,remainingY=y-sy*t;
+            return remainingX*remainingX+remainingY*remainingY<=(double)Arrival*Arrival;
+        }
         public static float Support(float normalX,float normalY,bool bike)
         {
             if(!Finite(normalX)||!Finite(normalY))return bike?1.5f:1.1f;

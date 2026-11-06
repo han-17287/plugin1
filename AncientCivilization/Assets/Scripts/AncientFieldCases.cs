@@ -91,7 +91,7 @@ namespace Plugin.AncientCivilization
             if(!Started(floor))return "E: 현장 단말 조사 (선택)";
             if(floor==1)return relayOpen?"E: 배정 기록 확인":"가까운 절연판을 블레이드로 제거";
             if(floor==2)return recordTaken?"E: 원본과 사본 대조":"서쪽 보관함의 원본 기록 회수";
-            return "단말 주변 경비 제압 → E: 기록 확보";
+            return "단말 주변 경비 제압 ▶ E: 기록 확보";
         }
         void OnGUI()
         {

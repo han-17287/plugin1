@@ -32,7 +32,8 @@ namespace Plugin.AncientCivilization
             if(Mode.Length==0||attack!=hero.AttackMode||productionPhase!=phase)
             {
                 attack=hero.AttackMode;productionPhase=phase;
-                Mode=auto?"트럭 접근 후 좌클릭 / 와이어 승선":"휠 / "+(attack?"공격":"와이어")+" · 우클릭 입자 수집";
+                Mode=phase==(int)AncientProductionPhase.Boarding?"와이어 견인 중 / 지붕 착지 후 공격":
+                    auto?"트럭 접근 후 좌클릭 / 와이어 승선":"휠 / "+(attack?"공격":"와이어")+" · 우클릭 입자 수집";
             }
             if(hero.Combat)
             {

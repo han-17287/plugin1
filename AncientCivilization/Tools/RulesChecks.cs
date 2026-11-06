@@ -284,8 +284,9 @@ class RulesChecks
         }
         Check(AncientProgressRules.RecoverHealth(0,100,20)==0&&AncientProgressRules.RecoverHealth(-5,100,20)==-5,"A checkpoint does not revive a dead actor");
         Check(float.IsNaN(AncientProgressRules.RecoverHealth(float.NaN,100,20)),"Invalid current health is not silently replaced with a gameplay reward");
-        Check(!AncientProgressRules.KnowsEvidence(1,4,0),"Theft evidence is not revealed before its dialogue ends");
-        Check(AncientProgressRules.KnowsEvidence(1,5,0),"Confirmed theft evidence appears in journal");
+        for(int stage=0;stage<8;stage++)
+            Check(!AncientProgressRules.KnowsEvidence(1,stage,0),"The manifest's hidden recipient is not revealed before the arrest and questions, including either playable chase round");
+        Check(AncientProgressRules.KnowsEvidence(1,8,0),"The questioned transport manifest appears after its actual discovery");
         Check(!AncientProgressRules.KnowsEvidence(4,9,0),"Top-floor access clue is not spoiled early");
         Check(AncientProgressRules.KnowsEvidence(4,9,8),"Denied promotion clue follows the residential encounter");
         Check(AncientProgressRules.KnowsEvidence(5,9,16),"Shared-status note follows the sniper encounter");

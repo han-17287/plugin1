@@ -9,7 +9,7 @@ namespace Plugin.AncientCivilization
         readonly AncientProductionSequence sequence=new AncientProductionSequence();
         readonly Hazard[] hazards=new Hazard[12];
         AncientGame game;AncientEnemy commander;AncientParkedBike escortBike;Rigidbody2D truck;BoxCollider2D deck;
-        Transform cargo;SpriteRenderer truckArt,truckRoofArt;SpriteRenderer[] coreArt=new SpriteRenderer[3];
+        Transform cargo;SpriteRenderer truckArt,truckRoofArt,boardingMast,boardingMastLight,boardingMastCap;SpriteRenderer[] coreArt=new SpriteRenderer[3];
         LineRenderer hook,tell,strikeZone,cut,filament,filamentCore,beam,glow,core;AncientBeamVisuals beamProfile;
         AncientProductionPhase applied=AncientProductionPhase.Dormant;
         bool lane,cargoSecured,truckDestroyed,pendingArrest,ready,boardingReady,handoff,handedOff,captainEjecting;float truckX,nextHazard,deckTime,captainTimer,captainRecoverySeconds=.7f,kinematicSpeed,handoffElapsed;
@@ -34,19 +34,29 @@ namespace Plugin.AncientCivilization
         public Vector2 BoardingHook {get{return truck?(Vector2)truck.position+new Vector2(-1.5f,6):Vector2.zero;}}
         public string Objective {get{return objective;}}
         public float DriveSpeed {get{return lane?Mathf.Min(17,Mathf.Max(0,(AncientProductionLayout.ChaseEnd-46-game.hero.transform.position.x)*.8f)):17;}}
-        public void Initialize(AncientGame owner){game=owner;AncientArt.Truck();AncientArt.ProductionCaptain(0);}
+        public void Initialize(AncientGame owner){game=owner;AncientArt.ProductionTruck();AncientArt.ProductionCaptain(0);}
         bool ExternalPaused {get{return !game||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||!Application.isFocused;}}
         bool EnsureActors()
         {
             if(ready)return true;if(!game.hero||!game.hero.Combat)return false;
             var body=new GameObject("Core theft pursuit truck");body.layer=8;truck=body.AddComponent<Rigidbody2D>();truck.bodyType=RigidbodyType2D.Kinematic;truck.interpolation=RigidbodyInterpolation2D.Interpolate;
             deck=body.AddComponent<BoxCollider2D>();deck.size=new Vector2(6.6f,2.7f);deck.offset=new Vector2(0,1.35f);
-            truckArt=AncientArt.Display("Pursuit cargo vehicle",AncientArt.Truck(),Vector2.zero,7,body.transform);
-            var plate=game.Box("Walkable cargo roof",Vector2.zero,new Vector2(6.6f,.14f),new Color(.35f,.53f,.58f),10);plate.transform.SetParent(body.transform,false);plate.transform.localPosition=new Vector2(0,2.7f);
+            truckArt=AncientArt.Display("Pursuit empty cargo chassis",AncientArt.ProductionTruck(),Vector2.zero,7,body.transform);
+            var plate=game.Box("Walkable cargo roof",Vector2.zero,new Vector2(6.6f,.14f),new Color(.35f,.53f,.58f),10);plate.transform.SetParent(body.transform,false);plate.transform.localPosition=new Vector2(0,2.63f);
             truckRoofArt=plate.GetComponent<SpriteRenderer>();
+            boardingMast=TruckPart("Telescopic boarding mast",Vector2.one,new Color(.18f,.29f,.34f),6);
+            boardingMastLight=TruckPart("Boarding mast inset guide",Vector2.one,new Color(.12f,.55f,.62f),7);
+            boardingMastCap=TruckPart("Boarding mast latch housing",new Vector2(.62f,.18f),new Color(.6f,.75f,.77f),7);
             cargo=new GameObject("Detachable secured core cradle").transform;cargo.SetParent(body.transform,false);cargo.localPosition=new Vector2(-.5f,1.45f);
             var container=game.Box("Core cargo cradle",Vector2.zero,new Vector2(3.8f,1.4f),new Color(.07f,.22f,.3f),9);container.transform.SetParent(cargo,false);
-            for(int i=0;i<3;i++){coreArt[i]=AncientArt.Display("Stolen energy core "+i,AncientArt.WireParticle(),new Vector2(-1.2f+i*1.2f,0),10,cargo);coreArt[i].transform.localScale=Vector3.one*.38f;coreArt[i].color=AncientGame.Cyan;}
+            for(int i=0;i<3;i++)
+            {
+                float x=-1.2f+i*1.2f;
+                CargoPart("Stolen core steel housing "+i,new Vector2(x,0),new Vector2(.84f,1.2f),new Color(.18f,.27f,.30f),10);
+                coreArt[i]=CargoPart("Stolen energy core "+i,new Vector2(x,0),new Vector2(.48f,.86f),AncientGame.Cyan,11);
+                CargoPart("Core glass highlight "+i,new Vector2(x-.12f,.02f),new Vector2(.07f,.7f),new Color(.8f,1,1),12);
+                foreach(float side in new[]{-1f,1f})CargoPart("Core retaining contact "+i,new Vector2(x,side*.51f),new Vector2(.66f,.14f),new Color(.65f,.72f,.70f),12);
+            }
             commander=new GameObject("Core theft transport captain").AddComponent<AncientEnemy>();commander.Initialize(3);commander.ConfigureProductionCommander(this);commander.transform.SetParent(body.transform,false);commander.transform.localPosition=new Vector2(1.4f,2.7f);game.enemies.Add(commander);
             escortBike=new GameObject("Autonomous pursuit motorcycle").AddComponent<AncientParkedBike>();escortBike.Initialize(new Vector2(AncientProductionLayout.StockX-2,.84f));game.parkedBikes.Add(escortBike);
             hook=game.Line("Truck boarding latch",AncientGame.Cyan,.07f,14);hook.loop=true;hook.positionCount=4;
@@ -66,6 +76,16 @@ namespace Plugin.AncientCivilization
                 h.root.SetActive(false);hazards[i]=h;
             }
             ready=true;return true;
+        }
+        SpriteRenderer CargoPart(string name,Vector2 point,Vector2 size,Color color,int order)
+        {
+            var part=game.Box(name,Vector2.zero,size,color,order);part.transform.SetParent(cargo,false);part.transform.localPosition=point;
+            return part.GetComponent<SpriteRenderer>();
+        }
+        SpriteRenderer TruckPart(string name,Vector2 size,Color color,int order)
+        {
+            var part=game.Box(name,Vector2.zero,size,color,order);part.transform.SetParent(truck.transform,false);
+            var view=part.GetComponent<SpriteRenderer>();view.enabled=false;return view;
         }
         public void BeginBreach()
         {
@@ -133,7 +153,7 @@ namespace Plugin.AncientCivilization
         }
         public bool CanBoardWire(Vector2 selected)
         {
-            if(!ready||!game.hero.bike||sequence.Phase!=AncientProductionPhase.Approach||truck.position.x-game.hero.transform.position.x>14)return false;
+            if(!ready||!boardingReady||!game.hero.bike||sequence.Phase!=AncientProductionPhase.Approach||truck.position.x-game.hero.transform.position.x>14)return false;
             if((selected-BoardingHook).sqrMagnitude<1)return true;
             var bounds=deck.bounds;bounds.Expand(new Vector3(1.5f,2,1));return bounds.Contains(new Vector3(selected.x,selected.y,truck.transform.position.z));
         }
@@ -228,12 +248,14 @@ namespace Plugin.AncientCivilization
                 if(!game.hero.bike){game.hero.RetryFromCheckpoint();return;}
                 TickHazards(roadStep);nextHazard-=dt;if(nextHazard<=0){SpawnHazard();nextHazard=sequence.Round==0?2.5f:2.05f;}
             }
-            if(phase==AncientProductionPhase.Approach&&!boardingReady&&truck.position.x-game.hero.transform.position.x<=14)
+            if(phase==AncientProductionPhase.Approach&&!boardingReady&&sequence.Elapsed>=.7f&&truck.position.x-game.hero.transform.position.x<=14)
             {boardingReady=true;objective="공격 중지 / 점등된 트럭 고리를 좌클릭해 와이어 승선";game.Notice("승선 가능 / 청록 고리를 좌클릭",2);game.Sound(2);}
             if(phase==AncientProductionPhase.Boarding)
             {
                 Vector2 h=game.hero.transform.position;
-                if(!game.hero.Wired){var body=game.hero.GetComponent<Rigidbody2D>();body.linearVelocity=new Vector2(kinematicSpeed>1?kinematicSpeed:17,body.linearVelocity.y);}
+                // A truck at the tunnel stop has zero carrier speed. A fallback17
+                // would walk the officer off its stationary roof during the landing.
+                if(!game.hero.Wired){var body=game.hero.GetComponent<Rigidbody2D>();body.linearVelocity=new Vector2(kinematicSpeed,body.linearVelocity.y);}
                 if(Mathf.Abs(h.x-truck.position.x)<3.1f&&Mathf.Abs(h.y-3.8f)<.35f&&game.hero.IsOnGround&&!game.hero.Wired)
                 {sequence.LandOnDeck();ApplyPhase();}
                 else if(sequence.Elapsed>4){sequence.AbortBoarding();ReturnToBike(false);ApplyPhase();}
@@ -437,9 +459,9 @@ namespace Plugin.AncientCivilization
                 case AncientProductionPhase.Chase:objective=round+" / 자동 전진 · Space로 잔재와 폭탄 회피";break;
                 case AncientProductionPhase.Approach:objective="공격 중지 / 트럭 지붕 고리를 좌클릭해 와이어 승선";break;
                 case AncientProductionPhase.Boarding:objective="트럭 지붕으로 견인 중";break;
-                case AncientProductionPhase.Deck:objective="운송대장 전투 / 전조 회피 → 블레이드·입자 레이저";break;
+                case AncientProductionPhase.Deck:objective="운송대장 전투 / 전조 회피 ▶ 블레이드·입자 레이저";break;
                 case AncientProductionPhase.Knockback:objective="급가속 / 자동주행 오토바이로 복귀";break;
-                case AncientProductionPhase.Finisher:objective="세 번째 탑승 / 짐칸 분리 → 백덤블링 → 입자 레이저";break;
+                case AncientProductionPhase.Finisher:objective="세 번째 탑승 / 짐칸 분리 ▶ 백덤블링 ▶ 입자 레이저";break;
                 case AncientProductionPhase.Secured:objective="코어 세 개 확보 / 운송대장 검거";break;
                 default:objective="코어 재고 확인 / 생산장 이동";break;
             }
@@ -448,7 +470,12 @@ namespace Plugin.AncientCivilization
         {
             focus=Vector2.zero;zoom=7.5f;if(!ready||(!Active&&!lane))return false;
             if(!lane){focus=new Vector2(AncientProductionLayout.StockX+6,4.8f);zoom=7;return true;}
-            if(DeckCombat){focus=new Vector2(truck.position.x,4.8f);zoom=6.5f;}
+            if(DeckCombat)
+            {
+                float offset=game.hero.transform.position.x-truck.position.x;
+                focus=new Vector2(truck.position.x+offset*.5f,4.8f);
+                zoom=AncientProductionLayout.DeckCameraZoom(offset,game.View.aspect);
+            }
             else if(sequence.Phase==AncientProductionPhase.Finisher)
             {
                 float close=Mathf.SmoothStep(0,1,sequence.Elapsed/AncientProductionMotion.AlongsideSeconds);
@@ -457,13 +484,30 @@ namespace Plugin.AncientCivilization
                 zoom=Mathf.Max(9.5f,halfSpan/Mathf.Max(.5f,game.View.aspect));
             }
             else if(sequence.Phase==AncientProductionPhase.Secured){focus=new Vector2(truck.position.x-7,4.6f);zoom=6.2f;}
+            else if(sequence.Phase==AncientProductionPhase.Chase||sequence.Phase==AncientProductionPhase.Approach)
+            {
+                float gap=truck.position.x-game.hero.transform.position.x;
+                focus=new Vector2(game.hero.transform.position.x+AncientProductionLayout.RoadCameraLead(gap),4.6f);
+                zoom=AncientProductionLayout.RoadCameraZoom(gap,game.View.aspect);
+            }
             else{focus=new Vector2(game.hero.transform.position.x+7,4.6f);zoom=7.8f;}return true;
         }
         public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
         {actor=null;headOffset=2.2f;if(!ready||!commander||(speaker!="운송대장"&&speaker!="용의자"))return false;actor=commander.transform;headOffset=commander.DialogueHeadHeight;return true;}
+        void UpdateBoardingMast()
+        {
+            float extension=sequence.Phase==AncientProductionPhase.Approach?Mathf.SmoothStep(0,1,sequence.Elapsed/.7f):
+                sequence.Phase==AncientProductionPhase.Boarding?1:sequence.Phase==AncientProductionPhase.Deck?1-Mathf.SmoothStep(0,1,sequence.Elapsed/.5f):0;
+            bool shown=!truckDestroyed&&extension>.001f;
+            boardingMast.enabled=boardingMastLight.enabled=boardingMastCap.enabled=shown;if(!shown)return;
+            float length=3.3f*extension;Vector2 middle=new Vector2(-1.5f,2.7f+length*.5f);
+            boardingMast.transform.localPosition=middle;boardingMast.transform.localScale=new Vector3(.14f,length,1);
+            boardingMastLight.transform.localPosition=middle;boardingMastLight.transform.localScale=new Vector3(.035f,length,1);
+            boardingMastCap.transform.localPosition=new Vector2(-1.5f,2.7f+length);
+        }
         void LateUpdate()
         {
-            if(!ready)return;bool shown=sequence.Phase==AncientProductionPhase.Approach&&boardingReady||sequence.Phase==AncientProductionPhase.Boarding;hook.enabled=shown;
+            if(!ready)return;UpdateBoardingMast();bool shown=sequence.Phase==AncientProductionPhase.Approach&&boardingReady||sequence.Phase==AncientProductionPhase.Boarding;hook.enabled=shown;
             if(hookSlot>=0)game.anchors[hookSlot]=shown?BoardingHook:new Vector2(-100000,-100000);
             if(shown){Vector2 p=BoardingHook+Vector2.up*.15f;for(int i=0;i<4;i++){float a=i*Mathf.PI*.5f;hook.SetPosition(i,p+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.38f);}}
         }
@@ -491,7 +535,7 @@ namespace Plugin.AncientCivilization
                 // The complete objective already appears in the regular top-right HUD.
                 float left=330,span=width-646;GUI.color=Color.white;
                 string title=DeckCombat?captainWindup?"운송대장 / 공격 전조":"운송대장 / 공격 기회":sequence.Phase==AncientProductionPhase.Approach?"공격 중지 / 와이어 승선":sequence.Phase==AncientProductionPhase.Boarding?"트럭 승선 / 와이어 견인":"자동주행 / Space 점프";
-                string cue=DeckCombat?captainWindup?(captainPattern%3==0?"근접 쓸기 / 뒤로 넘거나 거리를 벌리세요":captainPattern%3==1?"물체 투척 / 고정된 궤적을 피하거나 블레이드로 파괴":"낙하 압축판 / 바닥 표식에서 벗어나세요"):"블레이드 공격 · 우클릭 입자 수집 · 좌클릭을 길게 눌러 레이저":sequence.Phase==AncientProductionPhase.Approach?(boardingReady?"점등된 청록 고리를 좌클릭해 트럭에 올라타세요":"트럭 접근 중 / 승선 고리가 켜질 때까지 기다리세요"):sequence.Phase==AncientProductionPhase.Boarding?"움직이는 트럭 지붕으로 견인 중":"노란 표식은 잔재 / 주황 원이 차오르면 폭탄 폭발";
+                string cue=DeckCombat?captainWindup?(captainPattern%3==0?"근접 쓸기 / 뒤로 넘거나 거리를 벌리세요":captainPattern%3==1?"물체 투척 / 고정된 궤적을 피하거나 블레이드로 파괴":"낙하 압축판 / 바닥 표식에서 벗어나세요"):"블레이드 공격 · 우클릭 입자 수집 · 좌클릭 유지 후 놓아 레이저":sequence.Phase==AncientProductionPhase.Approach?(boardingReady?"점등된 청록 고리를 좌클릭해 트럭에 올라타세요":"트럭 접근 중 / 승선 고리가 켜질 때까지 기다리세요"):sequence.Phase==AncientProductionPhase.Boarding?"움직이는 트럭 지붕으로 견인 중":"노란 표식은 잔재 / 주황 원이 차오르면 폭탄 폭발";
                 GUI.Label(new Rect(left,18,span,28),title,caption);GUI.Label(new Rect(left,47,span,44),cue,hint);
             }
             GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;

@@ -27,6 +27,16 @@ namespace Plugin.AncientCivilization
         public static bool IsActive(int step,float elapsed)
         {return Finite(elapsed)&&elapsed>=ActiveStart(step)&&elapsed<ActiveEnd(step);}
 
+        // Enemy/interactive contact is scheduled once when a cut begins. A render
+        // hitch may cross the entire visible active interval; it must not erase an
+        // accepted cut. Physical-object breaking still uses IsActive separately.
+        // CancelBlade clears pending, so pause, hurt and mode changes cannot revive it.
+        public static bool ConsumeScheduledImpact(int step,float elapsed,ref bool pending)
+        {
+            if(!pending||!Finite(elapsed)||elapsed<ImpactTime(step))return false;
+            pending=false;return true;
+        }
+
         public static float SweepProgress(int step,float elapsed)
         {
             if(float.IsNaN(elapsed))return 0;

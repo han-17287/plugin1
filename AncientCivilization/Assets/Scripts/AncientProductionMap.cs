@@ -11,18 +11,25 @@ namespace Plugin.AncientCivilization
             public Sign(float x,float y,string text,float width=300){Point=new Vector2(x,y);Content=new GUIContent(text);Width=width;}
         }
         struct Shard {public Transform Transform;public SpriteRenderer View;public Vector2 Velocity;}
+        struct PressMotion
+        {
+            public float X,HeadFloor;public Transform Rod,Head;
+            public SpriteRenderer RodView,HeadView,Status;
+        }
         AncientGame game;GameObject breach;readonly Shard[] shards=new Shard[8];float breachAge=-1;GUIStyle label;
-        Transform inspectionCarrier;SpriteRenderer stockWarning;Sprite paint;float ambientAge;
+        CapsuleCollider2D officerShape;BoxCollider2D motorcycleShape;
+        Transform inspectionCarrier;SpriteRenderer stockWarning;Sprite paint;float ambientAge,stockAge,beltTravel,pressAge;
+        readonly SpriteRenderer[] beltTreads=new SpriteRenderer[10];readonly PressMotion[] presses=new PressMotion[3];
         public bool BreachOpen {get;private set;}
         readonly Sign[] signs={
             new Sign(-229,4.2f,"교대 통로\nA/D 이동 · Ctrl 달리기 전환"),
             new Sign(-201,5.4f,"교대 공고\n거주 포인트 재산정 대기",200),
             new Sign(-186,3.6f,"운송 벨트\nSpace: 낮은 장애물 넘기"),
-            new Sign(-116,4.5f,"검수 회랑\n좌클릭: 직선 견인 · 가운데 클릭: 스윙"),
+            new Sign(-128,5.8f,"검수 회랑\n좌클릭: 직선 견인 · 가운데 클릭: 스윙"),
             new Sign(-77,7.7f,"작업 고리 지름길 / 아래는 안전한 통로",340),
             new Sign(-26,4.6f,"장비 검수실\n휠 위: 공격 · 짧은 좌클릭: 베기"),
             new Sign(7,7.3f,"장비 검수 배출구 / 훈련용 빈 하우징",330),
-            new Sign(38,4.6f,"코어 재고 관리실 →"),
+            new Sign(38,4.6f,"코어 재고 관리실 ▶"),
             new Sign(60,8.8f,"C-00 예비분 / 별도 계량",260),
             new Sign(80.2f,7.9f,"반출 기록 없음",180),
             new Sign(92,3.6f,"재고 관리 단말\nE: 코어 수량 확인"),
@@ -38,8 +45,26 @@ namespace Plugin.AncientCivilization
         }
         void B(string name,float x,float y,float w,float h,Color color,int order=-5)
         {game.StaticBox(name,new Vector2(x,y),new Vector2(w,h),color,order);}
-        void Prop(int index,float x,float y,float scale=1,int order=-4)
-        {game.WorldBatch.Sprite(AncientArt.ProductionProp(index),new Vector2(x,y),Vector2.one*scale,new Color(.68f,.75f,.78f,.92f),order);}
+        void Prop(int index,float x,float y,float scale=1,int order=-4,bool supported=true)
+        {
+            var sprite=AncientArt.ProductionProp(index);
+            if(supported&&y>0)
+            {
+                // The native crop keeps three transparent pixels below the machine.
+                // Rear-wall stands meet that visible foot edge, without adding collision.
+                float width=sprite.bounds.size.x*scale+.3f;
+                float foot=y+3/AncientProductionPropAtlas.PixelsPerUnit*scale,deckBottom=foot-.16f;
+                Color stand=new Color(.13f,.2f,.23f);
+                B("Grounded rear machine stand",x,foot-.08f,width,.16f,stand,-6);
+                for(int side=-1;side<=1;side+=2)
+                {
+                    float legX=x+side*(width*.5f-.28f),ground=AncientProductionLayout.GroundHeight(legX);
+                    float top=deckBottom+.04f,height=Mathf.Max(.04f,top-ground);
+                    B("Grounded rear machine stand leg",legX,top-height*.5f,.2f,height,stand,-6);
+                }
+            }
+            game.WorldBatch.Sprite(sprite,new Vector2(x,y),Vector2.one*scale,new Color(.68f,.75f,.78f,.92f),order);
+        }
         void Solid(string name,float x,float y,float w,float h)
         {
             var o=new GameObject(name);o.layer=8;o.transform.SetParent(transform,false);o.transform.position=new Vector2(x,y);o.AddComponent<BoxCollider2D>().size=new Vector2(w,h);
@@ -136,9 +161,11 @@ namespace Plugin.AncientCivilization
         void BuildConveyorHall()
         {
             Portal(-164,52,Amber*.55f);
-            B("Conveyor road bed",-167,.055f,18,.11f,new Color(.11f,.17f,.19f),2);
+            // The visible belt surface meets the real ground at y=0; markings sit
+            // just above it so boots do not appear to sink through raised rollers.
+            B("Conveyor road bed",-167,-.055f,18,.11f,new Color(.11f,.17f,.19f),2);
             for(float x=-175;x<=-159;x+=1.3f)
-            {B("Conveyor steel roller",x,.1f,.7f,.14f,Steel,3);B("Conveyor travel mark",x+.18f,.18f,.22f,.05f,Amber,4);}
+            {B("Conveyor steel roller",x,-.07f,.7f,.14f,Steel,3);B("Conveyor fixed roller light",x+.18f,.02f,.22f,.04f,Teal*.7f,4);}
             for(int i=0;i<3;i++)
             {
                 float x=-188+i*18;B("Production press casing",x,5.2f,7.2f,7.6f,Steel*.7f,-7);B("Production press opening",x,4.6f,6.8f,6.8f,Back,-6);
@@ -154,7 +181,7 @@ namespace Plugin.AncientCivilization
                 B("Conveyor safety chain post",x,1.55f,.09f,2.9f,Steel,-5);
                 B("Conveyor safety chain cap",x,3.02f,.24f,.16f,Amber,-4);
             }
-            Prop(6,-138,3.5f,.65f);
+            Prop(6,-138,3.5f,.65f,-4,false);
         }
         void BuildInspectionHall()
         {
@@ -255,7 +282,7 @@ namespace Plugin.AncientCivilization
                 if(section==2){B("Emergency siding frame",x+15,4.2f,.3f,8.4f,Ivory*.45f,-4);B("Emergency siding beacon",x+15,8.65f,.7f,.25f,Amber,-3);}
                 if(((int)((x-left+12)/20))%3==0)
                 {
-                    if(section==1)Prop(6,x+11,2.2f,.95f,-5);
+                    if(section==1)Prop(6,x+11,2.2f,.95f,-5,false);
                     else if(section==2)Prop(3,x+9,1.3f,.88f,-5);
                     B("Tunnel heavy diagonal foot",x+1.6f,1.25f,.9f,2.5f,Steel*.8f,-6);
                     Diagonal("Tunnel heavy diagonal support",x+2.7f,6.3f,5.4f,.32f,-65,Steel*.8f,-6);
@@ -276,6 +303,66 @@ namespace Plugin.AncientCivilization
             CarrierPart("Sample carrier retaining band",new Vector2(.38f,.03f),new Vector2(.14f,.74f),Ivory*.65f,-1);
             var warning=game.Box("Missing inventory status lamp",new Vector2(80.2f,7.02f),new Vector2(.6f,.15f),Amber,1);
             warning.transform.SetParent(transform,true);stockWarning=warning.GetComponent<SpriteRenderer>();
+            for(int i=0;i<beltTreads.Length;i++)
+                beltTreads[i]=AmbientPart("Reused conveyor moving tread "+i,new Vector2(AncientProductionLayout.ConveyorLeft,.025f),new Vector2(.38f,.04f),Amber*.85f,4);
+            for(int i=0;i<presses.Length;i++)
+            {
+                float x=-188+i*18;
+                B("Press fixed upper cylinder",x,7.64f,.48f,.45f,Steel,-2);
+                B("Press safety indicator housing",x+2.7f,7.8f,.46f,.25f,Back,-2);
+                var rod=AmbientPart("Reused press piston rod "+i,new Vector2(x,7.25f),new Vector2(.16f,.55f),Ivory*.7f,-3);
+                var head=AmbientPart("Reused press ram head "+i,new Vector2(x,6.9f),new Vector2(1.1f,.22f),Steel,-3);
+                presses[i]=new PressMotion{X=x,HeadFloor=1.1f+AncientArt.ProductionProp(i==0?0:1).bounds.size.y+.11f,
+                    Rod=rod.transform,Head=head.transform,RodView=rod,HeadView=head,
+                    Status=AmbientPart("Reused press safety indicator "+i,new Vector2(x+2.7f,7.8f),new Vector2(.24f,.11f),Teal,-2)};
+            }
+        }
+        SpriteRenderer AmbientPart(string name,Vector2 point,Vector2 size,Color color,int order)
+        {
+            var part=game.Box(name,point,size,color,order);part.transform.SetParent(transform,true);
+            var view=part.GetComponent<SpriteRenderer>();view.enabled=false;return view;
+        }
+        static bool InAmbientView(Vector2 point,Vector2 size,Vector2 camera,Vector2 halfView)
+        {return Mathf.Abs(point.x-camera.x)<halfView.x+size.x*.5f&&Mathf.Abs(point.y-camera.y)<halfView.y+size.y*.5f;}
+        static void ShowAmbient(SpriteRenderer view,bool visible)
+        {if(view.enabled!=visible)view.enabled=visible;}
+        void TickIndustry(float activeDelta)
+        {
+            bool lower=game.HasSession&&!game.MainMenu&&game.Story.CurrentFloor==0&&
+                !(game.Production&&game.Production.InChaseLane)&&game.View;
+            Vector2 camera=game.View?(Vector2)game.View.transform.position:Vector2.zero;
+            Vector2 halfView=game.View?new Vector2(game.View.orthographicSize*game.View.aspect,game.View.orthographicSize):Vector2.zero;
+            float beltWidth=AncientProductionLayout.ConveyorRight-AncientProductionLayout.ConveyorLeft-.5f;
+            if(lower&&activeDelta>0)
+            {
+                // Hero turns ConveyorDrift(.45) into .45*3.5 metres per game second.
+                beltTravel=Mathf.Repeat(beltTravel+activeDelta*1.575f,beltWidth);
+                pressAge=Mathf.Repeat(pressAge+activeDelta,3.4f);
+            }
+            for(int i=0;i<beltTreads.Length;i++)
+            {
+                float x=AncientProductionLayout.ConveyorLeft+.25f+Mathf.Repeat(beltTravel+i*beltWidth/beltTreads.Length,beltWidth);
+                Vector2 point=new Vector2(x,.025f);
+                bool visible=lower&&InAmbientView(point,new Vector2(.38f,.04f),camera,halfView);
+                ShowAmbient(beltTreads[i],visible);if(visible)beltTreads[i].transform.position=point;
+            }
+            for(int i=0;i<presses.Length;i++)
+            {
+                var press=presses[i];
+                bool visible=lower&&InAmbientView(new Vector2(press.X,7.3f),new Vector2(6.2f,1.7f),camera,halfView);
+                if(!visible){ShowAmbient(press.RodView,false);ShowAmbient(press.HeadView,false);ShowAmbient(press.Status,false);continue;}
+                float cycle=Mathf.Repeat(pressAge+i*.9f,3.4f)/3.4f;
+                float down=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,.36f,cycle));
+                float up=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.48f,.8f,cycle));
+                float compression=down*(1-up),headY=press.HeadFloor+.4f*(1-compression);
+                float rodBottom=headY+.06f,rodHeight=Mathf.Max(.08f,7.52f-rodBottom);
+                Vector2 rodPoint=new Vector2(press.X,rodBottom+rodHeight*.5f),headPoint=new Vector2(press.X,headY);
+                press.Rod.position=rodPoint;press.Rod.localScale=new Vector3(.16f,rodHeight,1);press.Head.position=headPoint;
+                press.Status.color=Color.Lerp(Teal,Amber,compression*.85f);
+                ShowAmbient(press.RodView,InAmbientView(rodPoint,new Vector2(.16f,rodHeight),camera,halfView));
+                ShowAmbient(press.HeadView,InAmbientView(headPoint,new Vector2(1.1f,.22f),camera,halfView));
+                ShowAmbient(press.Status,InAmbientView(new Vector2(press.X+2.7f,7.8f),new Vector2(.24f,.11f),camera,halfView));
+            }
         }
         void CarrierPart(string name,Vector2 offset,Vector2 size,Color color,int order)
         {
@@ -314,20 +401,25 @@ namespace Plugin.AncientCivilization
         {BreachOpen=false;breachAge=-1;if(breach)breach.SetActive(true);foreach(var shard in shards)if(shard.Transform)shard.Transform.gameObject.SetActive(false);}
         void Update()
         {
-            if(!game||!game.hero||!game.Story||game.MainMenu||game.skills||game.Story.DialogueOpen||game.Story.LiftBusy||
-                (game.Journal&&game.Journal.Open)||!Application.isFocused)return;
+            if(!game||!game.hero||!game.Story)return;
+            bool externalPause=game.MainMenu||game.skills||game.Story.DialogueOpen||game.Story.LiftBusy||
+                (game.Journal&&game.Journal.Open)||!Application.isFocused;
+            float activeDelta=externalPause||game.Paused?0:Time.deltaTime;
+            TickIndustry(activeDelta);
             float heroX=game.hero.transform.position.x;
-            bool visibleInspection=!game.hero.bike&&heroX>-145&&heroX<-35&&game.Story.CurrentFloor==0;
+            bool visibleInspection=!game.MainMenu&&!game.hero.bike&&heroX>-145&&heroX<-35&&game.Story.CurrentFloor==0;
             if(inspectionCarrier.gameObject.activeSelf!=visibleInspection)inspectionCarrier.gameObject.SetActive(visibleInspection);
+            if(stockWarning)stockWarning.enabled=!game.MainMenu&&heroX>54&&heroX<107&&game.Story.CurrentFloor==0;
+            if(externalPause)return;
             if(visibleInspection)
             {
-                ambientAge+=Mathf.Min(Time.unscaledDeltaTime,.05f);
+                ambientAge+=activeDelta;
                 inspectionCarrier.localPosition=new Vector2(-119+Mathf.PingPong(ambientAge*1.25f,52),7.55f);
             }
-            if(stockWarning)
+            if(stockWarning&&stockWarning.enabled)
             {
-                stockWarning.enabled=heroX>54&&heroX<107&&game.Story.CurrentFloor==0;
-                stockWarning.color=Color.Lerp(Amber*.55f,Amber,.5f+.5f*Mathf.Sin(Time.unscaledTime*2.2f));
+                stockAge=Mathf.Repeat(stockAge+activeDelta,Mathf.PI*2/2.2f);
+                stockWarning.color=Color.Lerp(Amber*.55f,Amber,.5f+.5f*Mathf.Sin(stockAge*2.2f));
             }
             if(breachAge>=0)
             {
@@ -351,6 +443,15 @@ namespace Plugin.AncientCivilization
             float heroX=game.hero.transform.position.x;
             if(!AncientProductionLayout.InTutorial(heroX)&&!AncientProductionLayout.InChaseLane(heroX))return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,alignment=TextAnchor.MiddleCenter,wordWrap=true};
+            if(!officerShape)officerShape=game.hero.GetComponent<CapsuleCollider2D>();
+            if(!motorcycleShape)motorcycleShape=game.hero.GetComponent<BoxCollider2D>();
+            Collider2D shape=game.hero.bike?(Collider2D)motorcycleShape:officerShape;
+            Rect officerRect=new Rect();
+            if(shape)
+            {
+                Bounds bounds=shape.bounds;Vector3 low=game.View.WorldToScreenPoint(bounds.min),high=game.View.WorldToScreenPoint(bounds.max);
+                officerRect=Rect.MinMaxRect(low.x-10,Screen.height-high.y-10,high.x+10,Screen.height-low.y+10);
+            }
             float scale=Mathf.Clamp(Screen.height/720f,.85f,1.6f);label.fontSize=Mathf.RoundToInt(14*scale);
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;GUI.depth=4;
             foreach(var sign in signs)
@@ -360,6 +461,9 @@ namespace Plugin.AncientCivilization
                 if(screen.z<=0||screen.x<-100||screen.x>Screen.width+100||screen.y<0||screen.y>Screen.height)continue;
                 float width=Mathf.Min(sign.Width*scale,Screen.width-24),height=label.CalcHeight(sign.Content,width)+8*scale;
                 Rect panel=new Rect(screen.x-width*.5f,Screen.height-screen.y-height*.5f,width,height);
+                // A wall hint can be read on approach. During a jump or ceiling zip,
+                // let the body pass in front instead of painting a dark panel over it.
+                if(shape&&panel.Overlaps(officerRect))continue;
                 GUI.color=new Color(.018f,.035f,.045f,.82f);GUI.DrawTexture(panel,Texture2D.whiteTexture);
                 GUI.color=new Color(.74f,.88f,.86f);GUI.Label(panel,sign.Content,label);
             }

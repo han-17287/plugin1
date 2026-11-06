@@ -113,7 +113,7 @@ namespace Plugin.AncientCivilization
                 if(frame.Interactive)
                 {
                     GUI.enabled=enabled&&ready;
-                    clicked=GUI.Button(frame.Footer,complete?"Space / Enter  →":"Space / Enter  전체",hint);
+                    clicked=GUI.Button(frame.Footer,complete?"Space / Enter  ▶":"Space / Enter  전체",hint);
                 }
             }
             finally {GUI.matrix=old;GUI.color=color;GUI.depth=depth;GUI.enabled=enabled;}

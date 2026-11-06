@@ -148,7 +148,7 @@ namespace Plugin.AncientCivilization
             }
             if(hover&&!important)Fill(new Rect(rect.x,rect.y,2,rect.height),new Color(accent.r,accent.g,accent.b,.7f));
             bool clicked=GUI.Button(rect,text,important?primary:secondary);
-            Label(new Rect(rect.xMax-36,rect.y+9,22,30),"→",body,!GUI.enabled?new Color(.25f,.33f,.37f):hover?accent:new Color(.48f,.62f,.68f));
+            Label(new Rect(rect.xMax-36,rect.y+9,22,30),"▶",body,!GUI.enabled?new Color(.25f,.33f,.37f):hover?accent:new Color(.48f,.62f,.68f));
             return clicked;
         }
         void OnGUI()
@@ -184,7 +184,7 @@ namespace Plugin.AncientCivilization
 #endif
                 }
                 Label(new Rect(x+2,top+564,410,24),"F6 효과   F7 소리   F8 프레임 목표",caption,new Color(.48f,.61f,.67f));
-                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v0.19.0",eyebrow,new Color(.38f,.50f,.57f));
+                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v0.20.0",eyebrow,new Color(.38f,.50f,.57f));
                 Label(new Rect(w-334,h-39,280,22),backdropCaption,caption,new Color(.55f,.68f,.73f));
                 if(controls||confirmNew)DrawModal(w,h);
             }
@@ -196,7 +196,7 @@ namespace Plugin.AncientCivilization
             Fill(new Rect(px,py,680,540),new Color(.018f,.037f,.055f,.99f));Fill(new Rect(px,py,680,2),accent);
             Label(new Rect(px+30,py+25,620,42),confirmNew?"새 게임을 시작할까요?":"현장 조작 안내",modalHeading,White);
             string text=confirmNew?"스토리·시민 포인트·코어·업그레이드·체크포인트를 새로 시작합니다. 소리와 그래픽 설정은 유지합니다.":
-                "A/D 또는 방향키 이동 · Space 점프 · Ctrl 달리기\nE 대화·현장 조사·엘리베이터\n\n휠 위 공격 / 휠 아래 와이어\n와이어 좌클릭: 직선 견인 · 가운데 클릭: 스윙\n공격 좌클릭: 짧게 베기 · 길게 조준 후 놓아 레이저\n우클릭: 파괴되어 나온 파란 입자 수집\n\n초반 추격: 자동 전진 · Space 점프 · 좌클릭 와이어 승선\n마지막 추격: E 탑승/하차 · S/↓ 제동 · X 폭발 도약\n대화: Space/Enter 전체 표시 · 다음 말풍선\nTab 기록 · K/Esc 정비 · F 물체 분해\nF6 효과 · F7 소리 · F8 프레임 목표 · F9 성능 표시";
+                "A/D 또는 방향키 이동 · Space 점프 · Ctrl 달리기\nE 대화·현장 조사·엘리베이터\n\n휠 위 공격 / 휠 아래 와이어\n와이어 좌클릭: 직선 견인 · 가운데 클릭: 스윙\n공격 좌클릭: 짧게 베기 · 길게 조준 후 놓아 레이저\n우클릭: 파괴되어 나온 파란 입자 수집\n\n초반 추격: 자동 전진 · Space 점프 · 좌클릭 와이어 승선\n마지막 추격: E 탑승/하차 · S/▼ 제동 · X 폭발 도약\n대화: Space/Enter 전체 표시 · 다음 말풍선\nTab 기록 · K/Esc 정비 · F 물체 분해\nF6 효과 · F7 소리 · F8 프레임 목표 · F9 성능 표시";
             Label(new Rect(px+30,py+85,620,365),text,body,new Color(.74f,.85f,.90f));
             if(confirmNew)
             {

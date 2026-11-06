@@ -102,6 +102,52 @@ namespace Plugin.AncientCivilization.EditorChecks
         {return (int)typeof(AncientCampaign).GetMethod("NearestCitizen",PrivateInstance).Invoke(campaign,null);}
         static void MoveToSector(AncientGame game,int sector)
         {game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(game.Campaign.CurrentRoom)+AncientFieldExpansion.EntranceOf(sector),1.3f));}
+        static void CheckAnchorHaloPool(AncientGame game)
+        {
+            var visuals=game.GetComponent<AncientVisuals>();Assert(visuals,"The actual scene has its initialized visual-effects controller");
+            var halos=(SpriteRenderer[])typeof(AncientVisuals).GetField("anchorHalos",PrivateInstance).GetValue(visuals);
+            var selection=(AncientAnchorLightSelection)typeof(AncientVisuals).GetField("anchorSelection",PrivateInstance).GetValue(visuals);
+            var lamps=(System.Collections.Generic.List<SpriteRenderer>)typeof(AncientVisuals).GetField("lights",PrivateInstance).GetValue(visuals);
+            Assert(halos.Length==64&&selection.Capacity==64&&game.anchors.Count>1000&&lamps.Count<128,"Thousands of gameplay anchors share exactly64 halo renderers instead of entering the ordinary lamp list");
+            var unique=new System.Collections.Generic.HashSet<SpriteRenderer>();foreach(var halo in halos)Assert(halo&&unique.Add(halo),"Each native anchor-halo pool slot owns one distinct renderer");
+            var cranes=(System.Collections.Generic.List<AncientMovingAnchor>)typeof(AncientCampaign).GetField("cranes",PrivateInstance).GetValue(game.Campaign);
+            AncientMovingAnchor crane=null;foreach(var candidate in cranes)if(candidate&&AncientCityLayout.VisualSector(candidate.transform.position.x)==0){crane=candidate;break;}
+            Assert(crane,"The halo motion probe uses an actual lower production crane");
+            int slot=(int)typeof(AncientMovingAnchor).GetField("slot",PrivateInstance).GetValue(crane),originalCount=game.anchors.Count,oldFloor=game.Story.CurrentFloor;
+            Vector2 oldAnchor=game.anchors[slot];Vector3 oldCrane=crane.transform.position,oldCamera=game.View.transform.position;
+            float oldZoom=game.View.orthographicSize,oldAspect=game.View.aspect;bool oldQuality=AncientVisuals.HighQuality,oldMenu=game.MainMenu;
+            var setFloor=typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true);var setMenu=typeof(AncientGame).GetProperty("MainMenu").GetSetMethod(true);
+            var dirty=typeof(AncientVisuals).GetField("anchorSelectionDirty",PrivateInstance);var refresh=typeof(AncientVisuals).GetField("anchorRefreshAt",PrivateInstance);
+            var late=typeof(AncientVisuals).GetMethod("LateUpdate",PrivateInstance);
+            try
+            {
+                AncientVisuals.HighQuality=true;setMenu.Invoke(game,new object[]{false});setFloor.Invoke(game.Story,new object[]{0});
+                game.View.transform.position=new Vector3(oldAnchor.x,oldAnchor.y,-10);game.View.orthographicSize=7.5f;game.View.aspect=16/9f;
+                dirty.SetValue(visuals,true);late.Invoke(visuals,null);int craneHalo=-1;
+                for(int i=0;i<selection.Count;i++)if(selection.SlotAt(i)==slot)craneHalo=i;
+                Assert(craneHalo>=0&&halos[craneHalo].enabled&&((Vector2)halos[craneHalo].transform.position-oldAnchor).sqrMagnitude<.00001f,"A real nearby crane receives a halo at its current selectable hook");
+                Vector2 moved=oldAnchor+new Vector2(.45f,.1f);game.anchors[slot]=moved;crane.transform.position=moved;
+                float future=Time.unscaledTime+1;refresh.SetValue(visuals,future);late.Invoke(visuals,null);
+                Assert((float)refresh.GetValue(visuals)==future&&halos[craneHalo].enabled&&((Vector2)halos[craneHalo].transform.position-moved).sqrMagnitude<.00001f,"The existing halo follows the current moving-anchor position even when selection refresh is not due");
+                setFloor.Invoke(game.Story,new object[]{1});late.Invoke(visuals,null);bool any=false;foreach(var halo in halos)any|=halo.enabled;
+                Assert(!any&&selection.Count==0,"A camera still over the lower route cannot reveal its anchor halos after changing to another floor");
+                setFloor.Invoke(game.Story,new object[]{0});late.Invoke(visuals,null);
+                AncientVisuals.HighQuality=false;late.Invoke(visuals,null);any=false;foreach(var halo in halos)any|=halo.enabled;
+                Assert(!any,"The actual F6 low-effects state disables every anchor halo");
+                AncientVisuals.HighQuality=true;late.Invoke(visuals,null);setMenu.Invoke(game,new object[]{true});late.Invoke(visuals,null);any=false;foreach(var halo in halos)any|=halo.enabled;
+                Assert(!any,"The actual main-menu state disables every anchor halo");setMenu.Invoke(game,new object[]{false});
+                for(int i=0;i<160;i++)game.anchors.Add(oldAnchor+new Vector2((i%16-7.5f)*.03f,(i/16-4.5f)*.03f));
+                late.Invoke(visuals,null);int active=0;foreach(var halo in halos)if(halo.enabled)active++;
+                Assert(active==64&&selection.Count==64&&ReferenceEquals(halos,typeof(AncientVisuals).GetField("anchorHalos",PrivateInstance).GetValue(visuals)),"A crowded native camera reuses the same64 renderers without allocating a halo for each extra anchor");
+            }
+            finally
+            {
+                if(game.anchors.Count>originalCount)game.anchors.RemoveRange(originalCount,game.anchors.Count-originalCount);
+                game.anchors[slot]=oldAnchor;if(crane)crane.transform.position=oldCrane;
+                AncientVisuals.HighQuality=oldQuality;setMenu.Invoke(game,new object[]{oldMenu});setFloor.Invoke(game.Story,new object[]{oldFloor});
+                game.View.transform.position=oldCamera;game.View.orthographicSize=oldZoom;game.View.aspect=oldAspect;dirty.SetValue(visuals,true);late.Invoke(visuals,null);
+            }
+        }
         static void CheckExpertCatwalkGeometry(AncientHero hero)
         {
             Physics2D.SyncTransforms();int grates=0;Vector2 size=hero.GetComponent<CapsuleCollider2D>().size;float standing=size.y*.5f+.01f;
@@ -246,7 +292,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             FieldInfo completed=typeof(AncientCampaign).GetField("completed",PrivateInstance),chapters=typeof(AncientCampaign).GetField("chapters",PrivateInstance);
             int oldCompleted=campaign.CompletedMask,oldChapters=(int)chapters.GetValue(campaign);Vector2 original=hero.transform.position;
             var floorSetter=typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true);
-            AncientMovingAnchor selected=null;Vector3 previous=Vector3.zero,camera=game.View.transform.position;bool enabled=false,active=false,shown=false,nodeEnabled=false,railEnabled=false;int slot=-1;Vector2 savedAnchor=Vector2.zero;SpriteRenderer node=null;LineRenderer rail=null;
+            AncientMovingAnchor selected=null;Vector3 previous=Vector3.zero,camera=game.View.transform.position;bool enabled=false,active=false,shown=false,nodeEnabled=false,latchEnabled=false,railEnabled=false;int slot=-1;Vector2 savedAnchor=Vector2.zero;SpriteRenderer node=null,latch=null;LineRenderer rail=null;
             try
             {
                 Call(campaign,"LeaveFloor");completed.SetValue(campaign,oldCompleted|15);chapters.SetValue(campaign,oldChapters|1);floorSetter.Invoke(game.Story,new object[]{0});Call(campaign,"EnterFloor");
@@ -257,10 +303,13 @@ namespace Plugin.AncientCivilization.EditorChecks
                 selected.gameObject.SetActive(true);selected.enabled=true;
                 Vector2 centre=(Vector2)typeof(AncientMovingAnchor).GetField("centre",PrivateInstance).GetValue(selected);int index=(int)typeof(AncientMovingAnchor).GetField("index",PrivateInstance).GetValue(selected);
                 slot=(int)typeof(AncientMovingAnchor).GetField("slot",PrivateInstance).GetValue(selected);savedAnchor=game.anchors[slot];shown=(bool)typeof(AncientMovingAnchor).GetField("shown",PrivateInstance).GetValue(selected);
-                node=(SpriteRenderer)typeof(AncientMovingAnchor).GetField("node",PrivateInstance).GetValue(selected);rail=(LineRenderer)typeof(AncientMovingAnchor).GetField("rail",PrivateInstance).GetValue(selected);nodeEnabled=node.enabled;railEnabled=rail.enabled;
+                node=(SpriteRenderer)typeof(AncientMovingAnchor).GetField("node",PrivateInstance).GetValue(selected);latch=(SpriteRenderer)typeof(AncientMovingAnchor).GetField("latch",PrivateInstance).GetValue(selected);rail=(LineRenderer)typeof(AncientMovingAnchor).GetField("rail",PrivateInstance).GetValue(selected);nodeEnabled=node.enabled;latchEnabled=latch.enabled;railEnabled=rail.enabled;
+                game.View.transform.position=new Vector3(centre.x,5,-10);typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);
+                Assert(node.enabled&&latch.enabled&&rail.enabled&&((Vector2)latch.transform.position-game.anchors[slot]).sqrMagnitude<.00001f&&latch.color.r>.9f&&latch.color.g>.6f&&latch.color.b<.4f,"The visible gold wire latch marks the exact selectable crane anchor beneath the original hoist mechanism");
+                Assert(node.bounds.max.y<10&&latch.bounds.max.y<10&&rail.GetPosition(0).y+rail.startWidth*.5f<10&&rail.GetPosition(1).y+rail.endWidth*.5f<10,"The actual lower crane mechanism, latch and overhead rail fit below the solid ten-unit ceiling");
                 game.View.transform.position=new Vector3(centre.x+1000,centre.y,-10);selected.transform.position=centre+Vector2.right*99;
                 typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);Vector2 expected=centre+new Vector2(AncientRules.CraneOffset(Time.time,index),0);
-                Assert(((Vector2)selected.transform.position-expected).sqrMagnitude<.00001f&&(game.anchors[slot]-expected).sqrMagnitude<.00001f&&!node.enabled&&!rail.enabled,"An off-screen current-floor crane updates its real moving hook and selectable anchor while both renderers stay culled");
+                Assert(((Vector2)selected.transform.position-expected).sqrMagnitude<.00001f&&(game.anchors[slot]-expected).sqrMagnitude<.00001f&&!node.enabled&&!latch.enabled&&!rail.enabled,"An off-screen current-floor crane updates its real moving hook and selectable anchor while mechanism, latch and rail stay culled");
                 selected.transform.position=centre+Vector2.right*88;game.skills=true;typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);game.skills=false;
                 Assert((Vector2)selected.transform.position==centre+Vector2.right*88&&game.anchors[slot]==expected,"A paused off-screen crane cannot advance motion or its selectable anchor");
                 floorSetter.Invoke(game.Story,new object[]{1});selected.transform.position=centre+Vector2.right*77;typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);
@@ -282,7 +331,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             finally
             {
                 game.skills=false;game.View.transform.position=camera;
-                if(selected){selected.transform.position=previous;selected.enabled=enabled;selected.gameObject.SetActive(active);if(slot>=0)game.anchors[slot]=savedAnchor;if(node)node.enabled=nodeEnabled;if(rail)rail.enabled=railEnabled;typeof(AncientMovingAnchor).GetField("shown",PrivateInstance).SetValue(selected,shown);}
+                if(selected){selected.transform.position=previous;selected.enabled=enabled;selected.gameObject.SetActive(active);if(slot>=0)game.anchors[slot]=savedAnchor;if(node)node.enabled=nodeEnabled;if(latch)latch.enabled=latchEnabled;if(rail)rail.enabled=railEnabled;typeof(AncientMovingAnchor).GetField("shown",PrivateInstance).SetValue(selected,shown);}
                 hero.TravelTo(original);floorSetter.Invoke(game.Story,new object[]{oldFloor});completed.SetValue(campaign,oldCompleted);chapters.SetValue(campaign,oldChapters);Call(campaign,"EnterFloor");
             }
         }
@@ -313,6 +362,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(campaign.CurrentRoom==0&&campaign.CurrentSector==0,"Case 0 begins in sector 1");
                     Assert(campaign.CameraRight-campaign.CameraLeft>AncientCampaignRules.RoomWidth*4,"The camera spans the connected chapter rather than clamping to one case");
                     Assert(LiveEnemies(game)==2,"Exactly two criminals are active in the first sector");
+                    CheckAnchorHaloPool(game);
                     CheckExpertCatwalkGeometry(game.hero);
                     Physics2D.SyncTransforms();
                     for(int sector=0;sector<3;sector++)

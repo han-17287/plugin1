@@ -55,7 +55,7 @@ namespace Plugin.AncientCivilization
             return game.View.ScreenToWorldPoint(Input.mousePosition);
         }
         bool ControlsReady {get{return hero&&game&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted;}}
-        bool PulseInterrupted {get{return !hero||!game||!hero.AttackMode||hero.Wired||hero.MeleeInterrupted||game.won||(game.Sniper&&game.Sniper.InputLocked)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Finale&&game.Finale.Cinematic);}}
+        bool PulseInterrupted {get{return !hero||!game||!hero.AttackMode||hero.Wired||hero.MeleeInterrupted||game.won||(game.Sniper&&game.Sniper.InputLocked)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic);}}
         public void CancelInput(){heldAt=-1;readySignal=false;bladeBufferedUntil=0;if(aim)aim.enabled=false;}
         public void CancelAttacks()
         {CancelInput();CancelBlade();CancelLaser();}
@@ -108,6 +108,10 @@ namespace Plugin.AncientCivilization
         }
         void StartBlade(Vector2 direction)
         {
+            // Input may arrive before Combat.Update on a long frame. Resolve the
+            // previous accepted cut before a new tap can overwrite its pending hit.
+            ResolveScheduledBladeImpact();
+            if(!ControlsReady||!hero.AttackMode||hero.Wired||Charging||Firing)return;
             combo=AncientBladeRules.NextStep(combo,bladeReady,Time.time);
             bladeStarted=Time.time;bladeReady=Time.time+AncientBladeRules.Duration(combo);bladeUntil=bladeReady;bladeHitPending=true;bladeRebounded=false;bladeBufferedUntil=0;
             bladeDirection=direction;
@@ -123,13 +127,14 @@ namespace Plugin.AncientCivilization
             // Incoming physical objects can meet any visible part of the cut, including after contact.
             // Enemy and interactive-target damage still resolves once at its authored contact pose.
             if(!hero.Wired&&Time.time<bladeUntil&&AncientBladeRules.IsActive(combo,Time.time-bladeStarted))ResolvePhysicalBreaks();
-            if(bladeHitPending&&Time.time>=bladeStarted+AncientBladeRules.ImpactTime(combo))
-            {
-                bladeHitPending=false;
-                if(hero.AttackMode&&!hero.Wired&&AncientBladeRules.IsActive(combo,Time.time-bladeStarted))ResolveBladeHit();
-            }
+            ResolveScheduledBladeImpact();
             if(!hero.Wired&&!Charging&&!Firing&&Time.time>=bladeReady&&Time.time<bladeBufferedUntil)
             {Vector2 direction=bufferedDirection;bladeBufferedUntil=0;StartBlade(direction);}
+        }
+        void ResolveScheduledBladeImpact()
+        {
+            if(!AncientBladeRules.ConsumeScheduledImpact(combo,Time.time-bladeStarted,ref bladeHitPending))return;
+            if(hero.AttackMode&&!hero.Wired)ResolveBladeHit();
         }
         void ResolveBladeHit()
         {

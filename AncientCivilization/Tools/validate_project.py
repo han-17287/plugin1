@@ -1,5 +1,5 @@
 """Validate portable Unity project structure and shipped art, without Unity.
-Optional packages: Pillow, tree-sitter, tree-sitter-c-sharp.
+Optional packages: Pillow, tree-sitter, tree-sitter-c-sharp, fonttools.
 This does NOT compile C# or validate gameplay.
 """
 from pathlib import Path
@@ -16,6 +16,34 @@ def check(condition, description):
     if not condition:
         raise AssertionError(description)
     results.append('PASS: ' + description)
+
+
+def validate_ui_font(parser):
+    """Inspect cmap coverage only; this does not run Unity's font renderer."""
+    try:
+        from fontTools.ttLib import TTFont
+    except ImportError:
+        results.append('SKIP: bundled UI glyph coverage (fonttools unavailable)')
+        return
+    with TTFont(ROOT / 'Assets/Resources/Fonts/NeoDunggeunmo.ttf') as font:
+        glyphs = set(font.getBestCmap())
+    used = set()
+    for script in (ROOT / 'Assets/Scripts').glob('*.cs'):
+        data = script.read_bytes()
+        stack = [parser.parse(data).root_node]
+        while stack:
+            node = stack.pop()
+            if node.type in ('string_literal', 'verbatim_string_literal', 'character_literal', 'interpolated_string_expression'):
+                text = data[node.start_byte:node.end_byte].decode('utf-8')
+                text = re.sub(r'\\u([0-9a-fA-F]{4})', lambda match: chr(int(match.group(1), 16)), text)
+                used.update(ord(char) for char in text if ord(char) > 127)
+            else:
+                stack.extend(node.children)
+    check(any(0xAC00 <= value <= 0xD7A3 for value in used), 'runtime glyph inspection includes Korean dialogue')
+    missing = sorted(used - glyphs)
+    check(not missing, 'bundled font covers runtime non-ASCII literal glyphs: ' + str(len(used)) +
+          ('; missing ' + ', '.join(f'U+{value:04X}' for value in missing) if missing else ''))
+    check(all(ord(char) in glyphs for char in '◀▶▲▼'), 'direction hints use glyphs present in the bundled pixel font')
 
 
 def rgba_pixels(image):
@@ -72,7 +100,7 @@ def validate_production_props(Image):
     check(source_x[-2:] == [1773, 1773], 'factory grid retains its partial rightmost column')
     sampled_rows = {y: bytes(1 if pixels[x, y] >= 110 else 0 for x in source_x)
                     for y in set(source_y)}
-    atlas = (ROOT / 'Assets/Scripts/AncientProductionPropAtlas.cs').read_text()
+    atlas = (ROOT / 'Assets/Scripts/AncientProductionPropAtlas.cs').read_text(encoding='utf-8-sig')
     rectangles = [tuple(map(int, match)) for match in
                   re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', atlas)]
     check(len(rectangles) == 8, 'factory prop atlas has eight measured original machinery slices')
@@ -122,7 +150,7 @@ def validate_production_captain(Image):
                 for y in range(height)]
     sampled_rows = {y: bytes(1 if pixels[x, y] >= 110 else 0 for x in source_x)
                     for y in set(source_y)}
-    atlas = (ROOT / 'Assets/Scripts/AncientProductionCaptainAtlas.cs').read_text()
+    atlas = (ROOT / 'Assets/Scripts/AncientProductionCaptainAtlas.cs').read_text(encoding='utf-8-sig')
     pixels_per_unit = float(re.search(r'PixelsPerUnit=([0-9.]+)', atlas)[1])
     check(pixels_per_unit == 200, 'captain measured poses share the authored 200 pixels-per-unit scale')
     rectangles = [tuple(map(int, match)) for match in
@@ -180,25 +208,157 @@ def validate_production_captain(Image):
           'captain recovery retains its actual crouched height instead of stretching to idle height')
 
 
+def validate_production_workers(Image):
+    """Inspect the final padded source and the actual bottom-up native output."""
+    image = Image.open(ROOT / 'Assets/Resources/Art/ProductionWorkers.png').convert('RGBA')
+    width, height = image.size
+    alpha = image.getchannel('A')
+    pixels = alpha.load()
+    source_x = [min(x // 8 * 8 + 4, width - 1) for x in range(width)]
+    source_y = [height - 1 - min((height - 1 - y) // 8 * 8 + 4, height - 1)
+                for y in range(height)]
+    check(source_y[:5] == [0, 0, 0, 0, 7] and source_x[-4:] == [2171] * 4,
+          'worker native alpha measurement preserves both four-pixel partial edge blocks')
+    sampled_rows = {y: bytes(1 if pixels[x, y] >= 110 else 0 for x in source_x)
+                    for y in set(source_y)}
+    atlas = (ROOT / 'Assets/Scripts/AncientProductionWorkerAtlas.cs').read_text(encoding='utf-8-sig')
+    rectangles = [tuple(map(int, match)) for match in
+                  re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', atlas)]
+    roots = [float(value.rstrip('f')) for value in
+             atlas.split('RootX={', 1)[1].split('};', 1)[0].split(',')]
+    feet = [float(value.rstrip('f')) for value in
+            atlas.split('FootY={', 1)[1].split('};', 1)[0].split(',')]
+    ppu = float(re.search(r'PixelsPerUnit=([0-9.]+)', atlas)[1])
+    check(len(rectangles) == len(roots) == len(feet) == 3 and ppu == 240,
+          'worker atlas supplies three measured poses, planted roots and the authored 240ppu scale')
+    # Faint frame guides are present in the untouched source. Only the quantized
+    # output must be transparent; inspecting raw nonzero alpha would be misleading.
+    guides = ((0, 0, 4, height), (0, 0, width, 4), (0, height - 4, width, height),
+              (721, 0, 728, height), (1445, 0, 1452, height))
+    for index, box in enumerate(guides):
+        guide = alpha.crop(box)
+        check(0 < guide.getextrema()[1] < 110,
+              'worker source frame guide remains faint and below native opacity threshold ' + str(index))
+        left, top, right, bottom = box
+        check(not any(1 in sampled_rows[source_y[y]][left:right] for y in range(top, bottom)),
+              'worker actual packed output removes every guide pixel ' + str(index))
+    identities = []
+    baselines = []
+    for worker in range(3):
+        left = worker * 724
+        footprint = [sampled_rows[source_y[y]][left:left + 724] for y in range(height)]
+        opaque_rows = [(row, values.find(1), values.rfind(1)) for row, values in enumerate(footprint)
+                       if 1 in values]
+        check(bool(opaque_rows), 'worker body remains visible after native alpha sampling ' + str(worker))
+        x0 = left + min(first for _, first, _ in opaque_rows)
+        y0 = opaque_rows[0][0]
+        x1 = left + max(last for _, _, last in opaque_rows) + 1
+        y1 = opaque_rows[-1][0] + 1
+        check(left + 40 < x0 < x1 < left + 684 and 40 < y0 < y1 < height - 40,
+              'worker packed body keeps generous inner gutters without frame contamination ' + str(worker))
+        check(rectangles[worker] == (x0 - 3, y0 - 3, x1 - x0 + 6, y1 - y0 + 6),
+              'worker measured crop retains its complete packed body and three-pixel margins ' + str(worker))
+        x, y, w, h = rectangles[worker]
+        boots = [column for column in range(724)
+                 if any(row[column] for row in footprint[y1 - 32:y1])]
+        check(80 <= boots[-1] - boots[0] + 1 <= 180,
+              'worker planted pivot samples a plausible complete boot span ' + str(worker))
+        measured_root = left + (boots[0] + boots[-1] + 1) / 2
+        check(roots[worker] == measured_root and x < roots[worker] < x + w,
+              'worker horizontal pivot matches actual lower-boot alpha instead of carried equipment ' + str(worker))
+        check(feet[worker] == y1 and y + h - feet[worker] == 3,
+              'worker foot baseline retains the same three-pixel transparent lower margin ' + str(worker))
+        check(1.7 <= h / ppu <= 1.85,
+              'worker sprite preserves its measured human height at the shared pixel scale ' + str(worker))
+        check(sum(row.count(1) for row in footprint) > w * h * .45,
+              'worker crop contains substantial opaque body pixels rather than faint padding ' + str(worker))
+        identities.append(b''.join(footprint))
+        baselines.append((y + h - feet[worker]) / ppu)
+    check(len(set(identities)) == 3, 'all three production workers retain distinct packed silhouettes')
+    check(len(set(baselines)) == 1 and baselines[0] == .0125,
+          'all production worker boots share one stable world baseline')
+
+
+def validate_production_truck(Image):
+    """Measure the separate empty opening truck against its physical deck dimensions."""
+    image = Image.open(ROOT / 'Assets/Resources/Art/ProductionTruck.png').convert('RGBA')
+    width, height = image.size
+    alpha = image.getchannel('A')
+    pixels = alpha.load()
+    source_x = [min(x // 8 * 8 + 4, width - 1) for x in range(width)]
+    source_y = [height - 1 - min((height - 1 - y) // 8 * 8 + 4, height - 1)
+                for y in range(height)]
+    check(source_y[:2] == [0, 4] and source_x[-2:] == [1961, 1961],
+          'production truck native sampling keeps its one-row and two-column partial edge blocks')
+    sampled_rows = {y: bytes(1 if pixels[x, y] >= 110 else 0 for x in source_x)
+                    for y in set(source_y)}
+    footprint = [sampled_rows[source_y[y]] for y in range(height)]
+    opaque_rows = [(row, values.find(1), values.rfind(1)) for row, values in enumerate(footprint)
+                   if 1 in values]
+    check(bool(opaque_rows), 'production truck has a substantial native opaque silhouette')
+    x0 = min(first for _, first, _ in opaque_rows)
+    y0 = opaque_rows[0][0]
+    x1 = max(last for _, _, last in opaque_rows) + 1
+    y1 = opaque_rows[-1][0] + 1
+    atlas = (ROOT / 'Assets/Scripts/AncientProductionTruckAtlas.cs').read_text(encoding='utf-8-sig')
+    rectangles = [tuple(map(int, match)) for match in
+                  re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', atlas)]
+    ppu = float(re.search(r'PixelsPerUnit=([0-9.]+)', atlas)[1])
+    root = float(re.search(r'RootX=([0-9.]+)', atlas)[1])
+    foot = float(re.search(r'FootY=([0-9.]+)', atlas)[1])
+    check(len(rectangles) == 1 and rectangles[0] == (x0 - 3, y0 - 3, x1 - x0 + 6, y1 - y0 + 6),
+          'production truck crop encloses complete actual native alpha with three-pixel gutters')
+    x, y, w, h = rectangles[0]
+    check(0 < x < x + w < width and 0 < y < y + h < height,
+          'production truck retains clear outer source gutters')
+    check(ppu == 243 and root == (x0 + x1) / 2 and foot == y1,
+          'production truck metadata aligns its measured body centre and wheel contact edge')
+    boots = [column for column in range(width) if any(row[column] for row in footprint[y1 - 32:y1])]
+    runs = []
+    for column in boots:
+        if not runs or column != runs[-1][-1] + 1:
+            runs.append([column])
+        else:
+            runs[-1].append(column)
+    check(len(runs) == 2 and all(len(run) >= 96 for run in runs),
+          'production truck ground contact comes from two substantial wheel tread spans')
+    pivot_x = (root - x) / w
+    pivot_y = (y + h - foot) / h
+    check(pivot_x == .5 and abs(pivot_y - 3 / h) < 1e-12,
+          'production truck pivot removes the transparent bottom margin from its wheel baseline')
+    wheel_height = (y + h - y1 - pivot_y * h) / ppu
+    roof_height = (foot - y0) / ppu
+    check(abs(wheel_height) < 1e-9, 'production truck actual opaque wheels rest at world ground zero')
+    check(abs(roof_height - 2.7) < .01,
+          'production truck actual opaque roof aligns with the 2.7m playable deck')
+    overhang = ((x1 - x0) / ppu - 6.6) / 2
+    check(0 <= overhang < .2, 'production truck bumper overhang stays below twenty centimetres per side')
+    source = image.load()
+    cyan = sum(1 for yy in set(source_y[200:370]) for xx in set(source_x[240:1240])
+               if source[xx, yy][3] >= 110 and source[xx, yy][0] < 120 and
+               source[xx, yy][1] > 140 and source[xx, yy][2] > 150)
+    check(cyan == 0, 'production truck cargo bay has no baked bright cyan cores after the live cradle is detached')
+
+
 def main():
-    manifest = json.loads((ROOT / 'Packages/manifest.json').read_text())
+    manifest = json.loads((ROOT / 'Packages/manifest.json').read_text(encoding='utf-8-sig'))
     check(set(manifest['dependencies']) == {
         'com.unity.modules.physics2d', 'com.unity.modules.imgui', 'com.unity.modules.audio'
     }, 'required builtin Unity modules declared')
-    check('6000.6.7f1' in (ROOT / 'ProjectSettings/ProjectVersion.txt').read_text(), 'Unity version 6000.6.7f1')
+    check('6000.6.7f1' in (ROOT / 'ProjectSettings/ProjectVersion.txt').read_text(encoding='utf-8-sig'), 'Unity version 6000.6.7f1')
     guids = []
     for asset in (ROOT / 'Assets').rglob('*'):
         if asset.suffix == '.meta':
             check(asset.with_suffix('').exists(), 'metadata target ' + str(asset.relative_to(ROOT)))
-            match = re.search(r'^guid: ([a-f0-9]{32})$', asset.read_text(), re.M)
+            match = re.search(r'^guid: ([a-f0-9]{32})$', asset.read_text(encoding='utf-8-sig'), re.M)
             check(match is not None, '32-character GUID ' + asset.name)
             guids.append(match[1])
         else:
             check(asset.with_name(asset.name + '.meta').exists(), 'metadata coverage ' + asset.name)
     check(len(guids) == len(set(guids)), 'unique asset GUIDs')
     scene = ROOT / 'Assets/Scenes/Main.unity'
-    scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text())[1]
-    check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(), 'Main scene build GUID')
+    scene_guid = re.search(r'guid: (\w+)', scene.with_suffix('.unity.meta').read_text(encoding='utf-8-sig'))[1]
+    check(scene_guid in (ROOT / 'ProjectSettings/EditorBuildSettings.asset').read_text(encoding='utf-8-sig'), 'Main scene build GUID')
     dimensions = {}
     for name in ('City', 'Hero', 'HeroEmitterBody', 'World', 'Rooftop', 'Enemies', 'Scrap', 'Actions', 'Motorcycle', 'Truck', 'Dialogue'):
         path = ROOT / ('Assets/Resources/Art/' + name + '.png')
@@ -207,14 +367,14 @@ def main():
         check(header[:2] == ((1254, 1254) if name == 'Scrap' else (1536, 1024)), name + ' expected image dimensions')
         if name not in ('City', 'Rooftop'):
             check(header[3] == 6, name + ' has RGBA channel')
-        meta = path.with_suffix('.png.meta').read_text()
+        meta = path.with_suffix('.png.meta').read_text(encoding='utf-8-sig')
         check('isReadable: 1' in meta and 'filterMode: 0' in meta and 'textureCompression: 0' in meta,
               name + ' readable point-filtered uncompressed import')
     production_path = ROOT / 'Assets/Resources/Art/ProductionMachinery.png'
     production_header = png_info(production_path)
     check(production_header[:2] == (1774, 887) and production_header[3] == 6,
           'original factory machinery atlas keeps its exact 1774x887 RGBA source')
-    production_meta = production_path.with_suffix('.png.meta').read_text()
+    production_meta = production_path.with_suffix('.png.meta').read_text(encoding='utf-8-sig')
     check(all(value in production_meta for value in
               ('filterMode: 0', 'isReadable: 1', 'textureCompression: 0', 'enableMipMap: 0', 'nPOTScale: 0')),
           'factory source import preserves point filtering, readable pixels, full dimensions and no compression')
@@ -222,11 +382,33 @@ def main():
     captain_header = png_info(captain_path)
     check(captain_header[:2] == (1536, 1024) and captain_header[3] == 6,
           'original captain combat atlas keeps its exact 1536x1024 RGBA source')
-    captain_meta = captain_path.with_suffix('.png.meta').read_text()
+    captain_meta = captain_path.with_suffix('.png.meta').read_text(encoding='utf-8-sig')
     check(all(value in captain_meta for value in
               ('filterMode: 0', 'isReadable: 1', 'textureCompression: 0', 'enableMipMap: 0', 'nPOTScale: 0')),
           'captain source import preserves native point pixels, readable alpha and full dimensions')
-    art = (ROOT / 'Assets/Scripts/AncientArt.cs').read_text()
+    workers_path = ROOT / 'Assets/Resources/Art/ProductionWorkers.png'
+    workers_header = png_info(workers_path)
+    check(workers_header[:2] == (2172, 724) and workers_header[3] == 6,
+          'original padded worker atlas keeps its exact 2172x724 RGBA source')
+    workers_meta = workers_path.with_suffix('.png.meta').read_text(encoding='utf-8-sig')
+    check(all(value in workers_meta for value in
+              ('filterMode: 0', 'isReadable: 1', 'textureCompression: 0', 'enableMipMap: 0', 'nPOTScale: 0')),
+          'worker source import preserves point pixels, readable alpha and non-power-of-two dimensions')
+    worker_limits = [int(value) for value in re.findall(r'^\s*maxTextureSize:\s*(\d+)$', workers_meta, re.M)]
+    check(worker_limits == [4096, 4096],
+          'worker importer and default platform both allow 4096px so the 2172px atlas is never downscaled')
+    truck_path = ROOT / 'Assets/Resources/Art/ProductionTruck.png'
+    truck_header = png_info(truck_path)
+    check(truck_header[:2] == (1962, 801) and truck_header[3] == 6,
+          'original empty production truck keeps its exact 1962x801 RGBA source')
+    truck_meta = truck_path.with_suffix('.png.meta').read_text(encoding='utf-8-sig')
+    check(all(value in truck_meta for value in
+              ('filterMode: 0', 'isReadable: 1', 'textureCompression: 0', 'enableMipMap: 0', 'nPOTScale: 0')),
+          'production truck import keeps point pixels, readable alpha and its measured full dimensions')
+    truck_limits = [int(value) for value in re.findall(r'^\s*maxTextureSize:\s*(\d+)$', truck_meta, re.M)]
+    check(len(truck_limits) == 2 and all(value >= 1962 for value in truck_limits),
+          'production truck import limits cannot shrink its measured source width')
+    art = (ROOT / 'Assets/Scripts/AncientArt.cs').read_text(encoding='utf-8-sig')
     rect_block = art.split('Rect[] cells = {', 1)[1].split('};', 1)[0]
     rects = [tuple(map(int, m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)', rect_block)]
     check(len(rects) == 8, 'eight explicit world asset slices')
@@ -246,13 +428,15 @@ def main():
               'motorcycle component in texture bounds ' + str(i))
     for name in ('ParticleGlow', 'CharacterRim', 'Presentation'):
         shader = ROOT / ('Assets/Resources/Shaders/' + name + '.shader')
-        source = shader.read_text()
+        source = shader.read_text(encoding='utf-8-sig')
         check('Shader "' in source and source.count('CGPROGRAM') == source.count('ENDCG') == 1,
               'shader resource and program delimiters ' + name)
     try:
         from PIL import Image
         validate_production_props(Image)
         validate_production_captain(Image)
+        validate_production_workers(Image)
+        validate_production_truck(Image)
         image = Image.open(ROOT / 'Assets/Resources/Art/Hero.png')
         hero_cells=[(0,0,384,512),(384,0,316,480),(700,0,420,480),(1120,0,416,512),
                     (0,512,424,512),(424,480,312,544),(736,512,450,512),(1186,512,350,512)]
@@ -280,7 +464,7 @@ def main():
         projected = sum(1 for r,g,b,a in rgba_pixels(body_image.crop((640,480,750,565)))
                         if a >= 110 and g > 130 and b > 150 and r < 150)
         check(projected < 30, 'runtime emitter body has no baked wire to duplicate the live helix')
-        atlas = (ROOT / 'Assets/Scripts/AncientCitizenAtlas.cs').read_text()
+        atlas = (ROOT / 'Assets/Scripts/AncientCitizenAtlas.cs').read_text(encoding='utf-8-sig')
         atlas_rects = [tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',atlas.split('Rect[] Bounds={')[1].split('};')[0])]
         walk_rects = [tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',atlas.split('Rect[] WalkBounds={')[1].split('};')[0])]
         check(len(atlas_rects)==25 and len(walk_rects)==16,'measured citizen and walk crop coverage')
@@ -303,7 +487,7 @@ def main():
                 check(rect==atlas_rects[floor*5+slot],'citizen crop matches exact native-grid alpha '+str(floor*5+slot))
                 x,y,w,h=rect;check(x>x0 and y>y0 and x+w<x0+512 and y+h<y0+512,'citizen silhouette clear gutter '+str(floor*5+slot))
                 px=citizen_image.load();identities.append(tuple(px[x0+xx+4,y0+yy+3] for xx,yy in sorted(shape)))
-            meta=path.with_suffix('.png.meta').read_text()
+            meta=path.with_suffix('.png.meta').read_text(encoding='utf-8-sig')
             check('isReadable: 1' in meta and 'filterMode: 0' in meta,'citizen point readable import '+str(floor))
         check(len(set(identities))==25,'all twenty-five citizen appearances are distinct')
         walk_image=Image.open(ROOT / 'Assets/Resources/Art/CitizensWalk.png')
@@ -318,7 +502,7 @@ def main():
         swing_path=ROOT / 'Assets/Resources/Art/HeroSwing.png'
         check(png_info(swing_path)[:2]==(1536,1024),'swing PNG integrity and dimensions')
         swing_image=Image.open(swing_path)
-        swing_atlas=(ROOT / 'Assets/Scripts/AncientSwingAtlas.cs').read_text()
+        swing_atlas=(ROOT / 'Assets/Scripts/AncientSwingAtlas.cs').read_text(encoding='utf-8-sig')
         swing_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',swing_atlas)]
         check(len(swing_rects)==8,'eight distinct swing/release sprite crops')
         shapes=[]
@@ -332,7 +516,7 @@ def main():
         validate_blade_atlas(ROOT,check,png_info)
         backdrop_path=ROOT / 'Assets/Resources/Art/DistrictBackdrops.png'
         check(png_info(backdrop_path)[:2]==(1536,1024),'five-district backdrop atlas PNG integrity and dimensions')
-        backdrop_source=(ROOT / 'Assets/Scripts/AncientBackdropAtlas.cs').read_text()
+        backdrop_source=(ROOT / 'Assets/Scripts/AncientBackdropAtlas.cs').read_text(encoding='utf-8-sig')
         backdrop_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',backdrop_source)]
         check(len(backdrop_rects)==5,'one measured background panorama for each city floor')
         backdrop_image=Image.open(backdrop_path).convert('RGBA');backdrop_shapes=[]
@@ -342,7 +526,7 @@ def main():
             region=backdrop_image.crop((x,y,x+w,y+h));backdrop_shapes.append(region.tobytes())
             check(region.getchannel('A').getextrema()[0]>=250,'district panorama covers the distant background without holes '+str(i))
         check(len(set(backdrop_shapes))==5,'all five district panoramas are distinct')
-        backdrop_meta=backdrop_path.with_suffix('.png.meta').read_text()
+        backdrop_meta=backdrop_path.with_suffix('.png.meta').read_text(encoding='utf-8-sig')
         check(all(v in backdrop_meta for v in ('filterMode: 0','isReadable: 1','textureCompression: 0')),'district atlas uses point filtering and uncompressed readable import')
         for field in ('PivotPixels','EmitterPixels'):
             block=swing_atlas.split(field)[1].split('};')[0]
@@ -350,7 +534,7 @@ def main():
             check(len(points)==8,'swing '+field+' metadata coverage')
             for i,(px,py) in enumerate(points):
                 x,y,w,h=swing_rects[i];check(x<=px<x+w and y<=py<y+h,'swing '+field+' stays in its pose '+str(i))
-        boss_atlas=(ROOT / 'Assets/Scripts/AncientBossAtlas.cs').read_text()
+        boss_atlas=(ROOT / 'Assets/Scripts/AncientBossAtlas.cs').read_text(encoding='utf-8-sig')
         boss_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',boss_atlas)]
         check(len(boss_rects)==36,'six bosses each have six measured poses')
         for boss in range(6):
@@ -366,7 +550,7 @@ def main():
             check(len(set(poses))==6,'boss has six distinct silhouettes '+str(boss))
         equipment=ROOT / 'Assets/Resources/Art/SniperEquipment.png'
         check(png_info(equipment)[:2]==(1536,1024),'sniper equipment PNG integrity and dimensions')
-        equip_source=(ROOT / 'Assets/Scripts/SniperEquipmentArt.cs').read_text()
+        equip_source=(ROOT / 'Assets/Scripts/SniperEquipmentArt.cs').read_text(encoding='utf-8-sig')
         equip_rects=[tuple(map(int,m)) for m in re.findall(r'new Rect\((\d+),(\d+),(\d+),(\d+)\)',equip_source)]
         check(len(equip_rects)==6,'six separate physical sniper equipment pieces')
         equipment_image=Image.open(equipment)
@@ -443,14 +627,15 @@ def main():
         for script in (ROOT / 'Assets').rglob('*.cs'):
             tree = parser.parse(script.read_bytes())
             check(not tree.root_node.has_error, 'C# syntax ' + script.name)
+        validate_ui_font(parser)
     except ImportError:
         results.append('SKIP: C# syntax parser (tree-sitter packages unavailable)')
-    runtime = '\n'.join(p.read_text() for p in (ROOT / 'Assets/Scripts').glob('*.cs'))
+    runtime = '\n'.join(p.read_text(encoding='utf-8-sig') for p in (ROOT / 'Assets/Scripts').glob('*.cs'))
     check('.GetInstanceID(' not in runtime, 'active project avoids obsolete numeric Unity instance IDs')
     check('FindFirstObjectByType' not in runtime, 'bootstrap uses unsorted supported Unity object lookup')
     for spoiler in ('옛 친구', '옛 동료', '명아', '너였어?', '이제야 알아보네'):
         check(spoiler not in runtime, 'first-run script withholds friendship reveal: ' + spoiler)
-    campaign = (ROOT / 'Assets/Scripts/AncientCampaignData.cs').read_text()
+    campaign = (ROOT / 'Assets/Scripts/AncientCampaignData.cs').read_text(encoding='utf-8-sig')
     check(campaign.count('조커') == 5, 'five sparse Joker mentions across city resident dialogue')
     check('new Line("치안경찰"' not in runtime, 'protagonist script retains a consistent canonical speaker')
     results.append('NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build')

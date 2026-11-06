@@ -1,4 +1,4 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.19.0
+# PLUGIN — ANCIENT CIVILIZATION v0.20.0
 
 한국인 하층 치안경찰 **백 경위**의 도시 수사를 플레이하는 Unity **6000.6.7f1**용 2D 도트 액션 소스 프로젝트입니다. 설정상 본명은 내부 데이터에 유지하며 초반 화면과 대화에서는 백 경위로 부릅니다.
 
@@ -8,7 +8,7 @@
 
 대화는 인게임 캐릭터 곁의 작은 말풍선으로 표시합니다. 한국어가 한 글자씩 나오고 긴 대사는 페이지로 나눕니다. 통신관의 무전에는 무전기 아이콘이 붙습니다. 캐릭터를 가리는 큰 초상화나 화면 전체를 어둡게 만드는 대화 덮개는 사용하지 않습니다.
 
-층마다 담당자에게 **한 번 임무를 듣고 긴 연속 맵의 동쪽 목적지까지 이동**합니다. 도입부 128단위, 수사 이정표 네 곳(각 624), 연결 통로 세 곳(각 64), 목적지 96을 합쳐 층당 2,912단위입니다. 각 이정표의 세 목표와 적 여섯 명을 해결하고 동쪽 끝에 도달하면 다음으로 이어집니다. 위치·속도·와이어를 초기화하거나 소장에게 되돌아가 보고하지 않습니다. 결과·주민 반응·단서는 움직이는 동안 순차 무전으로 전달합니다.
+검거 후 하층 수사로는 무전 지시로 바로 열립니다. 이후 층은 담당자에게 **한 번 임무를 듣고 긴 연속 맵의 동쪽 목적지까지 이동**합니다. 도입부 128단위, 수사 이정표 네 곳(각 624), 연결 통로 세 곳(각 64), 목적지 96을 합쳐 층당 2,912단위입니다. 각 이정표의 세 목표와 적 여섯 명을 해결하고 동쪽 끝에 도달하면 다음으로 이어집니다. 위치·속도·와이어를 초기화하거나 소장에게 되돌아가 보고하지 않습니다. 결과·주민 반응·단서는 움직이는 동안 순차 무전으로 전달합니다.
 
 일반 경로는 지상 통로이며, 지정된 다섯 이정표의 두 번째 구간에 층별 점프·와이어 기믹을 유지합니다. 구간별 적 최대 2명, 거점 저장·재도전과 입자 재채취를 유지합니다. 주민은 도입부·연결 통로·목적지에서 선택적으로 대화할 수 있습니다. 뒤처진 보호 대상은 확보한 지상 통로에서만 빠르게 따라오며, 입자가 빈 전력 수광부는 재채취 패널로 안내합니다. 자세한 경로는 [FIELD_EXPANSION_KO.md](FIELD_EXPANSION_KO.md)에 있습니다.
 
@@ -24,7 +24,7 @@ ZIP을 새 폴더에 풀고 Unity Hub에서 `AncientCivilization` 폴더를 6000
 
 ## 이번에 실제 추가한 내용
 
-v0.19.0은 하층 개선판입니다. 고정된 안전 훈련 물체로 베기→수집→레이저를 한 단계씩 안내하고, 익명 작업자 세 명·생활 소품·빈 코어 자리·낮은 스윙 고리 세 곳을 추가했습니다. 대장의 세 전조와 반격 시간, 신관·위험 범위, 지붕 점프의 운반 속도, 차량 내구도 HUD를 다듬었습니다. 피니셔의 블레이드 전개·코어 분리·백덤블링·착지와 생존 검거도 연결했습니다. 재접속 격벽/체크포인트, 재도전 지붕 복구, 엘리베이터 안내와 포커스 정지를 수정했습니다. 자세한 내역은 CHANGELOG.md에 있습니다.
+v0.20.0은 하층 개선본입니다. 움직이는 트럭에 도착해도 풀리지 않던 와이어, 긴 프레임에 빠지던 베기 피해와 추격 카메라를 수정했습니다. 전용 작업자·운송대장 도트, 빈 트럭과 분리되는 코어 세 개, 움직이는 공장 설비를 추가했습니다. 검거 뒤 무전 지시로 수사로를 바로 이어 가며, 와이어 고리 빛은 화면 주변64개 풀로 표시합니다. 생산장 훈련·선택 스윙 경로·두 차례 차량/갑판 전투와 마지막 회수 컷신을 유지하며, 이동과 다음 행동을 가리던 HUD를 줄였습니다. 자세한 내역은 CHANGELOG.md에 있습니다.
 
 - 생산장까지362단위의 쉬운 재고 점검 경로를 새로 만들었습니다. 교대 통로·벨트·검수 회랑·재고 관리실과 낮은 점프 화물·완만한 경사로·선택 와이어 발판을 사용합니다. 지상 경로는 안전하게 이어집니다.
 - 재고 단말 E로120기/117기 불일치를 보고하면, 세 번째 말풍선이 나오던 도중 옆 격벽이 터지고 코어 적재 트럭이 도주합니다.
@@ -84,7 +84,7 @@ v0.19.0은 하층 개선판입니다. 고정된 안전 훈련 물체로 베기�
 | 와이어 좌클릭 / 가운데 클릭 | 충돌을 검사하는 즉시 직선 견인 / 스윙 |
 | 우클릭 유지 | 파괴되어 나온 입자 수집, 두 모드 공통 |
 | F · S/↓ · X | 보조 물체 분해 · 차량 제동 · 탑승 차량 폭발 도약 |
-| Tab · K/Esc · H | 순찰 기록 · 정비/재도전 · 하단 조작 안내 |
+| Tab · K/Esc · H | 순찰 기록 · 정비/재도전 · 조작 안내 펼치기/닫기 |
 | F6 · F7 · F8 · F9 · F10 | 효과 품질 · 소리 · 목표 FPS · 측정 표시 · CSV 기록 |
 | 대화 중 Space/Enter | 현재 페이지 전체 표시 / 다음 입력으로 다음 페이지·대사 |
 | 탈취한 저격수 포탑에서 E / 좌클릭 | 탑승·하차 / 마우스로 조준해 압축 발사 |
@@ -104,10 +104,12 @@ v0.19.0은 하층 개선판입니다. 고정된 안전 훈련 물체로 베기�
 - PERFORMANCE_KO.md: F9/F10 측정 방법과 한계.
 - VALIDATION.txt: 실행한 검사 결과.
 
-`python Tools/validate_project.py`는 PNG·GUID·분할·C# 문법·관계 공개 금지를 검사합니다. 선택 의존성은 Pillow, tree-sitter, tree-sitter-c-sharp입니다. `dotnet run --project Tools/RulesChecks.csproj`는 .NET 8 SDK에서 독립 규칙을 검사합니다. `dotnet run --project Tools/SniperChecks.csproj`는 저격수 전용 순수 규칙을 검사합니다. `Tools/PulseChecks.csproj`, `Tools/MovementChecks.csproj`, `Tools/BossReadabilityChecks.csproj`, `Tools/ProjectileOrderingChecks.csproj`에는 발사 중복 피해·점프·보스 예고/피해 규칙 검사가 있습니다. 전체 독립 검사는 .NET8 SDK와 Python이 있는 환경에서 `python Tools/run_checks.py`로 한 번에 실행할 수 있습니다. 이 명령은 Unity를 실행하지 않습니다. 게임 실행에 Python/.NET SDK는 필요하지 않습니다.
+`python Tools/validate_project.py`는 PNG·GUID·분할·C# 문법·관계 공개 금지를 검사합니다. 선택 의존성은 Pillow, tree-sitter, tree-sitter-c-sharp, fonttools입니다. `dotnet run --project Tools/RulesChecks.csproj`는 .NET 8 SDK에서 독립 규칙을 검사합니다. `dotnet run --project Tools/SniperChecks.csproj`는 저격수 전용 순수 규칙을 검사합니다. `Tools/PulseChecks.csproj`, `Tools/MovementChecks.csproj`, `Tools/BossReadabilityChecks.csproj`, `Tools/ProjectileOrderingChecks.csproj`에는 발사 중복 피해·점프·보스 예고/피해 규칙 검사가 있습니다. 전체 독립 검사는 .NET8 SDK와 Python이 있는 환경에서 `python Tools/run_checks.py`로 한 번에 실행할 수 있습니다. 이 명령은 Unity를 실행하지 않습니다. 게임 실행에 Python/.NET SDK는 필요하지 않습니다. 검사 도구의 의존성은 `python -m pip install -r Tools/requirements-checks.txt`로 설치합니다.
 
 실제 Unity 6000.6.7f1의 컴파일·임포트·셰이더·Play Mode·전체 완주·FPS·플레이어 빌드는 이 환경에서 실행하지 못했습니다. 보조 구버전 참조 DLL 타입 검사는 실제 Unity 6 검증을 대신하지 않습니다. 한국어 폰트 Neo둥근모의 SIL OFL 라이선스는 Assets/Resources/Fonts/LICENSE.txt에 있습니다.
 
 ## 별도 콘셉트 영상
 
 [수정된 블레이드 MP4](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/Video/Officer_Blade_Concept_60fps.mp4)는 12초·1920×1080·60fps의 별도 애니매틱입니다. 전개 전 팔을 수정하고 같은 자세에서 칼날이 뻗어나오도록 카메라·전개·효과를 새로 렌더링했습니다. 정지 이미지 기반 합성으로, 게임 플레이 녹화나 연속 캐릭터 동작 영상이 아닙니다. 영상은 Unity ZIP과 별도로 제공합니다. [영상 설명](https://github.com/han-17287/plugin1/blob/ancient-civilization-prototype/Video/README_KO.md).
+
+소스 ZIP 재생성은 프로젝트와 ArtReferences를 나란히 둔 뒤 `python Tools/package_project.py`로 실행합니다. Library·빌드 캐시·작업용 폴더는 제외하고 CRC·원본 바이트 일치·SHA256을 검사합니다. 이 명령은 Unity 플레이어를 빌드하지 않습니다.

@@ -30,7 +30,7 @@ namespace Plugin.AncientCivilization
         public AncientProductionMap ProductionMap {get;private set;}
         public AncientProductionPursuit Production {get;private set;}
         public AncientProductionResidents ProductionResidents {get;private set;}
-        public bool skills, won, bossDefeated, showHelp = true;
+        public bool skills, won, bossDefeated, showHelp;
         public bool MainMenu {get;private set;}
         public bool HasSession {get;private set;}
         public bool HasSavedProgress {get{return Saved("questStage")!=0||Saved("started")!=0||Saved("checkpoint")!=0||Saved("cores")!=0||Saved("credits")!=0||Saved("kills")!=0||Saved("score")!=0||Saved("bike")!=0||Saved("jump")!=0||Saved("capacity")!=0||Saved("armor")!=0||Saved("boss")!=0;}}
@@ -329,6 +329,9 @@ namespace Plugin.AncientCivilization
         public void SnapCameraToHero()
         {
             cameraFollow=new Vector3(hero.transform.position.x+4,Mathf.Max(4.6f,hero.transform.position.y+1),-10);
+            Vector2 productionFocus;float productionZoom;
+            if(Production&&Production.TryCamera(out productionFocus,out productionZoom))
+            {cameraFollow=new Vector3(productionFocus.x,productionFocus.y,-10);view.orthographicSize=productionZoom;}
             view.transform.position=cameraFollow;
         }
         public void BlockGameplayInput(){inputReadyFrame=Time.frameCount+1;}
@@ -386,7 +389,10 @@ namespace Plugin.AncientCivilization
             if(Production&&Production.TryCamera(out productionFocus,out productionZoom))
             {target=new Vector3(productionFocus.x,productionFocus.y,-10);if(!dialogue)zoom=productionZoom;}
             if(dialogue)target=new Vector3(dialogueFocus.x,dialogueFocus.y,-10);
-            view.orthographicSize=Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
+            // A fast ceiling zip can separate the officer from the moving deck faster
+            // than a zoom-out lerp. Expand immediately; ease back into the close fight.
+            view.orthographicSize=Production&&Production.DeckCombat&&zoom>view.orthographicSize?zoom:
+                Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
             cameraFollow=Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
             var p=cameraFollow;
             if(shake>0&&!skills)
@@ -510,7 +516,7 @@ namespace Plugin.AncientCivilization
                 if(showHelp&&!skills&&!boss&&!won)
                 {
                     Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
-                    GUI.Label(new Rect(28,h-87,w-56,70),"A/D 이동 · Ctrl 달리기 · Space 점프 · E 상호작용 · Tab 순찰 기록\n휠 위 공격 / 아래 와이어 · 좌클릭 베기/견인 · 길게 조준 후 놓아 레이저 · 우클릭 입자 수집 · 가운데 클릭 스윙",small);
+                    GUI.Label(new Rect(28,h-87,w-56,70),"A/D 이동 · Ctrl 달리기 · Space 점프 · E 상호작용 · Tab 순찰 기록 · H 안내 닫기\n휠 위 공격 / 아래 와이어 · 좌클릭 베기/견인 · 길게 조준 후 놓아 레이저 · 우클릭 입자 수집 · 가운데 클릭 스윙",small);
                 }
                 if(skills)
                 {
@@ -534,6 +540,7 @@ namespace Plugin.AncientCivilization
                     GUI.Label(new Rect(28,162,90,22),"좌클릭 / 조준",small);
                     Bar(new Rect(120,156,74,4),hero.CaptureEnergy/100f,Orange);
                     GUI.Label(new Rect(120,162,100,22),"입자",small);
+                    if(!hero.bike&&!boss)GUI.Label(new Rect(220,162,90,22),showHelp?"H 닫기":"H 조작키",small);
                     if(hero.bike)
                     {
                         Bar(new Rect(220,156,84,4),hero.bikeHP/80,Cyan);
@@ -628,8 +635,8 @@ namespace Plugin.AncientCivilization
         float wireAttachedAt,wireLength,wireMinLength,swingDirection,arcTravel,momentumUntil,lastWireRelease=-10;
         Vector2 previousRadial,wireSurfaceNormal;int wireChain;bool wireZip;
         readonly RaycastHit2D[] zipCastHits=new RaycastHit2D[16];ContactFilter2D zipCastFilter;
-        AncientEnemy wireEnemy,wireContactTarget;Transform wireMovingAnchor;Vector2 wireMovingLocal;float wireContactUntil;
-        bool wired,airJumpUsed;float axis;int combo;
+        AncientEnemy wireEnemy,wireContactTarget;Transform wireMovingAnchor;Rigidbody2D wireMovingBody;Vector2 wireMovingLocal,wireCarrierVelocity,wireFinishGoal;float wireContactUntil;
+        bool wired,airJumpUsed,wireFinishPending;float axis;int combo;
         Sprite[] frames,bladeFrames;
         float actionStarted,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
         bool wasGrounded,cutJump,jumpHeld;float strikeFacing;
@@ -737,7 +744,12 @@ namespace Plugin.AncientCivilization
             {
                 bool used=g.Story.TryProductionStock()||(g.ProductionResidents&&g.ProductionResidents.TryInteract())||(g.Sniper&&g.Sniper.TryInteract())||(g.Campaign&&g.Campaign.TryInteract())||g.Story.TryUseLift()||(g.Finale&&g.Finale.TryInteract())||(g.Cases&&g.Cases.TryInteract())||
                     (g.City&&g.City.TryInteract())||(g.Traversal&&g.Traversal.TryInteract());
-                if(!used){if(g.Story.Stage<5)g.Notice("생산장 재고 단말 앞에서 E로 수량을 확인하세요.",2);else InteractBike();}
+                if(!used)
+                {
+                    if(g.Story.Stage<5)g.Notice("생산장 재고 단말 앞에서 E로 수량을 확인하세요.",2);
+                    else if(bike||g.Finale&&g.Finale.Active)InteractBike();
+                    else g.Notice("주민·단말·엘리베이터 앞에서 E / 순찰 기록은 Tab",1.5f);
+                }
                 if(g.Paused||!g.GameplayInputReady){ClearJumpInput();return;}
             }
             if(Input.GetKeyDown(KeyCode.X)&&bike&&!(g.Production&&g.Production.Active))ExplodeBike();
@@ -893,12 +905,30 @@ namespace Plugin.AncientCivilization
             }
             if(!bike||wired)BikeSkid=0;
             if(wired)airborneSurface=0;
-            if(wired&&wireMovingAnchor){anchor=wireMovingAnchor.TransformPoint(wireMovingLocal);if(wireJoint)wireJoint.connectedAnchor=anchor;}
+            if(wired&&wireMovingAnchor)
+            {
+                Vector2 next=wireMovingAnchor.TransformPoint(wireMovingLocal);
+                wireCarrierVelocity=wireMovingBody?wireMovingBody.linearVelocity:Vector2.ClampMagnitude((next-anchor)/Time.fixedDeltaTime,AncientZipRules.Speed);
+                anchor=next;if(wireJoint)wireJoint.connectedAnchor=anchor;
+            }
             // A destroyed Unity object compares equal to null but still marks an enemy attachment.
             if(wired&&!object.ReferenceEquals(wireEnemy,null))
             {
                 if(!wireEnemy||!wireEnemy.IsAlive){StopWire(false);velocity=body.linearVelocity;}
                 else anchor=wireEnemy.AimPoint;
+            }
+            bool zipCompleted=false;
+            if(wired&&wireZip&&wireFinishPending)
+            {
+                wireFinishPending=false;
+                // Check the destination of the completed physics step, not the moving
+                // latch's newer position. A carrier otherwise stays one step ahead forever.
+                Vector2 arrived=wireFinishGoal-body.position;
+                if(AncientZipRules.Arrived(arrived.x,arrived.y))
+                {
+                    float carrier=wireMovingAnchor?wireCarrierVelocity.x:0;
+                    StopWire(false);airborneSurface=carrier;velocity=new Vector2(carrier,0);zipCompleted=true;
+                }
             }
             if(wired)
             {
@@ -919,6 +949,8 @@ namespace Plugin.AncientCivilization
                     }
                     else if(blocked||AncientZipRules.Arrived(remaining.x,remaining.y)||age>AncientZipRules.MaximumSeconds||delta.sqrMagnitude>36*36)
                     {StopWire(false);if(!blocked)velocity=Vector2.zero;}
+                    else if(!wireEnemy&&AncientZipRules.ReachesThisStep(remaining.x,remaining.y,travel.x,travel.y))
+                    {wireFinishPending=true;wireFinishGoal=goal;}
                 }
                 else
                 {
@@ -938,7 +970,7 @@ namespace Plugin.AncientCivilization
                     }
                 }
             }
-            else
+            else if(!zipCompleted)
             {
                 // Air control remains relative to the support at takeoff. A jump on
                 // a moving roof must not silently brake the officer behind the truck.
@@ -1100,7 +1132,7 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;Vector2 boardingHook;
             if(!body||!bike||!g||g.Paused||!g.GameplayInputReady||Time.time<wireReady||!g.Production||!g.Production.TryBoardWire(selected,out boardingHook))return false;
-            DismountProductionBike();ZipMode=true;AttachWire(boardingHook,null,Vector2.up);return wired;
+            DismountProductionBike();ZipMode=true;AttachWire(boardingHook,null,Vector2.down);return wired;
         }
         void AttachWire(Vector2 selected,AncientEnemy target,Vector2 normal)
         {
@@ -1109,6 +1141,7 @@ namespace Plugin.AncientCivilization
             if(wired&&!different&&wireZip==ZipMode)return;
             bool chain=(wired||Time.time-lastWireRelease<1.2f)&&different;
             if(wired)StopWire(false);
+            wireFinishPending=false;wireMovingBody=null;wireCarrierVelocity=Vector2.zero;
             wireChain=chain?Mathf.Min(wireChain+1,5):1;
             if(g.Traversal)g.Traversal.TryMovingAnchor(selected,out wireMovingAnchor);
             if(!wireMovingAnchor&&g.Campaign)g.Campaign.TryMovingAnchor(selected,out wireMovingAnchor);
@@ -1120,6 +1153,7 @@ namespace Plugin.AncientCivilization
                     wireMovingAnchor=moving.attachedRigidbody.transform;
             }
             wireMovingLocal=wireMovingAnchor?(Vector2)wireMovingAnchor.InverseTransformPoint(selected):Vector2.zero;
+            if(wireMovingAnchor)wireMovingBody=wireMovingAnchor.GetComponent<Rigidbody2D>();
             anchor=selected;wireSurfaceNormal=normal;wireEnemy=target;wired=true;wireZip=ZipMode;airborneSurface=0;wireAttachedAt=Time.time;wireReady=Time.time+(target?.45f:.18f);
             if(wireEnemy)
             {
@@ -1153,7 +1187,7 @@ namespace Plugin.AncientCivilization
         {
             bool wasWired=wired;
             if(wireEnemy){wireContactTarget=wireEnemy;wireContactUntil=Time.time+.3f;}
-            wireEnemy=null;wireMovingAnchor=null;wired=false;if(wireJoint)wireJoint.enabled=false;
+            wireEnemy=null;wireMovingAnchor=null;wireMovingBody=null;wireFinishPending=false;wireCarrierVelocity=Vector2.zero;wired=false;if(wireJoint)wireJoint.enabled=false;
             if(!wasWired)return;
             lastWireRelease=Time.time;momentumUntil=Time.time+.7f;
             if(launch&&body)

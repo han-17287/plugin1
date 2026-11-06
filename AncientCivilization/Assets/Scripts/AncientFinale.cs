@@ -114,7 +114,7 @@ namespace Plugin.AncientCivilization
             var enemy=new GameObject("Truck special-operations guard").AddComponent<AncientEnemy>();enemy.Initialize(1);
             enemy.ConfigureDistrict(4,false);enemy.transform.SetParent(truck.transform,false);enemy.transform.localPosition=new Vector2(.7f,2.5f);
             game.enemies.Add(enemy);crew.Add(enemy);Persist();game.SnapCameraToHero();game.BlockGameplayInput();
-            game.Notice("최상층 → 최하층 추격 / 배치된 오토바이는 E · 점프와 와이어로 트럭 지붕에 접근",5);
+            game.Notice("최상층 ▶ 최하층 추격 / 배치된 오토바이는 E · 점프와 와이어로 트럭 지붕에 접근",5);
         }
         public bool Retry()
         {if(phase!=2)return false;BeginChase();return true;}
