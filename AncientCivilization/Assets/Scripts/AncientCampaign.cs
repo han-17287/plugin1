@@ -21,6 +21,7 @@ namespace Plugin.AncientCivilization
         readonly SpriteRenderer[] caseExits=new SpriteRenderer[20];readonly BoxCollider2D[] caseExitSolids=new BoxCollider2D[20];
         readonly SpriteRenderer[] chapterEntries=new SpriteRenderer[5];readonly BoxCollider2D[] chapterEntrySolids=new BoxCollider2D[5];
         readonly int[] routeTasks=new int[20],routeCheckpoints=new int[20],routeDefeated=new int[20];
+        AncientWorkshopCircuit workshopCircuit;
         public static readonly string[] ProgressKeys=BuildProgressKeys();
         static string[] BuildProgressKeys()
         {
@@ -35,6 +36,11 @@ namespace Plugin.AncientCivilization
         public int EarnedCheckpoint {get{return checkpoint;}}
         public int DefeatedMask {get{return defeated;}}
         public int CompletedMask {get{return completed;}}
+        public int RecordedTasks(int mission)
+        {
+            if(mission<0||mission>=routeTasks.Length)return 0;
+            return AncientCampaignRules.Complete(completed,mission)?7:mission==active?tasks:routeTasks[mission];
+        }
         public bool Legacy {get{return legacy;}}
         public string ObjectiveText {get{return objective;}}
         public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
@@ -187,6 +193,11 @@ namespace Plugin.AncientCivilization
                 nodes[mission.Id,i]=AncientArt.Display(mission.Tasks[i],person?AncientCitizenArt.ForCitizen(AncientCampaignRules.Witness(mission.Id)):blade?AncientArt.MetalProjectile(1):AncientArt.World(2),person?p-Vector2.up*1.2f:p,10,transform);
                 nodes[mission.Id,i].transform.localScale=Vector3.one*(person?.9f:blade?.65f:receiver?.5f:.32f);
                 nodes[mission.Id,i].color=person?Color.white:blade?new Color(1,.82f,.25f):receiver?new Color(.2f,1,.85f):new Color(.4f,.85f,1);nodes[mission.Id,i].enabled=false;
+            }
+            if(mission.Id==1)
+            {
+                var lampPositions=new Vector2[3];for(int sector=0;sector<3;sector++)lampPositions[sector]=NodePoint(1,sector);
+                workshopCircuit=new AncientWorkshopCircuit(game,transform,left,lampPositions,RecordedTasks(1));
             }
         }
         void BuildExpertCatwalk(float roomLeft,AncientTraversalLayout.Ledge span)
@@ -407,7 +418,7 @@ namespace Plugin.AncientCivilization
         void Mark(int index)
         {
             if((tasks&(1<<index))!=0||!AncientFieldExpansion.ObjectiveAvailable(tasks,index))return;tasks=AncientCampaignRules.Objective(tasks,index);Refresh();Persist();game.Sound(2);
-            game.Feel.Signal("확보 / "+AncientCampaignData.Missions[active].Tasks[index],new Color(.65f,1,.85f),1.3f);
+            game.Feel.Signal(active==1&&index==2?"작업장 전력 복구 · 조명 재가동":"확보 / "+AncientCampaignData.Missions[active].Tasks[index],new Color(.65f,1,.85f),1.3f);
         }
         public bool TryBladeTarget(Vector2 origin,Vector2 direction)
         {
@@ -596,6 +607,8 @@ namespace Plugin.AncientCivilization
                 else if(blocked&&Time.time>=guardNoticeAt){guardNoticeAt=Time.time+5;game.Notice("위협을 먼저 제압하세요. 주민은 안전이 확인되면 따라옵니다.",2);}
             }
         }
+        void LateUpdate()
+        {if(workshopCircuit!=null)workshopCircuit.Update(RecordedTasks(1));}
         void EnsureFieldStyles(float scale)
         {
             if(fieldTitleStyle==null)
@@ -663,7 +676,8 @@ namespace Plugin.AncientCivilization
                 rect.y=above>=216*scale?above:Mathf.Min(below,Screen.height-110*scale-height);
                 if(rect.Overlaps(fieldGuideRect))return;
             }
-            GUI.Label(rect,text,fieldWorldStyle);
+            AncientHUD.Panel(rect,new Color(.025f,.05f,.065f,.86f));
+            GUI.Label(new Rect(rect.x+4*scale,rect.y,rect.width-8*scale,rect.height),text,fieldWorldStyle);
         }
         void FieldEdgeGuide(Vector2 target,int kind,float scale)
         {

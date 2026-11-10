@@ -29,6 +29,23 @@ namespace Plugin.AncientCivilization
             return Finite(heroX)&&Finite(heroY)&&Finite(bombX)&&
                 Math.Abs((double)heroX-bombX)<BombHalfWidth&&heroY<BombMaxY;
         }
+        // Feedback is earned at the far-edge crossing, even if a coarse frame
+        // lands the rider beyond the obstacle. Existing collision geometry wins.
+        public static bool DebrisCleared(float prevX,float prevY,float nextX,float nextY,float hazardX)
+        {
+            if(!Finite(prevX)||!Finite(prevY)||!Finite(nextX)||!Finite(nextY)||!Finite(hazardX)||nextX<=prevX)return false;
+            double edge=(double)hazardX+DebrisHalfWidth;
+            if(prevX>edge||nextX<=edge||SweptDebris(prevX,prevY,nextX,nextY,hazardX))return false;
+            double t=(edge-prevX)/((double)nextX-prevX),height=prevY+((double)nextY-prevY)*t;
+            return height>=DebrisMaxY;
+        }
+        // Call only at a real detonation's sampled rider position. Passing far
+        // outside a bomb or simply clearing the encounter is not a jump dodge.
+        public static bool BombCleared(float heroX,float heroY,float bombX)
+        {
+            return Finite(heroX)&&Finite(heroY)&&Finite(bombX)&&
+                Math.Abs((double)heroX-bombX)<BombHalfWidth&&heroY>=BombMaxY;
+        }
         // Returns a detonation in this step, with the actual seconds from the step's start.
         // The fuse starts at ground contact, not at the beginning of its landing frame.
         public static bool TickBomb(ref float y,ref float velocityY,ref float remainingFuse,ref bool landed,float step,out float detonationAfter)

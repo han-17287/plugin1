@@ -84,6 +84,50 @@ namespace Plugin.AncientCivilization.EditorChecks
         }
         static float MoteEnergy(AncientCombat combat)
         {float total=0;foreach(var mote in Motes(combat))if(mote.gameObject.activeSelf)total+=(float)Field(typeof(AncientEnergyMote),"energy").GetValue(mote);return total;}
+        static bool NoHitNumbers(AncientGameFeel feel)
+        {
+            foreach(var number in (Array)Field(typeof(AncientGameFeel),"numbers").GetValue(feel))
+                if((float)number.GetType().GetField("age").GetValue(number)>0)return false;
+            return true;
+        }
+        static void CheckCombatFeedback(AncientGame game)
+        {
+            var hero=game.hero;var combat=hero.Combat;var feel=game.Feel;var body=hero.GetComponent<Rigidbody2D>();Vector2 original=hero.transform.position;
+            var constraints=body.constraints;float gravity=body.gravityScale,facing=hero.Facing;bool skills=game.skills,won=game.won;
+            var cameraField=Field(typeof(AncientGame),"view");var camera=cameraField.GetValue(game);AncientEnemy enemy=null;
+            var start=typeof(AncientCombat).GetMethod("StartBlade",PrivateInstance);
+            try
+            {
+                combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;SetAttackMode(hero);
+                hero.AimWeaponAt((Vector2)hero.transform.position+Vector2.left*10);cameraField.SetValue(game,null);
+                int cursor=(int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel);combat.StrikeBlade();
+                Assert(hero.Facing==-1&&(float)Field(typeof(AncientCombat),"bladeFacing").GetValue(combat)==-1,"A real left-aimed cut keeps the body's facing aligned with its authored blade pose");
+                Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ImpactTime(1)-.005f);TickCombat(combat);
+                Assert((int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel)==cursor&&NoHitNumbers(feel),"A real whiff resolves its scheduled contact without a false accepted-hit marker");
+                combat.ResetCombat();start.Invoke(combat,new object[]{Vector2.up});
+                Assert(hero.Facing==-1&&(float)Field(typeof(AncientCombat),"bladeFacing").GetValue(combat)==-1,"A vertical cut preserves the previous persistent body facing");
+                combat.ResetCombat();enemy=LaserProbeEnemy(game,(Vector2)hero.transform.position+new Vector2(1.84f,.55f));start.Invoke(combat,new object[]{Vector2.right});
+                Assert(hero.Facing==1,"A cut toward the opposite side turns the persistent body before the next movement frame");
+                Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ImpactTime(1)-.005f);TickCombat(combat);TickCombat(combat);
+                Assert(Mathf.Abs(enemy.HealthRatio-.972f)<.00001f&&(int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel)==cursor+1,"Actual accepted blade damage creates exactly one hit confirmation, even across repeated recovery updates");
+                var numbers=(Array)Field(typeof(AncientGameFeel),"numbers").GetValue(feel);var number=numbers.GetValue(cursor%numbers.Length);
+                Vector2 impact=(Vector2)number.GetType().GetField("impact").GetValue(number);
+                Assert((impact-enemy.AimPoint).sqrMagnitude<.00001f,"The hit marker stays at the actual struck actor rather than the drifting damage number or an arbitrary blade endpoint");
+                feel.Damage(enemy.AimPoint,0,false);Assert((int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel)==cursor+1,"Zero accepted damage cannot produce another hit confirmation");
+                feel.Signal("QA 피격 확인",AncientGame.Cyan);game.skills=true;Invoke(feel,"Update");
+                Assert(!NoHitNumbers(feel)&&(string)Field(typeof(AncientGameFeel),"signal").GetValue(feel)!=null,"An ordinary pause preserves the feedback that was visible when gameplay stopped");
+                game.skills=false;game.won=true;Invoke(feel,"Update");game.won=false;
+                Assert(NoHitNumbers(feel)&&(string)Field(typeof(AncientGameFeel),"signal").GetValue(feel)==null,"A story-ending context clears live hit numbers and timed signals before gameplay can resume");
+                feel.Damage(enemy.AimPoint,10,true);feel.Signal("QA 이동 확인",AncientGame.Cyan);hero.TravelTo((Vector2)hero.transform.position+Vector2.right);
+                Assert(NoHitNumbers(feel)&&(string)Field(typeof(AncientGameFeel),"signal").GetValue(feel)==null,"The actual travel/reset path cannot carry the previous area's hit markers or contextual signals into a new location");
+            }
+            finally
+            {
+                game.skills=skills;game.won=won;cameraField.SetValue(game,camera);combat.ResetCombat();
+                if(enemy){game.enemies.Remove(enemy);UnityEngine.Object.Destroy(enemy.gameObject);}
+                body.constraints=constraints;body.gravityScale=gravity;MoveProbeHero(hero,original);hero.AimWeaponAt(original+Vector2.right*facing*10);SetAttackMode(hero);
+            }
+        }
         static void CheckScheduledBladeHitches(AncientGame game)
         {
             var hero=game.hero;var combat=hero.Combat;var body=hero.GetComponent<Rigidbody2D>();Vector2 original=hero.transform.position;
@@ -433,10 +477,12 @@ namespace Plugin.AncientCivilization.EditorChecks
                     if(StageAge<.12)return;
                     Assert(recoveryProbe&&!recoveryProbe.Available&&game.shots.Contains(recoveryProbe)&&combat.BrokenObjects==SessionState.GetInt(Root+"RecoveryBroken",-1),"The recovery plate remains intact through subsequent scene updates");
                     recoveryProbe.Remove();recoveryProbe=null;combat.ResetCombat();
-                    CheckScheduledBladeHitches(game);CheckLaserPulse(game);CheckCaptureEnergy(game);CheckTrainingObjectReuse(game);CheckPulseCallbacks(game);CheckTutorialLaser(game);
+                    CheckCombatFeedback(game);CheckScheduledBladeHitches(game);CheckLaserPulse(game);CheckCaptureEnergy(game);CheckTrainingObjectReuse(game);CheckPulseCallbacks(game);CheckTutorialLaser(game);
                     // Conversation is last because it deliberately acquires the gameplay input guard.
                     MoveProbeHero(hero,new Vector2(2,80));hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);Assert(combat.Firing,"The dialogue cancellation probe starts with a live pulse");
                     game.Story.Conversation(null,0,new[]{"QA 통신관"},new[]{"레이저 중단 확인."});Assert(game.Story.DialogueOpen&&!combat.Firing,"Opening a real conversation cancels the arm's active pulse");
+                    game.Feel.Damage(hero.transform.position,10,false);game.Feel.Signal("QA 대화 확인",AncientGame.Cyan);Invoke(game.Feel,"Update");
+                    Assert(NoHitNumbers(game.Feel)&&(string)Field(typeof(AncientGameFeel),"signal").GetValue(game.Feel)==null,"An actual Korean conversation clears transient combat feedback while keeping its in-world speech bubble");
                     Finish(true,"Structural blade, active moving laser, once-per-pulse actor/truck/turret damage, interruption and actual blue-energy checks completed. Physical hold/release, wheel switching, airborne wire transitions, frame pacing and visual alignment still need manual playtesting.");
                 }
             }

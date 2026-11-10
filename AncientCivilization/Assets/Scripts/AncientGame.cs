@@ -368,8 +368,8 @@ namespace Plugin.AncientCivilization
         void LateUpdate()
         {
             if(!hero)return;
-            float speed=Mathf.Abs(hero.HorizontalSpeed);
-            float zoom=hero.Wired?7.5f:hero.bike?6.8f:5.8f;
+            float horizontalSpeed=hero.HorizontalSpeed;
+            float zoom=AncientCameraRules.TravelZoom(hero.Wired,hero.bike,hero.IsOnGround,horizontalSpeed);
             float arenaLeft=0,arenaRight=0;bool arena=ArenaActive&&!(Finale&&Finale.Active);
             if(arena)
             {
@@ -379,7 +379,7 @@ namespace Plugin.AncientCivilization
             }
             Vector2 dialogueFocus=Vector2.zero;float dialogueZoom=5.8f;bool dialogue=Story&&Story.TryDialogueFrame(out dialogueFocus,out dialogueZoom);
             if(dialogue)zoom=dialogueZoom;
-            float lead=hero.Facing*Mathf.Lerp(2.5f,4,Mathf.Clamp01(speed/25));
+            float lead=AncientCameraRules.LookAhead(horizontalSpeed,hero.Facing);
             bool chapter=Story&&Story.Stage>=8;
             Vector3 target=new Vector3(Mathf.Clamp(hero.transform.position.x+lead,chapter?AncientCityLayout.Left(Story.CurrentFloor)+5:AncientProductionLayout.TutorialLeft+5,chapter?AncientCityLayout.Right(Story.CurrentFloor)-6:113),Mathf.Max(4.6f,hero.transform.position.y+1),-10);
             if(arena)target=new Vector3((arenaLeft+arenaRight)*.5f,4.6f,-10);
@@ -723,7 +723,7 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;if(!body)return;
             if(g.won){StopWire(false);body.linearVelocity=Vector2.zero;body.gravityScale=0;absorb.enabled=false;trail.emitting=false;return;}
-            if(g.Paused||!g.GameplayInputReady||(g.Sniper&&g.Sniper.InputLocked)){ClearJumpInput();absorb.enabled=false;if(Combat)Combat.CancelInput();return;}
+            if(g.Paused||!g.GameplayInputReady||(g.Sniper&&g.Sniper.InputLocked)){axis=0;ClearJumpInput();absorb.enabled=false;if(Combat)Combat.CancelInput();return;}
             if(transform.position.y<(g.Finale&&g.Finale.Active?AncientFinaleRules.Road(transform.position.x)-7:-9)){Respawn();return;}
             bool onGround=StableGrounded(body.linearVelocity);BikeGrounded=onGround;
             if(onGround)
@@ -750,7 +750,7 @@ namespace Plugin.AncientCivilization
                     else if(bike||g.Finale&&g.Finale.Active)InteractBike();
                     else g.Notice("주민·단말·엘리베이터 앞에서 E / 순찰 기록은 Tab",1.5f);
                 }
-                if(g.Paused||!g.GameplayInputReady){ClearJumpInput();return;}
+                if(g.Paused||!g.GameplayInputReady){axis=0;ClearJumpInput();return;}
             }
             if(Input.GetKeyDown(KeyCode.X)&&bike&&!(g.Production&&g.Production.Active))ExplodeBike();
             if(!wired)ZipMode=true;

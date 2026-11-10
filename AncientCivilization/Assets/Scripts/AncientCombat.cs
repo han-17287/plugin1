@@ -21,7 +21,7 @@ namespace Plugin.AncientCivilization
         AncientBeamVisuals beamProfile;AncientMoteVisuals moteVisuals;
         AncientHero hero;AncientGame game;LineRenderer slashTrail,slashGlow,aim,beam,beamGlow,beamCore;
         AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,bladeBufferedUntil;bool bladeHitPending,bladeRebounded,readySignal;
-        Vector2 bladeDirection,bufferedDirection,beamStart,beamEnd;float beamWidth;
+        Vector2 bladeDirection,bufferedDirection,beamStart,beamEnd;float beamWidth,bladeFacing=1;
         readonly AncientLaserPulse<AncientEnemy> laserPulse=new AncientLaserPulse<AncientEnemy>();
         readonly Vector3[] slashPoints=new Vector3[9];
         static readonly Color Yellow=new Color(1,.88f,.18f);
@@ -48,7 +48,7 @@ namespace Plugin.AncientCivilization
             }
         }
         Vector2 Origin {get{return (Vector2)hero.transform.position+new Vector2(hero.Facing*.14f,.55f);}}
-        Vector2 BladeOrigin {get{return (Vector2)hero.transform.position+new Vector2((bladeDirection.x<0?-1:1)*.14f,.55f);}}
+        Vector2 BladeOrigin {get{return (Vector2)hero.transform.position+new Vector2(bladeFacing*.14f,.55f);}}
         Vector2 AimPoint()
         {
             if(!game.View)return Origin+Vector2.right*hero.Facing*10;
@@ -89,8 +89,11 @@ namespace Plugin.AncientCivilization
                 // A deliberate laser hold replaces a queued tap rather than releasing both attacks.
                 bladeBufferedUntil=0;
                 hero.AimWeaponAt(AimPoint());Vector2 start=Origin,end=ResolveBeam(start,AimPoint(),hero.CaptureEnergy);aim.enabled=true;
-                if(ChargeProgress>=1&&!readySignal){readySignal=true;game.Sound(3);game.Feel.Signal("레이저 준비 완료",Yellow,.5f);}
-                aim.startColor=aim.endColor=ChargeProgress>=1?Yellow:new Color(.25f,1,.7f,.45f);
+                bool laserReady=AncientCombatFeedbackRules.LaserReady(hero.CaptureEnergy,ChargeProgress);
+                if(laserReady&&!readySignal){readySignal=true;game.Sound(3);}
+                // Ready feedback lives at the cursor and follows actual charge state;
+                // a global timed popup would survive the shot or a paused cinematic.
+                aim.startColor=aim.endColor=hero.CaptureEnergy<=0?AncientGame.Orange:laserReady?Yellow:new Color(.25f,1,.7f,.45f);
                 aim.SetPosition(0,start);aim.SetPosition(1,end);
             }
         }
@@ -115,7 +118,9 @@ namespace Plugin.AncientCivilization
             combo=AncientBladeRules.NextStep(combo,bladeReady,Time.time);
             bladeStarted=Time.time;bladeReady=Time.time+AncientBladeRules.Duration(combo);bladeUntil=bladeReady;bladeHitPending=true;bladeRebounded=false;bladeBufferedUntil=0;
             bladeDirection=direction;
-            hero.BladePose(bladeDirection.x<0?-1:1,combo);BladeUses++;game.Sound(8+combo);
+            bladeFacing=AncientCombatFeedbackRules.BladeFacing(bladeDirection.x,hero.Facing);
+            hero.AimWeaponAt((Vector2)hero.transform.position+Vector2.right*bladeFacing);
+            hero.BladePose(bladeFacing,combo);BladeUses++;game.Sound(8+combo);
         }
         void Update()
         {
@@ -145,7 +150,8 @@ namespace Plugin.AncientCivilization
                 if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8)){if(enemy.kind==4)rebound=true;enemy.Hit(combo==3?42:28,combo==3);}
             }
             if(rebound)ReboundOnce();
-            game.Burst(origin+bladeDirection*1.5f,Yellow,6);
+            // The blade trail is the whiff effect. Actual enemy hits, fractured
+            // objects and interactive targets provide their own contact feedback.
         }
         void ReboundOnce(){if(bladeRebounded||hero.bike||hero.IsOnGround)return;bladeRebounded=true;hero.BladeRebound();}
         void ResolvePhysicalBreaks()
@@ -283,7 +289,7 @@ namespace Plugin.AncientCivilization
         }
         void OnApplicationFocus(bool focus){if(!focus)CancelAttacks();}
         public void ResetCombat()
-        {CancelAttacks();slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;beamProfile.HideEndpoints();foreach(var mote in motes)mote.gameObject.SetActive(false);}
+        {CancelAttacks();if(game&&game.Feel)game.Feel.ClearTransient();slashTrail.enabled=slashGlow.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=aim.enabled=false;beamProfile.HideEndpoints();foreach(var mote in motes)mote.gameObject.SetActive(false);}
         void OnDestroy()
         {
             if(beamProfile!=null)beamProfile.Dispose();

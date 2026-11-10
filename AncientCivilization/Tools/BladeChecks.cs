@@ -6,6 +6,42 @@ class BladeChecks
     static int count;
     static void Check(bool condition,string description){if(!condition)throw new Exception(description);count++;}
     static bool Near(float a,float b){return Math.Abs(a-b)<.0001f;}
+    static bool Finite(float value){return !float.IsNaN(value)&&!float.IsInfinity(value);}
+    static void FeedbackChecks()
+    {
+        foreach(float facing in new[]{-1f,1f})
+        {
+            foreach(float aim in new[]{-.2f,-.08f,0,.08f,.2f})
+                Check(AncientCombatFeedbackRules.BladeFacing(aim,facing)==facing,"A nearly vertical cut preserves the body facing instead of flipping across the arm offset");
+            Check(AncientCombatFeedbackRules.BladeFacing(-.21f,facing)==-1&&AncientCombatFeedbackRules.BladeFacing(.21f,facing)==1,"A deliberate horizontal aim turns both the body and blade toward the attack");
+            foreach(float bad in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+                Check(AncientCombatFeedbackRules.BladeFacing(bad,facing)==facing,"An invalid aim never flips the character");
+        }
+        Check(AncientCombatFeedbackRules.BladeFacing(0,0)==1,"An invalid initial facing uses a stable right-facing fallback");
+        foreach(float energy in new[]{0f,-1,float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+            Check(!AncientCombatFeedbackRules.LaserReady(energy,1),"An empty or invalid gauge never signals that a laser can fire");
+        foreach(float progress in new[]{0f,.5f,.9999f,float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+            Check(!AncientCombatFeedbackRules.LaserReady(100,progress),"A partial or invalid charge never announces a ready shot");
+        Check(AncientCombatFeedbackRules.LaserReady(.01f,1)&&AncientCombatFeedbackRules.LaserReady(100,1),"A completed hold with actual energy signals readiness at every supported energy level");
+        Check(!AncientCombatFeedbackRules.LaserReady(0,1)&&AncientCombatFeedbackRules.LaserReady(6,1),"Collecting particles during an already completed hold changes empty guidance to a ready shot");
+
+        foreach(var view in new[]{new[]{640f,480},new[]{1280f,720},new[]{1920f,1080},new[]{3840f,2160},new[]{720f,1280}})
+        foreach(float scale in new[]{.85f,1,1.5f,2})
+        foreach(float text in new[]{160f,240,360})
+        foreach(float xRatio in new[]{0f,.02f,.5f,.98f,1})
+        foreach(float yRatio in new[]{0f,.02f,.5f,.98f,1})
+        {
+            float x=view[0]*xRatio,y=view[1]*yRatio;
+            var box=AncientCombatFeedbackRules.ChargeLabel(view[0],view[1],x,y,text,18*scale,scale);
+            Check(box.Width>0&&box.Height>0&&box.X>=0&&box.Y>=0&&box.X+box.Width<=view[0]+.001f&&box.Y+box.Height<=view[1]+.001f,"Measured Korean charge guidance remains inside the viewport at edges and all supported resolutions");
+            Check(x<box.X||x>box.X+box.Width||y<box.Y||y>box.Y+box.Height,"The charge label never covers the aiming cursor");
+        }
+        foreach(float bad in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity,-1f,0})
+        {
+            var box=AncientCombatFeedbackRules.ChargeLabel(bad,bad,bad,bad,bad,bad,bad);
+            Check(Finite(box.X)&&Finite(box.Y)&&Finite(box.Width)&&Finite(box.Height)&&box.X>=0&&box.Y>=0&&box.Width>0&&box.Height>0,"Transient invalid viewport samples never produce corrupt GUI coordinates");
+        }
+    }
     static void ScheduledImpactRun(int step,float[] samples,float cancelAt=-1)
     {
         bool pending=true;int hits=0;float previous=-1,accepted=-1;
@@ -113,6 +149,7 @@ class BladeChecks
         }
         Check(Near(AncientBladeRules.Duration(-1),AncientBladeRules.Duration(1)),"Low invalid step clamps to the first cut");
         Check(Near(AncientBladeRules.Duration(99),AncientBladeRules.Duration(3)),"High invalid step clamps to the last cut");
-        Console.WriteLine("PASS: "+count+" blade timing, sequence, hitch-safe scheduled contact and trail checks");
+        FeedbackChecks();
+        Console.WriteLine("PASS: "+count+" blade timing, scheduled contact, facing, laser readiness and measured feedback placement checks");
     }
 }

@@ -273,6 +273,67 @@ namespace Plugin.AncientCivilization.EditorChecks
             }
             finally {hero.enabled=enabled;}
         }
+        static void CheckRoadFeedback(AncientGame game)
+        {
+            var director=game.Production;var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
+            var type=typeof(AncientProductionPursuit);var pool=(Array)Field(type,"hazards").GetValue(director);
+            Vector2 position=body.position,velocity=body.linearVelocity,previous=(Vector2)Field(type,"roadHeroPrevious").GetValue(director);
+            float health=hero.bikeHP,invulnerable=(float)Field(typeof(AncientHero),"invulnerableUntil").GetValue(hero);
+            string[] names={"hazardCursor","volley","roadDodgeChain","roadDodgeCues","roadCoachBomb","roadCoachUntil","roadTitle"};
+            var saved=new object[names.Length];for(int i=0;i<names.Length;i++)saved[i]=Field(type,names[i]).GetValue(director);
+            try
+            {
+                Assert(LiveHazards(director)==0,"Road feedback begins without replacing an active hazard");
+                Field(type,"roadDodgeChain").SetValue(director,0);Field(type,"roadDodgeCues").SetValue(director,0);Field(type,"roadCoachUntil").SetValue(director,0f);
+                float x=position.x+6;
+                for(int probe=0;probe<4;probe++)
+                {
+                    Field(type,"hazardCursor").SetValue(director,0);Field(type,"volley").SetValue(director,0);Call(director,"SpawnHazard");
+                    var hazard=pool.GetValue(0);var root=(GameObject)hazard.GetType().GetField("root").GetValue(hazard);root.transform.position=new Vector2(x,AncientProductionHazardRules.BombFloorHeight);
+                    if(probe==1)
+                    {
+                        Call(director,"ClearHazards");
+                        Assert((int)Field(type,"roadDodgeChain").GetValue(director)==1,"Clearing a road pool cannot fabricate a successful jump");continue;
+                    }
+                    float y=probe==0?3:.84f;MoveHero(hero,new Vector2(x+3,y));Field(type,"roadHeroPrevious").SetValue(director,new Vector2(x-3,y));
+                    Field(typeof(AncientHero),"invulnerableUntil").SetValue(hero,probe==3?Time.time-1:Time.time+5);
+                    Call(director,"TickHazards",.1f);
+                    if(probe==0)
+                    {
+                        Assert((int)Field(type,"roadDodgeChain").GetValue(director)==1&&LiveHazards(director)==0,"An actual swept high clearance consumes the live debris and records one jump");
+                        Call(director,"TickHazards",.1f);
+                        Assert((int)Field(type,"roadDodgeChain").GetValue(director)==1,"The same consumed road obstacle cannot count twice");
+                    }
+                    else if(probe==2)
+                        Assert((int)Field(type,"roadDodgeChain").GetValue(director)==0&&Near(hero.bikeHP,health)&&(float)Field(type,"roadCoachUntil").GetValue(director)==0,"A physical collision breaks the clearance streak during invulnerability without issuing damage coaching");
+                    else
+                        Assert(Near(hero.bikeHP,health-14)&&(float)Field(type,"roadCoachUntil").GetValue(director)>Time.time,"A real debris hit retains its fourteen damage and opens the short contextual jump reminder");
+                }
+            }
+            finally
+            {
+                Call(director,"ClearHazards");for(int i=0;i<names.Length;i++)Field(type,names[i]).SetValue(director,saved[i]);
+                hero.bikeHP=health;Field(typeof(AncientHero),"invulnerableUntil").SetValue(hero,invulnerable);MoveHero(hero,position);body.linearVelocity=velocity;Field(type,"roadHeroPrevious").SetValue(director,previous);
+            }
+        }
+        static void CheckMissedBoarding(AncientGame game)
+        {
+            var director=game.Production;var hero=game.hero;var sequence=director.Sequence;
+            var truck=(Rigidbody2D)Field(typeof(AncientProductionPursuit),"truck").GetValue(director);
+            float health=director.Commander.HealthRatio;int round=sequence.Round,mounts=sequence.MountCount;
+            MoveHero(hero,new Vector2(truck.position.x-8,.84f));
+            for(int i=0;i<3;i++)Step(director);
+            Field(typeof(AncientHero),"wireReady").SetValue(hero,Time.time-1);Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
+            Assert(hero.TryProductionBoard(director.BoardingHook),"The recovery probe starts with an accepted real wire-boarding action");
+            // Deliberately leave physics unadvanced: this wire never reaches the roof.
+            for(int i=0;i<18&&sequence.Phase==AncientProductionPhase.Boarding;i++)Step(director);
+            Assert(sequence.Phase==AncientProductionPhase.Approach&&hero.bike&&!hero.Wired&&!sequence.AttackersEnabled,"An uncompleted real wire automatically returns to a safe motorcycle ceasefire");
+            Assert(sequence.Round==round&&sequence.MountCount==mounts&&Near(director.Commander.HealthRatio,health)&&(int)Field(typeof(AncientProductionPursuit),"boardingFailures").GetValue(director)==1,"A missed boarding records guidance without resetting captain health, round or mount count");
+            for(int i=0;i<3;i++)Step(director);Call(director,"LateUpdate");
+            var latch=(LineRenderer)Field(typeof(AncientProductionPursuit),"hook").GetValue(director);
+            bool precise=latch.enabled;for(int i=0;i<latch.positionCount;i++)precise&=((Vector2)latch.GetPosition(i)-director.BoardingHook).magnitude<.5f;
+            Assert(precise&&director.CanBoardWire(director.BoardingHook),"The ordinary mast deployment reopens boarding with its blinking cue entirely inside the actual half-metre latch target");
+        }
         static void BoardStationaryRoof(AncientGame game)
         {
             var director=game.Production;var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
@@ -425,6 +486,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             CheckTruckArtwork(game);
             CheckRoadCamera(game,"chase entry");
             CheckAutomaticBike(game);
+            CheckRoadFeedback(game);
             float initial=commander.HealthRatio;commander.Hit(100000,true);
             Assert(Near(commander.HealthRatio,initial),"The captain cannot lose deck-phase health from an early road attack");
             float elapsed=sequence.Elapsed;game.skills=true;Call(director,"Update");game.skills=false;
@@ -435,6 +497,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             CheckRoadCamera(game,"ceasefire approach");
             Step(director,1);Step(director,1);
             Assert(sequence.Phase==AncientProductionPhase.Approach,"The wire-boarding opportunity stays open instead of timing out");
+            CheckMissedBoarding(game);
             BoardRoof(game);CheckMovingRoofJump(game);CheckDeckCamera(game);CheckCaptainPresentation(game);commander.Hit(100000,true);
             Assert(sequence.Phase==AncientProductionPhase.Knockback&&Near(commander.HealthRatio,AncientProductionRules.FirstHealthGate)&&commander.IsAlive,"An actual captain hit stops at the first health gate and begins the knockback transition");
             Advance(director,AncientProductionPhase.Chase);

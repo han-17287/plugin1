@@ -62,6 +62,18 @@ class ProductionHazardChecks
         Check(AncientProductionHazardRules.SweptDebris(29996,.84f,30004,.84f,30000),"Swept debris remains reliable at the authored production highway coordinates");
         Check(AncientProductionHazardRules.BombHit(0,.84f,0)&&!AncientProductionHazardRules.BombHit(0,2.7f,0),"The grounded rider is threatened but the exact bomb jump-clearance height is safe");
         Check(!AncientProductionHazardRules.BombHit(2.4f,.84f,0)&&AncientProductionHazardRules.BombHit(2.39f,.84f,0),"Bomb width uses the same strict border at either frame rate");
+        foreach(float origin in new[]{0f,30000f})
+        {
+            Check(AncientProductionHazardRules.DebrisCleared(origin-3,3.9f,origin+5,.84f,origin),"A coarse frame can safely clear the far edge high and land beyond it before drawing success feedback");
+            Check(!AncientProductionHazardRules.DebrisCleared(origin-3,.84f,origin+5,3.8f,origin),"Rising after a low entrance cannot turn a real debris collision into dodge feedback");
+            Check(!AncientProductionHazardRules.DebrisCleared(origin+2,3,origin+3,3,origin),"An already passed hazard cannot increase a dodge chain again");
+            Check(!AncientProductionHazardRules.DebrisCleared(origin+3,3,origin-3,3,origin),"Reverse motion is not an earned forward road clearance");
+            Check(AncientProductionHazardRules.BombCleared(origin,2.7f,origin)&&!AncientProductionHazardRules.BombCleared(origin,2.69f,origin),"Bomb dodge feedback uses the same exact jump-height threshold as its damage geometry");
+            Check(!AncientProductionHazardRules.BombCleared(origin+3,4,origin),"A distant explosion cannot manufacture successful-jump feedback");
+        }
+        Check(!AncientProductionHazardRules.DebrisCleared(-3,3,1.4f,3,0),"Feedback waits until the rider exits the far side, rather than counting a stopped boundary");
+        Check(AncientProductionHazardRules.DebrisCleared(1.4f,3,2,3,0),"Exiting after an exact far-edge sample produces one clearance");
+        Check(!AncientProductionHazardRules.BombCleared(2.4f,3,0),"The strict side boundary is outside the blast and is not a jump dodge");
         foreach(int fps in new[]{15,30,60,120,240})
         {
             var ground=BombRun(new[]{1f/fps},false);var jump=BombRun(new[]{1f/fps},true);
@@ -75,6 +87,10 @@ class ProductionHazardChecks
                 jumpHit|=AncientProductionHazardRules.SweptDebris(time*17,RiderY(time,true),next*17,RiderY(next,true),18);time=next;
             }
             Check(hit&&!jumpHit,"Debris collision remains a grounded hit and a clear jump at "+fps+"FPS");
+            int clears=0;time=0;
+            for(int frame=0;frame<fps*2;frame++)
+            {float next=time+1f/fps;if(AncientProductionHazardRules.DebrisCleared(time*17,RiderY(time,true),next*17,RiderY(next,true),18))clears++;time=next;}
+            Check(clears==1,"A completed Space jump produces exactly one far-edge clearance at "+fps+"FPS");
         }
         foreach(float step in new[]{.2f,.3f})
         {
@@ -103,6 +119,7 @@ class ProductionHazardChecks
         {
             Check(!AncientProductionHazardRules.SweptDebris(bad,0,3,0,0)&&!AncientProductionHazardRules.SweptDebris(0,bad,3,0,0)&&!AncientProductionHazardRules.SweptDebris(0,0,bad,0,0)&&!AncientProductionHazardRules.SweptDebris(0,0,3,bad,0)&&!AncientProductionHazardRules.SweptDebris(0,0,3,0,bad),"Invalid geometry cannot create a phantom debris collision");
             Check(!AncientProductionHazardRules.BombHit(bad,0,0)&&!AncientProductionHazardRules.BombHit(0,bad,0)&&!AncientProductionHazardRules.BombHit(0,0,bad),"Invalid blast geometry cannot hit the rider");
+            Check(!AncientProductionHazardRules.DebrisCleared(bad,3,3,3,0)&&!AncientProductionHazardRules.DebrisCleared(-3,3,3,bad,0)&&!AncientProductionHazardRules.BombCleared(bad,3,0)&&!AncientProductionHazardRules.BombCleared(0,bad,0),"Invalid samples cannot create a dodge cue");
             float beforeY=y,beforeVelocity=velocity,beforeFuse=fuse;bool beforeLanded=landed;
             Check(!AncientProductionHazardRules.TickBomb(ref y,ref velocity,ref fuse,ref landed,bad,out after)&&y==beforeY&&velocity==beforeVelocity&&fuse==beforeFuse&&landed==beforeLanded,"Invalid active time cannot poison the bomb state");
         }

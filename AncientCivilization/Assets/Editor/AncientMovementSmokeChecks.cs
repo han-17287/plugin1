@@ -192,9 +192,9 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Assert(Near(body.linearVelocity.y,14),"Running uphill on a physical ramp preserves ground-jump eligibility");
                 Prepare(hero,new Vector2(2,80),new Vector2(0,-2));Set(hero,"lastGrounded",Time.time-.06f);Queue(hero,true);Tick(hero,"FixedUpdate");
                 Assert(Near(body.linearVelocity.y,14),"A recent ledge departure can use coyote time in the real physics path");
-                Prepare(hero,new Vector2(2,80),new Vector2(0,-2));Queue(hero,true);Set(hero,"cutJump",true);game.skills=true;Tick(hero,"Update");
-                Assert(Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld")&&!Read<bool>(hero,"cutJump"),"Opening a pause discards the queued jump and release flags");
-                game.skills=false;Tick(hero,"FixedUpdate");Assert(Near(body.linearVelocity.y,-2),"Unpausing cannot replay a queued jump");
+                Prepare(hero,new Vector2(2,80),new Vector2(0,-2));Set(hero,"axis",1f);Queue(hero,true);Set(hero,"cutJump",true);game.skills=true;Tick(hero,"Update");
+                Assert(Near(Read<float>(hero,"axis"),0)&&Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld")&&!Read<bool>(hero,"cutJump"),"Opening a pause discards stale movement, the queued jump and release flags");
+                game.skills=false;Tick(hero,"FixedUpdate");Assert(Near(body.linearVelocity.x,0)&&Near(body.linearVelocity.y,-2),"The first unpaused physics step cannot replay movement or a queued jump");
                 Prepare(hero,new Vector2(2,80),Vector2.zero);Set(hero,"wired",true);Set(hero,"wireZip",true);
                 Set(hero,"anchor",new Vector2(2,85));Set(hero,"wireSurfaceNormal",Vector2.down);Set(hero,"wireAttachedAt",Time.time);Tick(hero,"FixedUpdate");
                 Assert(hero.Wired&&Near(body.linearVelocity.x,0)&&Near(body.linearVelocity.y,AncientZipRules.Speed),"The existing active zip still pulls immediately in a straight line without gravity or a tangent kick");
@@ -212,8 +212,10 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Assert(!hero.Wired&&hero.ZipMode&&(body.linearVelocity-previewVelocity).sqrMagnitude<.00001f&&body.position==previewPosition,"After swing release the normal Hero Update restores the primary left-click zip preview without changing momentum");
                 Queue(hero,true);Set(hero,"cutJump",true);hero.TravelTo(new Vector2(2,80));
                 Assert(Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld")&&!Read<bool>(hero,"cutJump"),"Travel clears queued jump input before arriving in another area");
-                Queue(hero,true);game.BlockGameplayInput();Tick(hero,"Update");
-                Assert(Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld"),"The post-dialogue input guard cannot retain the Space press that closed dialogue");
+                Prepare(hero,new Vector2(2,80),new Vector2(7,-2));Set(hero,"axis",-1f);Queue(hero,true);Set(hero,"cutJump",true);game.BlockGameplayInput();Tick(hero,"Update");
+                Assert(Near(Read<float>(hero,"axis"),0)&&Read<float>(hero,"jumpBufferedUntil")<Time.time&&!Read<bool>(hero,"jumpHeld")&&!Read<bool>(hero,"cutJump"),"The post-dialogue input guard clears stale movement and the Space press that closed dialogue");
+                Tick(hero,"FixedUpdate");
+                Assert(Near(body.linearVelocity.x,7)&&Near(body.linearVelocity.y,-2),"The guarded physics step preserves airborne momentum without replaying an old opposite-direction input or jump");
             }
             finally
             {

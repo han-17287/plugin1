@@ -2,9 +2,9 @@
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**v0.20.1 Unity 소스:** [다운로드 ZIP](https://raw.githubusercontent.com/han-17287/plugin1/ancient-civilization-prototype/PLUGIN_v0.20.1_LowerDistrict_Unity_6000.6.7f1.zip)
+**v0.21.0 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.21.0-download.zip)
 
-v0.20.1은 고해상도 화면의 트럭 승선 고리 클릭을 보정한 패치입니다. 보이는 고리와 클릭 중심을 맞추고 승선 고리의 바깥쪽도 선택할 수 있도록 반경을 보완했습니다. 실제 4K 조작 확인은 남아 있습니다.
+v0.21.0은 이동·전투 피드백과 하층 현장 변화를 보강합니다. 빠른 공중 이동의 카메라는 실제 진행 방향과 속도를 따라가고, 대화·일시정지 뒤 남은 방향 입력을 정리합니다. 실제 명중 표시와 입자량에 맞는 레이저 준비 안내, 추격전의 점프 회피·재승선 안내를 추가했습니다. 작업장 전력을 복구하면 배선과 조명이 켜지고 저장 후에도 유지됩니다. 실제 Unity 조작·화면·FPS 확인은 남아 있습니다.
 
 생산구 도입을 **재고 점검 → 보고 중 벽 돌파 → 자동주행 오토바이/트럭 위 전투 두 차례 → 세 번째 탑승 회수 컷신**으로 바꿨습니다. 생산장까지362단위의 안전한 이동 튜토리얼과 별도1,600단위 수송 터널을 구성했습니다. 코어를 담은 짐칸을 먼저 분리하고, 높은 백덤블링 뒤 굵은 입자 레이저로 트럭을 폭파합니다. 새 도입부는 **새 게임**으로 확인하세요.
 

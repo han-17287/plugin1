@@ -13,7 +13,8 @@ namespace Plugin.AncientCivilization
         LineRenderer hook,tell,strikeZone,cut,filament,filamentCore,beam,glow,core;AncientBeamVisuals beamProfile;
         AncientProductionPhase applied=AncientProductionPhase.Dormant;
         bool lane,cargoSecured,truckDestroyed,pendingArrest,ready,boardingReady,handoff,handedOff,captainEjecting;float truckX,nextHazard,deckTime,captainTimer,captainRecoverySeconds=.7f,kinematicSpeed,handoffElapsed;
-        int hazardCursor,volley,captainPattern,captainLastAttack,hookSlot=-1;bool captainWindup;Vector2 captainAim,throwOrigin;float throwBikeX,captainFacing=1;
+        int hazardCursor,volley,captainPattern,captainLastAttack,hookSlot=-1,roadDodgeChain,roadDodgeCues,boardingFailures;bool captainWindup,roadCoachBomb;Vector2 captainAim,throwOrigin;float throwBikeX,captainFacing=1,roadCoachUntil;
+        string roadTitle="자동주행 / Space 점프";
         string objective="";GUIStyle caption,hint;Vector2 roadHeroPrevious,cargoReleaseOffset,captainEjectOrigin;float cargoReleasedAt,captainEjectedAt,captainActionUntil;
         public AncientProductionSequence Sequence {get{return sequence;}}
         public AncientEnemy Commander {get{return commander;}}
@@ -258,12 +259,12 @@ namespace Plugin.AncientCivilization
                 if(!game.hero.Wired){var body=game.hero.GetComponent<Rigidbody2D>();body.linearVelocity=new Vector2(kinematicSpeed,body.linearVelocity.y);}
                 if(Mathf.Abs(h.x-truck.position.x)<3.1f&&Mathf.Abs(h.y-3.8f)<.35f&&game.hero.IsOnGround&&!game.hero.Wired)
                 {sequence.LandOnDeck();ApplyPhase();}
-                else if(sequence.Elapsed>4){sequence.AbortBoarding();ReturnToBike(false);ApplyPhase();}
+                else if(sequence.Elapsed>4)MissedBoarding(false);
             }
             if(phase==AncientProductionPhase.Deck)
             {
                 deckTime+=dt;if(deckTime>.7f&&game.hero.transform.position.y<2.15f)
-                {sequence.AbortBoarding();ReturnToBike(false);ApplyPhase();}
+                {MissedBoarding(true);}
             }
             if(!game.hero.bike)escortBike.Park(new Vector2(truck.position.x-8,.84f),1,80);
         }
@@ -292,7 +293,8 @@ namespace Plugin.AncientCivilization
                 if(previous==AncientProductionPhase.Breach){truckX=AncientProductionLayout.ChaseStart+24;truck.position=new Vector2(truckX,0);}
                 else truckX=truck.position.x;
                 if(truckX>AncientProductionLayout.ChaseEnd-360){truckX=AncientProductionLayout.ChaseStart+444;truck.position=new Vector2(truckX,0);}
-                lane=true;ClearHazards();game.ClearBattleProjectiles();game.hero.HoldForEncounter(false);ReturnToBike(true);nextHazard=2;volley=0;WriteSave();game.Save();game.Sound(3);
+                lane=true;roadDodgeChain=roadDodgeCues=boardingFailures=0;roadCoachUntil=0;roadTitle="자동주행 / Space 점프";
+                ClearHazards();game.ClearBattleProjectiles();game.hero.HoldForEncounter(false);ReturnToBike(true);nextHazard=2;volley=0;WriteSave();game.Save();game.Sound(3);
                 roadHeroPrevious=game.hero.transform.position;
                 game.SnapCameraToHero();
             }
@@ -320,6 +322,13 @@ namespace Plugin.AncientCivilization
             if(forward&&sequence.Phase==AncientProductionPhase.Chase&&sequence.Elapsed<.05f)truck.position=new Vector2(truckX,0);
             float x=truck.position.x-(sequence.Phase==AncientProductionPhase.Chase||sequence.Phase==AncientProductionPhase.Finisher?22:8);
             game.hero.MountProductionBike(escortBike,new Vector2(x,.84f),DriveSpeed);
+        }
+        void MissedBoarding(bool fellFromDeck)
+        {
+            if(!sequence.AbortBoarding())return;
+            boardingFailures++;ReturnToBike(false);ApplyPhase();
+            game.Notice(fellFromDeck?"지붕 이탈 / 오토바이가 받아 줍니다. 대장의 남은 체력은 유지됩니다.":
+                "승선 복귀 / 공격은 멈춰 있습니다. 청록 고리에 좌클릭해 다시 올라가세요.",3);
         }
         void BreachPose()
         {
@@ -441,13 +450,35 @@ namespace Plugin.AncientCivilization
                 bool debris=!h.bomb&&AncientProductionHazardRules.SweptDebris(roadHeroPrevious.x,roadHeroPrevious.y,current.x,current.y,p.x);
                 if(debris||blast)
                 {
-                    float hx,hy;bool bombHit=blast&&AncientProductionHazardRules.BombImpactHero(roadHeroPrevious.x,roadHeroPrevious.y,current.x,current.y,after,dt,out hx,out hy)&&AncientProductionHazardRules.BombHit(hx,hy,p.x);
-                    if(debris||bombHit)game.hero.Hurt(h.bomb?22:14);game.Impact(p,AncientGame.Orange,h.bomb);h.live=false;h.root.SetActive(false);
+                    float hx=0,hy=0;bool sampled=blast&&AncientProductionHazardRules.BombImpactHero(roadHeroPrevious.x,roadHeroPrevious.y,current.x,current.y,after,dt,out hx,out hy);
+                    bool bombHit=sampled&&AncientProductionHazardRules.BombHit(hx,hy,p.x);
+                    if(debris||bombHit)
+                    {
+                        roadDodgeChain=0;roadTitle="자동주행 / Space 점프";
+                        float before=game.hero.bikeHP;game.hero.Hurt(h.bomb?22:14);
+                        if(game.hero.bike&&game.hero.bikeHP<before)
+                        {roadCoachBomb=h.bomb;roadCoachUntil=Time.time+3;}
+                        game.Impact(p,AncientGame.Orange,h.bomb);
+                    }
+                    else if(sampled&&AncientProductionHazardRules.BombCleared(hx,hy,p.x))
+                    {RoadDodge(h,p);game.Impact(p,AncientGame.Orange,true);}
+                    else game.Impact(p,AncientGame.Orange,h.bomb);
+                    h.live=false;h.root.SetActive(false);
                     if(((Vector2)game.hero.transform.position-current).sqrMagnitude>25)return;
                 }
+                else if(!h.bomb&&AncientProductionHazardRules.DebrisCleared(roadHeroPrevious.x,roadHeroPrevious.y,current.x,current.y,p.x))
+                {RoadDodge(h,p);h.live=false;h.root.SetActive(false);}
                 else if(p.x<game.hero.transform.position.x-5){h.live=false;h.root.SetActive(false);}
             }
             roadHeroPrevious=current;
+        }
+        void RoadDodge(Hazard hazard,Vector2 point)
+        {
+            roadDodgeChain++;roadTitle="자동주행 / 연속 회피 "+roadDodgeChain;
+            int cue=hazard.bomb?2:1;
+            // The title counts every real clearance; only the first of each type
+            // in this road round adds a small world cue, never a screen popup/reward.
+            if((roadDodgeCues&cue)==0){roadDodgeCues|=cue;if(!hazard.bomb)game.Impact(point,AncientGame.Cyan,false);game.Sound(2);}
         }
         void ClearHazards(){foreach(var h in hazards)if(h!=null){h.live=false;h.root.SetActive(false);}}
         void RefreshObjective()
@@ -509,6 +540,8 @@ namespace Plugin.AncientCivilization
         {
             if(!ready)return;UpdateBoardingMast();bool shown=sequence.Phase==AncientProductionPhase.Approach&&boardingReady||sequence.Phase==AncientProductionPhase.Boarding;hook.enabled=shown;
             if(hookSlot>=0)game.anchors[hookSlot]=shown?BoardingHook:new Vector2(-100000,-100000);
+            Color latch=AncientGame.Cyan;if(boardingFailures>0)latch.a=.62f+.38f*(.5f+.5f*Mathf.Sin(Time.time*5));
+            hook.startColor=hook.endColor=latch;
             if(shown){Vector2 p=BoardingHook;for(int i=0;i<4;i++){float a=i*Mathf.PI*.5f;hook.SetPosition(i,p+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*.38f);}}
         }
         void OnGUI()
@@ -534,8 +567,12 @@ namespace Plugin.AncientCivilization
                 // Keep the road, landing point and normal boss health bar unobscured.
                 // The complete objective already appears in the regular top-right HUD.
                 float left=330,span=width-646;GUI.color=Color.white;
-                string title=DeckCombat?captainWindup?"운송대장 / 공격 전조":"운송대장 / 공격 기회":sequence.Phase==AncientProductionPhase.Approach?"공격 중지 / 와이어 승선":sequence.Phase==AncientProductionPhase.Boarding?"트럭 승선 / 와이어 견인":"자동주행 / Space 점프";
+                string title=DeckCombat?captainWindup?"운송대장 / 공격 전조":"운송대장 / 공격 기회":sequence.Phase==AncientProductionPhase.Approach?"공격 중지 / 와이어 승선":sequence.Phase==AncientProductionPhase.Boarding?"트럭 승선 / 와이어 견인":roadTitle;
                 string cue=DeckCombat?captainWindup?(captainPattern%3==0?"근접 쓸기 / 뒤로 넘거나 거리를 벌리세요":captainPattern%3==1?"물체 투척 / 고정된 궤적을 피하거나 블레이드로 파괴":"낙하 압축판 / 바닥 표식에서 벗어나세요"):"블레이드 공격 · 우클릭 입자 수집 · 좌클릭 유지 후 놓아 레이저":sequence.Phase==AncientProductionPhase.Approach?(boardingReady?"점등된 청록 고리를 좌클릭해 트럭에 올라타세요":"트럭 접근 중 / 승선 고리가 켜질 때까지 기다리세요"):sequence.Phase==AncientProductionPhase.Boarding?"움직이는 트럭 지붕으로 견인 중":"노란 표식은 잔재 / 주황 원이 차오르면 폭탄 폭발";
+                if(sequence.Phase==AncientProductionPhase.Chase&&Time.time<roadCoachUntil)
+                    cue=roadCoachBomb?"폭탄은 즉시 뛰지 말고 주황 원이 차오를 때 Space / 다음 표식을 보세요":"잔재에 닿기 전에 Space / 너무 일찍 뛰면 앞에서 착지합니다";
+                else if(sequence.Phase==AncientProductionPhase.Approach&&boardingReady&&boardingFailures>0)
+                    cue="몇 번이든 다시 승선 가능 / 점멸하는 청록 고리를 좌클릭하세요";
                 GUI.Label(new Rect(left,18,span,28),title,caption);GUI.Label(new Rect(left,47,span,44),cue,hint);
             }
             GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;

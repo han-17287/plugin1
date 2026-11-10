@@ -102,6 +102,51 @@ namespace Plugin.AncientCivilization.EditorChecks
         {return (int)typeof(AncientCampaign).GetMethod("NearestCitizen",PrivateInstance).Invoke(campaign,null);}
         static void MoveToSector(AncientGame game,int sector)
         {game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(game.Campaign.CurrentRoom)+AncientFieldExpansion.EntranceOf(sector),1.3f));}
+        static AncientWorkshopCircuit Workshop(AncientGame game)
+        {return (AncientWorkshopCircuit)typeof(AncientCampaign).GetField("workshopCircuit",PrivateInstance).GetValue(game.Campaign);}
+        static void CheckRestoredWorkshop(AncientGame game)
+        {
+            var circuit=Workshop(game);var root=game.Campaign.transform.Find("Lower workshop service power circuit");
+            Assert(circuit!=null&&root,"The actual workshop owns its persistent service circuit");
+            var renderers=root.GetComponentsInChildren<Renderer>();
+            Assert(renderers.Length<=40&&root.GetComponentsInChildren<Collider2D>().Length==0,"The repair circuit uses a bounded visual set and adds no collision geometry");
+            Vector3 oldCamera=game.View.transform.position;int oldFloor=game.Story.CurrentFloor;bool oldMenu=game.MainMenu,oldQuality=AncientVisuals.HighQuality;
+            var setFloor=typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true);var setMenu=typeof(AncientGame).GetProperty("MainMenu").GetSetMethod(true);
+            try
+            {
+                Vector2 receiver=Point("NodePoint",1,2);game.View.transform.position=new Vector3(receiver.x,4.6f,-10);
+                AncientVisuals.HighQuality=false;circuit.Update(game.Campaign.RecordedTasks(1));
+                Assert(root.Find("Restored receiver powered glass").GetComponent<SpriteRenderer>().enabled&&root.Find("Workshop receiver supply riser").GetComponent<LineRenderer>().enabled,"Restored power remains readable at the real receiver in low-effects mode");
+                bool lit=false;foreach(var view in root.GetComponentsInChildren<SpriteRenderer>())if(view.name=="Workshop restored service light"&&view.enabled&&view.color.b>.8f)lit=true;
+                Assert(lit,"The restored circuit lights a nearby physical overhead lamp rather than only recoloring its objective");
+                float before=(float)typeof(AncientWorkshopCircuit).GetField("restoreAge",PrivateInstance).GetValue(circuit);
+                setMenu.Invoke(game,new object[]{true});circuit.Update(game.Campaign.RecordedTasks(1));bool any=false;foreach(var view in renderers)any|=view.enabled;
+                Assert(!any&&(float)typeof(AncientWorkshopCircuit).GetField("restoreAge",PrivateInstance).GetValue(circuit)==before,"The menu hides the actual circuit and pauses its restoration wave");
+                setMenu.Invoke(game,new object[]{false});setFloor.Invoke(game.Story,new object[]{1});circuit.Update(game.Campaign.RecordedTasks(1));any=false;foreach(var view in renderers)any|=view.enabled;
+                Assert(!any,"The lower workshop cannot remain visible when another floor is active");
+                setFloor.Invoke(game.Story,new object[]{0});game.View.transform.position=new Vector3(AncientCampaignRules.Left(1)-100,4.6f,-10);circuit.Update(game.Campaign.RecordedTasks(1));any=false;foreach(var view in renderers)any|=view.enabled;
+                Assert(!any,"The powered workshop disables its renderers outside the actual camera");
+            }
+            finally
+            {
+                game.View.transform.position=oldCamera;setFloor.Invoke(game.Story,new object[]{oldFloor});setMenu.Invoke(game,new object[]{oldMenu});AncientVisuals.HighQuality=oldQuality;
+                circuit.Update(game.Campaign.RecordedTasks(1));
+            }
+        }
+        static void CheckWorkshopRevisit(AncientGame game)
+        {
+            Assert(game.Campaign.RecordedTasks(1)==7&&AncientGame.Saved("routeTask1")==7&&Workshop(game).PoweredOn,"The completed workshop keeps its actual saved power mask while the escort case is active");
+            var probe=new GameObject("QA reconstructed saved workshop");int credits=game.credits,score=game.score;float health=game.hero.hp;
+            try
+            {
+                var points=new[]{Point("NodePoint",1,0),Point("NodePoint",1,1),Point("NodePoint",1,2)};
+                var restored=new AncientWorkshopCircuit(game,probe.transform,AncientCampaignRules.Left(1),points,AncientGame.Saved("routeTask1"));
+                restored.Update(game.Campaign.RecordedTasks(1));
+                Assert(restored.PoweredOn&&!restored.RestorationWave,"Reconstructing the actual visual from its persisted mask lights the workshop without replaying the restoration wave");
+                Assert(game.credits==credits&&game.score==score&&game.hero.hp==health&&game.Campaign.CurrentRoom==2,"Restoring workshop lighting grants no currency, score, recovery or extra mission advance");
+            }
+            finally{probe.SetActive(false);UnityEngine.Object.Destroy(probe);}
+        }
         static void CheckAnchorHaloPool(AncientGame game)
         {
             var visuals=game.GetComponent<AncientVisuals>();Assert(visuals,"The actual scene has its initialized visual-effects controller");
@@ -459,8 +504,11 @@ namespace Plugin.AncientCivilization.EditorChecks
                     game.hero.Combat.ResetCombat();Vector2 panel=Point("PowerPoint",1,2);
                     Assert(campaign.TryBladeTarget(panel-Vector2.right,Vector2.right)&&LiveMotes(game.hero)==3,"The final sector can regenerate collectible energy after all prior motes are lost");
                     Assert(Tasks(campaign)==3,"Refill does not grant the laser objective");
+                    var circuit=Workshop(game);circuit.Update(campaign.RecordedTasks(1));
+                    Assert(!circuit.PoweredOn&&!circuit.RestorationWave,"Earlier workshop objectives and energy refills do not restore the service circuit");
                     Vector2 receiver=Point("NodePoint",1,2);campaign.OnLaser(receiver-Vector2.right*3,receiver+Vector2.right*3);
                     Assert(Tasks(campaign)==7,"A visible ray through the final receiver completes the power objective");
+                    circuit.Update(campaign.RecordedTasks(1));Assert(circuit.PoweredOn&&circuit.RestorationWave,"The actual receiver laser switches on the workshop and starts one restoration wave");CheckRestoredWorkshop(game);
                     game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(1)+AncientCampaignRules.RoomWidth-6,1.3f));Call(campaign,"Update");
                     Assert(campaign.CurrentRoom==1&&(campaign.CompletedMask&2)==0,"The onward road still refuses a live final encounter");
                     DefeatCurrent(game);Call(campaign,"RecordDefeats");Vector2 position=game.hero.transform.position;Call(campaign,"Update");
@@ -470,6 +518,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==12)
                 {
                     Assert(campaign.CurrentRoom==2,"The escort case starts after the power case");Physics2D.SyncTransforms();
+                    CheckWorkshopRevisit(game);
                     CheckIndependentForeman(game);
                     float left=AncientCampaignRules.Left(2);
                     for(int i=1;i<AncientCampaignRules.RoomWidth/10;i++)Assert(Physics2D.OverlapPoint(new Vector2(left+i*10,-.1f),1<<8),"Escort ground remains continuous at local x="+(i*10));
