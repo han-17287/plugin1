@@ -676,6 +676,10 @@ namespace Plugin.AncientCivilization
                 rect.y=above>=216*scale?above:Mathf.Min(below,Screen.height-110*scale-height);
                 if(rect.Overlaps(fieldGuideRect))return;
             }
+            // Low world prompts must not cover the officer while interacting or fighting.
+            var heroLow=game.View.WorldToScreenPoint(game.hero.transform.position+new Vector3(-.55f,-1.15f,0));
+            var heroHigh=game.View.WorldToScreenPoint(game.hero.transform.position+new Vector3(.55f,1.15f,0));
+            if(heroLow.z>0&&heroHigh.z>0&&rect.Overlaps(Rect.MinMaxRect(Mathf.Min(heroLow.x,heroHigh.x),Screen.height-Mathf.Max(heroLow.y,heroHigh.y),Mathf.Max(heroLow.x,heroHigh.x),Screen.height-Mathf.Min(heroLow.y,heroHigh.y))))return;
             AncientHUD.Panel(rect,new Color(.025f,.05f,.065f,.86f));
             GUI.Label(new Rect(rect.x+4*scale,rect.y,rect.width-8*scale,rect.height),text,fieldWorldStyle);
         }
