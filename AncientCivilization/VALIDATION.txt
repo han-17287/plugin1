@@ -1,0 +1,1626 @@
+v0.21.0 lower district game-feel source release — 2026-11-10
+PASS: .NET SDK8.0.416 built and ran20 independently isolated rule-check projects
+PASS: BeamChecks = 11591
+PASS: BladeChecks = 4600
+PASS: BossReadabilityChecks = 1748
+PASS: ChapterRouteChecks = 9891
+PASS: ChapterVisibilityChecks = 13661
+PASS: FieldExpansionChecks = 28597
+PASS: MovementChecks = 2558
+PASS: ProductionHazardChecks = 767
+PASS: ProductionLayoutChecks = 522114
+PASS: ProductionMotionChecks = 48172
+PASS: ProductionSequenceChecks = 192993
+PASS: ProjectileOrderingChecks = 7024
+PASS: PulseChecks = 137
+PASS: RouteRadioChecks = 106
+PASS: RulesChecks = 3845
+PASS: SniperChecks = 76
+PASS: SpeechLayoutChecks = 3997
+PASS: SwingChecks = 596
+PASS: ThreatChecks = 359
+PASS: ZipChecks = 28917
+TOTAL: 881749 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
+PASS: 1586 source/asset checks, no skipped optional dependencies in this run.
+PASS: all92 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors; compiled snapshots match current source except the declared velocity alias.
+LIMIT: supplemental compilation uses UnityEngine.Modules NuGet package2021.3.33, temporary linearVelocity-to-velocity aliases and minimal Editor stubs. It does not establish native Unity6000.6.7f1 import, shaders, physics or Play.
+PASS: metadata GUIDs, PNG integrity/alpha/native-grid crops, C# syntax, first-run secrecy and unchanged original weapon/wire references.
+FONT: bundled NeoDunggeunmo cmap covers585 runtime non-ASCII literal codepoints; unsupported direction arrows were replaced by supported pixel triangles. This does not validate Unity font rasterization or layout.
+REVIEW v0.21: carried-motion camera lead/airborne zoom; stale horizontal input cleanup; actual accepted-hit markers; stable near-vertical blade facing; measured energy-aware charge hints; actual jump-clearance feedback; failed boarding guidance; persisted collision-free workshop lighting.
+REVIEW retained: display-aligned boarding-latch picking with480p..8K numerical coverage; safe staged training; optional worker art/anchors; thin expert ledges; arrest-to-investigation continuation; rescued Reha; moving-anchor completed-step release and carrier velocity; truck latch underside/mast; chase/deck camera margins; separate three-core cargo; physical/visible roof alignment; frame-hitch blade contact; grounded factory artwork and paused industry motion; bounded64 anchor halos.
+NUMERICAL MODEL LIMIT: route/cinematic/camera and moving-target traces use declared geometry and assumptions. They do not run the Unity collision solver or measure real keyboard/mouse input, rendering or camera feel.
+NATIVE FIXTURES WRITTEN/COMPILED, NOT RUN: PLUGIN/검사 production, movement, blade and continuous-chapter menus use isolated QA profiles, actual components and directed Physics2D simulations. Added probes cover8..14m boarding without a clock timeout, static/moving zip finish, stationary end-of-tunnel boarding, worker feet/heads, three-core cargo, actual camera viewports, halo capacity/tracking, late-finisher retry and arrest handoff. New authored probes cover accepted/whiff markers and their context cleanup, input guards, real hazard consumption/damage coaching, a physically incomplete boarding timeout with safe remount, and actual laser-powered workshop restoration/persistence/culling. These native probes were compiled, not run.
+AUDIO:18 generated waveforms checked offline for finite samples, clipping and endpoint smoothing; real listening/Unity playback unverified.
+CI: .github/workflows/source-checks.yml runs source/assets and portable rules with pinned Python dependencies. It cannot run native Unity fixtures.
+PACKAGING: Tools/package_project.py creates a source/reference ZIP, excludes Unity/build/tool caches, checks CRC and file-byte equality, and writes a separate SHA256. It does not build a player.
+NOT RUN: native Unity6000.6.7f1 compile/import/shaders, PlayMode, physical controls, audio audition, full playthrough, measuredFPS or player build.
+SCOPE: lower-district source improvement. No claim of measured nine-hour gameplay,90%completion or commercial-release quality.
+
+Source/asset checks follow:
+PASS: required builtin Unity modules declared
+PASS: Unity version 6000.6.7f1
+PASS: metadata coverage Editor
+PASS: metadata coverage Scenes
+PASS: metadata target Assets/Resources.meta
+PASS: 32-character GUID Resources.meta
+PASS: metadata coverage Scripts
+PASS: metadata target Assets/Scenes.meta
+PASS: 32-character GUID Scenes.meta
+PASS: metadata target Assets/Editor.meta
+PASS: 32-character GUID Editor.meta
+PASS: metadata coverage Resources
+PASS: metadata target Assets/Scripts.meta
+PASS: 32-character GUID Scripts.meta
+PASS: metadata coverage AncientSniperSmokeChecks.cs
+PASS: metadata target Assets/Editor/AncientFieldSmokeChecks.cs.meta
+PASS: 32-character GUID AncientFieldSmokeChecks.cs.meta
+PASS: metadata coverage AncientFieldSmokeChecks.cs
+PASS: metadata coverage AncientProjectileSmokeChecks.cs
+PASS: metadata target Assets/Editor/AncientProjectileSmokeChecks.cs.meta
+PASS: 32-character GUID AncientProjectileSmokeChecks.cs.meta
+PASS: metadata target Assets/Editor/AncientSniperSmokeChecks.cs.meta
+PASS: 32-character GUID AncientSniperSmokeChecks.cs.meta
+PASS: metadata coverage AncientBladeSmokeChecks.cs
+PASS: metadata target Assets/Editor/AncientBladeSmokeChecks.cs.meta
+PASS: 32-character GUID AncientBladeSmokeChecks.cs.meta
+PASS: metadata coverage AncientMovementSmokeChecks.cs
+PASS: metadata coverage AncientProductionSmokeChecks.cs
+PASS: metadata target Assets/Editor/AncientMovementSmokeChecks.cs.meta
+PASS: 32-character GUID AncientMovementSmokeChecks.cs.meta
+PASS: metadata target Assets/Editor/AncientProductionSmokeChecks.cs.meta
+PASS: 32-character GUID AncientProductionSmokeChecks.cs.meta
+PASS: metadata coverage Main.unity
+PASS: metadata target Assets/Scenes/Main.unity.meta
+PASS: 32-character GUID Main.unity.meta
+PASS: metadata target Assets/Scripts/AncientCitizenArt.cs.meta
+PASS: 32-character GUID AncientCitizenArt.cs.meta
+PASS: metadata target Assets/Scripts/AncientBootIntro.cs.meta
+PASS: 32-character GUID AncientBootIntro.cs.meta
+PASS: metadata coverage AncientTraversalLayout.cs
+PASS: metadata target Assets/Scripts/AncientCampaign.cs.meta
+PASS: 32-character GUID AncientCampaign.cs.meta
+PASS: metadata target Assets/Scripts/AncientMainMenu.cs.meta
+PASS: 32-character GUID AncientMainMenu.cs.meta
+PASS: metadata coverage AncientProductionResidents.cs
+PASS: metadata coverage AncientWireParticleBatch.cs
+PASS: metadata target Assets/Scripts/AncientRouteRadioPlayback.cs.meta
+PASS: 32-character GUID AncientRouteRadioPlayback.cs.meta
+PASS: metadata target Assets/Scripts/AncientDistrict.cs.meta
+PASS: 32-character GUID AncientDistrict.cs.meta
+PASS: metadata coverage AncientProductionRules.cs
+PASS: metadata target Assets/Scripts/AncientPointer.cs.meta
+PASS: 32-character GUID AncientPointer.cs.meta
+PASS: metadata target Assets/Scripts/AncientBossController.cs.meta
+PASS: 32-character GUID AncientBossController.cs.meta
+PASS: metadata coverage AncientMovementRules.cs
+PASS: metadata target Assets/Scripts/AncientProductionLayout.cs.meta
+PASS: 32-character GUID AncientProductionLayout.cs.meta
+PASS: metadata target Assets/Scripts/AncientZipRules.cs.meta
+PASS: 32-character GUID AncientZipRules.cs.meta
+PASS: metadata target Assets/Scripts/AncientEvidenceQuestions.cs.meta
+PASS: 32-character GUID AncientEvidenceQuestions.cs.meta
+PASS: metadata target Assets/Scripts/AncientChapterLayout.cs.meta
+PASS: 32-character GUID AncientChapterLayout.cs.meta
+PASS: metadata coverage AncientPulseRules.cs
+PASS: metadata target Assets/Scripts/AncientProductionHazardRules.cs.meta
+PASS: 32-character GUID AncientProductionHazardRules.cs.meta
+PASS: metadata target Assets/Scripts/SniperEquipmentArt.cs.meta
+PASS: 32-character GUID SniperEquipmentArt.cs.meta
+PASS: metadata coverage AncientCameraRules.cs
+PASS: metadata coverage AncientProductionPropAtlas.cs
+PASS: metadata target Assets/Scripts/AncientCameraFX.cs.meta
+PASS: 32-character GUID AncientCameraFX.cs.meta
+PASS: metadata coverage AncientBeamRules.cs
+PASS: metadata coverage AncientBossRules.cs
+PASS: metadata target Assets/Scripts/AncientWireParticleBatch.cs.meta
+PASS: 32-character GUID AncientWireParticleBatch.cs.meta
+PASS: metadata target Assets/Scripts/AncientSwingMotion.cs.meta
+PASS: 32-character GUID AncientSwingMotion.cs.meta
+PASS: metadata target Assets/Scripts/AncientChapterVisibility.cs.meta
+PASS: 32-character GUID AncientChapterVisibility.cs.meta
+PASS: metadata coverage AncientAnchorLightSelection.cs
+PASS: metadata target Assets/Scripts/AncientAudio.cs.meta
+PASS: 32-character GUID AncientAudio.cs.meta
+PASS: metadata coverage AncientCityLayout.cs
+PASS: metadata coverage AncientSpeechLayout.cs
+PASS: metadata target Assets/Scripts/AncientCampaignRules.cs.meta
+PASS: 32-character GUID AncientCampaignRules.cs.meta
+PASS: metadata coverage AncientSwingAtlas.cs
+PASS: metadata target Assets/Scripts/AncientProductionCaptainAtlas.cs.meta
+PASS: 32-character GUID AncientProductionCaptainAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientPulseRules.cs.meta
+PASS: 32-character GUID AncientPulseRules.cs.meta
+PASS: metadata coverage AncientFrameRules.cs
+PASS: metadata coverage AncientSwingMotion.cs
+PASS: metadata coverage AncientRadioAtlas.cs
+PASS: metadata target Assets/Scripts/AncientPerformance.cs.meta
+PASS: 32-character GUID AncientPerformance.cs.meta
+PASS: metadata target Assets/Scripts/AncientChapterView.cs.meta
+PASS: 32-character GUID AncientChapterView.cs.meta
+PASS: metadata coverage AncientFieldExpansion.cs
+PASS: metadata coverage AncientCampaignRules.cs
+PASS: metadata coverage AncientSniperGround.cs
+PASS: metadata target Assets/Scripts/AncientExploration.cs.meta
+PASS: 32-character GUID AncientExploration.cs.meta
+PASS: metadata coverage AncientProductionMap.cs
+PASS: metadata coverage AncientPointer.cs
+PASS: metadata target Assets/Scripts/AncientFrameRules.cs.meta
+PASS: 32-character GUID AncientFrameRules.cs.meta
+PASS: metadata target Assets/Scripts/AncientMovementRules.cs.meta
+PASS: 32-character GUID AncientMovementRules.cs.meta
+PASS: metadata coverage AncientWorkshopCircuit.cs
+PASS: metadata coverage AncientArt.cs
+PASS: metadata target Assets/Scripts/AncientProductionResidents.cs.meta
+PASS: 32-character GUID AncientProductionResidents.cs.meta
+PASS: metadata target Assets/Scripts/AncientProjectileRules.cs.meta
+PASS: 32-character GUID AncientProjectileRules.cs.meta
+PASS: metadata coverage AncientProductionTruckAtlas.cs
+PASS: metadata coverage AncientProductionLayout.cs
+PASS: metadata target Assets/Scripts/AncientParkedBike.cs.meta
+PASS: 32-character GUID AncientParkedBike.cs.meta
+PASS: metadata target Assets/Scripts/AncientProjectilePool.cs.meta
+PASS: 32-character GUID AncientProjectilePool.cs.meta
+PASS: metadata coverage AncientCityCampaign.cs
+PASS: metadata coverage AncientRules.cs
+PASS: metadata coverage AncientTraversal.cs
+PASS: metadata target Assets/Scripts/AncientSniperGround.cs.meta
+PASS: 32-character GUID AncientSniperGround.cs.meta
+PASS: metadata target Assets/Scripts/AncientCampaignData.cs.meta
+PASS: 32-character GUID AncientCampaignData.cs.meta
+PASS: metadata target Assets/Scripts/AncientCombat.cs.meta
+PASS: 32-character GUID AncientCombat.cs.meta
+PASS: metadata target Assets/Scripts/AncientFieldExpansion.cs.meta
+PASS: 32-character GUID AncientFieldExpansion.cs.meta
+PASS: metadata coverage AncientCitizenAtlas.cs
+PASS: metadata target Assets/Scripts/AncientFieldScenery.cs.meta
+PASS: 32-character GUID AncientFieldScenery.cs.meta
+PASS: metadata target Assets/Scripts/AncientBossRules.cs.meta
+PASS: 32-character GUID AncientBossRules.cs.meta
+PASS: metadata coverage AncientCombatRules.cs
+PASS: metadata target Assets/Scripts/AncientThreatRules.cs.meta
+PASS: 32-character GUID AncientThreatRules.cs.meta
+PASS: metadata target Assets/Scripts/AncientSniperRules.cs.meta
+PASS: 32-character GUID AncientSniperRules.cs.meta
+PASS: metadata coverage AncientFinaleRules.cs
+PASS: metadata coverage AncientProductionHazardRules.cs
+PASS: metadata coverage AncientJournal.cs
+PASS: metadata coverage AncientCampaignData.cs
+PASS: metadata coverage AncientWireMath.cs
+PASS: metadata target Assets/Scripts/AncientFieldCases.cs.meta
+PASS: 32-character GUID AncientFieldCases.cs.meta
+PASS: metadata coverage AncientProductionMotion.cs
+PASS: metadata target Assets/Scripts/AncientVisuals.cs.meta
+PASS: 32-character GUID AncientVisuals.cs.meta
+PASS: metadata target Assets/Scripts/AncientFieldLayout.cs.meta
+PASS: 32-character GUID AncientFieldLayout.cs.meta
+PASS: metadata coverage AncientSniperRules.cs
+PASS: metadata target Assets/Scripts/AncientTraversal.cs.meta
+PASS: 32-character GUID AncientTraversal.cs.meta
+PASS: metadata coverage AncientProductionPursuit.cs
+PASS: metadata target Assets/Scripts/AncientTraversalLayout.cs.meta
+PASS: 32-character GUID AncientTraversalLayout.cs.meta
+PASS: metadata coverage AncientProductionCaptainAtlas.cs
+PASS: metadata target Assets/Scripts/AncientBossAtlas.cs.meta
+PASS: 32-character GUID AncientBossAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientRules.cs.meta
+PASS: 32-character GUID AncientRules.cs.meta
+PASS: metadata coverage AncientFieldCases.cs
+PASS: metadata coverage AncientProjectilePool.cs
+PASS: metadata target Assets/Scripts/AncientWireMath.cs.meta
+PASS: 32-character GUID AncientWireMath.cs.meta
+PASS: metadata target Assets/Scripts/AncientBladeRules.cs.meta
+PASS: 32-character GUID AncientBladeRules.cs.meta
+PASS: metadata coverage AncientClockBoss.cs
+PASS: metadata target Assets/Scripts/AncientDistrictBackdrop.cs.meta
+PASS: 32-character GUID AncientDistrictBackdrop.cs.meta
+PASS: metadata target Assets/Scripts/AncientProductionMap.cs.meta
+PASS: 32-character GUID AncientProductionMap.cs.meta
+PASS: metadata target Assets/Scripts/AncientGame.cs.meta
+PASS: 32-character GUID AncientGame.cs.meta
+PASS: metadata coverage AncientClockRules.cs
+PASS: metadata target Assets/Scripts/AncientCityCampaign.cs.meta
+PASS: 32-character GUID AncientCityCampaign.cs.meta
+PASS: metadata coverage AncientCameraFX.cs
+PASS: metadata coverage AncientBossController.cs
+PASS: metadata target Assets/Scripts/AncientHUD.cs.meta
+PASS: 32-character GUID AncientHUD.cs.meta
+PASS: metadata coverage AncientMainMenu.cs
+PASS: metadata target Assets/Scripts/AncientHudText.cs.meta
+PASS: 32-character GUID AncientHudText.cs.meta
+PASS: metadata coverage AncientProductionWorkerAtlas.cs
+PASS: metadata target Assets/Scripts/AncientCityLayout.cs.meta
+PASS: 32-character GUID AncientCityLayout.cs.meta
+PASS: metadata target Assets/Scripts/AncientProductionWorkerAtlas.cs.meta
+PASS: 32-character GUID AncientProductionWorkerAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientBeamVisuals.cs.meta
+PASS: 32-character GUID AncientBeamVisuals.cs.meta
+PASS: metadata coverage AncientProgressRules.cs
+PASS: metadata coverage AncientBossAtlas.cs
+PASS: metadata coverage AncientAudio.cs
+PASS: metadata target Assets/Scripts/AncientAnchorLightSelection.cs.meta
+PASS: 32-character GUID AncientAnchorLightSelection.cs.meta
+PASS: metadata target Assets/Scripts/AncientClockBoss.cs.meta
+PASS: 32-character GUID AncientClockBoss.cs.meta
+PASS: metadata target Assets/Scripts/AncientFinaleRules.cs.meta
+PASS: 32-character GUID AncientFinaleRules.cs.meta
+PASS: metadata coverage AncientMoteVisuals.cs
+PASS: metadata target Assets/Scripts/AncientProductionPursuit.cs.meta
+PASS: 32-character GUID AncientProductionPursuit.cs.meta
+PASS: metadata target Assets/Scripts/AncientWorkshopCircuit.cs.meta
+PASS: 32-character GUID AncientWorkshopCircuit.cs.meta
+PASS: metadata coverage AncientProjectileRules.cs
+PASS: metadata coverage AncientBeamVisuals.cs
+PASS: metadata coverage AncientPixels.cs
+PASS: metadata coverage AncientSpeechBubble.cs
+PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
+PASS: 32-character GUID AncientPixels.cs.meta
+PASS: metadata coverage AncientCitizenArt.cs
+PASS: metadata coverage AncientExploration.cs
+PASS: metadata target Assets/Scripts/AncientSwingRules.cs.meta
+PASS: 32-character GUID AncientSwingRules.cs.meta
+PASS: metadata target Assets/Scripts/AncientMotorcycle.cs.meta
+PASS: 32-character GUID AncientMotorcycle.cs.meta
+PASS: metadata target Assets/Scripts/AncientFinale.cs.meta
+PASS: 32-character GUID AncientFinale.cs.meta
+PASS: metadata coverage AncientBootIntro.cs
+PASS: metadata coverage AncientVisuals.cs
+PASS: metadata coverage AncientSwingRules.cs
+PASS: metadata target Assets/Scripts/AncientSniperEncounter.cs.meta
+PASS: 32-character GUID AncientSniperEncounter.cs.meta
+PASS: metadata target Assets/Scripts/AncientBladeAtlas.cs.meta
+PASS: 32-character GUID AncientBladeAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientRouteRadio.cs.meta
+PASS: 32-character GUID AncientRouteRadio.cs.meta
+PASS: metadata coverage AncientKoreanUI.cs
+PASS: metadata target Assets/Scripts/AncientProductionMotion.cs.meta
+PASS: 32-character GUID AncientProductionMotion.cs.meta
+PASS: metadata coverage AncientCombatFeedbackRules.cs
+PASS: metadata coverage AncientRouteRadio.cs
+PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
+PASS: 32-character GUID AncientClockRules.cs.meta
+PASS: metadata coverage AncientDistrict.cs
+PASS: metadata target Assets/Scripts/AncientProductionTruckAtlas.cs.meta
+PASS: 32-character GUID AncientProductionTruckAtlas.cs.meta
+PASS: metadata coverage AncientDistrictBackdrop.cs
+PASS: metadata target Assets/Scripts/AncientProgressRules.cs.meta
+PASS: 32-character GUID AncientProgressRules.cs.meta
+PASS: metadata target Assets/Scripts/AncientBackdropAtlas.cs.meta
+PASS: 32-character GUID AncientBackdropAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientSpeechBubble.cs.meta
+PASS: 32-character GUID AncientSpeechBubble.cs.meta
+PASS: metadata target Assets/Scripts/AncientProductionPropAtlas.cs.meta
+PASS: 32-character GUID AncientProductionPropAtlas.cs.meta
+PASS: metadata coverage AncientPerformance.cs
+PASS: metadata coverage AncientBackdropAtlas.cs
+PASS: metadata coverage AncientThreatRules.cs
+PASS: metadata coverage AncientEvidenceQuestions.cs
+PASS: metadata target Assets/Scripts/AncientCitizenAtlas.cs.meta
+PASS: 32-character GUID AncientCitizenAtlas.cs.meta
+PASS: metadata coverage AncientGameFeel.cs
+PASS: metadata coverage AncientRouteRadioPlayback.cs
+PASS: metadata target Assets/Scripts/AncientMoteVisuals.cs.meta
+PASS: 32-character GUID AncientMoteVisuals.cs.meta
+PASS: metadata coverage AncientParkedBike.cs
+PASS: metadata target Assets/Scripts/AncientWorldBatch.cs.meta
+PASS: 32-character GUID AncientWorldBatch.cs.meta
+PASS: metadata coverage AncientCampaign.cs
+PASS: metadata target Assets/Scripts/AncientCombatRules.cs.meta
+PASS: 32-character GUID AncientCombatRules.cs.meta
+PASS: metadata coverage AncientChapterView.cs
+PASS: metadata target Assets/Scripts/AncientStory.cs.meta
+PASS: 32-character GUID AncientStory.cs.meta
+PASS: metadata coverage AncientFinale.cs
+PASS: metadata target Assets/Scripts/AncientCombatFeedbackRules.cs.meta
+PASS: 32-character GUID AncientCombatFeedbackRules.cs.meta
+PASS: metadata coverage AncientChapterLayout.cs
+PASS: metadata coverage AncientCombat.cs
+PASS: metadata coverage AncientSniperEncounter.cs
+PASS: metadata coverage AncientChapterVisibility.cs
+PASS: metadata target Assets/Scripts/AncientSwingAtlas.cs.meta
+PASS: 32-character GUID AncientSwingAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientBeamRules.cs.meta
+PASS: 32-character GUID AncientBeamRules.cs.meta
+PASS: metadata coverage AncientFieldScenery.cs
+PASS: metadata target Assets/Scripts/AncientKoreanUI.cs.meta
+PASS: 32-character GUID AncientKoreanUI.cs.meta
+PASS: metadata coverage AncientHUD.cs
+PASS: metadata coverage SniperEquipmentArt.cs
+PASS: metadata coverage AncientFieldLayout.cs
+PASS: metadata coverage AncientStory.cs
+PASS: metadata target Assets/Scripts/AncientRadioAtlas.cs.meta
+PASS: 32-character GUID AncientRadioAtlas.cs.meta
+PASS: metadata target Assets/Scripts/AncientProductionRules.cs.meta
+PASS: 32-character GUID AncientProductionRules.cs.meta
+PASS: metadata target Assets/Scripts/AncientSpeechLayout.cs.meta
+PASS: 32-character GUID AncientSpeechLayout.cs.meta
+PASS: metadata coverage AncientBladeRules.cs
+PASS: metadata target Assets/Scripts/AncientArt.cs.meta
+PASS: 32-character GUID AncientArt.cs.meta
+PASS: metadata coverage AncientMotorcycle.cs
+PASS: metadata target Assets/Scripts/AncientJournal.cs.meta
+PASS: 32-character GUID AncientJournal.cs.meta
+PASS: metadata coverage AncientGame.cs
+PASS: metadata target Assets/Scripts/AncientCameraRules.cs.meta
+PASS: 32-character GUID AncientCameraRules.cs.meta
+PASS: metadata coverage AncientZipRules.cs
+PASS: metadata coverage AncientHudText.cs
+PASS: metadata target Assets/Scripts/AncientGameFeel.cs.meta
+PASS: 32-character GUID AncientGameFeel.cs.meta
+PASS: metadata coverage AncientBladeAtlas.cs
+PASS: metadata coverage AncientWorldBatch.cs
+PASS: metadata target Assets/Resources/Art.meta
+PASS: 32-character GUID Art.meta
+PASS: metadata coverage Art
+PASS: metadata coverage Shaders
+PASS: metadata coverage Fonts
+PASS: metadata target Assets/Resources/Shaders.meta
+PASS: 32-character GUID Shaders.meta
+PASS: metadata target Assets/Resources/Fonts.meta
+PASS: 32-character GUID Fonts.meta
+PASS: metadata target Assets/Resources/Art/BladeHorizontal.png.meta
+PASS: 32-character GUID BladeHorizontal.png.meta
+PASS: metadata target Assets/Resources/Art/ProductionWorkers.png.meta
+PASS: 32-character GUID ProductionWorkers.png.meta
+PASS: metadata target Assets/Resources/Art/Citizens3.png.meta
+PASS: 32-character GUID Citizens3.png.meta
+PASS: metadata coverage MenuBlade.png
+PASS: metadata coverage BladeVertical.png
+PASS: metadata target Assets/Resources/Art/Scrap.png.meta
+PASS: 32-character GUID Scrap.png.meta
+PASS: metadata target Assets/Resources/Art/StudioLogos.png.meta
+PASS: 32-character GUID StudioLogos.png.meta
+PASS: metadata coverage Citizens1.png
+PASS: metadata coverage StudioLogos.png
+PASS: metadata coverage Citizens0.png
+PASS: metadata coverage Boss0.png
+PASS: metadata target Assets/Resources/Art/ProductionMachinery.png.meta
+PASS: 32-character GUID ProductionMachinery.png.meta
+PASS: metadata coverage HeroSwing.png
+PASS: metadata target Assets/Resources/Art/MenuSlash.png.meta
+PASS: 32-character GUID MenuSlash.png.meta
+PASS: metadata coverage MenuStandoff.png
+PASS: metadata target Assets/Resources/Art/Citizens1.png.meta
+PASS: 32-character GUID Citizens1.png.meta
+PASS: metadata target Assets/Resources/Art/City.png.meta
+PASS: 32-character GUID City.png.meta
+PASS: metadata coverage ProductionMachinery.png
+PASS: metadata coverage Citizens3.png
+PASS: metadata target Assets/Resources/Art/MenuStandoff.png.meta
+PASS: 32-character GUID MenuStandoff.png.meta
+PASS: metadata coverage Boss2.png
+PASS: metadata target Assets/Resources/Art/Citizens4.png.meta
+PASS: 32-character GUID Citizens4.png.meta
+PASS: metadata coverage CitizensWalk.png
+PASS: metadata target Assets/Resources/Art/Truck.png.meta
+PASS: 32-character GUID Truck.png.meta
+PASS: metadata target Assets/Resources/Art/ProductionTruck.png.meta
+PASS: 32-character GUID ProductionTruck.png.meta
+PASS: metadata target Assets/Resources/Art/Dialogue.png.meta
+PASS: 32-character GUID Dialogue.png.meta
+PASS: metadata coverage Dialogue.png
+PASS: metadata coverage BladeHorizontal.png
+PASS: metadata coverage MenuOfficer.png
+PASS: metadata coverage Citizens4.png
+PASS: metadata target Assets/Resources/Art/World.png.meta
+PASS: 32-character GUID World.png.meta
+PASS: metadata coverage HeroEmitterBody.png
+PASS: metadata coverage SniperEquipment.png
+PASS: metadata coverage MenuSlash.png
+PASS: metadata target Assets/Resources/Art/Hero.png.meta
+PASS: 32-character GUID Hero.png.meta
+PASS: metadata target Assets/Resources/Art/Enemies.png.meta
+PASS: 32-character GUID Enemies.png.meta
+PASS: metadata coverage Scrap.png
+PASS: metadata coverage DialogueRadio.png
+PASS: metadata coverage Boss4.png
+PASS: metadata coverage Rooftop.png
+PASS: metadata target Assets/Resources/Art/HeroEmitterBody.png.meta
+PASS: 32-character GUID HeroEmitterBody.png.meta
+PASS: metadata coverage City.png
+PASS: metadata target Assets/Resources/Art/Boss2.png.meta
+PASS: 32-character GUID Boss2.png.meta
+PASS: metadata target Assets/Resources/Art/Boss4.png.meta
+PASS: 32-character GUID Boss4.png.meta
+PASS: metadata target Assets/Resources/Art/DistrictBackdrops.png.meta
+PASS: 32-character GUID DistrictBackdrops.png.meta
+PASS: metadata coverage Citizens2.png
+PASS: metadata target Assets/Resources/Art/CitizensWalk.png.meta
+PASS: 32-character GUID CitizensWalk.png.meta
+PASS: metadata target Assets/Resources/Art/Rooftop.png.meta
+PASS: 32-character GUID Rooftop.png.meta
+PASS: metadata target Assets/Resources/Art/MenuBlade.png.meta
+PASS: 32-character GUID MenuBlade.png.meta
+PASS: metadata target Assets/Resources/Art/SniperEquipment.png.meta
+PASS: 32-character GUID SniperEquipment.png.meta
+PASS: metadata coverage ProductionWorkers.png
+PASS: metadata coverage Hero.png
+PASS: metadata target Assets/Resources/Art/BladeVertical.png.meta
+PASS: 32-character GUID BladeVertical.png.meta
+PASS: metadata coverage ProductionCaptain.png
+PASS: metadata coverage Actions.png
+PASS: metadata target Assets/Resources/Art/DialogueRadio.png.meta
+PASS: 32-character GUID DialogueRadio.png.meta
+PASS: metadata coverage Enemies.png
+PASS: metadata target Assets/Resources/Art/MenuOfficer.png.meta
+PASS: 32-character GUID MenuOfficer.png.meta
+PASS: metadata target Assets/Resources/Art/ProductionCaptain.png.meta
+PASS: 32-character GUID ProductionCaptain.png.meta
+PASS: metadata coverage Motorcycle.png
+PASS: metadata target Assets/Resources/Art/Boss1.png.meta
+PASS: 32-character GUID Boss1.png.meta
+PASS: metadata target Assets/Resources/Art/Citizens2.png.meta
+PASS: 32-character GUID Citizens2.png.meta
+PASS: metadata target Assets/Resources/Art/Boss5.png.meta
+PASS: 32-character GUID Boss5.png.meta
+PASS: metadata target Assets/Resources/Art/Motorcycle.png.meta
+PASS: 32-character GUID Motorcycle.png.meta
+PASS: metadata coverage DistrictBackdrops.png
+PASS: metadata coverage ProductionTruck.png
+PASS: metadata coverage Boss5.png
+PASS: metadata coverage Boss3.png
+PASS: metadata coverage Boss1.png
+PASS: metadata target Assets/Resources/Art/Boss3.png.meta
+PASS: 32-character GUID Boss3.png.meta
+PASS: metadata target Assets/Resources/Art/Boss0.png.meta
+PASS: 32-character GUID Boss0.png.meta
+PASS: metadata target Assets/Resources/Art/Citizens0.png.meta
+PASS: 32-character GUID Citizens0.png.meta
+PASS: metadata target Assets/Resources/Art/BladeDiagonal.png.meta
+PASS: 32-character GUID BladeDiagonal.png.meta
+PASS: metadata target Assets/Resources/Art/HeroSwing.png.meta
+PASS: 32-character GUID HeroSwing.png.meta
+PASS: metadata coverage BladeDiagonal.png
+PASS: metadata coverage World.png
+PASS: metadata target Assets/Resources/Art/Actions.png.meta
+PASS: 32-character GUID Actions.png.meta
+PASS: metadata coverage Truck.png
+PASS: metadata target Assets/Resources/Shaders/CharacterRim.shader.meta
+PASS: 32-character GUID CharacterRim.shader.meta
+PASS: metadata target Assets/Resources/Shaders/Presentation.shader.meta
+PASS: 32-character GUID Presentation.shader.meta
+PASS: metadata coverage Presentation.shader
+PASS: metadata coverage ParticleGlow.shader
+PASS: metadata coverage CharacterRim.shader
+PASS: metadata target Assets/Resources/Shaders/ParticleGlow.shader.meta
+PASS: 32-character GUID ParticleGlow.shader.meta
+PASS: metadata coverage AncientEnergyClone.shader
+PASS: metadata target Assets/Resources/Shaders/AncientEnergyClone.shader.meta
+PASS: 32-character GUID AncientEnergyClone.shader.meta
+PASS: metadata target Assets/Resources/Fonts/LICENSE.txt.meta
+PASS: 32-character GUID LICENSE.txt.meta
+PASS: metadata coverage NeoDunggeunmo.ttf
+PASS: metadata coverage LICENSE.txt
+PASS: metadata target Assets/Resources/Fonts/NeoDunggeunmo.ttf.meta
+PASS: 32-character GUID NeoDunggeunmo.ttf.meta
+PASS: unique asset GUIDs
+PASS: Main scene build GUID
+PASS: City.png PNG signature
+PASS: City.png PNG chunk integrity
+PASS: City expected image dimensions
+PASS: City readable point-filtered uncompressed import
+PASS: Hero.png PNG signature
+PASS: Hero.png PNG chunk integrity
+PASS: Hero expected image dimensions
+PASS: Hero has RGBA channel
+PASS: Hero readable point-filtered uncompressed import
+PASS: HeroEmitterBody.png PNG signature
+PASS: HeroEmitterBody.png PNG chunk integrity
+PASS: HeroEmitterBody expected image dimensions
+PASS: HeroEmitterBody has RGBA channel
+PASS: HeroEmitterBody readable point-filtered uncompressed import
+PASS: World.png PNG signature
+PASS: World.png PNG chunk integrity
+PASS: World expected image dimensions
+PASS: World has RGBA channel
+PASS: World readable point-filtered uncompressed import
+PASS: Rooftop.png PNG signature
+PASS: Rooftop.png PNG chunk integrity
+PASS: Rooftop expected image dimensions
+PASS: Rooftop readable point-filtered uncompressed import
+PASS: Enemies.png PNG signature
+PASS: Enemies.png PNG chunk integrity
+PASS: Enemies expected image dimensions
+PASS: Enemies has RGBA channel
+PASS: Enemies readable point-filtered uncompressed import
+PASS: Scrap.png PNG signature
+PASS: Scrap.png PNG chunk integrity
+PASS: Scrap expected image dimensions
+PASS: Scrap has RGBA channel
+PASS: Scrap readable point-filtered uncompressed import
+PASS: Actions.png PNG signature
+PASS: Actions.png PNG chunk integrity
+PASS: Actions expected image dimensions
+PASS: Actions has RGBA channel
+PASS: Actions readable point-filtered uncompressed import
+PASS: Motorcycle.png PNG signature
+PASS: Motorcycle.png PNG chunk integrity
+PASS: Motorcycle expected image dimensions
+PASS: Motorcycle has RGBA channel
+PASS: Motorcycle readable point-filtered uncompressed import
+PASS: Truck.png PNG signature
+PASS: Truck.png PNG chunk integrity
+PASS: Truck expected image dimensions
+PASS: Truck has RGBA channel
+PASS: Truck readable point-filtered uncompressed import
+PASS: Dialogue.png PNG signature
+PASS: Dialogue.png PNG chunk integrity
+PASS: Dialogue expected image dimensions
+PASS: Dialogue has RGBA channel
+PASS: Dialogue readable point-filtered uncompressed import
+PASS: ProductionMachinery.png PNG signature
+PASS: ProductionMachinery.png PNG chunk integrity
+PASS: original factory machinery atlas keeps its exact 1774x887 RGBA source
+PASS: factory source import preserves point filtering, readable pixels, full dimensions and no compression
+PASS: ProductionCaptain.png PNG signature
+PASS: ProductionCaptain.png PNG chunk integrity
+PASS: original captain combat atlas keeps its exact 1536x1024 RGBA source
+PASS: captain source import preserves native point pixels, readable alpha and full dimensions
+PASS: ProductionWorkers.png PNG signature
+PASS: ProductionWorkers.png PNG chunk integrity
+PASS: original padded worker atlas keeps its exact 2172x724 RGBA source
+PASS: worker source import preserves point pixels, readable alpha and non-power-of-two dimensions
+PASS: worker importer and default platform both allow 4096px so the 2172px atlas is never downscaled
+PASS: ProductionTruck.png PNG signature
+PASS: ProductionTruck.png PNG chunk integrity
+PASS: original empty production truck keeps its exact 1962x801 RGBA source
+PASS: production truck import keeps point pixels, readable alpha and its measured full dimensions
+PASS: production truck import limits cannot shrink its measured source width
+PASS: eight explicit world asset slices
+PASS: world slice in texture bounds 0
+PASS: world slice in texture bounds 1
+PASS: world slice in texture bounds 2
+PASS: world slice in texture bounds 3
+PASS: world slice in texture bounds 4
+PASS: world slice in texture bounds 5
+PASS: world slice in texture bounds 6
+PASS: world slice in texture bounds 7
+PASS: six distinct enemy sprite slices
+PASS: enemy slice in texture bounds 0
+PASS: enemy slice in texture bounds 1
+PASS: enemy slice in texture bounds 2
+PASS: enemy slice in texture bounds 3
+PASS: enemy slice in texture bounds 4
+PASS: enemy slice in texture bounds 5
+PASS: four modular motorcycle components
+PASS: motorcycle component in texture bounds 0
+PASS: motorcycle component in texture bounds 1
+PASS: motorcycle component in texture bounds 2
+PASS: motorcycle component in texture bounds 3
+PASS: shader resource and program delimiters ParticleGlow
+PASS: shader resource and program delimiters CharacterRim
+PASS: shader resource and program delimiters Presentation
+PASS: factory alpha measurement respects the 887px bottom-up grid and partial top row
+PASS: factory grid retains its partial rightmost column
+PASS: factory prop atlas has eight measured original machinery slices
+PASS: factory source has a clear vertical cell gutter at 444
+PASS: factory source has a clear vertical cell gutter at 887
+PASS: factory source has a clear vertical cell gutter at 1330
+PASS: factory source has a clear horizontal cell gutter
+PASS: factory prop retains an opaque silhouette and transparent source gutter 0
+PASS: factory prop survives the real four-pixel opacity sampling 0
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 0
+PASS: factory crop cannot bleed into a neighbouring prop cell 0
+PASS: factory machinery has substantial visible opaque grid coverage 0
+PASS: factory prop retains an opaque silhouette and transparent source gutter 1
+PASS: factory prop survives the real four-pixel opacity sampling 1
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 1
+PASS: factory crop cannot bleed into a neighbouring prop cell 1
+PASS: factory machinery has substantial visible opaque grid coverage 1
+PASS: factory prop retains an opaque silhouette and transparent source gutter 2
+PASS: factory prop survives the real four-pixel opacity sampling 2
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 2
+PASS: factory crop cannot bleed into a neighbouring prop cell 2
+PASS: factory machinery has substantial visible opaque grid coverage 2
+PASS: factory prop retains an opaque silhouette and transparent source gutter 3
+PASS: factory prop survives the real four-pixel opacity sampling 3
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 3
+PASS: factory crop cannot bleed into a neighbouring prop cell 3
+PASS: factory machinery has substantial visible opaque grid coverage 3
+PASS: factory prop retains an opaque silhouette and transparent source gutter 4
+PASS: factory prop survives the real four-pixel opacity sampling 4
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 4
+PASS: factory crop cannot bleed into a neighbouring prop cell 4
+PASS: factory machinery has substantial visible opaque grid coverage 4
+PASS: factory prop retains an opaque silhouette and transparent source gutter 5
+PASS: factory prop survives the real four-pixel opacity sampling 5
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 5
+PASS: factory crop cannot bleed into a neighbouring prop cell 5
+PASS: factory machinery has substantial visible opaque grid coverage 5
+PASS: factory prop retains an opaque silhouette and transparent source gutter 6
+PASS: factory prop survives the real four-pixel opacity sampling 6
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 6
+PASS: factory crop cannot bleed into a neighbouring prop cell 6
+PASS: factory machinery has substantial visible opaque grid coverage 6
+PASS: factory prop retains an opaque silhouette and transparent source gutter 7
+PASS: factory prop survives the real four-pixel opacity sampling 7
+PASS: factory measured crop encloses its complete packed alpha with three-pixel margins 7
+PASS: factory crop cannot bleed into a neighbouring prop cell 7
+PASS: factory machinery has substantial visible opaque grid coverage 7
+PASS: all eight factory props have distinct packed silhouettes
+PASS: captain measured poses share the authored 200 pixels-per-unit scale
+PASS: captain atlas provides six measured crops, boot roots and foot baselines
+PASS: captain pose has a complete source silhouette and clear cell gutters 0
+PASS: captain pose survives native eight-pixel alpha sampling 0
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 0
+PASS: captain crop cannot include a neighbouring pose 0
+PASS: captain planted-root measurement contains two substantial separate boots 0
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 0
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 0
+PASS: captain planted pivot remains inside its own sprite rectangle 0
+PASS: captain pose has a complete source silhouette and clear cell gutters 1
+PASS: captain pose survives native eight-pixel alpha sampling 1
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 1
+PASS: captain crop cannot include a neighbouring pose 1
+PASS: captain planted-root measurement contains two substantial separate boots 1
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 1
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 1
+PASS: captain planted pivot remains inside its own sprite rectangle 1
+PASS: captain pose has a complete source silhouette and clear cell gutters 2
+PASS: captain pose survives native eight-pixel alpha sampling 2
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 2
+PASS: captain crop cannot include a neighbouring pose 2
+PASS: captain planted-root measurement contains two substantial separate boots 2
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 2
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 2
+PASS: captain planted pivot remains inside its own sprite rectangle 2
+PASS: captain pose has a complete source silhouette and clear cell gutters 3
+PASS: captain pose survives native eight-pixel alpha sampling 3
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 3
+PASS: captain crop cannot include a neighbouring pose 3
+PASS: captain planted-root measurement contains two substantial separate boots 3
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 3
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 3
+PASS: captain planted pivot remains inside its own sprite rectangle 3
+PASS: captain pose has a complete source silhouette and clear cell gutters 4
+PASS: captain pose survives native eight-pixel alpha sampling 4
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 4
+PASS: captain crop cannot include a neighbouring pose 4
+PASS: captain planted-root measurement contains two substantial separate boots 4
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 4
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 4
+PASS: captain planted pivot remains inside its own sprite rectangle 4
+PASS: captain pose has a complete source silhouette and clear cell gutters 5
+PASS: captain pose survives native eight-pixel alpha sampling 5
+PASS: captain crop retains its complete actual packed silhouette and three-pixel margins 5
+PASS: captain crop cannot include a neighbouring pose 5
+PASS: captain planted-root measurement contains two substantial separate boots 5
+PASS: captain horizontal pivot follows the measured boot span rather than extended arms 5
+PASS: captain per-pose foot baseline has exactly three lower transparent pixels 5
+PASS: captain planted pivot remains inside its own sprite rectangle 5
+PASS: all six captain combat poses have distinct packed silhouettes
+PASS: captain boots keep one world baseline despite different source-row foot heights
+PASS: captain recovery retains its actual crouched height instead of stretching to idle height
+PASS: worker native alpha measurement preserves both four-pixel partial edge blocks
+PASS: worker atlas supplies three measured poses, planted roots and the authored 240ppu scale
+PASS: worker source frame guide remains faint and below native opacity threshold 0
+PASS: worker actual packed output removes every guide pixel 0
+PASS: worker source frame guide remains faint and below native opacity threshold 1
+PASS: worker actual packed output removes every guide pixel 1
+PASS: worker source frame guide remains faint and below native opacity threshold 2
+PASS: worker actual packed output removes every guide pixel 2
+PASS: worker source frame guide remains faint and below native opacity threshold 3
+PASS: worker actual packed output removes every guide pixel 3
+PASS: worker source frame guide remains faint and below native opacity threshold 4
+PASS: worker actual packed output removes every guide pixel 4
+PASS: worker body remains visible after native alpha sampling 0
+PASS: worker packed body keeps generous inner gutters without frame contamination 0
+PASS: worker measured crop retains its complete packed body and three-pixel margins 0
+PASS: worker planted pivot samples a plausible complete boot span 0
+PASS: worker horizontal pivot matches actual lower-boot alpha instead of carried equipment 0
+PASS: worker foot baseline retains the same three-pixel transparent lower margin 0
+PASS: worker sprite preserves its measured human height at the shared pixel scale 0
+PASS: worker crop contains substantial opaque body pixels rather than faint padding 0
+PASS: worker body remains visible after native alpha sampling 1
+PASS: worker packed body keeps generous inner gutters without frame contamination 1
+PASS: worker measured crop retains its complete packed body and three-pixel margins 1
+PASS: worker planted pivot samples a plausible complete boot span 1
+PASS: worker horizontal pivot matches actual lower-boot alpha instead of carried equipment 1
+PASS: worker foot baseline retains the same three-pixel transparent lower margin 1
+PASS: worker sprite preserves its measured human height at the shared pixel scale 1
+PASS: worker crop contains substantial opaque body pixels rather than faint padding 1
+PASS: worker body remains visible after native alpha sampling 2
+PASS: worker packed body keeps generous inner gutters without frame contamination 2
+PASS: worker measured crop retains its complete packed body and three-pixel margins 2
+PASS: worker planted pivot samples a plausible complete boot span 2
+PASS: worker horizontal pivot matches actual lower-boot alpha instead of carried equipment 2
+PASS: worker foot baseline retains the same three-pixel transparent lower margin 2
+PASS: worker sprite preserves its measured human height at the shared pixel scale 2
+PASS: worker crop contains substantial opaque body pixels rather than faint padding 2
+PASS: all three production workers retain distinct packed silhouettes
+PASS: all production worker boots share one stable world baseline
+PASS: production truck native sampling keeps its one-row and two-column partial edge blocks
+PASS: production truck has a substantial native opaque silhouette
+PASS: production truck crop encloses complete actual native alpha with three-pixel gutters
+PASS: production truck retains clear outer source gutters
+PASS: production truck metadata aligns its measured body centre and wheel contact edge
+PASS: production truck ground contact comes from two substantial wheel tread spans
+PASS: production truck pivot removes the transparent bottom margin from its wheel baseline
+PASS: production truck actual opaque wheels rest at world ground zero
+PASS: production truck actual opaque roof aligns with the 2.7m playable deck
+PASS: production truck bumper overhang stays below twenty centimetres per side
+PASS: production truck cargo bay has no baked bright cyan cores after the live cradle is detached
+PASS: hero pose has opaque silhouette and clear gutters 0
+PASS: hero pose has opaque silhouette and clear gutters 1
+PASS: hero pose has opaque silhouette and clear gutters 2
+PASS: hero pose has opaque silhouette and clear gutters 3
+PASS: hero pose has opaque silhouette and clear gutters 4
+PASS: hero pose has opaque silhouette and clear gutters 5
+PASS: hero pose has opaque silhouette and clear gutters 6
+PASS: hero pose has opaque silhouette and clear gutters 7
+PASS: idle hero visibly carries a broad golden blade
+PASS: idle blade has a long sword silhouette rather than a short stub
+PASS: hero equipment sheet contains substantial double-helix wire preview
+PASS: laser preview is a continuous bright beam rather than detached particles
+PASS: runtime emitter body has no baked wire to duplicate the live helix
+PASS: measured citizen and walk crop coverage
+PASS: Citizens0.png PNG signature
+PASS: Citizens0.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 0
+PASS: citizen crop matches exact native-grid alpha 0
+PASS: citizen silhouette clear gutter 0
+PASS: citizen crop matches exact native-grid alpha 1
+PASS: citizen silhouette clear gutter 1
+PASS: citizen crop matches exact native-grid alpha 2
+PASS: citizen silhouette clear gutter 2
+PASS: citizen crop matches exact native-grid alpha 3
+PASS: citizen silhouette clear gutter 3
+PASS: citizen crop matches exact native-grid alpha 4
+PASS: citizen silhouette clear gutter 4
+PASS: citizen spare cell is truly transparent 0
+PASS: citizen point readable import 0
+PASS: Citizens1.png PNG signature
+PASS: Citizens1.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 1
+PASS: citizen crop matches exact native-grid alpha 5
+PASS: citizen silhouette clear gutter 5
+PASS: citizen crop matches exact native-grid alpha 6
+PASS: citizen silhouette clear gutter 6
+PASS: citizen crop matches exact native-grid alpha 7
+PASS: citizen silhouette clear gutter 7
+PASS: citizen crop matches exact native-grid alpha 8
+PASS: citizen silhouette clear gutter 8
+PASS: citizen crop matches exact native-grid alpha 9
+PASS: citizen silhouette clear gutter 9
+PASS: citizen spare cell is truly transparent 1
+PASS: citizen point readable import 1
+PASS: Citizens2.png PNG signature
+PASS: Citizens2.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 2
+PASS: citizen crop matches exact native-grid alpha 10
+PASS: citizen silhouette clear gutter 10
+PASS: citizen crop matches exact native-grid alpha 11
+PASS: citizen silhouette clear gutter 11
+PASS: citizen crop matches exact native-grid alpha 12
+PASS: citizen silhouette clear gutter 12
+PASS: citizen crop matches exact native-grid alpha 13
+PASS: citizen silhouette clear gutter 13
+PASS: citizen crop matches exact native-grid alpha 14
+PASS: citizen silhouette clear gutter 14
+PASS: citizen spare cell is truly transparent 2
+PASS: citizen point readable import 2
+PASS: Citizens3.png PNG signature
+PASS: Citizens3.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 3
+PASS: citizen crop matches exact native-grid alpha 15
+PASS: citizen silhouette clear gutter 15
+PASS: citizen crop matches exact native-grid alpha 16
+PASS: citizen silhouette clear gutter 16
+PASS: citizen crop matches exact native-grid alpha 17
+PASS: citizen silhouette clear gutter 17
+PASS: citizen crop matches exact native-grid alpha 18
+PASS: citizen silhouette clear gutter 18
+PASS: citizen crop matches exact native-grid alpha 19
+PASS: citizen silhouette clear gutter 19
+PASS: citizen spare cell is truly transparent 3
+PASS: citizen point readable import 3
+PASS: Citizens4.png PNG signature
+PASS: Citizens4.png PNG chunk integrity
+PASS: citizen atlas RGBA dimensions 4
+PASS: citizen crop matches exact native-grid alpha 20
+PASS: citizen silhouette clear gutter 20
+PASS: citizen crop matches exact native-grid alpha 21
+PASS: citizen silhouette clear gutter 21
+PASS: citizen crop matches exact native-grid alpha 22
+PASS: citizen silhouette clear gutter 22
+PASS: citizen crop matches exact native-grid alpha 23
+PASS: citizen silhouette clear gutter 23
+PASS: citizen crop matches exact native-grid alpha 24
+PASS: citizen silhouette clear gutter 24
+PASS: citizen spare cell is truly transparent 4
+PASS: citizen point readable import 4
+PASS: all twenty-five citizen appearances are distinct
+PASS: four-person walking sheet dimensions
+PASS: walking crop matches native-grid alpha 0
+PASS: walking crop matches native-grid alpha 1
+PASS: walking crop matches native-grid alpha 2
+PASS: walking crop matches native-grid alpha 3
+PASS: escort has four distinct walk phases 0
+PASS: walking crop matches native-grid alpha 4
+PASS: walking crop matches native-grid alpha 5
+PASS: walking crop matches native-grid alpha 6
+PASS: walking crop matches native-grid alpha 7
+PASS: escort has four distinct walk phases 1
+PASS: walking crop matches native-grid alpha 8
+PASS: walking crop matches native-grid alpha 9
+PASS: walking crop matches native-grid alpha 10
+PASS: walking crop matches native-grid alpha 11
+PASS: escort has four distinct walk phases 2
+PASS: walking crop matches native-grid alpha 12
+PASS: walking crop matches native-grid alpha 13
+PASS: walking crop matches native-grid alpha 14
+PASS: walking crop matches native-grid alpha 15
+PASS: escort has four distinct walk phases 3
+PASS: HeroSwing.png PNG signature
+PASS: HeroSwing.png PNG chunk integrity
+PASS: swing PNG integrity and dimensions
+PASS: eight distinct swing/release sprite crops
+PASS: swing crop within atlas 0
+PASS: swing crop has opaque actor 0
+PASS: swing crop within atlas 1
+PASS: swing crop has opaque actor 1
+PASS: swing crop within atlas 2
+PASS: swing crop has opaque actor 2
+PASS: swing crop within atlas 3
+PASS: swing crop has opaque actor 3
+PASS: swing crop within atlas 4
+PASS: swing crop has opaque actor 4
+PASS: swing crop within atlas 5
+PASS: swing crop has opaque actor 5
+PASS: swing crop within atlas 6
+PASS: swing crop has opaque actor 6
+PASS: swing crop within atlas 7
+PASS: swing crop has opaque actor 7
+PASS: all swing poses have distinct silhouettes
+PASS: three blade cuts each have sixteen measured crops, foot pivots and tip points
+PASS: three blade sheets have explicit positive world scales
+PASS: BladeVertical.png PNG signature
+PASS: BladeVertical.png PNG chunk integrity
+PASS: BladeVertical retains its transparent RGBA source
+PASS: BladeVertical uses readable point-filtered uncompressed import
+PASS: BladeVertical measured crop stays in the texture and follows frame order 0
+PASS: BladeVertical crop has no overlap with another pose 0
+PASS: BladeVertical foot pivot and blade tip are finite 0
+PASS: BladeVertical has an opaque actor 0
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 0
+PASS: BladeVertical blade and body form one complete actor 0
+PASS: BladeVertical keeps clear blade and boot gutters 0
+PASS: BladeVertical measured blade tip stays inside its pose 0
+PASS: BladeVertical tip metadata touches the yellow blade 0
+PASS: BladeVertical measured crop stays in the texture and follows frame order 1
+PASS: BladeVertical crop has no overlap with another pose 1
+PASS: BladeVertical foot pivot and blade tip are finite 1
+PASS: BladeVertical has an opaque actor 1
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 1
+PASS: BladeVertical blade and body form one complete actor 1
+PASS: BladeVertical keeps clear blade and boot gutters 1
+PASS: BladeVertical measured blade tip stays inside its pose 1
+PASS: BladeVertical tip metadata touches the yellow blade 1
+PASS: BladeVertical measured crop stays in the texture and follows frame order 2
+PASS: BladeVertical crop has no overlap with another pose 2
+PASS: BladeVertical foot pivot and blade tip are finite 2
+PASS: BladeVertical has an opaque actor 2
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 2
+PASS: BladeVertical blade and body form one complete actor 2
+PASS: BladeVertical keeps clear blade and boot gutters 2
+PASS: BladeVertical measured blade tip stays inside its pose 2
+PASS: BladeVertical tip metadata touches the yellow blade 2
+PASS: BladeVertical measured crop stays in the texture and follows frame order 3
+PASS: BladeVertical crop has no overlap with another pose 3
+PASS: BladeVertical foot pivot and blade tip are finite 3
+PASS: BladeVertical has an opaque actor 3
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 3
+PASS: BladeVertical blade and body form one complete actor 3
+PASS: BladeVertical keeps clear blade and boot gutters 3
+PASS: BladeVertical measured blade tip stays inside its pose 3
+PASS: BladeVertical tip metadata touches the yellow blade 3
+PASS: BladeVertical measured crop stays in the texture and follows frame order 4
+PASS: BladeVertical crop has no overlap with another pose 4
+PASS: BladeVertical foot pivot and blade tip are finite 4
+PASS: BladeVertical has an opaque actor 4
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 4
+PASS: BladeVertical blade and body form one complete actor 4
+PASS: BladeVertical keeps clear blade and boot gutters 4
+PASS: BladeVertical measured blade tip stays inside its pose 4
+PASS: BladeVertical tip metadata touches the yellow blade 4
+PASS: BladeVertical measured crop stays in the texture and follows frame order 5
+PASS: BladeVertical crop has no overlap with another pose 5
+PASS: BladeVertical foot pivot and blade tip are finite 5
+PASS: BladeVertical has an opaque actor 5
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 5
+PASS: BladeVertical blade and body form one complete actor 5
+PASS: BladeVertical keeps clear blade and boot gutters 5
+PASS: BladeVertical measured blade tip stays inside its pose 5
+PASS: BladeVertical tip metadata touches the yellow blade 5
+PASS: BladeVertical measured crop stays in the texture and follows frame order 6
+PASS: BladeVertical crop has no overlap with another pose 6
+PASS: BladeVertical foot pivot and blade tip are finite 6
+PASS: BladeVertical has an opaque actor 6
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 6
+PASS: BladeVertical blade and body form one complete actor 6
+PASS: BladeVertical keeps clear blade and boot gutters 6
+PASS: BladeVertical measured blade tip stays inside its pose 6
+PASS: BladeVertical tip metadata touches the yellow blade 6
+PASS: BladeVertical measured crop stays in the texture and follows frame order 7
+PASS: BladeVertical crop has no overlap with another pose 7
+PASS: BladeVertical foot pivot and blade tip are finite 7
+PASS: BladeVertical has an opaque actor 7
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 7
+PASS: BladeVertical blade and body form one complete actor 7
+PASS: BladeVertical keeps clear blade and boot gutters 7
+PASS: BladeVertical measured blade tip stays inside its pose 7
+PASS: BladeVertical tip metadata touches the yellow blade 7
+PASS: BladeVertical measured crop stays in the texture and follows frame order 8
+PASS: BladeVertical crop has no overlap with another pose 8
+PASS: BladeVertical foot pivot and blade tip are finite 8
+PASS: BladeVertical has an opaque actor 8
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 8
+PASS: BladeVertical blade and body form one complete actor 8
+PASS: BladeVertical keeps clear blade and boot gutters 8
+PASS: BladeVertical measured blade tip stays inside its pose 8
+PASS: BladeVertical tip metadata touches the yellow blade 8
+PASS: BladeVertical measured crop stays in the texture and follows frame order 9
+PASS: BladeVertical crop has no overlap with another pose 9
+PASS: BladeVertical foot pivot and blade tip are finite 9
+PASS: BladeVertical has an opaque actor 9
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 9
+PASS: BladeVertical blade and body form one complete actor 9
+PASS: BladeVertical keeps clear blade and boot gutters 9
+PASS: BladeVertical measured blade tip stays inside its pose 9
+PASS: BladeVertical tip metadata touches the yellow blade 9
+PASS: BladeVertical measured crop stays in the texture and follows frame order 10
+PASS: BladeVertical crop has no overlap with another pose 10
+PASS: BladeVertical foot pivot and blade tip are finite 10
+PASS: BladeVertical has an opaque actor 10
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 10
+PASS: BladeVertical blade and body form one complete actor 10
+PASS: BladeVertical keeps clear blade and boot gutters 10
+PASS: BladeVertical measured blade tip stays inside its pose 10
+PASS: BladeVertical tip metadata touches the yellow blade 10
+PASS: BladeVertical measured crop stays in the texture and follows frame order 11
+PASS: BladeVertical crop has no overlap with another pose 11
+PASS: BladeVertical foot pivot and blade tip are finite 11
+PASS: BladeVertical has an opaque actor 11
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 11
+PASS: BladeVertical blade and body form one complete actor 11
+PASS: BladeVertical keeps clear blade and boot gutters 11
+PASS: BladeVertical measured blade tip stays inside its pose 11
+PASS: BladeVertical tip metadata touches the yellow blade 11
+PASS: BladeVertical measured crop stays in the texture and follows frame order 12
+PASS: BladeVertical crop has no overlap with another pose 12
+PASS: BladeVertical foot pivot and blade tip are finite 12
+PASS: BladeVertical has an opaque actor 12
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 12
+PASS: BladeVertical blade and body form one complete actor 12
+PASS: BladeVertical keeps clear blade and boot gutters 12
+PASS: BladeVertical measured blade tip stays inside its pose 12
+PASS: BladeVertical tip metadata touches the yellow blade 12
+PASS: BladeVertical measured crop stays in the texture and follows frame order 13
+PASS: BladeVertical crop has no overlap with another pose 13
+PASS: BladeVertical foot pivot and blade tip are finite 13
+PASS: BladeVertical has an opaque actor 13
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 13
+PASS: BladeVertical blade and body form one complete actor 13
+PASS: BladeVertical keeps clear blade and boot gutters 13
+PASS: BladeVertical measured blade tip stays inside its pose 13
+PASS: BladeVertical tip metadata touches the yellow blade 13
+PASS: BladeVertical measured crop stays in the texture and follows frame order 14
+PASS: BladeVertical crop has no overlap with another pose 14
+PASS: BladeVertical foot pivot and blade tip are finite 14
+PASS: BladeVertical has an opaque actor 14
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 14
+PASS: BladeVertical blade and body form one complete actor 14
+PASS: BladeVertical keeps clear blade and boot gutters 14
+PASS: BladeVertical measured blade tip stays inside its pose 14
+PASS: BladeVertical tip metadata touches the yellow blade 14
+PASS: BladeVertical measured crop stays in the texture and follows frame order 15
+PASS: BladeVertical crop has no overlap with another pose 15
+PASS: BladeVertical foot pivot and blade tip are finite 15
+PASS: BladeVertical has an opaque actor 15
+PASS: BladeVertical retains yellow blade, white/black uniform and blue arm 15
+PASS: BladeVertical blade and body form one complete actor 15
+PASS: BladeVertical keeps clear blade and boot gutters 15
+PASS: BladeVertical measured blade tip stays inside its pose 15
+PASS: BladeVertical tip metadata touches the yellow blade 15
+PASS: BladeHorizontal.png PNG signature
+PASS: BladeHorizontal.png PNG chunk integrity
+PASS: BladeHorizontal retains its transparent RGBA source
+PASS: BladeHorizontal uses readable point-filtered uncompressed import
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 0
+PASS: BladeHorizontal crop has no overlap with another pose 0
+PASS: BladeHorizontal foot pivot and blade tip are finite 0
+PASS: BladeHorizontal has an opaque actor 0
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 0
+PASS: BladeHorizontal blade and body form one complete actor 0
+PASS: BladeHorizontal keeps clear blade and boot gutters 0
+PASS: BladeHorizontal measured blade tip stays inside its pose 0
+PASS: BladeHorizontal tip metadata touches the yellow blade 0
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 1
+PASS: BladeHorizontal crop has no overlap with another pose 1
+PASS: BladeHorizontal foot pivot and blade tip are finite 1
+PASS: BladeHorizontal has an opaque actor 1
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 1
+PASS: BladeHorizontal blade and body form one complete actor 1
+PASS: BladeHorizontal keeps clear blade and boot gutters 1
+PASS: BladeHorizontal measured blade tip stays inside its pose 1
+PASS: BladeHorizontal tip metadata touches the yellow blade 1
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 2
+PASS: BladeHorizontal crop has no overlap with another pose 2
+PASS: BladeHorizontal foot pivot and blade tip are finite 2
+PASS: BladeHorizontal has an opaque actor 2
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 2
+PASS: BladeHorizontal blade and body form one complete actor 2
+PASS: BladeHorizontal keeps clear blade and boot gutters 2
+PASS: BladeHorizontal measured blade tip stays inside its pose 2
+PASS: BladeHorizontal tip metadata touches the yellow blade 2
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 3
+PASS: BladeHorizontal crop has no overlap with another pose 3
+PASS: BladeHorizontal foot pivot and blade tip are finite 3
+PASS: BladeHorizontal has an opaque actor 3
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 3
+PASS: BladeHorizontal blade and body form one complete actor 3
+PASS: BladeHorizontal keeps clear blade and boot gutters 3
+PASS: BladeHorizontal measured blade tip stays inside its pose 3
+PASS: BladeHorizontal tip metadata touches the yellow blade 3
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 4
+PASS: BladeHorizontal crop has no overlap with another pose 4
+PASS: BladeHorizontal foot pivot and blade tip are finite 4
+PASS: BladeHorizontal has an opaque actor 4
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 4
+PASS: BladeHorizontal blade and body form one complete actor 4
+PASS: BladeHorizontal keeps clear blade and boot gutters 4
+PASS: BladeHorizontal measured blade tip stays inside its pose 4
+PASS: BladeHorizontal tip metadata touches the yellow blade 4
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 5
+PASS: BladeHorizontal crop has no overlap with another pose 5
+PASS: BladeHorizontal foot pivot and blade tip are finite 5
+PASS: BladeHorizontal has an opaque actor 5
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 5
+PASS: BladeHorizontal blade and body form one complete actor 5
+PASS: BladeHorizontal keeps clear blade and boot gutters 5
+PASS: BladeHorizontal measured blade tip stays inside its pose 5
+PASS: BladeHorizontal tip metadata touches the yellow blade 5
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 6
+PASS: BladeHorizontal crop has no overlap with another pose 6
+PASS: BladeHorizontal foot pivot and blade tip are finite 6
+PASS: BladeHorizontal has an opaque actor 6
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 6
+PASS: BladeHorizontal blade and body form one complete actor 6
+PASS: BladeHorizontal keeps clear blade and boot gutters 6
+PASS: BladeHorizontal measured blade tip stays inside its pose 6
+PASS: BladeHorizontal tip metadata touches the yellow blade 6
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 7
+PASS: BladeHorizontal crop has no overlap with another pose 7
+PASS: BladeHorizontal foot pivot and blade tip are finite 7
+PASS: BladeHorizontal has an opaque actor 7
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 7
+PASS: BladeHorizontal blade and body form one complete actor 7
+PASS: BladeHorizontal keeps clear blade and boot gutters 7
+PASS: BladeHorizontal measured blade tip stays inside its pose 7
+PASS: BladeHorizontal tip metadata touches the yellow blade 7
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 8
+PASS: BladeHorizontal crop has no overlap with another pose 8
+PASS: BladeHorizontal foot pivot and blade tip are finite 8
+PASS: BladeHorizontal has an opaque actor 8
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 8
+PASS: BladeHorizontal blade and body form one complete actor 8
+PASS: BladeHorizontal keeps clear blade and boot gutters 8
+PASS: BladeHorizontal measured blade tip stays inside its pose 8
+PASS: BladeHorizontal tip metadata touches the yellow blade 8
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 9
+PASS: BladeHorizontal crop has no overlap with another pose 9
+PASS: BladeHorizontal foot pivot and blade tip are finite 9
+PASS: BladeHorizontal has an opaque actor 9
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 9
+PASS: BladeHorizontal blade and body form one complete actor 9
+PASS: BladeHorizontal keeps clear blade and boot gutters 9
+PASS: BladeHorizontal measured blade tip stays inside its pose 9
+PASS: BladeHorizontal tip metadata touches the yellow blade 9
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 10
+PASS: BladeHorizontal crop has no overlap with another pose 10
+PASS: BladeHorizontal foot pivot and blade tip are finite 10
+PASS: BladeHorizontal has an opaque actor 10
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 10
+PASS: BladeHorizontal blade and body form one complete actor 10
+PASS: BladeHorizontal keeps clear blade and boot gutters 10
+PASS: BladeHorizontal measured blade tip stays inside its pose 10
+PASS: BladeHorizontal tip metadata touches the yellow blade 10
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 11
+PASS: BladeHorizontal crop has no overlap with another pose 11
+PASS: BladeHorizontal foot pivot and blade tip are finite 11
+PASS: BladeHorizontal has an opaque actor 11
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 11
+PASS: BladeHorizontal blade and body form one complete actor 11
+PASS: BladeHorizontal keeps clear blade and boot gutters 11
+PASS: BladeHorizontal measured blade tip stays inside its pose 11
+PASS: BladeHorizontal tip metadata touches the yellow blade 11
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 12
+PASS: BladeHorizontal crop has no overlap with another pose 12
+PASS: BladeHorizontal foot pivot and blade tip are finite 12
+PASS: BladeHorizontal has an opaque actor 12
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 12
+PASS: BladeHorizontal blade and body form one complete actor 12
+PASS: BladeHorizontal keeps clear blade and boot gutters 12
+PASS: BladeHorizontal measured blade tip stays inside its pose 12
+PASS: BladeHorizontal tip metadata touches the yellow blade 12
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 13
+PASS: BladeHorizontal crop has no overlap with another pose 13
+PASS: BladeHorizontal foot pivot and blade tip are finite 13
+PASS: BladeHorizontal has an opaque actor 13
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 13
+PASS: BladeHorizontal blade and body form one complete actor 13
+PASS: BladeHorizontal keeps clear blade and boot gutters 13
+PASS: BladeHorizontal measured blade tip stays inside its pose 13
+PASS: BladeHorizontal tip metadata touches the yellow blade 13
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 14
+PASS: BladeHorizontal crop has no overlap with another pose 14
+PASS: BladeHorizontal foot pivot and blade tip are finite 14
+PASS: BladeHorizontal has an opaque actor 14
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 14
+PASS: BladeHorizontal blade and body form one complete actor 14
+PASS: BladeHorizontal keeps clear blade and boot gutters 14
+PASS: BladeHorizontal measured blade tip stays inside its pose 14
+PASS: BladeHorizontal tip metadata touches the yellow blade 14
+PASS: BladeHorizontal measured crop stays in the texture and follows frame order 15
+PASS: BladeHorizontal crop has no overlap with another pose 15
+PASS: BladeHorizontal foot pivot and blade tip are finite 15
+PASS: BladeHorizontal has an opaque actor 15
+PASS: BladeHorizontal retains yellow blade, white/black uniform and blue arm 15
+PASS: BladeHorizontal blade and body form one complete actor 15
+PASS: BladeHorizontal keeps clear blade and boot gutters 15
+PASS: BladeHorizontal measured blade tip stays inside its pose 15
+PASS: BladeHorizontal tip metadata touches the yellow blade 15
+PASS: BladeDiagonal.png PNG signature
+PASS: BladeDiagonal.png PNG chunk integrity
+PASS: BladeDiagonal retains its transparent RGBA source
+PASS: BladeDiagonal uses readable point-filtered uncompressed import
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 0
+PASS: BladeDiagonal crop has no overlap with another pose 0
+PASS: BladeDiagonal foot pivot and blade tip are finite 0
+PASS: BladeDiagonal has an opaque actor 0
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 0
+PASS: BladeDiagonal blade and body form one complete actor 0
+PASS: BladeDiagonal keeps clear blade and boot gutters 0
+PASS: BladeDiagonal measured blade tip stays inside its pose 0
+PASS: BladeDiagonal tip metadata touches the yellow blade 0
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 1
+PASS: BladeDiagonal crop has no overlap with another pose 1
+PASS: BladeDiagonal foot pivot and blade tip are finite 1
+PASS: BladeDiagonal has an opaque actor 1
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 1
+PASS: BladeDiagonal blade and body form one complete actor 1
+PASS: BladeDiagonal keeps clear blade and boot gutters 1
+PASS: BladeDiagonal measured blade tip stays inside its pose 1
+PASS: BladeDiagonal tip metadata touches the yellow blade 1
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 2
+PASS: BladeDiagonal crop has no overlap with another pose 2
+PASS: BladeDiagonal foot pivot and blade tip are finite 2
+PASS: BladeDiagonal has an opaque actor 2
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 2
+PASS: BladeDiagonal blade and body form one complete actor 2
+PASS: BladeDiagonal keeps clear blade and boot gutters 2
+PASS: BladeDiagonal measured blade tip stays inside its pose 2
+PASS: BladeDiagonal tip metadata touches the yellow blade 2
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 3
+PASS: BladeDiagonal crop has no overlap with another pose 3
+PASS: BladeDiagonal foot pivot and blade tip are finite 3
+PASS: BladeDiagonal has an opaque actor 3
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 3
+PASS: BladeDiagonal blade and body form one complete actor 3
+PASS: BladeDiagonal keeps clear blade and boot gutters 3
+PASS: BladeDiagonal measured blade tip stays inside its pose 3
+PASS: BladeDiagonal tip metadata touches the yellow blade 3
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 4
+PASS: BladeDiagonal crop has no overlap with another pose 4
+PASS: BladeDiagonal foot pivot and blade tip are finite 4
+PASS: BladeDiagonal has an opaque actor 4
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 4
+PASS: BladeDiagonal blade and body form one complete actor 4
+PASS: BladeDiagonal keeps clear blade and boot gutters 4
+PASS: BladeDiagonal measured blade tip stays inside its pose 4
+PASS: BladeDiagonal tip metadata touches the yellow blade 4
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 5
+PASS: BladeDiagonal crop has no overlap with another pose 5
+PASS: BladeDiagonal foot pivot and blade tip are finite 5
+PASS: BladeDiagonal has an opaque actor 5
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 5
+PASS: BladeDiagonal blade and body form one complete actor 5
+PASS: BladeDiagonal keeps clear blade and boot gutters 5
+PASS: BladeDiagonal measured blade tip stays inside its pose 5
+PASS: BladeDiagonal tip metadata touches the yellow blade 5
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 6
+PASS: BladeDiagonal crop has no overlap with another pose 6
+PASS: BladeDiagonal foot pivot and blade tip are finite 6
+PASS: BladeDiagonal has an opaque actor 6
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 6
+PASS: BladeDiagonal blade and body form one complete actor 6
+PASS: BladeDiagonal keeps clear blade and boot gutters 6
+PASS: BladeDiagonal measured blade tip stays inside its pose 6
+PASS: BladeDiagonal tip metadata touches the yellow blade 6
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 7
+PASS: BladeDiagonal crop has no overlap with another pose 7
+PASS: BladeDiagonal foot pivot and blade tip are finite 7
+PASS: BladeDiagonal has an opaque actor 7
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 7
+PASS: BladeDiagonal blade and body form one complete actor 7
+PASS: BladeDiagonal keeps clear blade and boot gutters 7
+PASS: BladeDiagonal measured blade tip stays inside its pose 7
+PASS: BladeDiagonal tip metadata touches the yellow blade 7
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 8
+PASS: BladeDiagonal crop has no overlap with another pose 8
+PASS: BladeDiagonal foot pivot and blade tip are finite 8
+PASS: BladeDiagonal has an opaque actor 8
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 8
+PASS: BladeDiagonal blade and body form one complete actor 8
+PASS: BladeDiagonal keeps clear blade and boot gutters 8
+PASS: BladeDiagonal measured blade tip stays inside its pose 8
+PASS: BladeDiagonal tip metadata touches the yellow blade 8
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 9
+PASS: BladeDiagonal crop has no overlap with another pose 9
+PASS: BladeDiagonal foot pivot and blade tip are finite 9
+PASS: BladeDiagonal has an opaque actor 9
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 9
+PASS: BladeDiagonal blade and body form one complete actor 9
+PASS: BladeDiagonal keeps clear blade and boot gutters 9
+PASS: BladeDiagonal measured blade tip stays inside its pose 9
+PASS: BladeDiagonal tip metadata touches the yellow blade 9
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 10
+PASS: BladeDiagonal crop has no overlap with another pose 10
+PASS: BladeDiagonal foot pivot and blade tip are finite 10
+PASS: BladeDiagonal has an opaque actor 10
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 10
+PASS: BladeDiagonal blade and body form one complete actor 10
+PASS: BladeDiagonal keeps clear blade and boot gutters 10
+PASS: BladeDiagonal measured blade tip stays inside its pose 10
+PASS: BladeDiagonal tip metadata touches the yellow blade 10
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 11
+PASS: BladeDiagonal crop has no overlap with another pose 11
+PASS: BladeDiagonal foot pivot and blade tip are finite 11
+PASS: BladeDiagonal has an opaque actor 11
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 11
+PASS: BladeDiagonal blade and body form one complete actor 11
+PASS: BladeDiagonal keeps clear blade and boot gutters 11
+PASS: BladeDiagonal measured blade tip stays inside its pose 11
+PASS: BladeDiagonal tip metadata touches the yellow blade 11
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 12
+PASS: BladeDiagonal crop has no overlap with another pose 12
+PASS: BladeDiagonal foot pivot and blade tip are finite 12
+PASS: BladeDiagonal has an opaque actor 12
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 12
+PASS: BladeDiagonal blade and body form one complete actor 12
+PASS: BladeDiagonal keeps clear blade and boot gutters 12
+PASS: BladeDiagonal measured blade tip stays inside its pose 12
+PASS: BladeDiagonal tip metadata touches the yellow blade 12
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 13
+PASS: BladeDiagonal crop has no overlap with another pose 13
+PASS: BladeDiagonal foot pivot and blade tip are finite 13
+PASS: BladeDiagonal has an opaque actor 13
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 13
+PASS: BladeDiagonal blade and body form one complete actor 13
+PASS: BladeDiagonal keeps clear blade and boot gutters 13
+PASS: BladeDiagonal measured blade tip stays inside its pose 13
+PASS: BladeDiagonal tip metadata touches the yellow blade 13
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 14
+PASS: BladeDiagonal crop has no overlap with another pose 14
+PASS: BladeDiagonal foot pivot and blade tip are finite 14
+PASS: BladeDiagonal has an opaque actor 14
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 14
+PASS: BladeDiagonal blade and body form one complete actor 14
+PASS: BladeDiagonal keeps clear blade and boot gutters 14
+PASS: BladeDiagonal measured blade tip stays inside its pose 14
+PASS: BladeDiagonal tip metadata touches the yellow blade 14
+PASS: BladeDiagonal measured crop stays in the texture and follows frame order 15
+PASS: BladeDiagonal crop has no overlap with another pose 15
+PASS: BladeDiagonal foot pivot and blade tip are finite 15
+PASS: BladeDiagonal has an opaque actor 15
+PASS: BladeDiagonal retains yellow blade, white/black uniform and blue arm 15
+PASS: BladeDiagonal blade and body form one complete actor 15
+PASS: BladeDiagonal keeps clear blade and boot gutters 15
+PASS: BladeDiagonal measured blade tip stays inside its pose 15
+PASS: BladeDiagonal tip metadata touches the yellow blade 15
+PASS: all forty-eight blade frames have distinct measured silhouettes
+PASS: DistrictBackdrops.png PNG signature
+PASS: DistrictBackdrops.png PNG chunk integrity
+PASS: five-district backdrop atlas PNG integrity and dimensions
+PASS: one measured background panorama for each city floor
+PASS: district backdrop stays inside the source 0
+PASS: district panorama keeps its authored wide aspect 0
+PASS: district panorama covers the distant background without holes 0
+PASS: district backdrop stays inside the source 1
+PASS: district panorama keeps its authored wide aspect 1
+PASS: district panorama covers the distant background without holes 1
+PASS: district backdrop stays inside the source 2
+PASS: district panorama keeps its authored wide aspect 2
+PASS: district panorama covers the distant background without holes 2
+PASS: district backdrop stays inside the source 3
+PASS: district panorama keeps its authored wide aspect 3
+PASS: district panorama covers the distant background without holes 3
+PASS: district backdrop stays inside the source 4
+PASS: district panorama keeps its authored wide aspect 4
+PASS: district panorama covers the distant background without holes 4
+PASS: all five district panoramas are distinct
+PASS: district atlas uses point filtering and uncompressed readable import
+PASS: swing PivotPixels metadata coverage
+PASS: swing PivotPixels stays in its pose 0
+PASS: swing PivotPixels stays in its pose 1
+PASS: swing PivotPixels stays in its pose 2
+PASS: swing PivotPixels stays in its pose 3
+PASS: swing PivotPixels stays in its pose 4
+PASS: swing PivotPixels stays in its pose 5
+PASS: swing PivotPixels stays in its pose 6
+PASS: swing PivotPixels stays in its pose 7
+PASS: swing EmitterPixels metadata coverage
+PASS: swing EmitterPixels stays in its pose 0
+PASS: swing EmitterPixels stays in its pose 1
+PASS: swing EmitterPixels stays in its pose 2
+PASS: swing EmitterPixels stays in its pose 3
+PASS: swing EmitterPixels stays in its pose 4
+PASS: swing EmitterPixels stays in its pose 5
+PASS: swing EmitterPixels stays in its pose 6
+PASS: swing EmitterPixels stays in its pose 7
+PASS: six bosses each have six measured poses
+PASS: Boss0.png PNG signature
+PASS: Boss0.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 0
+PASS: boss silhouette crop within texture 0
+PASS: boss crop matches exact native-grid alpha 0
+PASS: boss silhouette crop within texture 1
+PASS: boss crop matches exact native-grid alpha 1
+PASS: boss silhouette crop within texture 2
+PASS: boss crop matches exact native-grid alpha 2
+PASS: boss silhouette crop within texture 3
+PASS: boss crop matches exact native-grid alpha 3
+PASS: boss silhouette crop within texture 4
+PASS: boss crop matches exact native-grid alpha 4
+PASS: boss silhouette crop within texture 5
+PASS: boss crop matches exact native-grid alpha 5
+PASS: boss has six distinct silhouettes 0
+PASS: Boss1.png PNG signature
+PASS: Boss1.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 1
+PASS: boss silhouette crop within texture 6
+PASS: boss crop matches exact native-grid alpha 6
+PASS: boss silhouette crop within texture 7
+PASS: boss crop matches exact native-grid alpha 7
+PASS: boss silhouette crop within texture 8
+PASS: boss crop matches exact native-grid alpha 8
+PASS: boss silhouette crop within texture 9
+PASS: boss crop matches exact native-grid alpha 9
+PASS: boss silhouette crop within texture 10
+PASS: boss crop matches exact native-grid alpha 10
+PASS: boss silhouette crop within texture 11
+PASS: boss crop matches exact native-grid alpha 11
+PASS: boss has six distinct silhouettes 1
+PASS: Boss2.png PNG signature
+PASS: Boss2.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 2
+PASS: boss silhouette crop within texture 12
+PASS: boss crop matches exact native-grid alpha 12
+PASS: boss silhouette crop within texture 13
+PASS: boss crop matches exact native-grid alpha 13
+PASS: boss silhouette crop within texture 14
+PASS: boss crop matches exact native-grid alpha 14
+PASS: boss silhouette crop within texture 15
+PASS: boss crop matches exact native-grid alpha 15
+PASS: boss silhouette crop within texture 16
+PASS: boss crop matches exact native-grid alpha 16
+PASS: boss silhouette crop within texture 17
+PASS: boss crop matches exact native-grid alpha 17
+PASS: boss has six distinct silhouettes 2
+PASS: Boss3.png PNG signature
+PASS: Boss3.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 3
+PASS: boss silhouette crop within texture 18
+PASS: boss crop matches exact native-grid alpha 18
+PASS: boss silhouette crop within texture 19
+PASS: boss crop matches exact native-grid alpha 19
+PASS: boss silhouette crop within texture 20
+PASS: boss crop matches exact native-grid alpha 20
+PASS: boss silhouette crop within texture 21
+PASS: boss crop matches exact native-grid alpha 21
+PASS: boss silhouette crop within texture 22
+PASS: boss crop matches exact native-grid alpha 22
+PASS: boss silhouette crop within texture 23
+PASS: boss crop matches exact native-grid alpha 23
+PASS: boss has six distinct silhouettes 3
+PASS: Boss4.png PNG signature
+PASS: Boss4.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 4
+PASS: boss silhouette crop within texture 24
+PASS: boss crop matches exact native-grid alpha 24
+PASS: boss silhouette crop within texture 25
+PASS: boss crop matches exact native-grid alpha 25
+PASS: boss silhouette crop within texture 26
+PASS: boss crop matches exact native-grid alpha 26
+PASS: boss silhouette crop within texture 27
+PASS: boss crop matches exact native-grid alpha 27
+PASS: boss silhouette crop within texture 28
+PASS: boss crop matches exact native-grid alpha 28
+PASS: boss silhouette crop within texture 29
+PASS: boss crop matches exact native-grid alpha 29
+PASS: boss has six distinct silhouettes 4
+PASS: Boss5.png PNG signature
+PASS: Boss5.png PNG chunk integrity
+PASS: boss source atlas RGBA and PNG integrity 5
+PASS: boss silhouette crop within texture 30
+PASS: boss silhouette crop within texture 31
+PASS: boss silhouette crop within texture 32
+PASS: boss silhouette crop within texture 33
+PASS: boss silhouette crop within texture 34
+PASS: boss silhouette crop within texture 35
+PASS: boss has six distinct silhouettes 5
+PASS: SniperEquipment.png PNG signature
+PASS: SniperEquipment.png PNG chunk integrity
+PASS: sniper equipment PNG integrity and dimensions
+PASS: six separate physical sniper equipment pieces
+PASS: equipment crop cannot bleed into neighbouring cell 0
+PASS: equipment piece has visible alpha 0
+PASS: equipment crop cannot bleed into neighbouring cell 1
+PASS: equipment piece has visible alpha 1
+PASS: equipment crop cannot bleed into neighbouring cell 2
+PASS: equipment piece has visible alpha 2
+PASS: equipment crop cannot bleed into neighbouring cell 3
+PASS: equipment piece has visible alpha 3
+PASS: equipment crop cannot bleed into neighbouring cell 4
+PASS: equipment piece has visible alpha 4
+PASS: equipment crop cannot bleed into neighbouring cell 5
+PASS: equipment piece has visible alpha 5
+PASS: StudioLogos.png PNG signature
+PASS: StudioLogos.png PNG chunk integrity
+PASS: boot logo sheet PNG integrity and dimensions
+PASS: world slice contains visible art 0
+PASS: world slice contains visible art 1
+PASS: world slice contains visible art 2
+PASS: world slice contains visible art 3
+PASS: world slice contains visible art 4
+PASS: world slice contains visible art 5
+PASS: world slice contains visible art 6
+PASS: world slice contains visible art 7
+PASS: slash frame has an opaque body seed 0
+PASS: isolated slash silhouette retains full blade with clear gutters 0
+PASS: slash pose retains a long broad yellow blade 0
+PASS: slash frame has an opaque body seed 1
+PASS: isolated slash silhouette retains full blade with clear gutters 1
+PASS: slash pose retains a long broad yellow blade 1
+PASS: slash frame has an opaque body seed 2
+PASS: isolated slash silhouette retains full blade with clear gutters 2
+PASS: slash pose retains a long broad yellow blade 2
+PASS: slash frame has an opaque body seed 3
+PASS: isolated slash silhouette retains full blade with clear gutters 3
+PASS: slash pose retains a long broad yellow blade 3
+PASS: slash frame has an opaque body seed 4
+PASS: isolated slash silhouette retains full blade with clear gutters 4
+PASS: slash pose retains a long broad yellow blade 4
+PASS: slash frame has an opaque body seed 5
+PASS: isolated slash silhouette retains full blade with clear gutters 5
+PASS: slash pose retains a long broad yellow blade 5
+PASS: slash frame has an opaque body seed 6
+PASS: isolated slash silhouette retains full blade with clear gutters 6
+PASS: slash pose retains a long broad yellow blade 6
+PASS: slash frame has an opaque body seed 7
+PASS: isolated slash silhouette retains full blade with clear gutters 7
+PASS: slash pose retains a long broad yellow blade 7
+PASS: all eight new slash poses are distinct
+PASS: enemy silhouette and transparent gutters 0
+PASS: enemy silhouette and transparent gutters 1
+PASS: enemy silhouette and transparent gutters 2
+PASS: enemy silhouette and transparent gutters 3
+PASS: enemy silhouette and transparent gutters 4
+PASS: enemy silhouette and transparent gutters 5
+PASS: motorcycle component silhouette and transparent gutters 0
+PASS: motorcycle component silhouette and transparent gutters 1
+PASS: motorcycle component silhouette and transparent gutters 2
+PASS: motorcycle component silhouette and transparent gutters 3
+PASS: rotating wheel silhouette is circular
+PASS: healthy and damaged chassis display widths agree
+PASS: scrap projectile silhouette and transparent gutters
+PASS: C# syntax AncientSniperSmokeChecks.cs
+PASS: C# syntax AncientFieldSmokeChecks.cs
+PASS: C# syntax AncientProjectileSmokeChecks.cs
+PASS: C# syntax AncientBladeSmokeChecks.cs
+PASS: C# syntax AncientMovementSmokeChecks.cs
+PASS: C# syntax AncientProductionSmokeChecks.cs
+PASS: C# syntax AncientTraversalLayout.cs
+PASS: C# syntax AncientProductionResidents.cs
+PASS: C# syntax AncientWireParticleBatch.cs
+PASS: C# syntax AncientProductionRules.cs
+PASS: C# syntax AncientMovementRules.cs
+PASS: C# syntax AncientPulseRules.cs
+PASS: C# syntax AncientCameraRules.cs
+PASS: C# syntax AncientProductionPropAtlas.cs
+PASS: C# syntax AncientBeamRules.cs
+PASS: C# syntax AncientBossRules.cs
+PASS: C# syntax AncientAnchorLightSelection.cs
+PASS: C# syntax AncientCityLayout.cs
+PASS: C# syntax AncientSpeechLayout.cs
+PASS: C# syntax AncientSwingAtlas.cs
+PASS: C# syntax AncientFrameRules.cs
+PASS: C# syntax AncientSwingMotion.cs
+PASS: C# syntax AncientRadioAtlas.cs
+PASS: C# syntax AncientFieldExpansion.cs
+PASS: C# syntax AncientCampaignRules.cs
+PASS: C# syntax AncientSniperGround.cs
+PASS: C# syntax AncientProductionMap.cs
+PASS: C# syntax AncientPointer.cs
+PASS: C# syntax AncientWorkshopCircuit.cs
+PASS: C# syntax AncientArt.cs
+PASS: C# syntax AncientProductionTruckAtlas.cs
+PASS: C# syntax AncientProductionLayout.cs
+PASS: C# syntax AncientCityCampaign.cs
+PASS: C# syntax AncientRules.cs
+PASS: C# syntax AncientTraversal.cs
+PASS: C# syntax AncientCitizenAtlas.cs
+PASS: C# syntax AncientCombatRules.cs
+PASS: C# syntax AncientFinaleRules.cs
+PASS: C# syntax AncientProductionHazardRules.cs
+PASS: C# syntax AncientJournal.cs
+PASS: C# syntax AncientCampaignData.cs
+PASS: C# syntax AncientWireMath.cs
+PASS: C# syntax AncientProductionMotion.cs
+PASS: C# syntax AncientSniperRules.cs
+PASS: C# syntax AncientProductionPursuit.cs
+PASS: C# syntax AncientProductionCaptainAtlas.cs
+PASS: C# syntax AncientFieldCases.cs
+PASS: C# syntax AncientProjectilePool.cs
+PASS: C# syntax AncientClockBoss.cs
+PASS: C# syntax AncientClockRules.cs
+PASS: C# syntax AncientCameraFX.cs
+PASS: C# syntax AncientBossController.cs
+PASS: C# syntax AncientMainMenu.cs
+PASS: C# syntax AncientProductionWorkerAtlas.cs
+PASS: C# syntax AncientProgressRules.cs
+PASS: C# syntax AncientBossAtlas.cs
+PASS: C# syntax AncientAudio.cs
+PASS: C# syntax AncientMoteVisuals.cs
+PASS: C# syntax AncientProjectileRules.cs
+PASS: C# syntax AncientBeamVisuals.cs
+PASS: C# syntax AncientPixels.cs
+PASS: C# syntax AncientSpeechBubble.cs
+PASS: C# syntax AncientCitizenArt.cs
+PASS: C# syntax AncientExploration.cs
+PASS: C# syntax AncientBootIntro.cs
+PASS: C# syntax AncientVisuals.cs
+PASS: C# syntax AncientSwingRules.cs
+PASS: C# syntax AncientKoreanUI.cs
+PASS: C# syntax AncientCombatFeedbackRules.cs
+PASS: C# syntax AncientRouteRadio.cs
+PASS: C# syntax AncientDistrict.cs
+PASS: C# syntax AncientDistrictBackdrop.cs
+PASS: C# syntax AncientPerformance.cs
+PASS: C# syntax AncientBackdropAtlas.cs
+PASS: C# syntax AncientThreatRules.cs
+PASS: C# syntax AncientEvidenceQuestions.cs
+PASS: C# syntax AncientGameFeel.cs
+PASS: C# syntax AncientRouteRadioPlayback.cs
+PASS: C# syntax AncientParkedBike.cs
+PASS: C# syntax AncientCampaign.cs
+PASS: C# syntax AncientChapterView.cs
+PASS: C# syntax AncientFinale.cs
+PASS: C# syntax AncientChapterLayout.cs
+PASS: C# syntax AncientCombat.cs
+PASS: C# syntax AncientSniperEncounter.cs
+PASS: C# syntax AncientChapterVisibility.cs
+PASS: C# syntax AncientFieldScenery.cs
+PASS: C# syntax AncientHUD.cs
+PASS: C# syntax SniperEquipmentArt.cs
+PASS: C# syntax AncientFieldLayout.cs
+PASS: C# syntax AncientStory.cs
+PASS: C# syntax AncientBladeRules.cs
+PASS: C# syntax AncientMotorcycle.cs
+PASS: C# syntax AncientGame.cs
+PASS: C# syntax AncientZipRules.cs
+PASS: C# syntax AncientHudText.cs
+PASS: C# syntax AncientBladeAtlas.cs
+PASS: C# syntax AncientWorldBatch.cs
+PASS: runtime glyph inspection includes Korean dialogue
+PASS: bundled font covers runtime non-ASCII literal glyphs: 585
+PASS: direction hints use glyphs present in the bundled pixel font
+PASS: active project avoids obsolete numeric Unity instance IDs
+PASS: bootstrap uses unsorted supported Unity object lookup
+PASS: first-run script withholds friendship reveal: 옛 친구
+PASS: first-run script withholds friendship reveal: 옛 동료
+PASS: first-run script withholds friendship reveal: 명아
+PASS: first-run script withholds friendship reveal: 너였어?
+PASS: first-run script withholds friendship reveal: 이제야 알아보네
+PASS: five sparse Joker mentions across city resident dialogue
+PASS: protagonist script retains a consistent canonical speaker
+NOT RUN: Unity C# type/API compilation, shader compilation, import, Play Mode, gameplay, player build
