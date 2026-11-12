@@ -159,6 +159,29 @@ namespace Plugin.AncientCivilization.EditorChecks
                 platform.bodyType=kind;if(kind!=RigidbodyType2D.Static)platform.linearVelocity=platformVelocity;collider.size=size;support.transform.position=oldPosition;Physics2D.SyncTransforms();Physics2D.simulationMode=simulation;
             }
         }
+        static void CheckLocomotionPresentation(AncientGame game,GameObject support)
+        {
+            var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();var carrier=support.GetComponent<Rigidbody2D>();
+            var art=Read<SpriteRenderer>(hero,"art");var motion=Read<AncientLocomotionMotion>(hero,"locomotion");
+            Vector2 carrierVelocity=carrier.linearVelocity;bool paused=game.skills;
+            int input=(int)Field(typeof(AncientGame),"inputReadyFrame").GetValue(game);
+            try
+            {
+                game.skills=false;Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
+                carrier.linearVelocity=new Vector2(7,0);Prepare(hero,new Vector2(2,71.1f),new Vector2(7,0));Tick(hero,"Update");
+                Assert(hero.IsOnGround&&motion.Frame==0&&art.sprite==AncientArt.Hero(0),"Standing on the actual seven-unit moving support keeps the feet idle rather than running with world speed");
+                Assert(Near(body.linearVelocity.x,7)&&Near(body.linearVelocity.y,0)&&Near(hero.transform.eulerAngles.z,0),"Visual gait leaves the actual root velocity and collider orientation untouched");
+                body.linearVelocity=new Vector2(12,0);Tick(hero,"Update");
+                if(Time.deltaTime>0)Assert(motion.Frame>=1&&motion.Frame<=4,"Walking relative to the actual moving support selects an authored locomotion pose");
+                Vector3 scale=art.transform.localScale,point=art.transform.localPosition;Quaternion rotation=art.transform.localRotation;
+                game.skills=true;Tick(hero,"Update");
+                Assert(art.transform.localScale==scale&&art.transform.localPosition==point&&art.transform.localRotation==rotation,"The real paused Hero update freezes every visual locomotion transform");
+                game.skills=false;hero.TravelTo(new Vector2(2,80));
+                Assert(motion.Frame==0&&motion.ScaleX==1&&motion.ScaleY==1&&art.transform.localScale==Vector3.one&&art.transform.localRotation==Quaternion.identity,"Travel clears stride, landing rebound and visual tilt before entering another location");
+            }
+            finally
+            {carrier.linearVelocity=carrierVelocity;game.skills=paused;Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,input);}
+        }
         static void CheckRealHero(AncientGame game)
         {
             var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();
@@ -172,6 +195,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 support=new GameObject("Movement QA support");support.layer=8;support.transform.position=new Vector2(2,69.75f);
                 var platform=support.AddComponent<Rigidbody2D>();platform.bodyType=RigidbodyType2D.Kinematic;
                 support.AddComponent<BoxCollider2D>().size=new Vector2(8,.5f);
+                CheckLocomotionPresentation(game,support);
                 Prepare(hero,new Vector2(2,71.1f),new Vector2(0,-8));
                 Set(hero,"airJumpUsed",true);Queue(hero,false);Tick(hero,"FixedUpdate");
                 Assert(Near(body.linearVelocity.y,7.7f),"A released press buffered before landing creates one short hop in the real Hero physics path");

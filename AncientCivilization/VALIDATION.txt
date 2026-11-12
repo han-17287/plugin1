@@ -1,4 +1,4 @@
-v0.22.0 lower production first-play source release — 2026-11-12
+v0.23.0 lower production motion source release — 2026-11-12
 PASS: .NET SDK8.0.416 built and ran20 independently isolated rule-check projects
 PASS: BeamChecks = 11591
 PASS: BladeChecks = 4600
@@ -6,7 +6,7 @@ PASS: BossReadabilityChecks = 1748
 PASS: ChapterRouteChecks = 9891
 PASS: ChapterVisibilityChecks = 13661
 PASS: FieldExpansionChecks = 28597
-PASS: MovementChecks = 2558
+PASS: MovementChecks = 9400
 PASS: ProductionHazardChecks = 767
 PASS: ProductionLayoutChecks = 522128
 PASS: ProductionMotionChecks = 48172
@@ -20,12 +20,14 @@ PASS: SpeechLayoutChecks = 3997
 PASS: SwingChecks = 596
 PASS: ThreatChecks = 359
 PASS: ZipChecks = 28917
-TOTAL: 881842 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
-PASS: 1586 source/asset checks, no skipped optional dependencies in this run.
-PASS: all92 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors; compiled snapshots match current source except the declared velocity alias.
+TOTAL: 888684 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
+PASS: 1590 source/asset checks, no skipped optional dependencies in this run.
+PASS: all93 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors; compiled snapshots match current source except the declared velocity alias.
 LIMIT: supplemental compilation uses UnityEngine.Modules NuGet package2021.3.33, temporary linearVelocity-to-velocity aliases and minimal Editor stubs. It does not establish native Unity6000.6.7f1 import, shaders, physics or Play.
 PASS: metadata GUIDs, PNG integrity/alpha/native-grid crops, C# syntax, first-run secrecy and unchanged original weapon/wire references.
 FONT: bundled NeoDunggeunmo cmap covers586 runtime non-ASCII literal codepoints; unsupported direction arrows were replaced by supported pixel triangles. This does not validate Unity font rasterization or layout.
+REVIEW v0.23: actual-support-relative locomotion and foot dust; resettable distance gait; ascent/apex/fall poses; severity-aware planted landing recovery; priority of blade/aim/swing; paused/resumed motorcycle suspension and rider brace. Actual moving-support presentation fixture authored/compiled, not run.
+VISUAL SOURCE PREVIEW: Chromium rendered the actual Hero sheet palette/crops with samples exported from the current C# locomotion helper; inspected airborne and landing poses. This is an isolated source preview, not Unity rendering or a gameplay screenshot.
 REVIEW v0.22: lower tutorial live-energy/supply-direction guidance; first accepted deck victory saves the second-road checkpoint during knockback; sustained separation safely remounts with preserved captain damage. Actual component fixture paths added for those transitions; compiled, not run.
 REVIEW v0.21.1: final world-prompt rectangles skip the projected officer silhouette after edge-guide avoidance; no input/progress/interaction-coordinate changes.
 REVIEW v0.21: carried-motion camera lead/airborne zoom; stale horizontal input cleanup; actual accepted-hit markers; stable near-vertical blade facing; measured energy-aware charge hints; actual jump-clearance feedback; failed boarding guidance; persisted collision-free workshop lighting.
@@ -278,6 +280,7 @@ PASS: metadata target Assets/Scripts/AncientProductionMotion.cs.meta
 PASS: 32-character GUID AncientProductionMotion.cs.meta
 PASS: metadata coverage AncientCombatFeedbackRules.cs
 PASS: metadata coverage AncientRouteRadio.cs
+PASS: metadata coverage AncientLocomotionMotion.cs
 PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
 PASS: 32-character GUID AncientClockRules.cs.meta
 PASS: metadata coverage AncientDistrict.cs
@@ -325,6 +328,8 @@ PASS: 32-character GUID AncientBeamRules.cs.meta
 PASS: metadata coverage AncientFieldScenery.cs
 PASS: metadata target Assets/Scripts/AncientKoreanUI.cs.meta
 PASS: 32-character GUID AncientKoreanUI.cs.meta
+PASS: metadata target Assets/Scripts/AncientLocomotionMotion.cs.meta
+PASS: 32-character GUID AncientLocomotionMotion.cs.meta
 PASS: metadata coverage AncientHUD.cs
 PASS: metadata coverage SniperEquipmentArt.cs
 PASS: metadata coverage AncientFieldLayout.cs
@@ -1585,6 +1590,7 @@ PASS: C# syntax AncientSwingRules.cs
 PASS: C# syntax AncientKoreanUI.cs
 PASS: C# syntax AncientCombatFeedbackRules.cs
 PASS: C# syntax AncientRouteRadio.cs
+PASS: C# syntax AncientLocomotionMotion.cs
 PASS: C# syntax AncientDistrict.cs
 PASS: C# syntax AncientDistrictBackdrop.cs
 PASS: C# syntax AncientPerformance.cs

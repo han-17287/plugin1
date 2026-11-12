@@ -595,7 +595,7 @@ namespace Plugin.AncientCivilization
         public float BikeSkid {get;private set;}
         public AncientCombat Combat {get;private set;}
         LineRenderer chargeRing;
-                Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;AncientSwingMotion swingMotion;
+                Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;AncientSwingMotion swingMotion;AncientLocomotionMotion locomotion;
         CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
         DistanceJoint2D wireJoint;SpriteRenderer hook;AncientWireParticleBatch wireParticles;
         LineRenderer wireCuff,wireLatch;
@@ -638,7 +638,7 @@ namespace Plugin.AncientCivilization
         AncientEnemy wireEnemy,wireContactTarget;Transform wireMovingAnchor;Rigidbody2D wireMovingBody;Vector2 wireMovingLocal,wireCarrierVelocity,wireFinishGoal;float wireContactUntil;
         bool wired,airJumpUsed,wireFinishPending;float axis;int combo;
         Sprite[] frames,bladeFrames;
-        float actionStarted,actionUntil,hurtUntil,ghostAt,landingUntil,fallSpeed,dustAt;
+        float actionStarted,actionUntil,hurtUntil,ghostAt,fallSpeed,dustAt;
         bool wasGrounded,cutJump,jumpHeld;float strikeFacing;
         void Awake()
         {
@@ -663,6 +663,7 @@ namespace Plugin.AncientCivilization
                 bladeFrames[(step-1)*AncientBladeRules.FramesPerStep+frame]=AncientArt.Blade(step,frame);
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-1.05f),10,transform);
             swingMotion=new AncientSwingMotion(art);
+            locomotion=new AncientLocomotionMotion();
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
             motorcycle=gameObject.AddComponent<AncientMotorcycle>();motorcycle.Initialize(this);
             armProperties=new MaterialPropertyBlock();
@@ -728,7 +729,7 @@ namespace Plugin.AncientCivilization
             bool onGround=StableGrounded(body.linearVelocity);BikeGrounded=onGround;
             if(onGround)
             {
-                if(!wasGrounded&&fallSpeed<-7){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.4f,.57f,.65f),10);g.Sound(7);landingUntil=Time.time+.10f;g.Shake(.025f);}
+                if(!wasGrounded&&fallSpeed<-7){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.4f,.57f,.65f),10);g.Sound(7);g.Shake(.025f);}
                 fallSpeed=0;lastGrounded=Time.time;airJumpUsed=false;if(!wired&&Time.time>momentumUntil)wireChain=0;
             }
             else fallSpeed=Mathf.Min(fallSpeed,body.linearVelocity.y);
@@ -781,23 +782,32 @@ namespace Plugin.AncientCivilization
                 if(Combat.TryCollectionTarget(out point))
                 {absorb.enabled=true;absorb.SetPosition(0,transform.position+new Vector3(direction*.5f,.35f,0));absorb.SetPosition(1,point);}
             }
+            // Follow movement relative to the supporting roof, rather than input or
+            // global time: a wall or a moving carrier cannot make idle feet run.
+            float relativeSpeed=body.linearVelocity.x-(onGround&&groundBody?groundBody.linearVelocity.x:0);
+            if(locomotion!=null)locomotion.Step(onGround,relativeSpeed,body.linearVelocity.y,direction,Time.deltaTime);
             art.flipX=(Time.time<actionUntil&&!wired?strikeFacing:direction)<0;
-            int frame=bike?7:wired?5:(Capturing||Input.GetKey(KeyCode.F)||(Combat&&(Combat.Charging||Combat.Firing)))?6:Mathf.Abs(axis)>.1f?1+(int)(Time.time*(running?13:9))%4:0;
+            int frame=bike?7:wired?5:(Capturing||Input.GetKey(KeyCode.F)||(Combat&&(Combat.Charging||Combat.Firing)))?6:locomotion!=null?locomotion.Frame:0;
             art.sprite=frames[frame];
             if(!bike&&!wired)
             {
                 if(Time.time<hurtUntil)art.sprite=frames[0];
                 else if(Time.time<actionUntil)art.sprite=bladeFrames[(combo-1)*AncientBladeRules.FramesPerStep+AncientBladeRules.AnimationFrame(combo,Time.time-actionStarted)];
                 else if(Combat&&(Combat.Charging||Combat.Firing))art.sprite=frames[6];
-                else if(!onGround)art.sprite=frames[3];
             }
-            float squash=Time.time<landingUntil?.08f:0;
-            art.transform.localScale=new Vector3(1+squash,1-squash,1);
-            if(onGround&&Mathf.Abs(body.linearVelocity.x)>7&&Time.time>=dustAt){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.35f,.48f,.55f),2);dustAt=Time.time+.18f;}
+            art.transform.localScale=Vector3.one;art.transform.localRotation=Quaternion.identity;
+            if(onGround&&Mathf.Abs(relativeSpeed)>7&&Time.time>=dustAt){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.35f,.48f,.55f),2);dustAt=Time.time+.18f;}
             art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);
             bool recoverSwing=!bike&&!wired&&!onGround&&Time.time>=hurtUntil&&Time.time>=actionUntil&&!Capturing&&!Input.GetKey(KeyCode.F)&&!(Combat&&(Combat.Charging||Combat.Firing));
-            if(swingMotion!=null)swingMotion.Apply(wired&&!wireZip&&!bike,recoverSwing,anchor-(Vector2)transform.position,body.linearVelocity,
+            bool swingPose=swingMotion!=null&&swingMotion.Apply(wired&&!wireZip&&!bike,recoverSwing,anchor-(Vector2)transform.position,body.linearVelocity,
                 Time.time-wireAttachedAt,arcTravel,swingDirection,Time.time,Time.deltaTime);
+            bool ordinaryPose=!bike&&!wired&&!swingPose&&Time.time>=hurtUntil&&Time.time>=actionUntil&&!Capturing&&!Input.GetKey(KeyCode.F)&&!(Combat&&(Combat.Charging||Combat.Firing));
+            if(ordinaryPose&&locomotion!=null)
+            {
+                art.transform.localPosition+=Vector3.up*locomotion.OffsetY;
+                art.transform.localScale=new Vector3(locomotion.ScaleX,locomotion.ScaleY,1);
+                art.transform.localRotation=Quaternion.Euler(0,0,locomotion.Angle);
+            }
             if(wired&&Time.time>=ghostAt){g.Afterimage(art);ghostAt=Time.time+.065f;}
             art.color=Time.time<invulnerableUntil&&(int)(Time.time*14)%2==0?new Color(1,1,1,.45f):Color.white;
             art.enabled=!bike;
@@ -809,7 +819,7 @@ namespace Plugin.AncientCivilization
             body.simulated=!held;
         }
         void ResetSwingPresentation()
-        {if(swingMotion!=null)swingMotion.Clear();if(art){art.transform.localRotation=Quaternion.identity;art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);art.transform.localScale=Vector3.one;}}
+        {if(swingMotion!=null)swingMotion.Clear();if(locomotion!=null)locomotion.Clear();if(art){art.transform.localRotation=Quaternion.identity;art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);art.transform.localScale=Vector3.one;}}
         public void CinematicPose(bool low,float facing)
         {
             if(!art||frames==null)return;ResetSwingPresentation();art.sprite=frames[low?4:0];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
@@ -888,7 +898,7 @@ namespace Plugin.AncientCivilization
             }
             StopWire(false);body.position=point;transform.position=point;body.linearVelocity=Vector2.zero;
             momentumUntil=0;conveyorUntil=0;airborneSurface=0;ClearJumpInput();lastGrounded=-100;groundSampleTick=-1;
-            fallSpeed=0;wasGrounded=false;airJumpUsed=false;hurtUntil=actionUntil=landingUntil=0;
+            fallSpeed=0;wasGrounded=false;airJumpUsed=false;hurtUntil=actionUntil=0;
             if(trail){trail.emitting=false;trail.Clear();}if(Combat)Combat.ResetCombat();
         }
         Vector2 anchor;

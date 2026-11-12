@@ -1,10 +1,12 @@
 # PLUGIN · Ancient Civilization
 
+v0.23.0은 하층에서 반복해서 보는 이동 모션을 보강합니다. 발판 대비 실제 이동 속도로 보폭을 진행하고, 점프의 상승·정점·낙하 자세와 착지 강도에 맞는 압축·회복을 구분했습니다. 오토바이에는 착지 반동·탑승자 기울기·일시정지 자세 보존을 적용했습니다. 실제 Unity 화면과 조작 확인은 남아 있습니다.
+
 이번 작업은 하층 생산구의 첫 플레이 흐름에 집중했습니다. 입자량과 배출구 위치에 맞는 튜토리얼 안내, 첫 갑판 전투 승리 직후의 저장, 차량에서 멀어졌을 때의 복귀를 보완했습니다. 하층 완료 판정에는 실제 Unity에서 새 게임부터 검거까지의 연속 플레이 확인이 남아 있습니다.
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**v0.22.0 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.22.0-download.zip)
+**v0.23.0 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.23.0-download.zip)
 
 v0.21.1은 현장 안내판이 가까이 선 주인공을 가리지 않도록 보완한 패치입니다. 안내판의 최종 화면 위치가 주인공과 겹치면 숨기며, 상단의 다음 목표는 계속 표시합니다.
 

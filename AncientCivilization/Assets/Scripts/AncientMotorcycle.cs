@@ -12,7 +12,9 @@ namespace Plugin.AncientCivilization
         Sprite normalBody,damagedBody;Material effects;AudioSource engine;AudioClip engineClip;
         MaterialPropertyBlock armProperties;
         static readonly int ArmCharge=Shader.PropertyToID("_ArmCharge"),ArmPulse=Shader.PropertyToID("_ArmPulse");
-        float lastSpeed,wheelAngle,compression,sparkAt,flashUntil;bool previousGrounded,lastProductionBlade;
+        float lastSpeed,wheelAngle,compression,sparkAt,flashUntil;
+        float landingAge=1,landingStrength,airborneAge,fallingSpeed,riderLean,roadPhase;
+        bool previousGrounded,lastProductionBlade,wasRunning;
         public void Initialize(AncientHero owner)
         {
             hero=owner;game=AncientGame.Instance;audioSettings=game.GetComponent<AncientAudio>();
@@ -75,7 +77,9 @@ namespace Plugin.AncientCivilization
         public void Mount()
         {
             wheelAngle=0;compression=0;lastSpeed=hero.HorizontalSpeed;
+            landingAge=1;landingStrength=airborneAge=fallingSpeed=riderLean=roadPhase=0;wasRunning=false;
             frame.localPosition=Vector3.zero;frame.localRotation=Quaternion.identity;previousGrounded=false;
+            rider.transform.localPosition=new Vector2(-.05f,-.42f);rider.transform.localRotation=Quaternion.identity;
             exhaust.Clear();exhaustCore.Clear();foreach(var trace in skidTrails){trace.emitting=false;trace.Clear();}model.gameObject.SetActive(true);
         }
         public void Park()
@@ -106,7 +110,7 @@ namespace Plugin.AncientCivilization
             if(!hero||!model)return;
             bool externalPause=game.MainMenu||game.skills||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Journal&&game.Journal.Open)||!Application.isFocused;
             bool cinematic=hero.bike&&game.Production&&game.Production.Cinematic&&!externalPause;
-            float visualDelta=cinematic?Time.unscaledDeltaTime:Time.deltaTime,visualTime=cinematic?Time.unscaledTime:Time.time;
+            float visualDelta=cinematic?Time.unscaledDeltaTime:Time.deltaTime;
             float signedSpeed=cinematic?game.Production.CinematicBikeSpeed:hero.HorizontalSpeed;
             float speed=Mathf.Abs(signedSpeed);float skid=hero.BikeSkid;bool running=hero.bike&&!externalPause&&(!game.Paused||cinematic)&&!game.won;
             bool productionBlade=hero.bike&&game.Production&&game.Production.CinematicBikeBladeActive;
@@ -115,18 +119,43 @@ namespace Plugin.AncientCivilization
             float volume=running&&audioSettings&&!audioSettings.Muted ? 0.065f : 0f;
             engine.volume=!running||!audioSettings||audioSettings.Muted?0:Mathf.MoveTowards(engine.volume,volume,Time.unscaledDeltaTime*.3f);
             // Park/Detonate already clear the presentation; walking need not repeat native renderer setters.
-            if(!hero.bike){previousGrounded=false;return;}
-            engine.pitch=Mathf.Lerp(engine.pitch,.75f+Mathf.Clamp01(speed/17)*1.15f+skid*.2f,1-Mathf.Exp(-6*Time.unscaledDeltaTime));
+            if(!hero.bike){previousGrounded=wasRunning=false;return;}
+            // Preserve the exact suspended pose while a menu, dialogue or focus loss
+            // stops play. The first resumed frame must not invent an acceleration jolt.
+            if(!running)
+            {
+                wasRunning=false;exhaust.emitting=exhaustCore.emitting=false;headlight.enabled=false;
+                foreach(var trace in skidTrails)trace.emitting=false;
+                return;
+            }
+            if(!wasRunning){lastSpeed=signedSpeed;wasRunning=true;}
+            visualDelta=Mathf.Max(0,visualDelta);
+            engine.pitch=Mathf.Lerp(engine.pitch,.75f+Mathf.Clamp01(speed/17)*1.15f+skid*.2f,1-Mathf.Exp(-6*visualDelta));
             float facing=speed>1.5f?Mathf.Sign(signedSpeed):hero.Facing;
             model.localScale=new Vector3(facing*(1-skid*.12f),1,1);
             float acceleration=(signedSpeed-lastSpeed)/Mathf.Max(.001f,visualDelta);lastSpeed=signedSpeed;
             bool grounded=cinematic||hero.BikeGrounded;
-            if(grounded&&!previousGrounded)compression=.09f;
-            previousGrounded=grounded;compression=Mathf.MoveTowards(compression,0,visualDelta*.7f);
-            float bounce=grounded?Mathf.Sin(visualTime*(12+speed))*.009f*Mathf.Clamp01(speed/10):0;
+            if(grounded)
+            {
+                if(!previousGrounded&&airborneAge>.06f&&fallingSpeed<-2)
+                {landingStrength=Mathf.Lerp(.035f,.12f,Mathf.Clamp01((-fallingSpeed-2)/20));landingAge=0;}
+                airborneAge=fallingSpeed=0;
+                roadPhase=Mathf.Repeat(roadPhase+(12+speed)*visualDelta,Mathf.PI*2);
+            }
+            else{airborneAge+=visualDelta;fallingSpeed=Mathf.Min(fallingSpeed,hero.VerticalSpeed);}
+            previousGrounded=grounded;
+            // An analytic damped spring starts at the current ride height, dips,
+            // then makes one small rebound. It stays stable across frame rates/hitches.
+            compression=landingStrength*Mathf.Exp(-landingAge*14)*Mathf.Sin(landingAge*22);
+            landingAge=Mathf.Min(1,landingAge+visualDelta);
+            float bounce=grounded?Mathf.Sin(roadPhase)*.009f*Mathf.Clamp01(speed/10):0;
             frame.localPosition=new Vector2(-skid*.16f,-compression+bounce-skid*.06f);
             float pitch=-skid*7+Mathf.Clamp(acceleration*facing*.12f,-4,4)+(grounded?0:Mathf.Clamp(hero.VerticalSpeed*.35f,-7,7));
             frame.localRotation=Quaternion.Lerp(frame.localRotation,Quaternion.Euler(0,0,pitch),1-Mathf.Exp(-9*visualDelta));
+            float brace=cinematic?0:Mathf.Clamp(Mathf.Clamp(-acceleration*facing*.16f,-4,4)-skid*2+(grounded?0:Mathf.Clamp(-hero.VerticalSpeed*.12f,-1.8f,1.8f)),-6,6);
+            riderLean=Mathf.Lerp(riderLean,brace,1-Mathf.Exp(-12*visualDelta));
+            rider.transform.localRotation=Quaternion.Euler(0,0,riderLean);
+            rider.transform.localPosition=new Vector2(-.05f+riderLean*.004f,-.42f-compression*.18f);
             wheelAngle=Mathf.Repeat(wheelAngle-signedSpeed*facing/.37f*Mathf.Rad2Deg*visualDelta*(1+skid*.3f),360);
             rear.transform.localRotation=front.transform.localRotation=Quaternion.Euler(0,0,wheelAngle);
             bool damaged=hero.bikeHP<=28;

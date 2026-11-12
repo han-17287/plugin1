@@ -38,9 +38,66 @@ class MovementChecks
         foreach(float invalid in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
             Check(Near(AncientCameraRules.LookAhead(invalid,invalid),2.5f)&&Near(AncientCameraRules.TravelZoom(false,false,false,invalid),5.8f),"Invalid observed speed cannot poison the view");
     }
+    static void LocomotionChecks()
+    {
+        var still=new AncientLocomotionMotion();
+        still.Step(true,.35f,0,1,.01f);Check(still.Frame==0,"The exact idle threshold ignores tiny support jitter");
+        still.Step(true,.351f,0,1,.01f);Check(still.Frame==1,"Supported travel just above the threshold starts the first stride");
+        still.Step(true,-.34f,0,-1,.01f);Check(still.Frame==0,"Small reversed support jitter cannot keep a run cycle alive");
+        foreach(int hz in new[]{30,60,120,240})
+        {
+            still.Clear();
+            for(int i=0;i<hz*2;i++)still.Step(true,0,0,1,1f/hz);
+            Check(still.Frame==0&&Near(still.OffsetY,0)&&Near(still.Angle,0),"Pressing against a wall or standing on a moving carrier cannot produce a run cycle without relative travel");
+            foreach(float speed in new[]{5f,9,-5,-9})
+            {
+                var motion=new AncientLocomotionMotion();
+                for(int i=0;i<hz*3;i++)
+                {
+                    motion.Step(true,speed,0,speed<0?-1:1,1f/hz);
+                    Check(motion.Frame>=1&&motion.Frame<=4&&Math.Abs(motion.Angle)<=3.5001f&&motion.OffsetY>=0&&motion.OffsetY<=.0201f,"Walk/run presentation stays within its four authored poses and subtle grounded bounds");
+                }
+                var reference=new AncientLocomotionMotion();for(int i=0;i<720;i++)reference.Step(true,speed,0,speed<0?-1:1,1f/240);
+                Check(motion.Frame==reference.Frame&&Math.Abs(motion.OffsetY-reference.OffsetY)<.0001f&&Math.Abs(motion.Angle-reference.Angle)<.0001f,"The same supported travel has the same gait and lean from30through240Hz");
+                motion.Step(true,0,0,1,1f/hz);Check(motion.Frame==0&&Near(motion.OffsetY,0),"Stopping a run rests at the foot pivot without a random global-clock pose");
+                motion.Step(true,speed,0,1,.001f);Check(motion.Frame==1,"Every fresh departure starts at the first authored stride");
+            }
+            foreach(float impact in new[]{-6f,-14,-25})
+            {
+                var landing=new AncientLocomotionMotion();landing.Step(false,0,impact,1,1f/hz);
+                Check(landing.Frame==4&&landing.ScaleY<=1.04f,"A descending body uses its extended fall pose without excessive stretch");
+                float minimum=1;
+                for(int i=0;i<hz;i++)
+                {
+                    landing.Step(true,0,0,1,1f/hz);minimum=Math.Min(minimum,landing.ScaleY);
+                    Check(landing.OffsetY==0&&landing.ScaleX>.95f&&landing.ScaleX<1.08f&&landing.ScaleY>.90f&&landing.ScaleY<1.04f,"Landing recovery stays planted and bounds squash/rebound across impact speeds and frame rates");
+                }
+                Check(minimum<.999f&&Math.Abs(landing.ScaleY-1)<.0001f&&Math.Abs(landing.ScaleX-1)<.0001f,"A real landing visibly compresses then settles to its unscaled stance");
+            }
+        }
+        var mild=new AncientLocomotionMotion();var hard=new AncientLocomotionMotion();
+        mild.Step(false,0,-6,1,.01f);hard.Step(false,0,-25,1,.01f);
+        float mildMin=1,hardMin=1;
+        for(int i=0;i<40;i++){mild.Step(true,0,0,1,.01f);hard.Step(true,0,0,1,.01f);mildMin=Math.Min(mildMin,mild.ScaleY);hardMin=Math.Min(hardMin,hard.ScaleY);}
+        Check(hardMin<mildMin-.02f,"A hard drop has more landing compression than a small hop");
+        var air=new AncientLocomotionMotion();air.Step(false,8,12,1,.05f);Check(air.Frame==1,"Ascent uses the lifting-leg pose");
+        air.Step(false,8,0,1,.05f);Check(air.Frame==3,"The jump apex switches to a distinct suspended stride");
+        air.Step(false,8,-12,1,.05f);Check(air.Frame==4,"Descent opens the legs ready for contact");
+        int frozenFrame=air.Frame;float angle=air.Angle,y=air.OffsetY,xs=air.ScaleX,ys=air.ScaleY;
+        air.Step(true,-40,0,-1,0);
+        Check(air.Frame==frozenFrame&&air.Angle==angle&&air.OffsetY==y&&air.ScaleX==xs&&air.ScaleY==ys,"A zero visual step freezes pose and the pending landing edge completely");
+        air.Step(true,0,0,1,.05f);Check(air.ScaleY<ys,"The pending landing is still recognized when the paused visual clock resumes");
+        air.Clear();Check(air.Frame==0&&air.Angle==0&&air.OffsetY==0&&air.ScaleX==1&&air.ScaleY==1,"Travel/reset discards the previous lean, stride and landing recovery");
+        foreach(float invalid in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+        {
+            air.Step(false,invalid,invalid,invalid,.016f);
+            Check(!float.IsNaN(air.Angle)&&!float.IsInfinity(air.Angle)&&air.ScaleX>.9f&&air.ScaleY<1.04f,"Invalid observed velocities cannot poison visual transforms");
+            angle=air.Angle;air.Step(true,9,0,1,invalid);Check(air.Angle==angle,"An invalid visual clock cannot consume pose state");
+        }
+    }
     static void Main()
     {
-        CameraChecks();
+        CameraChecks();LocomotionChecks();
         // A tap can begin and end before the landing. No render Update runs on the landing tick.
         foreach(int physicsHz in new[]{30,50,60,120,240})foreach(bool held in new[]{false,true})
         {
