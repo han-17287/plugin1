@@ -266,6 +266,7 @@ namespace Plugin.AncientCivilization
         void ActivateSector(int sector)
         {
             if(encounterSector==sector)return;RecordDefeats();ClearFoes();encounterSector=sector;
+            if(active>=4&&active<=7){defeated=AncientFieldExpansion.EnemyMask;return;}
             var mission=AncientCampaignData.Missions[active];int floor=mission.Floor;
             for(int i=0;i<AncientFieldExpansion.EnemiesPerSector;i++)
             {
@@ -353,11 +354,11 @@ namespace Plugin.AncientCivilization
             game.Feel.Signal(next>=0?"기록 전송 · 동쪽으로 계속 이동":id==18?"관제실 전방 · 미등록 사격 신호":"목적지 도착 · 동쪽 통로로",new Color(.55f,1,.85f),1.6f);
         }
         static string ChapterTitle(int floor)
-        {return floor==0?"회수 운송로의 끝":floor==1?"끊긴 배급선":floor==2?"지워진 승인":floor==3?"보류된 승진":"중앙 관제의 침묵";}
+        {return floor==0?"회수 운송로의 끝":floor==1?"도둑이 지나간 길":floor==2?"지워진 승인":floor==3?"보류된 승진":"중앙 관제의 침묵";}
         static string ChapterBrief(int floor)
         {
             return floor==0?"회수품의 운송로를 끝까지 따라가라. 작업장과 봉쇄 구역을 지나 동쪽 인계선까지 조사해 줘. 확보한 기록은 무전으로 받겠다.":
-                floor==1?"배급이 끊긴 길을 따라 동쪽 경비 구역까지 가 주세요. 진료선과 막힌 운송로에 아직 사람이 남아 있어요.":
+                floor==1?"코어를 든 도둑이 동쪽 정비 골목으로 갔어요. 그 길의 흔적을 따라가면 배급 창고 뒤 본거지에 닿을 거예요.":
                 floor==2?"신고 접수로부터 원본 보관소까지 기록이 같은 승인선으로 묶였습니다. 동쪽 통제구까지 따라가면 누가 기록을 막는지 확인할 수 있습니다.":
                 floor==3?"공용 전력의 분기선을 따라 동쪽 외벽까지 가 보죠. 계약과 이송 명단도 그 길에 있습니다. 제 계측 기록을 보내겠습니다.":
                 "정비로를 따라 중앙 관제실 너머 회장실까지 갈 수 있어요. 감시 회선을 피하면서 지워진 기록을 찾아 주세요. 전방의 사격 신호는 경비망에 등록돼 있지 않습니다.";
@@ -422,7 +423,7 @@ namespace Plugin.AncientCivilization
         }
         public bool TryBladeTarget(Vector2 origin,Vector2 direction)
         {
-            if(!Active)return false;var m=AncientCampaignData.Missions[active];
+            if(!Active||active>=4&&active<=7)return false;var m=AncientCampaignData.Missions[active];
             for(int i=0;i<3;i++)
             {
                 Vector2 p=NodePoint(active,i),delta=p-origin;
@@ -489,6 +490,7 @@ namespace Plugin.AncientCivilization
             RecordDefeats();
             for(int sector=0;sector<=checkpoint;sector++)if(Mathf.Abs(hero.x-left-AncientFieldExpansion.EntranceOf(sector))<2.5f&&Mathf.Abs(hero.y-1.3f)<1.5f)
             {Persist();game.Notice("안전 거점 / 확보한 기록과 수사 진행을 저장했습니다.",2);return true;}
+            if(m.Floor==1)return false;
             if(hero.x>left+AncientCampaignRules.RoomWidth-10)
             {
                 if(!AncientFieldExpansion.ExitReady(tasks,defeated)||ThreatsAlive())game.Notice("남아 있는 기록과 위협을 확인하면 동쪽 통로가 열립니다.",2);
@@ -567,6 +569,10 @@ namespace Plugin.AncientCivilization
             if(!Active)TryContinueProductionRoute();
             if(!Active||game.Paused)return;
             RecordDefeats();
+            if(active>=4&&active<=7)
+            {
+                for(int i=0;i<3;i++)if(game.hero.transform.position.x>=NodePoint(active,i).x-3&&(active!=5||i!=0||game.Living.ThrowTaught))Mark(i);
+            }
             float left=AncientCampaignRules.Left(active);Vector2 p=game.hero.transform.position;
             if(p.y<-2.5f||p.x<AncientCityLayout.Left(game.Story.CurrentFloor)-1||p.x>left+AncientCampaignRules.RoomWidth+1)
             {RecoverToCheckpoint();return;}
@@ -652,7 +658,7 @@ namespace Plugin.AncientCivilization
             if(uiMission==active&&uiSector==sector&&uiNext==next&&uiGuideKind==kind&&uiGuideId==id&&uiFollowing==following)return;
             var mission=AncientCampaignData.Missions[active];
             if(uiMission!=active)for(int i=0;i<3;i++)
-                fieldNodeLabels[i]=(UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
+                fieldNodeLabels[i]=(mission.Floor==1?"경로 · ":UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
             uiMission=active;uiSector=sector;uiNext=next;uiGuideKind=kind;uiGuideId=id;uiFollowing=following;edgeMetres=-1;
             fieldTitle=ChapterTitle(mission.Floor)+" · "+(active%4+1)+"/4 · "+(sector+1)+"/3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 와이어":"");
             guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"동쪽 통로로 계속 이동":kind==5?"베기 · 입자 재채취":

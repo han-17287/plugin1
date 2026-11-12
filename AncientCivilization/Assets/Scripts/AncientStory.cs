@@ -414,6 +414,7 @@ namespace Plugin.AncientCivilization
             else if(floor==3)
                 Talk(done,new Line("통신관","구역은 확보했다. 하지만 네 포인트 심사가 보류됐다. 최상층은 승진 대상도 아니야. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
                     new Line("백명","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
+            else if(floor==1)Talk(done,new Line("백 경위","코어와 거래 원장을 확보했습니다. 조직이 훔친 물량을 합쳐도 미수령량과 맞지 않습니다.",0),new Line("사령관","원장의 수령처 수정 기록은 행정구로 이어진다. 동쪽 엘리베이터에서 올라가 확인해라.",1));
             else Talk(done,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 동쪽 이동 엘리베이터에서 목적지를 선택해라.",1));
         }
         public void TravelBySidePassage(int destination)
@@ -480,6 +481,7 @@ namespace Plugin.AncientCivilization
             Transform actor=null;float offset=2;
             bool found=(game.Production&&game.Production.TryDialogueActor(speaker,out actor,out offset));
             if(!found)found=game.ProductionResidents&&game.ProductionResidents.TryDialogueActor(speaker,out actor,out offset);
+            if(!found)found=game.Living&&game.Living.TryActor(speaker,out actor,out offset);
             if(!found)found=game.City&&game.City.TryDialogueActor(speaker,out actor,out offset);
             if(!found)found=game.Campaign&&game.Campaign.TryDialogueActor(speaker,out actor,out offset);
             if(found&&actor)

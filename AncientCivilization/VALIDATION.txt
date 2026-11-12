@@ -1,11 +1,12 @@
-v0.23.0 lower production motion source release — 2026-11-12
-PASS: .NET SDK8.0.416 built and ran20 independently isolated rule-check projects
+v0.24.0 living district source release — 2026-11-12
+PASS: .NET SDK 8.0.416 built and ran 21 independently isolated rule-check projects
 PASS: BeamChecks = 11591
 PASS: BladeChecks = 4600
 PASS: BossReadabilityChecks = 1748
 PASS: ChapterRouteChecks = 9891
 PASS: ChapterVisibilityChecks = 13661
 PASS: FieldExpansionChecks = 28597
+PASS: LivingChecks = 4243
 PASS: MovementChecks = 9400
 PASS: ProductionHazardChecks = 767
 PASS: ProductionLayoutChecks = 522128
@@ -14,31 +15,25 @@ PASS: ProductionSequenceChecks = 193072
 PASS: ProjectileOrderingChecks = 7024
 PASS: PulseChecks = 137
 PASS: RouteRadioChecks = 106
-PASS: RulesChecks = 3845
+PASS: RulesChecks = 3821
 PASS: SniperChecks = 76
 PASS: SpeechLayoutChecks = 3997
 PASS: SwingChecks = 596
 PASS: ThreatChecks = 359
 PASS: ZipChecks = 28917
-TOTAL: 888684 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
-PASS: 1590 source/asset checks, no skipped optional dependencies in this run.
-PASS: all93 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors; compiled snapshots match current source except the declared velocity alias.
-LIMIT: supplemental compilation uses UnityEngine.Modules NuGet package2021.3.33, temporary linearVelocity-to-velocity aliases and minimal Editor stubs. It does not establish native Unity6000.6.7f1 import, shaders, physics or Play.
-PASS: metadata GUIDs, PNG integrity/alpha/native-grid crops, C# syntax, first-run secrecy and unchanged original weapon/wire references.
-FONT: bundled NeoDunggeunmo cmap covers586 runtime non-ASCII literal codepoints; unsupported direction arrows were replaced by supported pixel triangles. This does not validate Unity font rasterization or layout.
-REVIEW v0.23: actual-support-relative locomotion and foot dust; resettable distance gait; ascent/apex/fall poses; severity-aware planted landing recovery; priority of blade/aim/swing; paused/resumed motorcycle suspension and rider brace. Actual moving-support presentation fixture authored/compiled, not run.
-VISUAL SOURCE PREVIEW: Chromium rendered the actual Hero sheet palette/crops with samples exported from the current C# locomotion helper; inspected airborne and landing poses. This is an isolated source preview, not Unity rendering or a gameplay screenshot.
-REVIEW v0.22: lower tutorial live-energy/supply-direction guidance; first accepted deck victory saves the second-road checkpoint during knockback; sustained separation safely remounts with preserved captain damage. Actual component fixture paths added for those transitions; compiled, not run.
-REVIEW v0.21.1: final world-prompt rectangles skip the projected officer silhouette after edge-guide avoidance; no input/progress/interaction-coordinate changes.
-REVIEW v0.21: carried-motion camera lead/airborne zoom; stale horizontal input cleanup; actual accepted-hit markers; stable near-vertical blade facing; measured energy-aware charge hints; actual jump-clearance feedback; failed boarding guidance; persisted collision-free workshop lighting.
-REVIEW retained: display-aligned boarding-latch picking with480p..8K numerical coverage; safe staged training; optional worker art/anchors; thin expert ledges; arrest-to-investigation continuation; rescued Reha; moving-anchor completed-step release and carrier velocity; truck latch underside/mast; chase/deck camera margins; separate three-core cargo; physical/visible roof alignment; frame-hitch blade contact; grounded factory artwork and paused industry motion; bounded64 anchor halos.
-NUMERICAL MODEL LIMIT: route/cinematic/camera and moving-target traces use declared geometry and assumptions. They do not run the Unity collision solver or measure real keyboard/mouse input, rendering or camera feel.
-NATIVE FIXTURES WRITTEN/COMPILED, NOT RUN: PLUGIN/검사 production, movement, blade and continuous-chapter menus use isolated QA profiles, actual components and directed Physics2D simulations. Added probes cover8..14m boarding without a clock timeout, static/moving zip finish, stationary end-of-tunnel boarding, worker feet/heads, three-core cargo, actual camera viewports, halo capacity/tracking, late-finisher retry and arrest handoff. New authored probes cover accepted/whiff markers and their context cleanup, input guards, real hazard consumption/damage coaching, a physically incomplete boarding timeout with safe remount, and actual laser-powered workshop restoration/persistence/culling. These native probes were compiled, not run.
-AUDIO:18 generated waveforms checked offline for finite samples, clipping and endpoint smoothing; real listening/Unity playback unverified.
-CI: .github/workflows/source-checks.yml runs source/assets and portable rules with pinned Python dependencies. It cannot run native Unity fixtures.
-PACKAGING: Tools/package_project.py creates a source/reference ZIP, excludes Unity/build/tool caches, checks CRC and file-byte equality, and writes a separate SHA256. It does not build a player.
-NOT RUN: native Unity6000.6.7f1 compile/import/shaders, PlayMode, physical controls, audio audition, full playthrough, measuredFPS or player build.
-SCOPE: lower-district source improvement. No claim of measured nine-hour gameplay,90%completion or commercial-release quality.
+TOTAL: 892903 assertions including geometry/frame sweeps. This is not a completion or quality percentage.
+PASS: 1614 source/asset checks; no skipped dependencies.
+PASS: 98 runtime and 7 Editor C# files compiled with warnings as errors using supplemental references; all snapshots match validated source except the declared velocity alias.
+LIMIT: supplemental compile uses UnityEngine.Modules NuGet 2021.3.33, linearVelocity-to-velocity aliases and minimal Editor stubs. It does not establish native Unity 6000.6.7f1 import, shader compile, physics, Play or build.
+FONT: bundled NeoDunggeunmo cmap covers 586 runtime non-ASCII literal codepoints. Unity font rasterization/layout not tested.
+REVIEW v0.24: continuous living trail; no obsolete escort/evidence prompts; object orbit/aim/throw and one-hit breakup; non-breakable bullets and pool reset; spotlight terrain occlusion and guard limits; saved pre-boss guard waves; 68%/34% HP gates; exact 1/10/7 and mixed shield hits; capture release on travel/death; background shells; double-fist catch and straight return; broad X warning/damage; fixed-step suction with terrain brace; overload/absorb branches.
+VISUAL SOURCE PREVIEW: Chromium rendered pixel buffers produced by the actual AncientLivingArt C# source using small texture stubs. The assembled mech parts were inspected. This is not Unity rendering, motion verification or a gameplay screenshot.
+NATIVE FIXTURE WRITTEN/COMPILED, NOT RUN: PLUGIN/검사/생활부 와이어와 거대 로봇 uses an isolated QA profile and real scene components to inspect controller binding, shield counts, HP transitions, overload branch, prop selection, collection lock, travel release and projectile flag reuse. It preserves the normal save profile. Actual inputs and native physics require manual Play testing.
+RETAINED: production tutorial, chase/deck/third-mount finale, original weapon art, native-pixel hero, locomotion and motorcycle motion; sniper and secretary story rules.
+CI: .github/workflows/source-checks.yml runs portable source/assets and .NET checks; it does not run Unity.
+PACKAGING: source/reference ZIP only; CRC, inventory and byte equality checked by Tools/package_project.py. No player build.
+NOT RUN: Unity Editor import/compile/shaders, native smoke menus, physical input timing, full playthrough, measured FPS, audio audition or player build.
+SCOPE: first living-district implementation, with playtest tuning remaining. No measured 9-hour or perfect-game claim.
 
 Source/asset checks follow:
 PASS: required builtin Unity modules declared
@@ -64,6 +59,8 @@ PASS: metadata target Assets/Editor/AncientProjectileSmokeChecks.cs.meta
 PASS: 32-character GUID AncientProjectileSmokeChecks.cs.meta
 PASS: metadata target Assets/Editor/AncientSniperSmokeChecks.cs.meta
 PASS: 32-character GUID AncientSniperSmokeChecks.cs.meta
+PASS: metadata target Assets/Editor/AncientLivingSmokeChecks.cs.meta
+PASS: 32-character GUID AncientLivingSmokeChecks.cs.meta
 PASS: metadata coverage AncientBladeSmokeChecks.cs
 PASS: metadata target Assets/Editor/AncientBladeSmokeChecks.cs.meta
 PASS: 32-character GUID AncientBladeSmokeChecks.cs.meta
@@ -71,6 +68,7 @@ PASS: metadata coverage AncientMovementSmokeChecks.cs
 PASS: metadata coverage AncientProductionSmokeChecks.cs
 PASS: metadata target Assets/Editor/AncientMovementSmokeChecks.cs.meta
 PASS: 32-character GUID AncientMovementSmokeChecks.cs.meta
+PASS: metadata coverage AncientLivingSmokeChecks.cs
 PASS: metadata target Assets/Editor/AncientProductionSmokeChecks.cs.meta
 PASS: 32-character GUID AncientProductionSmokeChecks.cs.meta
 PASS: metadata coverage Main.unity
@@ -108,6 +106,7 @@ PASS: 32-character GUID AncientChapterLayout.cs.meta
 PASS: metadata coverage AncientPulseRules.cs
 PASS: metadata target Assets/Scripts/AncientProductionHazardRules.cs.meta
 PASS: 32-character GUID AncientProductionHazardRules.cs.meta
+PASS: metadata coverage AncientLivingBoss.cs
 PASS: metadata target Assets/Scripts/SniperEquipmentArt.cs.meta
 PASS: 32-character GUID SniperEquipmentArt.cs.meta
 PASS: metadata coverage AncientCameraRules.cs
@@ -159,9 +158,13 @@ PASS: 32-character GUID AncientProductionResidents.cs.meta
 PASS: metadata target Assets/Scripts/AncientProjectileRules.cs.meta
 PASS: 32-character GUID AncientProjectileRules.cs.meta
 PASS: metadata coverage AncientProductionTruckAtlas.cs
+PASS: metadata target Assets/Scripts/AncientLivingArt.cs.meta
+PASS: 32-character GUID AncientLivingArt.cs.meta
 PASS: metadata coverage AncientProductionLayout.cs
 PASS: metadata target Assets/Scripts/AncientParkedBike.cs.meta
 PASS: 32-character GUID AncientParkedBike.cs.meta
+PASS: metadata target Assets/Scripts/AncientWireObject.cs.meta
+PASS: 32-character GUID AncientWireObject.cs.meta
 PASS: metadata target Assets/Scripts/AncientProjectilePool.cs.meta
 PASS: 32-character GUID AncientProjectilePool.cs.meta
 PASS: metadata coverage AncientCityCampaign.cs
@@ -200,6 +203,8 @@ PASS: 32-character GUID AncientFieldLayout.cs.meta
 PASS: metadata coverage AncientSniperRules.cs
 PASS: metadata target Assets/Scripts/AncientTraversal.cs.meta
 PASS: 32-character GUID AncientTraversal.cs.meta
+PASS: metadata target Assets/Scripts/AncientLivingRules.cs.meta
+PASS: 32-character GUID AncientLivingRules.cs.meta
 PASS: metadata coverage AncientProductionPursuit.cs
 PASS: metadata target Assets/Scripts/AncientTraversalLayout.cs.meta
 PASS: 32-character GUID AncientTraversalLayout.cs.meta
@@ -229,6 +234,7 @@ PASS: metadata coverage AncientBossController.cs
 PASS: metadata target Assets/Scripts/AncientHUD.cs.meta
 PASS: 32-character GUID AncientHUD.cs.meta
 PASS: metadata coverage AncientMainMenu.cs
+PASS: metadata coverage AncientLivingDistrict.cs
 PASS: metadata target Assets/Scripts/AncientHudText.cs.meta
 PASS: 32-character GUID AncientHudText.cs.meta
 PASS: metadata coverage AncientProductionWorkerAtlas.cs
@@ -259,6 +265,7 @@ PASS: metadata coverage AncientSpeechBubble.cs
 PASS: metadata target Assets/Scripts/AncientPixels.cs.meta
 PASS: 32-character GUID AncientPixels.cs.meta
 PASS: metadata coverage AncientCitizenArt.cs
+PASS: metadata coverage AncientWireObject.cs
 PASS: metadata coverage AncientExploration.cs
 PASS: metadata target Assets/Scripts/AncientSwingRules.cs.meta
 PASS: 32-character GUID AncientSwingRules.cs.meta
@@ -284,6 +291,8 @@ PASS: metadata coverage AncientLocomotionMotion.cs
 PASS: metadata target Assets/Scripts/AncientClockRules.cs.meta
 PASS: 32-character GUID AncientClockRules.cs.meta
 PASS: metadata coverage AncientDistrict.cs
+PASS: metadata target Assets/Scripts/AncientLivingDistrict.cs.meta
+PASS: 32-character GUID AncientLivingDistrict.cs.meta
 PASS: metadata target Assets/Scripts/AncientProductionTruckAtlas.cs.meta
 PASS: 32-character GUID AncientProductionTruckAtlas.cs.meta
 PASS: metadata coverage AncientDistrictBackdrop.cs
@@ -308,10 +317,13 @@ PASS: 32-character GUID AncientMoteVisuals.cs.meta
 PASS: metadata coverage AncientParkedBike.cs
 PASS: metadata target Assets/Scripts/AncientWorldBatch.cs.meta
 PASS: 32-character GUID AncientWorldBatch.cs.meta
+PASS: metadata target Assets/Scripts/AncientLivingBoss.cs.meta
+PASS: 32-character GUID AncientLivingBoss.cs.meta
 PASS: metadata coverage AncientCampaign.cs
 PASS: metadata target Assets/Scripts/AncientCombatRules.cs.meta
 PASS: 32-character GUID AncientCombatRules.cs.meta
 PASS: metadata coverage AncientChapterView.cs
+PASS: metadata coverage AncientLivingRules.cs
 PASS: metadata target Assets/Scripts/AncientStory.cs.meta
 PASS: 32-character GUID AncientStory.cs.meta
 PASS: metadata coverage AncientFinale.cs
@@ -320,6 +332,7 @@ PASS: 32-character GUID AncientCombatFeedbackRules.cs.meta
 PASS: metadata coverage AncientChapterLayout.cs
 PASS: metadata coverage AncientCombat.cs
 PASS: metadata coverage AncientSniperEncounter.cs
+PASS: metadata coverage AncientLivingArt.cs
 PASS: metadata coverage AncientChapterVisibility.cs
 PASS: metadata target Assets/Scripts/AncientSwingAtlas.cs.meta
 PASS: 32-character GUID AncientSwingAtlas.cs.meta
@@ -1526,12 +1539,14 @@ PASS: C# syntax AncientProjectileSmokeChecks.cs
 PASS: C# syntax AncientBladeSmokeChecks.cs
 PASS: C# syntax AncientMovementSmokeChecks.cs
 PASS: C# syntax AncientProductionSmokeChecks.cs
+PASS: C# syntax AncientLivingSmokeChecks.cs
 PASS: C# syntax AncientTraversalLayout.cs
 PASS: C# syntax AncientProductionResidents.cs
 PASS: C# syntax AncientWireParticleBatch.cs
 PASS: C# syntax AncientProductionRules.cs
 PASS: C# syntax AncientMovementRules.cs
 PASS: C# syntax AncientPulseRules.cs
+PASS: C# syntax AncientLivingBoss.cs
 PASS: C# syntax AncientCameraRules.cs
 PASS: C# syntax AncientProductionPropAtlas.cs
 PASS: C# syntax AncientBeamRules.cs
@@ -1573,6 +1588,7 @@ PASS: C# syntax AncientClockRules.cs
 PASS: C# syntax AncientCameraFX.cs
 PASS: C# syntax AncientBossController.cs
 PASS: C# syntax AncientMainMenu.cs
+PASS: C# syntax AncientLivingDistrict.cs
 PASS: C# syntax AncientProductionWorkerAtlas.cs
 PASS: C# syntax AncientProgressRules.cs
 PASS: C# syntax AncientBossAtlas.cs
@@ -1583,6 +1599,7 @@ PASS: C# syntax AncientBeamVisuals.cs
 PASS: C# syntax AncientPixels.cs
 PASS: C# syntax AncientSpeechBubble.cs
 PASS: C# syntax AncientCitizenArt.cs
+PASS: C# syntax AncientWireObject.cs
 PASS: C# syntax AncientExploration.cs
 PASS: C# syntax AncientBootIntro.cs
 PASS: C# syntax AncientVisuals.cs
@@ -1602,10 +1619,12 @@ PASS: C# syntax AncientRouteRadioPlayback.cs
 PASS: C# syntax AncientParkedBike.cs
 PASS: C# syntax AncientCampaign.cs
 PASS: C# syntax AncientChapterView.cs
+PASS: C# syntax AncientLivingRules.cs
 PASS: C# syntax AncientFinale.cs
 PASS: C# syntax AncientChapterLayout.cs
 PASS: C# syntax AncientCombat.cs
 PASS: C# syntax AncientSniperEncounter.cs
+PASS: C# syntax AncientLivingArt.cs
 PASS: C# syntax AncientChapterVisibility.cs
 PASS: C# syntax AncientFieldScenery.cs
 PASS: C# syntax AncientHUD.cs

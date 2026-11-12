@@ -96,7 +96,7 @@ namespace Plugin.AncientCivilization
             {
                 bool closed=(Cleared&(1<<floor))==0;
                 exitSolids[floor].enabled=closed;exitGates[floor].enabled=closed&&game.Story.CurrentFloor==floor;
-                bool fighting=activeBoss&&activeBoss.IsAlive&&!activeBoss.IsSecretary&&activeBoss.DistrictFloor==floor;
+                bool fighting=(activeBoss&&activeBoss.IsAlive&&!activeBoss.IsSecretary&&activeBoss.DistrictFloor==floor)||(floor==1&&game.Living&&game.Living.WaveActive);
                 entranceSolids[floor].enabled=fighting;entranceGates[floor].enabled=fighting&&game.Story.CurrentFloor==floor;
             }
             officeSolid.enabled=!SecretaryCleared;officeGate.enabled=!SecretaryCleared&&game.Story.CurrentFloor==4;
@@ -106,6 +106,7 @@ namespace Plugin.AncientCivilization
         public void OnEnterFloor()
         {
             ClearDialogueActors();
+            if(game.Living)game.Living.ResetForTravel();
             if(game.Traversal)game.Traversal.ResetForTravel();
             foreach(var enemy in game.enemies.ToArray())
                 if(enemy&&(enemy.DistrictFloor>0||(game.Story&&game.Story.Stage>=8&&enemy.DistrictFloor==0&&!enemy.IsBoss))){game.enemies.Remove(enemy);Destroy(enemy.gameObject);}
@@ -136,8 +137,9 @@ namespace Plugin.AncientCivilization
             }
             if(!activeBoss&&game.Campaign.ReadyForBoss(floor)&&(Cleared&(1<<floor))==0&&p.x>=AncientCityLayout.ArenaLeft(floor)+1&&p.y<4)
             {
+                if(floor==1&&game.Living&&!game.Living.PrepareBoss())return;
                 game.CombatCheckpoint(floor,new Vector2(AncientCityLayout.ArenaLeft(floor)+1.5f,1.3f));
-                Spawn(AncientCityLayout.ArenaRight(floor)-4,0,floor==4?1:3,floor,true);
+                Spawn(AncientCityLayout.ArenaRight(floor)-(floor==1?6:4),0,floor==4?1:3,floor,true);
                 game.Notice(floor==4?"저격수 / 조준 전조를 보고 엄폐·접근하세요.":"구역 보스 / 전조를 피하고 공격 후 빈틈을 노리세요.",3);
             }
             if(floor==4&&!activeBoss&&(Cleared&(1<<4))!=0&&!SecretaryCleared&&game.Campaign.ReadyForFinale&&p.x>=AncientCityLayout.BossArenaLeft(4,true)+1&&p.y<4)

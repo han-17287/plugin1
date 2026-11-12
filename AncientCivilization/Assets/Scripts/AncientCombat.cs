@@ -17,7 +17,7 @@ namespace Plugin.AncientCivilization
         public float ChargeProgress {get{return heldAt<0?0:Mathf.Clamp01((Time.time-heldAt-TapThreshold)/(ReadyDelay-TapThreshold));}}
         public bool Charging {get{return heldAt>=0&&Time.time-heldAt>=TapThreshold;}}
         public float ArmActivity {get{return Charging?ChargeProgress:Mathf.Clamp01((laserUntil-Time.time)/.18f);}}
-        public bool CanCollect {get{return hero&&!(game.Sniper&&game.Sniper.InputLocked)&&AncientRules.CanCollectParticles(Input.GetMouseButton(1),Application.isFocused,game.Paused,game.GameplayInputReady,hero.CaptureEnergy);}}
+        public bool CanCollect {get{return hero&&!(game.Living&&game.Living.InputLocked)&&!(game.Sniper&&game.Sniper.InputLocked)&&AncientRules.CanCollectParticles(Input.GetMouseButton(1),Application.isFocused,game.Paused,game.GameplayInputReady,hero.CaptureEnergy);}}
         AncientBeamVisuals beamProfile;AncientMoteVisuals moteVisuals;
         AncientHero hero;AncientGame game;LineRenderer slashTrail,slashGlow,aim,beam,beamGlow,beamCore;
         AncientEnergyMote[] motes;int moteCursor,combo;float heldAt=-1,bladeUntil,bladeStarted,laserUntil,bladeReady,bladeBufferedUntil;bool bladeHitPending,bladeRebounded,readySignal;
@@ -54,8 +54,8 @@ namespace Plugin.AncientCivilization
             if(!game.View)return Origin+Vector2.right*hero.Facing*10;
             return game.View.ScreenToWorldPoint(Input.mousePosition);
         }
-        bool ControlsReady {get{return hero&&game&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted;}}
-        bool PulseInterrupted {get{return !hero||!game||!hero.AttackMode||hero.Wired||hero.MeleeInterrupted||game.won||(game.Sniper&&game.Sniper.InputLocked)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic);}}
+        bool ControlsReady {get{return hero&&game&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted&&!(game.Living&&game.Living.InputLocked);}}
+        bool PulseInterrupted {get{return !hero||!game||(game.Living&&game.Living.InputLocked)||!hero.AttackMode||hero.Wired||hero.MeleeInterrupted||game.won||(game.Sniper&&game.Sniper.InputLocked)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic);}}
         public void CancelInput(){heldAt=-1;readySignal=false;bladeBufferedUntil=0;if(aim)aim.enabled=false;}
         public void CancelAttacks()
         {CancelInput();CancelBlade();CancelLaser();}
@@ -143,11 +143,11 @@ namespace Plugin.AncientCivilization
         }
         void ResolveBladeHit()
         {
-            Vector2 origin=BladeOrigin;bool rebound=(game.Sniper&&game.Sniper.TryBlade(origin,bladeDirection))||(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
+            Vector2 origin=BladeOrigin;bool rebound=(game.Living&&game.Living.TryBlade(origin,bladeDirection))||(game.Sniper&&game.Sniper.TryBlade(origin,bladeDirection))||(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
                 var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
-                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8)){if(enemy.kind==4)rebound=true;enemy.Hit(combo==3?42:28,combo==3);}
+                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8)){if(enemy.kind==4)rebound=true;if(enemy.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Blade,combo==3?42:28);else enemy.Hit(combo==3?42:28,combo==3);}
             }
             if(rebound)ReboundOnce();
             // The blade trail is the whiff effect. Actual enemy hits, fractured
@@ -159,7 +159,7 @@ namespace Plugin.AncientCivilization
             Vector2 origin=BladeOrigin;bool rebound=(game.Sniper&&game.Sniper.TryBreakObjects(origin,bladeDirection))||(game.City&&game.City.TryBreakObjects(origin,bladeDirection));
             for(int i=game.shots.Count-1;i>=0;i--)
             {
-                var shot=game.shots[i];if(!shot)continue;
+                var shot=game.shots[i];if(!shot||!shot.Breakable)continue;
                 Vector2 delta=(Vector2)shot.transform.position-origin;
                 if(delta.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,shot.transform.position,1<<8))
                 {
@@ -246,7 +246,7 @@ namespace Plugin.AncientCivilization
                 if(i>=game.enemies.Count)continue;
                 var enemy=game.enemies[i];if(!enemy||!enemy.IsAlive)continue;
                 Vector2 target=enemy.AimPoint-beamStart;
-                if(AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,radius,.6f)&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8)&&laserPulse.TryHit(enemy,Time.time))enemy.Hit(damage,true);
+                if(AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,radius,.6f)&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8)&&laserPulse.TryHit(enemy,Time.time)){if(enemy.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Laser,damage);else enemy.Hit(damage,true);}
                 // Hit can synchronously open dialogue or start the automatic sniper finale.
                 if(PulseInterrupted||!Firing){CancelLaser();return;}
             }
@@ -312,6 +312,8 @@ namespace Plugin.AncientCivilization
             bool collecting=combat.CanCollect&&delta.sqrMagnitude<49&&!Physics2D.Linecast(transform.position,hero.transform.position,1<<8);
             if(collecting)
             {velocity=delta.normalized*AncientCombatRules.CollectionSpeed;if(delta.sqrMagnitude<AncientCombatRules.CollectionRadiusSquared){combat.Receive(energy);gameObject.SetActive(false);return;}}
+            else if(g.Living&&g.Living.Sucking)
+            {Vector2 core=g.Living.Boss.Core-(Vector2)transform.position;velocity=core.normalized*7;if(core.sqrMagnitude<.8f){g.Living.Boss.Collect(energy);gameObject.SetActive(false);return;}}
             else velocity=Vector2.Lerp(velocity,Vector2.zero,Time.deltaTime*3);
             Vector2 step=collecting?delta.normalized*AncientCombatRules.CollectionStep(delta.magnitude,Time.deltaTime):velocity*Time.deltaTime;
             Vector2 next=(Vector2)transform.position+step;

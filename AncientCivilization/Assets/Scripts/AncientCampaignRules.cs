@@ -7,7 +7,7 @@ namespace Plugin.AncientCivilization
         public const float Origin=128,RoomStride=AncientFieldExpansion.Stride,RoomWidth=AncientFieldExpansion.Width;
         public static int Witness(int mission){return mission==2?4:mission==5?6:mission==11?14:mission==14?18:6;}
         public static int WalkRow(int citizen){return citizen==4?0:citizen==6?1:citizen==14?2:citizen==18?3:-1;}
-        public static int ResidentEscortMission(int citizen){return citizen==6?5:citizen==14?11:citizen==18?14:-1;}
+        public static int ResidentEscortMission(int citizen){return citizen==14?11:citizen==18?14:-1;}
         public static bool ResidentVisible(int citizen,int activeMission,int activeTasks)
         {int mission=ResidentEscortMission(citizen);return mission<0||mission!=activeMission||(activeTasks&4)!=0;}
         public static bool ResidentRescued(int citizen,int completed,int caseTasks)

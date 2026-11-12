@@ -1,14 +1,16 @@
 # PLUGIN · Ancient Civilization
 
+v0.24.0은 생활부의 코어 절도 흔적을 따라가는 연속 동선, 대형 물체 와이어 투척, 스포트라이트 보안, 조직원전과 거대 로봇 두목의 3페이즈를 추가합니다. 이야기·패턴 코드·도트 부품과 구역 배경을 연결했으며, 실제 Unity에서 입력·충돌·화면·완주 난도를 확인하는 단계는 남아 있습니다.
+
 v0.23.0은 하층에서 반복해서 보는 이동 모션을 보강합니다. 발판 대비 실제 이동 속도로 보폭을 진행하고, 점프의 상승·정점·낙하 자세와 착지 강도에 맞는 압축·회복을 구분했습니다. 오토바이에는 착지 반동·탑승자 기울기·일시정지 자세 보존을 적용했습니다. 실제 Unity 화면과 조작 확인은 남아 있습니다.
 
 이번 작업은 하층 생산구의 첫 플레이 흐름에 집중했습니다. 입자량과 배출구 위치에 맞는 튜토리얼 안내, 첫 갑판 전투 승리 직후의 저장, 차량에서 멀어졌을 때의 복귀를 보완했습니다. 하층 완료 판정에는 실제 Unity에서 새 게임부터 검거까지의 연속 플레이 확인이 남아 있습니다.
 
 개발 브랜치: [`ancient-civilization-prototype`](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype)
 
-**v0.23.0 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.23.0-download.zip)
+**v0.24.0 Unity 소스:** [다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.24.0-download.zip)
 
-**생활부 다음 제작 설계:** [도둑의 행적·조직 본거지 이야기](AncientCivilization/STORY_KO.md#생활부-다음-제작-설정--도둑의-행적에서-조직-본거지까지)와 [물체 와이어 투척·스포트라이트·거대 로봇 3페이즈](AncientCivilization/FLOOR_DESIGN_KO.md#생활부-다음-제작-설계)를 정리했습니다. 현재는 제작 명세이며 위 v0.23.0 게임과 ZIP에는 미반영입니다.
+**생활부:** [스토리](AncientCivilization/STORY_KO.md) · [와이어 투척·거대 로봇 패턴](AncientCivilization/FLOOR_DESIGN_KO.md#생활부-와이어-투척과-거대-로봇). 기존 세이브에서 생활부 미완료 구간은 새 동선으로 이어지며, 이미 제압한 생활부 보스를 자동으로 되살리지는 않습니다.
 
 v0.21.1은 현장 안내판이 가까이 선 주인공을 가리지 않도록 보완한 패치입니다. 안내판의 최종 화면 위치가 주인공과 겹치면 숨기며, 상단의 다음 목표는 계속 표시합니다.
 

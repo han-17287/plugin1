@@ -438,8 +438,8 @@ class RulesChecks
         foreach(var citizen in AncientCampaignData.Citizens)
         {
             int mission=AncientCampaignRules.ResidentEscortMission(citizen.Id);
-            int expected=citizen.Id==6?5:citizen.Id==14?11:citizen.Id==18?14:-1;
-            Check(mission==expected,"Only Sora, Joowan and Haesol share their resident identity with a rescued witness");
+            int expected=citizen.Id==14?11:citizen.Id==18?14:-1;
+            Check(mission==expected,"Only Joowan and Haesol share their resident identity with an active escort case; Sora now gives trail testimony");
             if(mission<0)
             {
                 Check(AncientCampaignRules.ResidentVisible(citizen.Id,2,3),"An unrelated resident remains present during Reha's escort");
@@ -485,7 +485,7 @@ class RulesChecks
             Check(AncientCampaignRules.WalkRow(person)>=0,"Protected witness has a dedicated walk cycle");
         }
         Check(AncientCampaignRules.WalkRow(0)==-1,"Static residents cannot accidentally use another character's walk row");
-        Check(AncientEvidenceQuestions.All.Length==7,"Seven pivotal cases require actual evidence comparison");
+        Check(AncientEvidenceQuestions.All.Length==6,"Six other-district cases require evidence comparison; the living trail is continuous");
         foreach(var question in AncientEvidenceQuestions.All)
         {
             Check(AncientCampaignData.Missions[question.Mission].Kind==0,"Evidence choice belongs to an investigation case");
@@ -494,7 +494,7 @@ class RulesChecks
             Check(AncientEvidenceQuestions.CanCompare(question.Mission,3,2),"Both source records permit the final comparison");
             Check(!AncientEvidenceQuestions.CanCompare(question.Mission,3,0),"Reading an early record does not open the final comparison");
         }
-        Check(AncientEvidenceQuestions.Find(4)==null,"Power restoration remains physical gameplay rather than a trivia prompt");
+        Check(AncientEvidenceQuestions.Find(4)==null&&AncientEvidenceQuestions.Find(7)==null,"Living trail progression does not require a trivia prompt");
         Check(AncientBossRules.Choose(0,0,false,5)==AncientBossMove.Slam,"Intro teaches close-range slam");
         Check(AncientBossRules.Choose(0,0,false,10)==AncientBossMove.ArcCrate,"Intro does not slam an unreachable target");
         Check(AncientBossRules.Choose(1,0,false,5)==AncientBossMove.Rush,"Smuggler opens with readable rush");

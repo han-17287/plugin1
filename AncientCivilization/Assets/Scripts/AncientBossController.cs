@@ -8,18 +8,19 @@ namespace Plugin.AncientCivilization
         AncientEnemy owner;AncientGame game;LineRenderer warning;
         readonly LineRenderer[] marks=new LineRenderer[3];readonly Vector2[] drops=new Vector2[3];
         readonly GameObject[] panels=new GameObject[2];
-        AncientClockBoss clock;AncientSniperEncounter sniper;
+        AncientClockBoss clock;AncientSniperEncounter sniper;AncientLivingBoss living;
         State state;AncientBossMove move;int floor,turn,remaining,emitted,rushes;
         float until,began,interval,facing=1,wallX,rushLeft;bool announced,phaseTwo;
         Vector2 aim;float left,right;
-        public bool Telegraphing {get{return sniper?sniper.Telegraphing:clock?clock.Telegraphing:state==State.Windup;}}
-        public bool Recovering {get{return sniper?sniper.Recovering:clock?clock.Recovering:state==State.Recovery;}}
-        public bool Physical {get{return sniper?false:clock?clock.Physical:AncientBossRules.Physical(move);}}
-        public float WindupProgress {get{return sniper?sniper.WindupProgress:clock?clock.WindupProgress:Telegraphing?Mathf.Clamp01((Time.time-began)/Mathf.Max(.01f,until-began)):0;}}
-        public float RecoveryRemaining {get{return sniper?sniper.RecoveryRemaining:clock?clock.RecoveryRemaining:Recovering?Mathf.Clamp01((until-Time.time)/AncientBossRules.Opening(move)):0;}}
+        public bool Telegraphing {get{return living?living.Telegraphing:sniper?sniper.Telegraphing:clock?clock.Telegraphing:state==State.Windup;}}
+        public bool Recovering {get{return living?living.Recovering:sniper?sniper.Recovering:clock?clock.Recovering:state==State.Recovery;}}
+        public bool Physical {get{return living?living.Physical:sniper?false:clock?clock.Physical:AncientBossRules.Physical(move);}}
+        public float WindupProgress {get{return living?living.Progress:sniper?sniper.WindupProgress:clock?clock.WindupProgress:Telegraphing?Mathf.Clamp01((Time.time-began)/Mathf.Max(.01f,until-began)):0;}}
+        public float RecoveryRemaining {get{return living?living.Recovery:sniper?sniper.RecoveryRemaining:clock?clock.RecoveryRemaining:Recovering?Mathf.Clamp01((until-Time.time)/AncientBossRules.Opening(move)):0;}}
         public void Initialize(AncientEnemy enemy,AncientGame world,LineRenderer line)
         {
             owner=enemy;game=world;warning=line;
+            if(enemy.IsLivingBoss){living=gameObject.AddComponent<AncientLivingBoss>();living.Initialize(enemy,world);enemy.BindLivingBoss(living);return;}
             if(enemy.IsSecretary){clock=gameObject.AddComponent<AncientClockBoss>();clock.Initialize(enemy,world);return;}
             if(enemy.IsDistrictBoss&&enemy.DistrictFloor==4){sniper=gameObject.AddComponent<AncientSniperEncounter>();sniper.Initialize(enemy,world);return;}
             floor=owner.IsDistrictBoss?owner.DistrictFloor:0;
@@ -46,6 +47,7 @@ namespace Plugin.AncientCivilization
         public void Tick()
         {
             if(!owner.IsAlive)return;
+            if(living){living.Tick();return;}
             if(clock){clock.Tick();return;}
             if(sniper){sniper.Tick();return;}
             if(owner.Enraged&&!announced)
