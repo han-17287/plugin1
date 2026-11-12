@@ -12,7 +12,7 @@ namespace Plugin.AncientCivilization
         Transform cargo;SpriteRenderer truckArt,truckRoofArt,boardingMast,boardingMastLight,boardingMastCap;SpriteRenderer[] coreArt=new SpriteRenderer[3];
         LineRenderer hook,tell,strikeZone,cut,filament,filamentCore,beam,glow,core;AncientBeamVisuals beamProfile;
         AncientProductionPhase applied=AncientProductionPhase.Dormant;
-        bool lane,cargoSecured,truckDestroyed,pendingArrest,ready,boardingReady,handoff,handedOff,captainEjecting;float truckX,nextHazard,deckTime,captainTimer,captainRecoverySeconds=.7f,kinematicSpeed,handoffElapsed;
+        bool lane,cargoSecured,truckDestroyed,pendingArrest,ready,boardingReady,handoff,handedOff,captainEjecting;float truckX,nextHazard,deckTime,deckAwayTime,captainTimer,captainRecoverySeconds=.7f,kinematicSpeed,handoffElapsed;
         int hazardCursor,volley,captainPattern,captainLastAttack,hookSlot=-1,roadDodgeChain,roadDodgeCues,boardingFailures;bool captainWindup,roadCoachBomb;Vector2 captainAim,throwOrigin;float throwBikeX,captainFacing=1,roadCoachUntil;
         string roadTitle="자동주행 / Space 점프";
         string objective="";GUIStyle caption,hint;Vector2 roadHeroPrevious,cargoReleaseOffset,captainEjectOrigin;float cargoReleasedAt,captainEjectedAt,captainActionUntil;
@@ -142,11 +142,11 @@ namespace Plugin.AncientCivilization
             game.Notice("현장 인계 완료 / 동부 운송로로 계속 이동",3);
         }
         public void WriteSave()
-        {if(!game||!game.Story||game.Story.Stage>=8)return;AncientGame.SetSaved("productionVersion",1);if(Active||lane)AncientGame.SetSaved("productionRound",sequence.Round);}
+        {if(!game||!game.Story||game.Story.Stage>=8)return;AncientGame.SetSaved("productionVersion",1);if(Active||lane)AncientGame.SetSaved("productionRound",sequence.RetryRound);}
         public bool Retry()
         {
             if(handoff){FinishHandoff();game.Save();return true;}
-            if(!Active)return false;int round=sequence.Round;game.ClearBattleProjectiles();ClearHazards();ShowBeam(false);ShowFilament(false);cut.enabled=false;tell.enabled=strikeZone.enabled=false;cargoSecured=truckDestroyed=captainEjecting=false;
+            if(!Active)return false;int round=sequence.RetryRound;game.ClearBattleProjectiles();ClearHazards();ShowBeam(false);ShowFilament(false);cut.enabled=false;tell.enabled=strikeZone.enabled=false;cargoSecured=truckDestroyed=captainEjecting=false;
             cargo.SetParent(truck.transform,false);cargo.localPosition=new Vector2(-.5f,1.45f);cargo.gameObject.SetActive(true);deck.enabled=truckArt.enabled=truckRoofArt.enabled=true;
             sequence.RestoreRound(round);applied=AncientProductionPhase.Dormant;lane=true;truckX=AncientProductionLayout.ChaseStart+24+round*420;truck.position=new Vector2(truckX,0);
             commander.transform.SetParent(truck.transform,false);commander.transform.localPosition=new Vector2(1.4f,2.7f);commander.ResetProductionHealth(sequence.HealthRatio);game.boss=commander;
@@ -263,8 +263,11 @@ namespace Plugin.AncientCivilization
             }
             if(phase==AncientProductionPhase.Deck)
             {
-                deckTime+=dt;if(deckTime>.7f&&game.hero.transform.position.y<2.15f)
+                deckTime+=dt;deckAwayTime=AncientProductionRules.AdvanceDeckSeparation(deckAwayTime,game.hero.transform.position.x-truck.position.x,dt);
+                if(deckTime>.7f&&game.hero.transform.position.y<2.15f)
                 {MissedBoarding(true);}
+                else if(deckAwayTime>=AncientProductionRules.DeckRecoverySeconds)
+                {MissedBoarding(true);game.Notice("차량과 거리가 벌어졌습니다 / 오토바이로 복귀 · 대장의 남은 체력은 유지됩니다.",3);}
             }
             if(!game.hero.bike)escortBike.Park(new Vector2(truck.position.x-8,.84f),1,80);
         }
@@ -284,7 +287,7 @@ namespace Plugin.AncientCivilization
         void ApplyPhase()
         {
             if(applied==sequence.Phase)return;var previous=applied;applied=sequence.Phase;RefreshObjective();
-            if(applied!=AncientProductionPhase.Deck)tell.enabled=strikeZone.enabled=false;
+            if(applied!=AncientProductionPhase.Deck){tell.enabled=strikeZone.enabled=false;deckAwayTime=0;}
             if(applied!=AncientProductionPhase.Finisher)ShowFilament(false);
             truck.interpolation=Cinematic?RigidbodyInterpolation2D.None:RigidbodyInterpolation2D.Interpolate;
             if(applied==AncientProductionPhase.Breach){game.Sound(4);game.Shake(.3f);game.Burst(new Vector2(104,3),AncientGame.Orange,40);game.Notice("벽 돌파 / 코어 적재 차량 도주",2);}
@@ -302,10 +305,11 @@ namespace Plugin.AncientCivilization
             {boardingReady=false;ClearHazards();game.ClearBattleProjectiles();objective="공격 중지 / 트럭 접근 중 · 승선 고리 점등 대기";game.Notice("적 공격 중지 · 트럭에 접근합니다.",2);}
             if(applied==AncientProductionPhase.Boarding){ClearHazards();game.hero.SetProductionAttackMode(false);}
             if(applied==AncientProductionPhase.Deck)
-            {game.hero.SetProductionAttackMode(true);deckTime=0;captainPattern=captainLastAttack=0;captainTimer=captainRecoverySeconds=.7f;captainActionUntil=-1;captainWindup=false;game.Notice("트럭 지붕 전투 / 전조를 피하고 빈틈에 블레이드·입자 레이저",4);game.BlockGameplayInput();}
+            {game.hero.SetProductionAttackMode(true);deckTime=deckAwayTime=0;captainPattern=captainLastAttack=0;captainTimer=captainRecoverySeconds=.7f;captainActionUntil=-1;captainWindup=false;game.Notice("트럭 지붕 전투 / 전조를 피하고 빈틈에 블레이드·입자 레이저",4);game.BlockGameplayInput();}
             if(applied==AncientProductionPhase.Knockback)
             {
                 commander.ClearProductionHitFlash();game.ClearBattleProjectiles();ClearHazards();tell.enabled=strikeZone.enabled=false;captainWindup=false;game.hero.Combat.CancelAttacks();throwOrigin=game.hero.transform.position;throwBikeX=truck.position.x-8;game.hero.HoldForEncounter(true);game.Sound(8);game.Notice("트럭 급가속 / 자동주행 오토바이로 복귀",2);
+                WriteSave();game.Save();
             }
             if(applied==AncientProductionPhase.Finisher)
             {truckX=truck.position.x;ReturnToBike(true);game.hero.HoldForEncounter(true);game.hero.Combat.CancelAttacks();ClearHazards();game.ClearBattleProjectiles();game.Notice("세 번째 탑승 / 코어 회수",2);}
@@ -573,6 +577,8 @@ namespace Plugin.AncientCivilization
                     cue=roadCoachBomb?"폭탄은 즉시 뛰지 말고 주황 원이 차오를 때 Space / 다음 표식을 보세요":"잔재에 닿기 전에 Space / 너무 일찍 뛰면 앞에서 착지합니다";
                 else if(sequence.Phase==AncientProductionPhase.Approach&&boardingReady&&boardingFailures>0)
                     cue="몇 번이든 다시 승선 가능 / 점멸하는 청록 고리를 좌클릭하세요";
+                else if(DeckCombat&&deckAwayTime>0)
+                    cue=game.hero.transform.position.x>truck.position.x?"◀ 트럭으로 복귀 / 멀리 머무르면 오토바이가 받아 줍니다":"트럭으로 복귀 ▶ / 멀리 머무르면 오토바이가 받아 줍니다";
                 GUI.Label(new Rect(left,18,span,28),title,caption);GUI.Label(new Rect(left,47,span,44),cue,hint);
             }
             GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;

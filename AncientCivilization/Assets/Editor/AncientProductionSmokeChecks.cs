@@ -155,6 +155,34 @@ namespace Plugin.AncientCivilization.EditorChecks
                 story.ClearProductionRadio();MoveHero(hero,original);Call(story,"Persist");
             }
         }
+        static void CheckTrainingGuidance(AncientGame game)
+        {
+            var story=game.Story;var hero=game.hero;Vector2 original=hero.transform.position;
+            int flags=(int)Field(typeof(AncientStory),"flags").GetValue(story);float energy=hero.CaptureEnergy;
+            try
+            {
+                MoveHero(hero,new Vector2(92,1.3f));Field(typeof(AncientStory),"flags").SetValue(story,(1<<5)|(1<<6));
+                Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,8f);Call(story,"RefreshHudLabels");
+                string charged=(string)Field(typeof(AncientStory),"cachedObjective").GetValue(story);
+                Assert(charged.Contains("레이저")&&charged==story.ProductionTutorialObjective,"Both actual tutorial displays agree when collected energy enables the laser lesson");
+                Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,0f);Call(story,"RefreshHudLabels");
+                string empty=(string)Field(typeof(AncientStory),"cachedObjective").GetValue(story);
+                Assert(empty!=charged&&empty.Contains("수집")&&empty==story.ProductionTutorialObjective,"Losing energy refreshes the real central lesson without changing saved tutorial flags");
+                Field(typeof(AncientStory),"flags").SetValue(story,0);MoveHero(hero,new Vector2(103.4f,1.3f));Call(story,"RefreshHudLabels");
+                string east=(string)Field(typeof(AncientStory),"cachedObjective").GetValue(story);
+                Assert(east.Contains("◀")&&east.Contains("배출구"),"At the sealed wall beyond supply range the actual lesson points back to a real emitter");
+                MoveHero(hero,new Vector2(-70,1.3f));Call(story,"RefreshHudLabels");
+                string west=(string)Field(typeof(AncientStory),"cachedObjective").GetValue(story);
+                Assert(west.Contains("▶")&&west!=east,"Backtracking out of supply range reverses the actual guidance without a progression change");
+                MoveHero(hero,new Vector2(-39,1.3f));Call(story,"RefreshHudLabels");
+                Assert(((string)Field(typeof(AncientStory),"cachedObjective").GetValue(story)).Contains("빈 하우징"),"Returning to an actual emitter restores the physical cutting instruction");
+            }
+            finally
+            {
+                Field(typeof(AncientStory),"flags").SetValue(story,flags);Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,energy);
+                MoveHero(hero,original);Call(story,"RefreshHudLabels");
+            }
+        }
         static void CheckStockApproach(AncientGame game)
         {
             var hero=game.hero;var story=game.Story;int stage=story.Stage,flags=(int)Field(typeof(AncientStory),"flags").GetValue(story);
@@ -476,6 +504,23 @@ namespace Plugin.AncientCivilization.EditorChecks
                 tell.positionCount=tellPoints.Length;tell.SetPositions(tellPoints);tell.enabled=tellShown;zone.positionCount=zonePoints.Length;zone.SetPositions(zonePoints);zone.enabled=zoneShown;
             }
         }
+        static void CheckDeckSeparation(AncientGame game)
+        {
+            var director=game.Production;var sequence=director.Sequence;var hero=game.hero;
+            var truck=(Rigidbody2D)Field(typeof(AncientProductionPursuit),"truck").GetValue(director);
+            float health=director.Commander.HealthRatio;int round=sequence.Round,mounts=sequence.MountCount;
+            MoveHero(hero,new Vector2(truck.position.x+23,8));Step(director);Step(director);
+            Assert(sequence.Phase==AncientProductionPhase.Deck,"A brief ceiling-height excursion beyond the truck does not immediately cancel the fight");
+            float away=(float)Field(typeof(AncientProductionPursuit),"deckAwayTime").GetValue(director);
+            game.skills=true;Call(director,"Update");game.skills=false;
+            Assert(Near((float)Field(typeof(AncientProductionPursuit),"deckAwayTime").GetValue(director),away),"An actual pause cannot consume the grace for returning to the moving roof");
+            MoveHero(hero,new Vector2(truck.position.x,8));Step(director);
+            Assert(sequence.Phase==AncientProductionPhase.Deck&&Near((float)Field(typeof(AncientProductionPursuit),"deckAwayTime").GetValue(director),0),"Returning above the truck cancels the separation timer while preserving aerial play");
+            MoveHero(hero,new Vector2(truck.position.x-23,8));for(int i=0;i<4;i++)Step(director);
+            Assert(sequence.Phase==AncientProductionPhase.Approach&&hero.bike&&!hero.Wired&&!sequence.AttackersEnabled,"Sustained separation uses the actual safe motorcycle remount and ceasefire");
+            Assert(sequence.Round==round&&sequence.MountCount==mounts&&Near(director.Commander.HealthRatio,health),"Distance recovery preserves earned damage and does not award a new fight or mount");
+            BoardRoof(game);
+        }
         static void CheckRun(AncientGame game)
         {
             var director=game.Production;var sequence=director.Sequence;var commander=director.Commander;
@@ -498,10 +543,11 @@ namespace Plugin.AncientCivilization.EditorChecks
             Step(director,1);Step(director,1);
             Assert(sequence.Phase==AncientProductionPhase.Approach,"The wire-boarding opportunity stays open instead of timing out");
             CheckMissedBoarding(game);
-            BoardRoof(game);CheckMovingRoofJump(game);CheckDeckCamera(game);CheckCaptainPresentation(game);commander.Hit(100000,true);
+            BoardRoof(game);CheckDeckSeparation(game);CheckMovingRoofJump(game);CheckDeckCamera(game);CheckCaptainPresentation(game);commander.Hit(100000,true);
             Assert(sequence.Phase==AncientProductionPhase.Knockback&&Near(commander.HealthRatio,AncientProductionRules.FirstHealthGate)&&commander.IsAlive,"An actual captain hit stops at the first health gate and begins the knockback transition");
-            Advance(director,AncientProductionPhase.Chase);
-            Assert(sequence.Round==1&&sequence.MountCount==2&&game.hero.bike,"The first knockback automatically returns to the second bike mount");
+            Assert(AncientGame.Saved("productionRound")==1,"The accepted first deck victory is saved before its knockback cinematic finishes");
+            Assert(director.Retry(),"A real retry is accepted during the first successful knockback");
+            Assert(sequence.Phase==AncientProductionPhase.Chase&&sequence.Round==1&&sequence.MountCount==2&&game.hero.bike&&Near(commander.HealthRatio,AncientProductionRules.FirstHealthGate),"Retry during the winning transition preserves the cleared first fight and starts the second bike mount");
             Assert(AncientGame.Saved("productionRound")==1,"The second chase checkpoint is persisted at its actual phase entry");
             Assert(director.Retry()&&sequence.Round==1&&sequence.MountCount==2&&Near(commander.HealthRatio,AncientProductionRules.FirstHealthGate),"Retry resumes the second round and its captain-health checkpoint instead of restarting inventory or round one");
             CheckRoadCamera(game,"second-round retry");
@@ -566,7 +612,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     if(Time.time<.5f)return;
                     Assert(game.Story.Stage==3&&!game.Story.DialogueOpen&&!game.Production.Active,"Completed weapon practice leaves the stock objective available without starting the chase");
-                    CheckOptionalWorkers(game);CheckTrainingFeeder(game);
+                    CheckOptionalWorkers(game);CheckTrainingFeeder(game);CheckTrainingGuidance(game);
                     CheckStockApproach(game);game.Story.TryProductionStock();
                     Assert(game.Story.Stage==4&&game.Story.DialogueOpen&&!game.Production.Active,"An actual stock-terminal request opens the discrepancy report before the breach");
                     SetStage(1);return;

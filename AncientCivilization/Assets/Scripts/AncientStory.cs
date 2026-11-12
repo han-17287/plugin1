@@ -28,15 +28,16 @@ namespace Plugin.AncientCivilization
         readonly List<Line> lines=new List<Line>();GUIStyle body,nameStyle,small,nextButton;bool inspectionReadyPrompted,reportPending;
         int coachedStep=-1;float nextTrainingHint;AncientProjectile trainingObject;
         const float TrainingLaunchClearance=2.2f;
-        int guideStage=-1,guideFlags=-1;bool guideEnergy,guideEmitterClose;string productionTutorialObjective="";
+        int guideStage=-1,guideFlags=-1,guideSupplyDirection;bool guideEnergy,guideEmitterClose;string productionTutorialObjective="";
         public string ProductionTutorialObjective
         {
             get
             {
                 bool energy=game&&game.hero&&game.hero.CaptureEnergy>0;
                 bool emitterClose=Stage==3&&game&&game.hero&&TooCloseToTrainingEmitter();
-                if(guideStage!=Stage||guideFlags!=flags||guideEnergy!=energy||guideEmitterClose!=emitterClose)
-                {guideStage=Stage;guideFlags=flags;guideEnergy=energy;guideEmitterClose=emitterClose;productionTutorialObjective=Objective();}
+                int supplyDirection=Stage==3&&game&&game.hero&&TrainingPracticeStep()<2?AncientProductionLayout.TrainingSupplyDirection(game.hero.transform.position.x):0;
+                if(guideStage!=Stage||guideFlags!=flags||guideEnergy!=energy||guideEmitterClose!=emitterClose||guideSupplyDirection!=supplyDirection)
+                {guideStage=Stage;guideFlags=flags;guideEnergy=energy;guideEmitterClose=emitterClose;guideSupplyDirection=supplyDirection;productionTutorialObjective=Objective();}
                 return productionTutorialObjective;
             }
         }
@@ -432,7 +433,10 @@ namespace Plugin.AncientCivilization
         {
             if(shownStage!=Stage||shownFlags!=flags||shownFloor!=CurrentFloor||shownCores!=game.Cores)
             {shownStage=Stage;shownFlags=flags;shownFloor=CurrentFloor;shownCores=game.Cores;cachedObjective=Objective();}
-            if(Stage==5&&game.Production)cachedObjective=game.Production.Objective;
+            // Both HUD locations follow current energy and emitter distance, including
+            // a retry that clears energy without changing the saved lesson flags.
+            if(Stage<=4)cachedObjective=ProductionTutorialObjective;
+            else if(Stage==5&&game.Production)cachedObjective=game.Production.Objective;
             if(shownPoints!=ResidencePoints||cachedResidenceFloor!=CurrentFloor)
             {shownPoints=ResidencePoints;cachedResidenceFloor=CurrentFloor;cachedResidence="시민 포인트 "+ResidencePoints+" / "+AncientCityLayout.Name(CurrentFloor);}
         }
@@ -445,6 +449,13 @@ namespace Plugin.AncientCivilization
             if(Stage==3)
             {
                 int step=TrainingPracticeStep();
+                int supplyDirection=step<2?AncientProductionLayout.TrainingSupplyDirection(game.hero.transform.position.x):0;
+                if(supplyDirection!=0)
+                {
+                    string direction=supplyDirection<0?"◀":"▶";
+                    return step==0?"장비 확인 / "+direction+" 검수 배출구로 이동 · 빈 하우징 베기":
+                        "파란 입자 우클릭 수집 · 새 물체는 "+direction+" 검수 배출구로";
+                }
                 if(step==0&&TooCloseToTrainingEmitter())return "장비 확인 / 배출구에서 두 걸음 물러나 빈 하우징을 베세요";
                 if(step==0)return "장비 확인 1 / 휠 위 ▶ 짧은 좌클릭으로 빈 하우징 베기";
                 if(step==1&&TooCloseToTrainingEmitter())return "장비 확인 2 / 파란 입자 우클릭 수집 · 새 물체는 배출구에서 두 걸음 뒤로";

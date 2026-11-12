@@ -1,4 +1,4 @@
-v0.21.1 lower district game-feel source release — 2026-11-10
+v0.22.0 lower production first-play source release — 2026-11-12
 PASS: .NET SDK8.0.416 built and ran20 independently isolated rule-check projects
 PASS: BeamChecks = 11591
 PASS: BladeChecks = 4600
@@ -8,9 +8,9 @@ PASS: ChapterVisibilityChecks = 13661
 PASS: FieldExpansionChecks = 28597
 PASS: MovementChecks = 2558
 PASS: ProductionHazardChecks = 767
-PASS: ProductionLayoutChecks = 522114
+PASS: ProductionLayoutChecks = 522128
 PASS: ProductionMotionChecks = 48172
-PASS: ProductionSequenceChecks = 192993
+PASS: ProductionSequenceChecks = 193072
 PASS: ProjectileOrderingChecks = 7024
 PASS: PulseChecks = 137
 PASS: RouteRadioChecks = 106
@@ -20,12 +20,13 @@ PASS: SpeechLayoutChecks = 3997
 PASS: SwingChecks = 596
 PASS: ThreatChecks = 359
 PASS: ZipChecks = 28917
-TOTAL: 881749 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
+TOTAL: 881842 assertions, including frame/geometry sweeps. Assertion count is not a completion or quality percentage.
 PASS: 1586 source/asset checks, no skipped optional dependencies in this run.
 PASS: all92 runtime and6 Editor C# files pass supplemental compatibility compilation with warnings as errors; compiled snapshots match current source except the declared velocity alias.
 LIMIT: supplemental compilation uses UnityEngine.Modules NuGet package2021.3.33, temporary linearVelocity-to-velocity aliases and minimal Editor stubs. It does not establish native Unity6000.6.7f1 import, shaders, physics or Play.
 PASS: metadata GUIDs, PNG integrity/alpha/native-grid crops, C# syntax, first-run secrecy and unchanged original weapon/wire references.
-FONT: bundled NeoDunggeunmo cmap covers585 runtime non-ASCII literal codepoints; unsupported direction arrows were replaced by supported pixel triangles. This does not validate Unity font rasterization or layout.
+FONT: bundled NeoDunggeunmo cmap covers586 runtime non-ASCII literal codepoints; unsupported direction arrows were replaced by supported pixel triangles. This does not validate Unity font rasterization or layout.
+REVIEW v0.22: lower tutorial live-energy/supply-direction guidance; first accepted deck victory saves the second-road checkpoint during knockback; sustained separation safely remounts with preserved captain damage. Actual component fixture paths added for those transitions; compiled, not run.
 REVIEW v0.21.1: final world-prompt rectangles skip the projected officer silhouette after edge-guide avoidance; no input/progress/interaction-coordinate changes.
 REVIEW v0.21: carried-motion camera lead/airborne zoom; stale horizontal input cleanup; actual accepted-hit markers; stable near-vertical blade facing; measured energy-aware charge hints; actual jump-clearance feedback; failed boarding guidance; persisted collision-free workshop lighting.
 REVIEW retained: display-aligned boarding-latch picking with480p..8K numerical coverage; safe staged training; optional worker art/anchors; thin expert ledges; arrest-to-investigation continuation; rescued Reha; moving-anchor completed-step release and carrier velocity; truck latch underside/mast; chase/deck camera margins; separate three-core cargo; physical/visible roof alignment; frame-hitch blade contact; grounded factory artwork and paused industry motion; bounded64 anchor halos.
@@ -1613,7 +1614,7 @@ PASS: C# syntax AncientHudText.cs
 PASS: C# syntax AncientBladeAtlas.cs
 PASS: C# syntax AncientWorldBatch.cs
 PASS: runtime glyph inspection includes Korean dialogue
-PASS: bundled font covers runtime non-ASCII literal glyphs: 585
+PASS: bundled font covers runtime non-ASCII literal glyphs: 586
 PASS: direction hints use glyphs present in the bundled pixel font
 PASS: active project avoids obsolete numeric Unity instance IDs
 PASS: bootstrap uses unsorted supported Unity object lookup

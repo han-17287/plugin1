@@ -271,6 +271,15 @@ class ProductionLayoutChecks
         }
         Check(Near(AncientProductionLayout.TutorialCheckpointX(2),-159),"The conveyor checkpoint sits before the access ramp instead of intersecting its rise");
         Check(AncientProductionLayout.TrainingEmitterY>1.05f&&AncientProductionLayout.TrainingEmitterY<2.1f,"The practice housing exits at the character's visible blade height");
+        Check(AncientProductionLayout.TrainingSupplyDirection(-70)==1,"Backtracking out of the lesson points east toward a real outlet");
+        Check(AncientProductionLayout.TrainingSupplyDirection(103.4f)==-1,"Overshooting the terminal to the sealed wall points west rather than waiting for an impossible shot");
+        Check(AncientProductionLayout.TrainingSupplyDirection(-58)==0&&AncientProductionLayout.TrainingSupplyDirection(-58.001f)==1,"The first outlet's inclusive west reach changes guidance at its real supply boundary");
+        Check(AncientProductionLayout.TrainingSupplyDirection(102)==0&&AncientProductionLayout.TrainingSupplyDirection(102.001f)==-1,"The final outlet's inclusive east reach changes guidance immediately beyond its supply boundary");
+        Check(AncientProductionLayout.TrainingSupplyDirection(AncientProductionLayout.StockX)==0,"Standing at the stock terminal keeps ordinary weapon practice guidance");
+        foreach(float emitter in AncientProductionLayout.TrainingEmitterX)
+            Check(AncientProductionLayout.TrainingSupplyDirection(emitter)==0,"Standing at an outlet leaves the separate step-back cue in charge");
+        foreach(float invalid in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+            Check(AncientProductionLayout.TrainingSupplyDirection(invalid)==0,"Invalid positions cannot produce a misleading supply direction");
         for(float x=-48;x<=AncientProductionLayout.StockX;x+=.25f)
         {
             float nearest=float.MaxValue;

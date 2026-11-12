@@ -9,6 +9,16 @@ namespace Plugin.AncientCivilization
         public const float BreachSeconds=3.2f,FirstChaseSeconds=16,SecondChaseSeconds=14;
         public const float KnockbackSeconds=2.2f,FinisherSeconds=10.5f,MaxTickSeconds=.25f;
         public const float FirstHealthGate=.65f,SecondHealthGate=.30f;
+        public const float DeckRecoveryDistance=22,DeckRecoverySeconds=.8f;
+        // A short excursion may be part of a swing. Only sustained separation
+        // recovers the rider; returning inside the range cancels the countdown.
+        public static float AdvanceDeckSeparation(float previous,float horizontalOffset,float seconds)
+        {
+            if(float.IsNaN(horizontalOffset)||float.IsInfinity(horizontalOffset)||Math.Abs(horizontalOffset)<=DeckRecoveryDistance)return 0;
+            float age=float.IsNaN(previous)||float.IsInfinity(previous)?0:Math.Max(0,Math.Min(DeckRecoverySeconds,previous));
+            if(float.IsNaN(seconds)||float.IsInfinity(seconds)||seconds<=0)return age;
+            return Math.Min(DeckRecoverySeconds,age+Math.Min(seconds,MaxTickSeconds));
+        }
         public static float ChaseSeconds(int round){return round<=0?FirstChaseSeconds:SecondChaseSeconds;}
         public static float HealthGate(int round){return round<=0?FirstHealthGate:SecondHealthGate;}
         public static float Duration(AncientProductionPhase phase,int round)
@@ -27,6 +37,9 @@ namespace Plugin.AncientCivilization
         double elapsed;
         public AncientProductionPhase Phase {get;private set;}
         public int Round {get;private set;}
+        // Crossing the first health gate earns the second road checkpoint now,
+        // even if the player quits or retries during its knockback animation.
+        public int RetryRound {get{return Round==0&&Phase==AncientProductionPhase.Knockback?1:Round;}}
         public int MountCount {get;private set;}
         public float Elapsed {get{return (float)elapsed;}}
         public float HealthRatio {get;private set;}=1;

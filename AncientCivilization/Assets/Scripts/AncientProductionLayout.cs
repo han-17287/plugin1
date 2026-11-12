@@ -32,6 +32,20 @@ namespace Plugin.AncientCivilization
         public const float TrainingEmitterY=1.6f,TrainingEmitterRange=16;
         public static readonly float[] SectionStarts={TutorialLeft,-194,-128,-52,38};
         public static readonly string[] SectionNames={"교대 통로","운송 벨트","검수 회랑","장비 검수실","코어 재고 관리실"};
+        // Zero means a real outlet can serve this position. Outside its reach,
+        // point back to the nearest authored outlet rather than imply a shot will arrive.
+        public static int TrainingSupplyDirection(float x)
+        {
+            if(float.IsNaN(x)||float.IsInfinity(x))return 0;
+            double nearest=double.PositiveInfinity;float target=x;
+            foreach(float emitter in TrainingEmitterX)
+            {
+                double distance=Math.Abs((double)x-emitter);
+                if(distance<=TrainingEmitterRange)return 0;
+                if(distance<nearest){nearest=distance;target=emitter;}
+            }
+            return target<x?-1:target>x?1:0;
+        }
         public static float GroundHeight(float x)
         {
             foreach(var ramp in GentleRamps)if(x>=ramp.Left&&x<=ramp.Right)return ramp.Height(x);

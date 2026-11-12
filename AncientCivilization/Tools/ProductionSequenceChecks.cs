@@ -77,6 +77,46 @@ class ProductionSequenceChecks
     }
     static void Main()
     {
+        // An accepted first clear survives a quit in the two-second ejection,
+        // without granting that checkpoint for an incomplete first deck fight.
+        var checkpointProbe=AtDeck();checkpointProbe.ApplyDamage(.1f);
+        Check(checkpointProbe.RetryRound==0,"Partial first-fight damage cannot grant the second road checkpoint");
+        checkpointProbe.ApplyDamage(1);
+        Check(checkpointProbe.Phase==AncientProductionPhase.Knockback&&checkpointProbe.Round==0&&checkpointProbe.RetryRound==1,
+            "The accepted first health gate immediately earns the second checkpoint before its knockback finishes");
+        int earnedRound=checkpointProbe.RetryRound;PauseWithoutChanging(checkpointProbe);
+        Check(checkpointProbe.RetryRound==earnedRound,"Pausing on the successful knockback retains the earned retry checkpoint");
+        var restoredCheckpoint=new AncientProductionSequence();restoredCheckpoint.RestoreRound(earnedRound);
+        Check(restoredCheckpoint.Phase==AncientProductionPhase.Chase&&restoredCheckpoint.Round==1&&restoredCheckpoint.MountCount==2&&Near(restoredCheckpoint.HealthRatio,.65f),
+            "Reloading the first clear resumes the second ride with the captain's first health gate preserved");
+        checkpointProbe=AtDeck(1);Check(checkpointProbe.RetryRound==1,"An incomplete second fight retains its second-road checkpoint");
+        checkpointProbe.ApplyDamage(1);Check(checkpointProbe.RetryRound==1,"The second knockback never creates an unsupported third chase checkpoint");
+        Until(checkpointProbe,AncientProductionPhase.Finisher,60,3);
+        Check(checkpointProbe.RetryRound==1,"Retrying the unfinished recovery finisher still resumes the second fight");
+
+        foreach(int fps in new[]{30,60,120})foreach(float side in new[]{-1f,1f})
+        {
+            float age=0,step=1f/fps;int frames=0;
+            while(age<AncientProductionRules.DeckRecoverySeconds&&frames<fps*2)
+            {age=AncientProductionRules.AdvanceDeckSeparation(age,side*30,step);frames++;}
+            Check(age>=AncientProductionRules.DeckRecoverySeconds&&frames*step>=.8f-.00001f&&frames*step<=.8f+step+.00001f,
+                "Sustained separation recovers in eight tenths of active time on either side at "+fps+" FPS");
+            age=0;
+            for(int trip=0;trip<4;trip++)
+            {
+                for(int frame=0;frame<fps/2;frame++)age=AncientProductionRules.AdvanceDeckSeparation(age,side*30,step);
+                Check(age<AncientProductionRules.DeckRecoverySeconds,"A brief intentional swing excursion retains control");
+                age=AncientProductionRules.AdvanceDeckSeparation(age,side*22,step);
+                Check(age==0,"Returning to the deck vicinity cancels accumulated separation rather than adding separate trips");
+            }
+            age=AncientProductionRules.AdvanceDeckSeparation(.4f,side*30,0);
+            for(int frame=0;frame<fps*2;frame++)age=AncientProductionRules.AdvanceDeckSeparation(age,side*30,0);
+            Check(Near(age,.4f),"Paused time cannot spend the player's recovery grace period");
+        }
+        Check(Near(AncientProductionRules.AdvanceDeckSeparation(0,100,5),.25f),"A stalled frame cannot consume the entire separation grace period");
+        foreach(float invalid in new[]{float.NaN,float.NegativeInfinity,float.PositiveInfinity,-1f})
+            Check(Near(AncientProductionRules.AdvanceDeckSeparation(.4f,30,invalid),.4f),"Invalid or negative time cannot change separation recovery");
+        Check(AncientProductionRules.AdvanceDeckSeparation(.7f,float.NaN,.2f)==0,"Invalid world geometry cannot trigger a phantom remount");
         var sequence=new AncientProductionSequence();
         Check(sequence.Phase==AncientProductionPhase.Dormant&&!sequence.Active&&!sequence.Completed&&sequence.MountCount==0,"A loaded but unstarted encounter does not move a bike or play a cinematic");
         Check(!sequence.BeginBoarding()&&!sequence.LandOnDeck()&&!sequence.AbortBoarding()&&sequence.ApplyDamage(1)==0,"Calls cannot skip inventory and breach into deck combat");
