@@ -31,7 +31,7 @@ class ChapterRouteChecks
             for(int mission=first;mission<=last;mission++)
             {
                 float a=AncientChapterLayout.CaseLeft(mission),b=AncientChapterLayout.CaseRight(mission);
-                Check(a>=left&&b<right&&b-a==624,"Every full case section fits inside its own chapter");
+                Check(a>=left&&b<right&&b-a==AncientFieldExpansion.WidthFor(mission),"Every full case section fits inside its own chapter");
                 for(float x=a;x<=b;x+=8)
                 {
                     Check(AncientChapterLayout.FloorAt(x)==floor&&AncientCityLayout.VisualSector(x)==floor,"Every point on a case route renders as its own floor");
@@ -67,7 +67,27 @@ class ChapterRouteChecks
         }
         Check(AncientChapterLayout.CaseLeft(int.MinValue)==AncientChapterLayout.CaseLeft(0)&&AncientChapterLayout.CaseRight(int.MaxValue)==AncientChapterLayout.CaseRight(19),"Case requests clamp before division and multiplication");
         Check(AncientFinaleRules.Start>AncientChapterLayout.FloorEnd(4),"The descending finale road cannot overlap any extended city chapter");
+        Check(AncientCityLayout.VisualSector(AncientChapterLayout.OpeningChaseStart)==5&&AncientCityLayout.VisualSector(AncientChapterLayout.OpeningChaseEnd)==5,"Opening chase retains its cargo visual sector after final-road relocation");
         Check(AncientCityLayout.VisualSector(AncientFinaleRules.Start)==5,"The relocated finale road uses the cargo visual sector");
+        for(int floor=0;floor<5;floor++)for(int count=0;count<=4;count++)for(int cleared=0;cleared<32;cleared++)foreach(bool secretary in new[]{false,true})
+        {
+            float point=AncientCityLayout.MigratedCheckpointX(floor,count,cleared,secretary);
+            Check(AncientCityLayout.SafeResume(floor,point,1.3f),"Every old-save migration lands inside its new physical floor");
+            if(floor>0&&floor<4&&count==4&&(cleared&(1<<floor))==0)
+                Check(point<AncientCityLayout.ArenaLeft(floor),"Completing four investigations cannot migrate an undefeated boss save behind its locked exit");
+            if(floor==4&&count>=3&&(cleared&16)==0)
+                Check(point<AncientChapterLayout.SniperLeft,"An old top-floor save with an undefeated sniper resumes before that arena");
+            if(floor==4&&count==4&&(cleared&16)!=0&&!secretary)
+                Check(point>AncientChapterLayout.CaseEnd(4)&&point<AncientChapterLayout.SecretaryLeft,"A cleared sniper and unfinished secretary resume at the secretary approach");
+            if(count==4&&(floor==0||floor<4&&(cleared&(1<<floor))!=0||floor==4&&(cleared&16)!=0&&secretary))
+                Check(point==AncientChapterLayout.ExitLift(floor),"Only a finished road and cleared applicable bosses migrate to the onward exit");
+            float arrival=AncientCityLayout.LiftArrivalX(floor,count,cleared);
+            Check(AncientCityLayout.SafeResume(floor,arrival,1.3f),"Lift arrival uses a supported same-floor destination");
+            if(floor>0&&(cleared&(1<<floor))==0)Check(arrival<AncientCityLayout.ArenaLeft(floor),"Returning from another floor cannot put an undefeated boss behind the player or a locked exit");
+            if(floor==1&&count==4&&(cleared&2)==0)Check(arrival==AncientChapterLayout.LivingApproachLift,"A completed living investigation returns to its physical pre-boss lift");
+            if(count<4||floor==4)Check(arrival==AncientCityLayout.Entry(floor),"An unfinished route never gains a forward arrival from lift travel");
+        }
+        Check(AncientChapterLayout.LivingApproachLift>AncientChapterLayout.CaseEnd(1)+2&&AncientChapterLayout.LivingApproachLift<AncientCityLayout.ArenaLeft(1)-3,"The new physical living lift stands on the clear approach, outside both investigation and boss seals");
         Console.WriteLine("PASS: "+checks+" continuous chapter layout, arena and save-boundary checks");
     }
 }

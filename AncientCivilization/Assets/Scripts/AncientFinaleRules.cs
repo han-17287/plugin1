@@ -3,7 +3,7 @@ namespace Plugin.AncientCivilization
 {
     public static class AncientFinaleRules
     {
-        public const float Start=24000,Finish=24600,Section=120;
+        public const float Start=44000,Finish=44600,Section=120;
         public static int RestorePhase(int saved){saved=Math.Max(0,Math.Min(5,saved));return saved==3||saved==4?2:saved;}
         public static float Road(float x){return Math.Max(0,60-(x-Start)*.1f);}
         public static int Zone(float x){return Math.Max(0,Math.Min(4,(int)((x-Start)/Section)));}

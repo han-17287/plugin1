@@ -3,7 +3,7 @@ namespace Plugin.AncientCivilization
 {
     public static class AncientCampaignRules
     {
-        public const int MissionCount=20,TasksMask=7,RouteVersion=2;
+        public const int MissionCount=20,TasksMask=7,RouteVersion=3;
         public const float Origin=128,RoomStride=AncientFieldExpansion.Stride,RoomWidth=AncientFieldExpansion.Width;
         public static int Witness(int mission){return mission==2?4:mission==5?6:mission==11?14:mission==14?18:6;}
         public static int WalkRow(int citizen){return citizen==4?0:citizen==6?1:citizen==14?2:citizen==18?3:-1;}
@@ -13,7 +13,7 @@ namespace Plugin.AncientCivilization
         public static bool ResidentRescued(int citizen,int completed,int caseTasks)
         {int mission=ResidentEscortMission(citizen);return mission>=0&&(Complete(completed,mission)||(caseTasks&4)!=0);}
         public static float ResidentPositionX(int citizen,float authoredX,int completed,int caseTasks)
-        {return ResidentRescued(citizen,completed,caseTasks)?Left(ResidentEscortMission(citizen))+RoomWidth-16:authoredX;}
+        {return ResidentRescued(citizen,completed,caseTasks)?Left(ResidentEscortMission(citizen))+AncientChapterLayout.Width(ResidentEscortMission(citizen))-16:authoredX;}
         public static int SanitizeMask(int mask){return mask&((1<<MissionCount)-1);}
         public static bool Complete(int mask,int id){return id>=0&&id<MissionCount&&(mask&(1<<id))!=0;}
         public static int RestoreChapters(int saved,int completed,int previousActive)
@@ -52,8 +52,8 @@ namespace Plugin.AncientCivilization
         {
             int floor=AncientChapterLayout.FloorAt(x);if(floor<0)return -1;
             float local=x-AncientChapterLayout.CaseLeft(floor*4);if(local<0)return -1;
-            int index=(int)(local/RoomStride);if(index>3)return -1;
-            int id=floor*4+index;return x<=Left(id)+RoomWidth?id:-1;
+            int index=(int)(local/AncientChapterLayout.Stride(floor*4));if(index>3)return -1;
+            int id=floor*4+index;return x<=AncientChapterLayout.CaseRight(id)?id:-1;
         }
         public static int Objective(int mask,int index){return index<0||index>2?mask&TasksMask:(mask|(1<<index))&TasksMask;}
         public static bool UseLaterDialogue(bool progressed,bool hasJokerClue,bool heardBefore)

@@ -8,18 +8,18 @@ class FieldExpansionChecks
     static void Check(bool condition,string message)
     {if(!condition)throw new InvalidOperationException(message);checks++;}
     static bool Near(float left,float right){return Math.Abs(left-right)<.0001f;}
-    static void CheckExpertGrate(int mission,int sector,int index)
+    static void CheckExpertGrate(int mission,int sector,int block,int index)
     {
         const float heroWidth=.72f,heroHeight=2.1f,safety=.15f,ceiling=10;
-        var support=AncientFieldExpansion.Segment(mission,sector,index);
-        var expert=AncientFieldExpansion.ExpertSegment(mission,sector,index);
+        var support=AncientFieldExpansion.BlockSegment(mission,sector,block,index);
+        var expert=AncientFieldExpansion.BlockExpertSegment(mission,sector,block,index);
         float underside=expert.top-AncientFieldExpansion.ExpertLedgeDepth;
         Check(expert.left>support.left+heroWidth*.5f&&expert.right<support.right-heroWidth*.5f,"The expert grate rests entirely over its own broad landing and leaves both ends clear");
         Check(expert.right-expert.left>heroWidth+.5f,"An expert landing supports the actual hero capsule with a readable landing margin");
         Check(underside-support.top>=heroHeight+safety,"A full-height hero and safety margin fit below every expert grate");
         Check(expert.top+heroHeight+safety<ceiling,"Standing on the expert grate keeps the entire hero below the physical ceiling");
-        if(index>0)Check(expert.left>AncientFieldExpansion.Segment(mission,sector,index-1).right+heroWidth*.5f,"The upper grate does not intrude into the previous landing's approach");
-        if(index<8)Check(expert.right<AncientFieldExpansion.Segment(mission,sector,index+1).left-heroWidth*.5f,"The upper grate does not intrude into the next landing's reverse approach");
+        if(index>0)Check(expert.left>AncientFieldExpansion.BlockSegment(mission,sector,block,index-1).right+heroWidth*.5f,"The upper grate does not intrude into the previous landing's approach");
+        if(index<8)Check(expert.right<AncientFieldExpansion.BlockSegment(mission,sector,block,index+1).left-heroWidth*.5f,"The upper grate does not intrude into the next landing's reverse approach");
         // An AABB enclosing the actual capsule is conservative: if this box clears
         // the grate, neither direction of ordinary walking can catch the head on it.
         foreach(int direction in new[]{1,-1})for(int sample=0;sample<=128;sample++)
@@ -50,24 +50,26 @@ class FieldExpansionChecks
                 if(jump){jumpSectors++;missionJumps++;floorsWithJump.Add(mission/4);}
                 Check(!jump||sector==1,"Dedicated traversal is separated into the labelled middle sector");
                 Check(!jump||mission!=2&&mission!=5&&mission!=11&&mission!=14,"Required escort paths never become a jump course");
-                float offset=AncientFieldExpansion.SectorStart(sector);
-                var entrance=AncientFieldExpansion.EntrancePlatform(sector);
-                var terminal=AncientFieldExpansion.TerminalPlatform(sector);
-                var road=AncientFieldExpansion.GroundRoad(sector);
-                Check(Near(road.left,offset)&&Near(road.right,offset+AncientFieldExpansion.SectorSpan)&&Near(road.top,0),"Ordinary sector road geometry covers its entire span without a hidden jump gap");
+                for(int block=0;block<AncientFieldExpansion.Blocks(mission);block++)
+                {
+                float offset=AncientFieldExpansion.SectorStart(mission,sector)+block*AncientFieldExpansion.SectorSpan;
+                var entrance=AncientFieldExpansion.BlockLanding(mission,sector,block,false);
+                var terminal=AncientFieldExpansion.BlockLanding(mission,sector,block,true);
+                var road=AncientFieldExpansion.GroundRoad(mission,sector);
+                Check(Near(road.left,AncientFieldExpansion.SectorStart(mission,sector))&&Near(road.right,road.left+AncientFieldExpansion.Span(mission))&&Near(road.top,0),"Ordinary sector road geometry covers its entire span without a hidden jump gap");
                 Check(Near(entrance.left,offset)&&Near(entrance.right,offset+14)&&Near(entrance.top,0),"Each section has a broad safe entrance at ground height");
                 Check(terminal.left>offset+AncientFieldExpansion.SectorSpan-32&&Near(terminal.right,offset+AncientFieldExpansion.SectorSpan)&&Near(terminal.top,0),"Each section ends on a broad ground landing");
-                if(sector<2)
+                if(sector<2||block<AncientFieldExpansion.Blocks(mission)-1)
                 {
-                    var nextEntrance=AncientFieldExpansion.EntrancePlatform(sector+1);
+                    var nextEntrance=block<AncientFieldExpansion.Blocks(mission)-1?AncientFieldExpansion.BlockLanding(mission,sector,block+1,false):AncientFieldExpansion.BlockLanding(mission,sector+1,0,false);
                     Check(Near(terminal.right,nextEntrance.left),"Required section transitions leave no gap between terminal and entrance platforms");
                 }
-                Check(AncientFieldExpansion.EntranceOf(sector)>entrance.left&&AncientFieldExpansion.EntranceOf(sector)<entrance.right,"Checkpoint rests within the safe entrance platform");
-                Check(AncientFieldExpansion.ExitOf(sector)>terminal.left&&AncientFieldExpansion.ExitOf(sector)<terminal.right,"Section exit rests within the safe terminal platform");
+                Check((offset+6)>entrance.left&&(offset+6)<entrance.right,"Checkpoint rests within the safe entrance platform");
+                Check((offset+196)>terminal.left&&(offset+196)<terminal.right,"Section exit rests within the safe terminal platform");
                 bool hasRaisedLanding=false;string jumpSignature="";
                 for(int i=0;i<9;i++)
                 {
-                    var ledge=AncientFieldExpansion.Segment(mission,sector,i);
+                    var ledge=AncientFieldExpansion.BlockSegment(mission,sector,block,i);
                     Check(ledge.left>=entrance.right&&ledge.right<=terminal.left,"Every field encounter and objective landing stays between safe ends");
                     Check(ledge.right-ledge.left>=7,"Landing widths remain readable and do not shrink into needle platforms");
                     Check(ledge.top>=0&&ledge.top+2.2f<9,"Required landings preserve full character clearance beneath the solid ceiling");
@@ -76,13 +78,13 @@ class FieldExpansionChecks
                     if(jump)jumpSignature+=(ledge.left-offset).ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+":"+ledge.top.ToString("F2",System.Globalization.CultureInfo.InvariantCulture)+";";
                     if(jump&&i%3==1)
                     {
-                        CheckExpertGrate(mission,sector,i);expertGrates++;
-                        var expert=AncientFieldExpansion.ExpertSegment(mission,sector,i);
+                        CheckExpertGrate(mission,sector,block,i);expertGrates++;
+                        var expert=AncientFieldExpansion.BlockExpertSegment(mission,sector,block,i);
                         if(expert.top-1-ledge.top<2.1f)oldDepthConflicts++;
                     }
                     if(i>0)
                     {
-                        var previous=AncientFieldExpansion.Segment(mission,sector,i-1);
+                        var previous=AncientFieldExpansion.BlockSegment(mission,sector,block,i-1);
                         Check(ledge.left>previous.right,"Encounter landing order never reverses or overlaps");
                         if(jump)
                         {
@@ -92,9 +94,9 @@ class FieldExpansionChecks
                     }
                 }
                 Check(!jump||hasRaisedLanding,"Each dedicated wire course actually contains raised traversal geometry");
-                if(jump)Check(jumpSignatures.Add(jumpSignature),"Each floor has a distinct authored wire course shape");
-                var first=AncientFieldExpansion.Segment(mission,sector,0);
-                var last=AncientFieldExpansion.Segment(mission,sector,8);
+                if(jump&&block==0)Check(jumpSignatures.Add(jumpSignature),"Each floor has a distinct authored wire course shape");
+                var first=AncientFieldExpansion.BlockSegment(mission,sector,block,0);
+                var last=AncientFieldExpansion.BlockSegment(mission,sector,block,8);
                 Check(first.top<1.5f&&last.top<2.5f,"Dedicated routes remain accessible from and to flat safe platforms");
                 Check(first.left-entrance.right>=0&&first.left-entrance.right<8,"The first landing remains close to the safe entrance");
                 Check(terminal.left-last.right>=0&&terminal.left-last.right<8,"The final landing reaches the safe terminal instead of an empty extension");
@@ -105,11 +107,12 @@ class FieldExpansionChecks
                     int index=AncientFieldExpansion.EnemySegment(sector,enemy);
                     Check(index/9==sector&&index!=node,"Encounter positions stay in their section and off the objective landing");
                 }
+                }
             }
             Check(missionJumps<=1,"Most of each investigation remains continuous fast travel");
         }
         Check(jumpSectors==5&&floorsWithJump.Count==5,"Every city floor retains one dedicated course while the other fifty-five sectors stay grounded");
-        Check(expertGrates==15,"All three expert grates in each of the five authored jump sectors receive physical clearance checks");
+        Check(expertGrates==33,"All expert grates across the eleven authored traversal blocks receive physical clearance checks");
         Check(oldDepthConflicts>0,"The geometry regression includes real landings blocked by the former one-meter expert platform depth");
         Check(names.Count==60,"All sixty section landmark names are unique");
         Check(AncientFieldExpansion.SectorAt(-1)==0&&AncientFieldExpansion.SectorAt(0)==0,"Left boundary and negative recovery position stay in first section");
@@ -196,7 +199,7 @@ class FieldExpansionChecks
             float guardX,guardY,supportX,supportY;
             AncientFieldExpansion.EncounterPosition(mission,kind,sector,0,out guardX,out guardY);
             AncientFieldExpansion.EncounterPosition(mission,kind,sector,1,out supportX,out supportY);
-            float left=AncientFieldExpansion.SectorStart(sector);
+            float left=AncientFieldExpansion.SectorStart(mission,sector)+(AncientFieldExpansion.Blocks(mission)-1)*AncientFieldExpansion.SectorSpan;
             Check(guardX>left+16&&guardX<left+AncientFieldExpansion.SectorSpan-28,"Close guards leave clear entry and exit areas");
             Check(supportX>left+16&&supportX<left+AncientFieldExpansion.SectorSpan-28,"Projectile support remains inside the active encounter sector");
             Check(Math.Abs(guardX-supportX)>=18,"The two criminals have distinct readable combat positions");

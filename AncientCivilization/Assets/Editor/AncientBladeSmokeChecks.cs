@@ -213,13 +213,26 @@ namespace Plugin.AncientCivilization.EditorChecks
         }
         static void CheckCaptureEnergy(AncientGame game)
         {
-            var hero=game.hero;var combat=hero.Combat;
-            combat.ResetCombat();hero.particles=0;Field(typeof(AncientHero),"absorbAt").SetValue(hero,Time.time-.05f);
-            var perfect=game.Projectiles.Spawn((Vector2)hero.transform.position+Vector2.right*5,Vector2.zero,20,false,1);hero.AbsorbShot(perfect);
-            Assert(perfect.Available&&Mathf.Abs(MoteEnergy(combat)-30)<.001f&&Mathf.Abs(hero.particles-18)<.001f,"Perfect F decomposition produces 50 percent more actual blue energy and the matching legacy-resource bonus");
-            combat.ResetCombat();hero.particles=0;Field(typeof(AncientHero),"absorbAt").SetValue(hero,Time.time-1);
-            var ordinary=game.Projectiles.Spawn((Vector2)hero.transform.position+Vector2.right*5,Vector2.zero,20,false,1);hero.AbsorbShot(ordinary);
-            Assert(ordinary.Available&&Mathf.Abs(MoteEnergy(combat)-20)<.001f&&Mathf.Abs(hero.particles-12)<.001f,"An ordinary F decomposition retains its original collectible energy and resource amount");combat.ResetCombat();
+            var hero=game.hero;var combat=hero.Combat;Vector2 original=hero.transform.position;float saved=hero.CaptureEnergy;
+            AncientProjectile shot=null;
+            try
+            {
+                combat.ResetCombat();hero.SpendCapturedEnergy();MoveProbeHero(hero,new Vector2(2,80));
+                Field(typeof(AncientCombat),"bladeFacing").SetValue(combat,1f);Field(typeof(AncientCombat),"bladeDirection").SetValue(combat,Vector2.right);
+                Vector2 origin=(Vector2)hero.transform.position+new Vector2(.14f,.55f);
+                shot=game.Projectiles.Spawn(origin+Vector2.right,Vector2.left,20,false,1);Invoke(combat,"ResolvePhysicalBreaks");
+                Assert(shot.Available&&Mathf.Abs(MoteEnergy(combat)-25)<.001f&&hero.CaptureEnergy==0,"A close approaching object breaks into 25 loose energy without auto-collecting it");
+                combat.ResetCombat();shot=game.Projectiles.Spawn(origin+Vector2.right*2,Vector2.zero,20,false,1);Invoke(combat,"ResolvePhysicalBreaks");
+                Assert(shot.Available&&Mathf.Abs(MoteEnergy(combat)-20)<.001f&&hero.CaptureEnergy==0,"An ordinary blade break produces its real 20 energy for later right-button collection");
+                combat.Receive(MoteEnergy(combat));Assert(Mathf.Abs(hero.CaptureEnergy-20)<.001f,"Only the actual collection callback adds the emitted amount to the particle gauge");
+                combat.ResetCombat();shot=game.Projectiles.Spawn(origin+Vector2.right,Vector2.left,20,false,1);shot.SetLivingProjectile(false);Invoke(combat,"ResolvePhysicalBreaks");
+                Assert(!shot.Available&&MoteEnergy(combat)==0,"An unbreakable living bullet remains hostile and cannot create collectible particles");
+            }
+            finally
+            {
+                if(shot)shot.Remove();combat.ResetCombat();MoveProbeHero(hero,original);
+                Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,saved);
+            }
         }
         static void CheckTrainingObjectReuse(AncientGame game)
         {

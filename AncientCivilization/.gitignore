@@ -6,6 +6,7 @@ Builds/
 Logs/
 UserSettings/
 *.csproj
+!Tools/LowerRouteExport.csproj
 *.sln
 
 !Tools/RulesChecks.csproj

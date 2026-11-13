@@ -10,10 +10,10 @@ namespace Plugin.AncientCivilization
     {
         struct Key : System.IEquatable<Key>
         {
-            public Texture texture;public int order,floor,room;
-            public bool Equals(Key other){return object.ReferenceEquals(texture,other.texture)&&order==other.order&&floor==other.floor&&room==other.room;}
+            public Texture texture;public int order,floor,room,chunk;
+            public bool Equals(Key other){return object.ReferenceEquals(texture,other.texture)&&order==other.order&&floor==other.floor&&room==other.room&&chunk==other.chunk;}
             public override bool Equals(object value){return value is Key&&Equals((Key)value);}
-            public override int GetHashCode(){unchecked{return ((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(texture)*397^order)*397^floor)*397^room;}}
+            public override int GetHashCode(){unchecked{return (((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(texture)*397^order)*397^floor)*397^room)*397^chunk;}}
         }
         sealed class Build
         {
@@ -42,7 +42,9 @@ namespace Plugin.AncientCivilization
         {Add(sprite,position,scale,color,order,AncientCityLayout.VisualSector(position.x),angle);}
         void Add(Sprite sprite,Vector2 position,Vector2 scale,Color color,int order,int floor,float angle=0)
         {
-            Key key=new Key{texture=sprite.texture,order=order,floor=floor,room=AncientCampaignRules.RoomAt(position.x)};Build build;
+            // Short mesh bounds let Unity cull distant scenery inside a long case.
+            // A large road/ceiling quad keeps its complete bounds; no geometry is cut away.
+            Key key=new Key{texture=sprite.texture,order=order,floor=floor,room=AncientCampaignRules.RoomAt(position.x),chunk=Mathf.FloorToInt(position.x/128f)};Build build;
             if(!builders.TryGetValue(key,out build)){build=new Build{texture=sprite.texture};builders.Add(key,build);}
             float ppu=sprite.pixelsPerUnit;
             Vector2 size=sprite.rect.size/ppu;
@@ -71,7 +73,7 @@ namespace Plugin.AncientCivilization
             foreach(var pair in builders)
             {
                 Key key=pair.Key;Build build=pair.Value;
-                var o=new GameObject("Static scenery / floor "+key.floor+" / layer "+key.order);o.transform.SetParent(transform,false);
+                var o=new GameObject("Static scenery / floor "+key.floor+" / chunk "+key.chunk+" / layer "+key.order);o.transform.SetParent(transform,false);
                 var mesh=new Mesh{name=o.name};
                 if(build.vertices.Count>65535)mesh.indexFormat=IndexFormat.UInt32;
                 mesh.SetVertices(build.vertices);mesh.SetUVs(0,build.uv);mesh.SetColors(build.colors);mesh.SetTriangles(build.triangles,0);mesh.RecalculateBounds();

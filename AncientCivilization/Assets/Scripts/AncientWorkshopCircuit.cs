@@ -13,7 +13,7 @@ namespace Plugin.AncientCivilization
             public readonly SpriteRenderer[] leds=new SpriteRenderer[3];
             public LineRenderer bus,drop;
         }
-        readonly AncientGame game;readonly Transform root;readonly Bank[] banks=new Bank[3];
+        readonly AncientGame game;readonly Transform root;readonly Bank[] banks=new Bank[3*AncientFieldExpansion.Blocks(1)];
         readonly SpriteRenderer receiverFrame,receiverGlass,receiverCore;readonly LineRenderer receiverFeed;
         readonly Vector2 receiverPoint;int lastMask;float restoreAge=-1;
         static readonly Color Steel=new Color(.17f,.25f,.28f),Unpowered=new Color(.24f,.19f,.11f),Powered=new Color(.32f,.86f,.94f);
@@ -23,10 +23,12 @@ namespace Plugin.AncientCivilization
         {
             game=owner;lastMask=initialMask&7;receiverPoint=points[2];
             root=new GameObject("Lower workshop service power circuit").transform;root.SetParent(parent,false);
-            for(int sector=0;sector<banks.Length;sector++)
+            for(int sector=0;sector<3;sector++)for(int block=0;block<AncientFieldExpansion.Blocks(1);block++)
             {
-                float start=left+AncientFieldExpansion.SectorStart(sector),x=points[sector].x-6;
-                var bank=new Bank{X=x,Left=start+(sector==0?8:0),Right=start+AncientFieldExpansion.SectorSpan-(sector==banks.Length-1?8:0)};banks[sector]=bank;
+                int index=sector*AncientFieldExpansion.Blocks(1)+block;
+                float start=left+AncientFieldExpansion.SectorStart(1,sector)+block*AncientFieldExpansion.SectorSpan;
+                float x=points[sector].x-6-(AncientFieldExpansion.Blocks(1)-1-block)*AncientFieldExpansion.SectorSpan;
+                var bank=new Bank{X=x,Left=start+(index==0?8:0),Right=start+AncientFieldExpansion.SectorSpan-(index==banks.Length-1?8:0)};banks[index]=bank;
                 bank.shell=Part("Workshop service lamp casing",new Vector2(x,8.35f),new Vector2(5,.38f),Steel,-3);
                 bank.lamp=Part("Workshop restored service light",new Vector2(x,8.30f),new Vector2(4.5f,.1f),Unpowered,-2);
                 bank.window=Part("Workshop restored machine window",new Vector2(x,4.8f),new Vector2(6.3f,3.2f),new Color(.12f,.35f,.4f,.01f),-6);
@@ -79,7 +81,7 @@ namespace Plugin.AncientCivilization
                 {Show(bank.leds[i],near);bank.leds[i].color=(lastMask&(1<<i))!=0?(powered?Powered:AncientGame.Orange):Unpowered;}
                 bool wire=shown&&Near(bank.Left,bank.Right,8.8f,8.9f,camera,half);Show(bank.bus,wire);Show(bank.drop,near);
                 bank.bus.startColor=bank.bus.endColor=bank.drop.startColor=bank.drop.endColor=cable;
-                float pulseX=receiverPoint.x+2-restoreAge*220;
+                float pulseX=Mathf.Lerp(receiverPoint.x+2,banks[0].Left,Mathf.Clamp01(restoreAge/3.2f));
                 bool pulse=RestorationWave&&shown&&pulseX>=bank.Left&&pulseX<=bank.Right&&Near(pulseX-1,pulseX+1,8.7f,9,camera,half);
                 Show(bank.surge,pulse);if(pulse)bank.surge.transform.position=new Vector2(pulseX,8.85f);
             }

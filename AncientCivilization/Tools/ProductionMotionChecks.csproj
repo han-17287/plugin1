@@ -5,5 +5,6 @@
     <Compile Include="../Assets/Scripts/AncientProductionMotion.cs" />
     <Compile Include="../Assets/Scripts/AncientProductionRules.cs" />
     <Compile Include="../Assets/Scripts/AncientProductionLayout.cs" />
+    <Compile Include="../Assets/Scripts/AncientChapterLayout.cs" />
   </ItemGroup>
 </Project>

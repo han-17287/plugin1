@@ -6,17 +6,20 @@ namespace Plugin.AncientCivilization
         enum State { Intro,Windup,Active,Recovery,Transition,Stunned }
         AncientGame game;AncientEnemy owner;AncientLivingRules rules=new AncientLivingRules();AncientLivingAttack move;State state;
         Transform rig;SpriteRenderer torso,core,handL,handR,armL,armR,footL,footR,hatchL,hatchR,unstable;
+        AncientClockAreaDamage xDamage;float hurtFlash;
         LineRenderer shield,armSweep;readonly LineRenderer[] marks=new LineRenderer[8];
         readonly Vector2[] drops=new Vector2[6];Vector2 aim,from,grabStart;float age,duration,shotAt,behind,catchFlash;int emitted;bool grabbed,grabAttempted,overloaded;float collected,sparkAt;
         public bool Alive {get{return owner&&owner.IsAlive;}}
         public bool InputLocked {get{return grabbed;}}
         public bool Sucking {get{return Alive&&state==State.Active&&move==AncientLivingAttack.Suction&&!overloaded;}}
-        public bool CanCatchRocket {get{return Alive&&rules.Phase==3&&state!=State.Transition&&state!=State.Stunned;}}
+        public bool CanCatchRocket {get{return Alive&&rules.Phase==3&&move==AncientLivingAttack.DoubleRocket&&(state==State.Active||state==State.Recovery)&&behind<.25f;}}
+        public string TelegraphHint {get{return AncientLivingRules.TelegraphHint(move);}}
+        public void DamageFlash(){hurtFlash=.12f;}
         public Vector2 Core {get{return (Vector2)owner.transform.position+new Vector2(0,2.7f+behind*1.8f);}}
         public int Phase {get{return rules.Phase;}}
         public int Barrier {get{return rules.Barrier;}}
         public bool Telegraphing {get{return state==State.Windup;}}
-        public bool Recovering {get{return state==State.Recovery||state==State.Stunned;}}
+        public bool Recovering {get{return (state==State.Recovery||state==State.Stunned)&&behind<.25f;}}
         public float Progress {get{return Telegraphing?Mathf.Clamp01(age/duration):0;}}
         public float Recovery {get{return Recovering?1-Mathf.Clamp01(age/duration):0;}}
         public bool Physical {get{return move==AncientLivingAttack.Leap||move==AncientLivingAttack.Grab;}}
@@ -45,12 +48,12 @@ namespace Plugin.AncientCivilization
         void HideMarks(){foreach(var line in marks)if(line)line.enabled=false;if(armSweep)armSweep.enabled=false;}
         public float FilterDamage(float damage,float hp,float max)
         {return rules.FilterDamage(damage,hp,max,state!=State.Intro&&state!=State.Transition&&behind<.25f);}
-        public void ReceiveHit(AncientLivingHit kind,float damage)
+        public void ReceiveHit(AncientLivingHit kind,float damage,float energy=100)
         {
             if(!Alive||state==State.Intro||state==State.Transition||behind>.25f)return;
             if(rules.Barrier>0)
             {
-                if(rules.HitBarrier(kind))
+                if(rules.HitBarrier(kind,energy))
                 {ReleasePlayer();Enter(State.Stunned,3.2f);game.Living.ClearRockets();game.Notice("배리어 파괴 / 스턴",2);game.Impact(Core,AncientGame.Cyan,true);}
                 else game.Impact(Core,AncientGame.Cyan,false);
                 return;
@@ -63,7 +66,7 @@ namespace Plugin.AncientCivilization
         public void Collect(float amount){if(Sucking)collected+=Mathf.Max(0,amount);}
         public void Tick()
         {
-            if(!Alive||game.Paused)return;float dt=Time.deltaTime;age+=dt;catchFlash=Mathf.Max(0,catchFlash-dt);
+            if(!Alive||game.Paused)return;float dt=Time.deltaTime;age+=dt;catchFlash=Mathf.Max(0,catchFlash-dt);hurtFlash=Mathf.Max(0,hurtFlash-dt);
             if(rules.AdvancePhase(owner.HealthRatio))
             {
                 ReleasePlayer();game.ClearBattleProjectiles();game.Living.ClearRockets();behind=0;owner.transform.position=new Vector2(Mathf.Clamp(owner.transform.position.x,Left+3,Right-3),0);
@@ -89,7 +92,7 @@ namespace Plugin.AncientCivilization
             if(move==AncientLivingAttack.Leap)aim=new Vector2(Mathf.Clamp(aim.x,Left+3,Right-3),0);
             Enter(State.Windup,tell);
             if(move==AncientLivingAttack.Suction)game.Notice("입자 흡입 / 천장 와이어로 버티기 또는 코어에 레이저",3);
-            if(move==AncientLivingAttack.Grab)game.Notice("배리어 / 레이저 1 · 투척 10 · 베기 7",2.5f);
+            if(move==AncientLivingAttack.Grab)game.Notice("배리어 / 풀게이지 레이저 1 · 투척 10 · 베기 7",2.5f);
         }
         void Warn()
         {
@@ -111,6 +114,7 @@ namespace Plugin.AncientCivilization
         void BeginAttack()
         {
             Enter(State.Active,move==AncientLivingAttack.Leap?1:move==AncientLivingAttack.Suction?5:move==AncientLivingAttack.XBlast?.75f:move==AncientLivingAttack.Grab?4.5f:move==AncientLivingAttack.Cannon?4.4f:3);
+            xDamage.Begin();
             if(move==AncientLivingAttack.Rocket||move==AncientLivingAttack.DoubleRocket)
             {game.Living.LaunchRocket(this,handL.transform.position,move==AncientLivingAttack.DoubleRocket);if(move==AncientLivingAttack.DoubleRocket)game.Living.LaunchRocket(this,handR.transform.position,true);duration=4;}
             if(move==AncientLivingAttack.Suction)
@@ -183,7 +187,8 @@ namespace Plugin.AncientCivilization
             else if(move==AncientLivingAttack.XBlast)
             {
                 DrawX(true);for(int i=0;i<2;i++)
-                {Vector2 a=marks[i].GetPosition(0),b=marks[i].GetPosition(1);if(AncientLivingRules.BeamHit(a.x,a.y,b.x,b.y,player.x,player.y,2.25f))game.hero.Hurt(32);}
+                {Vector2 a=marks[i].GetPosition(0),b=marks[i].GetPosition(1);if(xDamage.CanHit&&AncientLivingRules.BeamHit(a.x,a.y,b.x,b.y,player.x,player.y,2.25f))
+                    {float hp=game.hero.hp,bike=game.hero.bikeHP;game.hero.Hurt(32);xDamage.RecordHealth(hp,game.hero.hp,bike,game.hero.bikeHP);}}
             }
             else if(move==AncientLivingAttack.Suction)
             {
@@ -214,6 +219,8 @@ namespace Plugin.AncientCivilization
             float punch=Telegraphing&&(move==AncientLivingAttack.Rocket||move==AncientLivingAttack.DoubleRocket)?Progress:0;
             armL.transform.localRotation=Quaternion.Euler(0,0,-punch*40-catchFlash*40);armR.transform.localRotation=Quaternion.Euler(0,0,punch*40+catchFlash*40);
             handL.transform.localPosition=new Vector2(-2.3f-punch*.35f,1.9f+punch*1.5f);handR.transform.localPosition=new Vector2(2.3f+punch*.35f,1.9f+punch*1.5f);
+            bool fistsAway=state==State.Active&&(move==AncientLivingAttack.Rocket||move==AncientLivingAttack.DoubleRocket);
+            handL.enabled=!fistsAway;handR.enabled=!(fistsAway&&move==AncientLivingAttack.DoubleRocket);
             float walk=state==State.Active&&move==AncientLivingAttack.Grab&&!grabbed?Mathf.Sin(age*8)*.16f:0;
             footL.transform.localPosition=new Vector2(-1.2f,.8f+Mathf.Max(0,walk));footR.transform.localPosition=new Vector2(1.2f,.8f+Mathf.Max(0,-walk));
             bool insertion=rules.Phase==3&&state==State.Transition;
@@ -223,9 +230,10 @@ namespace Plugin.AncientCivilization
             core.enabled=!insertion||age>=1.7f;
             core.color=rules.Phase==3?new Color(.25f,.72f,1):new Color(1,.5f,.12f);
             core.transform.localScale=Vector3.one*(Sucking?1.1f+Mathf.Clamp01(collected/48)*.4f:1);core.transform.localRotation=Quaternion.Euler(0,0,rules.Phase==3?45:0);
+            torso.color=hurtFlash>0?new Color(.55f,.95f,1):Color.white;
             if(rules.Phase==3&&core.enabled)
             {
-                float pulse=.5f+.5f*Mathf.Sin(Time.time*8);torso.color=Color.Lerp(Color.white,new Color(.55f,.8f,1),pulse*.25f);
+                float pulse=.5f+.5f*Mathf.Sin(Time.time*8);if(hurtFlash<=0)torso.color=Color.Lerp(Color.white,new Color(.55f,.8f,1),pulse*.25f);
                 // Two crossing luminous conduits make the X readable even with the core chamber shut.
                 for(int k=2;k<4;k++)
                 {float sign=k==2?1:-1;Segment(k,Core+new Vector2(-.6f,sign*.7f),Core+new Vector2(.6f,-sign*.7f),new Color(.25f,.7f,1),.12f);}
@@ -233,6 +241,11 @@ namespace Plugin.AncientCivilization
             }
             shield.enabled=rules.Barrier>0;
             if(shield.enabled)for(int i=0;i<48;i++){float a=i*Mathf.PI*2/48;shield.SetPosition(i,Core+new Vector2(Mathf.Cos(a)*3.4f,Mathf.Sin(a)*3));}
+        }
+        public void LeaveWreck()
+        {
+            StopBattle();handL.enabled=handR.enabled=true;unstable.enabled=false;core.enabled=false;
+            game.Living.BeginAftermath(rig,owner.transform.position);
         }
         public void StopBattle(){ReleasePlayer();HideMarks();if(shield)shield.enabled=false;if(game&&game.Living){game.Living.ClearRockets();if(game.Living.Boss==this)game.Living.Boss=null;}}
         void OnDestroy(){StopBattle();}

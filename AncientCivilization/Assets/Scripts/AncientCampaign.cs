@@ -11,7 +11,7 @@ namespace Plugin.AncientCivilization
         readonly BoxCollider2D[,] fieldGateSolids=new BoxCollider2D[20,2];
         readonly List<AncientEnemy> foes=new List<AncientEnemy>();readonly List<int> foeSlots=new List<int>();SpriteRenderer escort,rescuedReha;bool following;
         const string RehaName="야간 작업자 재하";
-        GUIStyle label;string objective="";int journalFloor=-1,journalMission=-1,journalCitizen=-1;bool journalPeople;float guardNoticeAt,powerEmitReady,escortCycle;int escortFrame=-1;
+        GUIStyle label;string objective="";int journalFloor=-1,journalMission=-1,journalCitizen=-1;bool journalPeople,routeJournal;float guardNoticeAt,powerEmitReady,escortCycle;int escortFrame=-1;
         GUIStyle fieldTitleStyle,fieldBodyStyle,fieldHintStyle,fieldWorldStyle,fieldEdgeStyle;float fieldStyleScale=-1;
         int uiMission=-1,uiSector=-1,uiNext=-2,uiGuideKind=-1,uiGuideId=-1,edgeMetres=-1,edgeDirection=-1;bool uiFollowing;
         bool fieldGuideVisible;Rect fieldGuideRect;
@@ -32,7 +32,7 @@ namespace Plugin.AncientCivilization
         static readonly string[] guideArrows={"◀ ","▶ ","▲ ","▼ "};
         public bool Active {get{return active>=0;}}
         public int CurrentRoom {get{return active;}}
-        public int CurrentSector {get{return Active&&game.hero?AncientFieldExpansion.SectorAt(game.hero.transform.position.x-AncientCampaignRules.Left(active)):-1;}}
+        public int CurrentSector {get{return Active&&game.hero?AncientFieldExpansion.SectorAt(active,game.hero.transform.position.x-AncientCampaignRules.Left(active)):-1;}}
         public int EarnedCheckpoint {get{return checkpoint;}}
         public int DefeatedMask {get{return defeated;}}
         public int CompletedMask {get{return completed;}}
@@ -112,7 +112,7 @@ namespace Plugin.AncientCivilization
         }
         void BuildRoom(AncientMission mission)
         {
-            float left=AncientCampaignRules.Left(mission.Id),right=left+AncientCampaignRules.RoomWidth;
+            float left=AncientCampaignRules.Left(mission.Id),right=AncientChapterLayout.CaseRight(mission.Id);
             if(mission.Id%4==0)
             {
                 var start=game.Box("Chapter assignment checkpoint",new Vector2(left-2,4.8f),new Vector2(.2f,10.4f),new Color(.2f,.7f,.8f,.35f),5);
@@ -123,10 +123,11 @@ namespace Plugin.AncientCivilization
             Color facade=tint;facade.a=.68f;Color window=tint*1.55f;window.a=.30f;
             for(int sector=0;sector<AncientFieldExpansion.SectorCount;sector++)
             {
-                float sectorLeft=left+AncientFieldExpansion.SectorStart(sector);
+                float sectorLeft=left+AncientFieldExpansion.SectorStart(mission.Id,sector);
                 bool jumping=AncientFieldExpansion.IsJumpSector(mission.Id,sector);
-                AncientFieldScenery.Build(game,mission.Floor,sectorLeft,(mission.Id+sector)%4,AncientFieldExpansion.SectorSpan);
-                int facades=Mathf.CeilToInt(AncientFieldExpansion.SectorSpan/12f);float facadeStep=AncientFieldExpansion.SectorSpan/(float)facades;
+                for(int block=0;block<AncientFieldExpansion.Blocks(mission.Id);block++)
+                    AncientFieldScenery.Build(game,mission.Floor,sectorLeft+block*AncientFieldExpansion.SectorSpan,(mission.Id+sector+block)%4,AncientFieldExpansion.SectorSpan);
+                int facades=Mathf.CeilToInt(AncientFieldExpansion.Span(mission.Id)/12f);float facadeStep=AncientFieldExpansion.Span(mission.Id)/(float)facades;
                 for(int i=0;i<facades;i++)
                 {
                     float x=sectorLeft+(i+.5f)*facadeStep;
@@ -134,19 +135,20 @@ namespace Plugin.AncientCivilization
                     game.StaticBox("Investigation window",new Vector2(x,6.6f),new Vector2(5,1.4f),window,-7);
                     game.StaticBox("District floor stripe",new Vector2(x,9.88f),new Vector2(8,.06f),new Color(.2f,.65f,.7f),3);
                 }
-                if(!jumping){var road=AncientFieldExpansion.GroundRoad(sector);game.Platform(left+road.left,left+road.right,road.top);}
+                if(!jumping){var road=AncientFieldExpansion.GroundRoad(mission.Id,sector);game.Platform(left+road.left,left+road.right,road.top);}
                 else
                 {
-                    var entry=AncientFieldExpansion.EntrancePlatform(sector);var end=AncientFieldExpansion.TerminalPlatform(sector);
-                    game.Platform(left+entry.left,left+entry.right,entry.top);game.Platform(left+end.left,left+end.right,end.top);
+                    for(int block=0;block<AncientFieldExpansion.Blocks(mission.Id);block++)
+                    {var entry=AncientFieldExpansion.BlockLanding(mission.Id,sector,block,false);var end=AncientFieldExpansion.BlockLanding(mission.Id,sector,block,true);
+                    game.Platform(left+entry.left,left+entry.right,entry.top);game.Platform(left+end.left,left+end.right,end.top); }
                 }
-                for(int i=0;i<9;i++)
+                for(int block=0;block<AncientFieldExpansion.Blocks(mission.Id);block++)for(int i=0;i<9;i++)
                 {
-                    var segment=AncientFieldExpansion.Segment(mission.Id,sector,i);float x=left+segment.left,top=segment.top;
+                    var segment=AncientFieldExpansion.BlockSegment(mission.Id,sector,block,i);float x=left+segment.left,top=segment.top;
                     if(jumping)game.Platform(x,left+segment.right,top);
                     game.StaticBox("Field route edge",new Vector2(left+(segment.left+segment.right)*.5f,(mission.Kind==2?0:top)+.025f),new Vector2(segment.right-segment.left,.05f),AncientGame.Cyan,3);
                     if(jumping&&i%3==1)
-                        BuildExpertCatwalk(left,AncientFieldExpansion.ExpertSegment(mission.Id,sector,i));
+                        BuildExpertCatwalk(left,AncientFieldExpansion.BlockExpertSegment(mission.Id,sector,block,i));
                 }
                 if(mission.Floor==0)for(int index=3;index<=6;index+=3)
                 {
@@ -167,9 +169,9 @@ namespace Plugin.AncientCivilization
                     gate.layer=8;fieldGates[mission.Id,sector-1]=gate.GetComponent<SpriteRenderer>();fieldGateSolids[mission.Id,sector-1]=gate.AddComponent<BoxCollider2D>();
                     fieldGates[mission.Id,sector-1].enabled=fieldGateSolids[mission.Id,sector-1].enabled=false;
                 }
-                if(jumping)for(int i=0;i<2;i++)
+                if(jumping)for(int block=0;block<AncientFieldExpansion.Blocks(mission.Id);block++)for(int i=0;i<2;i++)
                 {
-                    float x=sectorLeft+63+i*68;
+                    float x=sectorLeft+block*AncientFieldExpansion.SectorSpan+63+i*68;
                     if(mission.Floor==0)
                     {var crane=new GameObject("Field moving crane").AddComponent<AncientMovingAnchor>();crane.Initialize(game,new Vector2(x,7.6f),mission.Id+sector*2+i);cranes.Add(crane);}
                     if(mission.Floor==2)new GameObject("Field security shutter").AddComponent<AncientSecurityShutter>().Initialize(game,new Vector2(x,6.4f),mission.Id+sector*2+i);
@@ -217,7 +219,7 @@ namespace Plugin.AncientCivilization
         {
             var mission=AncientCampaignData.Missions[id];float left=AncientCampaignRules.Left(id);
             var segment=AncientFieldExpansion.Segment(id,index,5);float x=left+(segment.left+segment.right)*.5f;
-            if(mission.Kind==2)return new Vector2(index==2?left+AncientCampaignRules.RoomWidth-16:x,1.2f);
+            if(mission.Kind==2)return new Vector2(index==2?left+AncientChapterLayout.Width(id)-16:x,1.2f);
             return new Vector2(x,segment.top+1.3f);
         }
         static Vector2 PowerPoint(int id,int sector)
@@ -279,7 +281,7 @@ namespace Plugin.AncientCivilization
             }
         }
         Vector2 CheckpointPoint()
-        {return new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(checkpoint),1.3f);}
+        {var point=new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(active,checkpoint),1.3f);return game.LowerRoute?game.LowerRoute.Checkpoint(active,checkpoint,point):point;}
         void RestoreEscort()
         {
             if(AncientCampaignData.Missions[active].Kind!=2||(tasks&2)==0||(tasks&4)!=0)return;
@@ -291,7 +293,7 @@ namespace Plugin.AncientCivilization
         void ActivateCase(int id,bool relocate)
         {
             if(!AncientCampaignRules.CanStart(completed,id,game.Story.CurrentFloor,game.Story.Stage,game.City.Cleared))return;
-            if(Active){RecordDefeats();StoreProgress();}ClearFoes();
+            if(Active){RecordDefeats();StoreProgress();}ClearFoes();if(game.LowerRoute)game.LowerRoute.ResetEncounter();
             active=id;escortCycle=0;escortFrame=-1;escort.sprite=AncientCitizenArt.ForCitizen(AncientCampaignRules.Witness(id));
             chapters|=1<<(id/4);
             if(taskMission!=id){taskMission=id;tasks=routeTasks[id];checkpoint=routeCheckpoints[id];defeated=routeDefeated[id];}
@@ -329,7 +331,7 @@ namespace Plugin.AncientCivilization
         public void LeaveFloor()
         {
             if(Active){RecordDefeats();StoreProgress();Persist();}
-            ClearFoes();active=-1;following=false;escort.enabled=false;Refresh();
+            ClearFoes();if(game.LowerRoute)game.LowerRoute.ResetEncounter();active=-1;following=false;escort.enabled=false;Refresh();
         }
         public void EnterFloor()
         {
@@ -418,7 +420,7 @@ namespace Plugin.AncientCivilization
         }
         void Mark(int index)
         {
-            if((tasks&(1<<index))!=0||!AncientFieldExpansion.ObjectiveAvailable(tasks,index))return;tasks=AncientCampaignRules.Objective(tasks,index);Refresh();Persist();game.Sound(2);
+            if((tasks&(1<<index))!=0||!AncientFieldExpansion.ObjectiveAvailable(tasks,index)||game.LowerRoute&&!game.LowerRoute.SectorComplete(active,index))return;tasks=AncientCampaignRules.Objective(tasks,index);Refresh();Persist();game.Sound(2);
             game.Feel.Signal(active==1&&index==2?"작업장 전력 복구 · 조명 재가동":"확보 / "+AncientCampaignData.Missions[active].Tasks[index],new Color(.65f,1,.85f),1.3f);
         }
         public bool TryBladeTarget(Vector2 origin,Vector2 direction)
@@ -488,10 +490,10 @@ namespace Plugin.AncientCivilization
         {
             var m=AncientCampaignData.Missions[active];float left=AncientCampaignRules.Left(active);Vector2 hero=game.hero.transform.position;
             RecordDefeats();
-            for(int sector=0;sector<=checkpoint;sector++)if(Mathf.Abs(hero.x-left-AncientFieldExpansion.EntranceOf(sector))<2.5f&&Mathf.Abs(hero.y-1.3f)<1.5f)
+            for(int sector=0;sector<=checkpoint;sector++)if(Mathf.Abs(hero.x-left-AncientFieldExpansion.EntranceOf(active,sector))<2.5f&&Mathf.Abs(hero.y-1.3f)<1.5f)
             {Persist();game.Notice("안전 거점 / 확보한 기록과 수사 진행을 저장했습니다.",2);return true;}
             if(m.Floor==1)return false;
-            if(hero.x>left+AncientCampaignRules.RoomWidth-10)
+            if(hero.x>left+AncientChapterLayout.Width(active)-10)
             {
                 if(!AncientFieldExpansion.ExitReady(tasks,defeated)||ThreatsAlive())game.Notice("남아 있는 기록과 위협을 확인하면 동쪽 통로가 열립니다.",2);
                 else FinishCase();return true;
@@ -548,7 +550,7 @@ namespace Plugin.AncientCivilization
         void RecoverToCheckpoint()
         {
             RecordDefeats();checkpoint=AncientFieldExpansion.ResolveCheckpoint(checkpoint,tasks,defeated);
-            ClearFoes();game.hero.TravelTo(CheckpointPoint());ActivateSector(checkpoint);RestoreEscort();Refresh();
+            ClearFoes();if(game.LowerRoute)game.LowerRoute.ResetEncounter();game.hero.TravelTo(CheckpointPoint());ActivateSector(checkpoint);RestoreEscort();Refresh();
             game.SnapCameraToHero();game.BlockGameplayInput();game.Notice("안전 거점 회수 / 확보한 기록과 제압한 위협은 유지됩니다.");
         }
         void Update()
@@ -574,11 +576,11 @@ namespace Plugin.AncientCivilization
                 for(int i=0;i<3;i++)if(game.hero.transform.position.x>=NodePoint(active,i).x-3&&(active!=5||i!=0||game.Living.ThrowTaught))Mark(i);
             }
             float left=AncientCampaignRules.Left(active);Vector2 p=game.hero.transform.position;
-            if(p.y<-2.5f||p.x<AncientCityLayout.Left(game.Story.CurrentFloor)-1||p.x>left+AncientCampaignRules.RoomWidth+1)
+            if(p.y<-2.5f||p.x<AncientCityLayout.Left(game.Story.CurrentFloor)-1||p.x>left+AncientChapterLayout.Width(active)+1)
             {RecoverToCheckpoint();return;}
-            if(p.x>=left+AncientCampaignRules.RoomWidth-10&&AncientFieldExpansion.ExitReady(tasks,defeated)&&!ThreatsAlive())
+            if(p.x>=left+AncientChapterLayout.Width(active)-10&&AncientFieldExpansion.ExitReady(tasks,defeated)&&!ThreatsAlive())
             {FinishCase();return;}
-            int sector=AncientFieldExpansion.SectorAt(p.x-left),allowed=AncientFieldExpansion.MaximumCheckpoint(tasks,defeated);
+            int sector=AncientFieldExpansion.SectorAt(active,p.x-left),allowed=AncientFieldExpansion.MaximumCheckpoint(tasks,defeated);
             if(sector>allowed){RecoverToCheckpoint();return;}
             if(sector>checkpoint)
             {
@@ -603,13 +605,13 @@ namespace Plugin.AncientCivilization
             {
                 Vector2 witness=escort.transform.position;float previousX=witness.x;bool blocked=false;
                 foreach(var enemy in foes)if(enemy&&enemy.IsAlive&&Mathf.Abs(enemy.transform.position.x-witness.x)<8)blocked=true;
-                witness.x=left+AncientFieldExpansion.EscortStep(witness.x-left,p.x-left,game.hero.HorizontalSpeed,Time.deltaTime,tasks,defeated,blocked);
+                witness.x=left+AncientFieldExpansion.EscortStep(active,witness.x-left,p.x-left,game.hero.HorizontalSpeed,Time.deltaTime,tasks,defeated,blocked);
                 float moved=Mathf.Abs(witness.x-previousX);escortCycle+=moved*2.2f;
                 int frame=moved>.0001f?(int)escortCycle%4:-1;
                 if(frame!=escortFrame)
                 {escortFrame=frame;int person=AncientCampaignRules.Witness(active);escort.sprite=frame<0?AncientCitizenArt.ForCitizen(person):AncientArt.CitizenWalk(person,frame);}
                 escort.transform.position=witness;
-                if(witness.x>=left+AncientCampaignRules.RoomWidth-16){following=false;Mark(2);}
+                if(witness.x>=left+AncientChapterLayout.Width(active)-16){following=false;Mark(2);}
                 else if(blocked&&Time.time>=guardNoticeAt){guardNoticeAt=Time.time+5;game.Notice("위협을 먼저 제압하세요. 주민은 안전이 확인되면 따라옵니다.",2);}
             }
         }
@@ -635,6 +637,7 @@ namespace Plugin.AncientCivilization
         void GuideTarget(int next,out Vector2 point,out int kind,out int id)
         {
             float left=AncientCampaignRules.Left(active);id=next;kind=0;
+            if(game.LowerRoute&&game.LowerRoute.TryGuide(out point,out guideCaption)){kind=6;id=game.LowerRoute.CurrentStop;return;}
             if(next==2&&AncientFieldExpansion.NeedsPowerRefill(AncientCampaignData.Missions[active].Kind,tasks,game.hero.CaptureEnergy))
             {kind=5;id=CurrentSector;point=PowerPoint(active,id);return;}
             bool escortThreat=next==2&&following&&escort&&ThreatsAlive();
@@ -650,21 +653,21 @@ namespace Plugin.AncientCivilization
             if(threat){kind=2;point=threat.AimPoint;return;}
             if(next>=0){point=NodePoint(active,next);return;}
             for(int sector=0;sector<3;sector++)if(!AncientFieldExpansion.SectorClear(defeated,sector))
-            {kind=3;id=sector;point=new Vector2(left+AncientFieldExpansion.EntranceOf(sector),1.3f);return;}
-            kind=4;id=-1;point=new Vector2(left+AncientCampaignRules.RoomWidth-6,1.3f);
+            {kind=3;id=sector;point=new Vector2(left+AncientFieldExpansion.EntranceOf(active,sector),1.3f);return;}
+            kind=4;id=-1;point=new Vector2(left+AncientChapterLayout.Width(active)-6,1.3f);
         }
         void RefreshFieldText(int sector,int next,int kind,int id)
         {
-            if(uiMission==active&&uiSector==sector&&uiNext==next&&uiGuideKind==kind&&uiGuideId==id&&uiFollowing==following)return;
+            if(kind!=6&&uiMission==active&&uiSector==sector&&uiNext==next&&uiGuideKind==kind&&uiGuideId==id&&uiFollowing==following)return;
             var mission=AncientCampaignData.Missions[active];
             if(uiMission!=active)for(int i=0;i<3;i++)
                 fieldNodeLabels[i]=(mission.Floor==1?"경로 · ":UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
             uiMission=active;uiSector=sector;uiNext=next;uiGuideKind=kind;uiGuideId=id;uiFollowing=following;edgeMetres=-1;
             fieldTitle=ChapterTitle(mission.Floor)+" · "+(active%4+1)+"/4 · "+(sector+1)+"/3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 와이어":"");
-            guideCaption=kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"동쪽 통로로 계속 이동":kind==5?"베기 · 입자 재채취":
+            guideCaption=kind==6?guideCaption:kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"동쪽 통로로 계속 이동":kind==5?"베기 · 입자 재채취":
                 mission.Kind==2&&next==2?"보호 대상과 출구로":fieldNodeLabels[next];
             fieldNext="다음 / "+guideCaption;
-            fieldHint=kind==5?"패널을 베고 우클릭으로 수집 · 길게 눌러 레이저":kind==1?"위협이 없는 통로에서는 주민이 뒤따라옵니다.":mission.Kind==2&&following?"주민을 보호하며 동쪽 출구로 이동":
+            fieldHint=kind==6?"짧은 구간마다 진행 저장 · 해결한 사건은 유지됩니다.":kind==5?"패널을 베고 우클릭으로 수집 · 길게 눌러 레이저":kind==1?"위협이 없는 통로에서는 주민이 뒤따라옵니다.":mission.Kind==2&&following?"주민을 보호하며 동쪽 출구로 이동":
                 kind==2||kind==3?"위협을 제압하세요 · 안전 거점 자동 저장":"기록은 무전으로 전송 · 계속 동쪽으로 이동";
         }
         static bool InView(Vector3 point)
@@ -721,9 +724,9 @@ namespace Plugin.AncientCivilization
             GUI.color=Color.white;GUI.Label(new Rect(header.x+10*scale,header.y+26*scale,header.width-20*scale,22*scale),fieldNext,fieldBodyStyle);
             GUI.color=new Color(.65f,.77f,.8f);GUI.Label(new Rect(header.x+10*scale,header.y+48*scale,header.width-20*scale,22*scale),fieldHint,fieldHintStyle);GUI.color=Color.white;
             FieldEdgeGuide(target,kind,scale);
-            for(int i=0;i<=checkpoint;i++)FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(i),2.3f)),terminalLabels[i],220,40,scale);
+            for(int i=0;i<=checkpoint;i++)FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(active,i),2.3f)),terminalLabels[i],220,40,scale);
             int gate=AncientFieldExpansion.MaximumCheckpoint(tasks,defeated);
-            if(gate<2)FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.SectorStart(gate+1)-.4f,5)),"다음 구간 / 조사·위협 해결 후 통과",300,44,scale);
+            if(gate<2)FieldWorldLabel(game.View.WorldToScreenPoint(new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.SectorStart(active,gate+1)-.4f,5)),"다음 구간 / 조사·위협 해결 후 통과",300,44,scale);
             var mission=AncientCampaignData.Missions[active];
             if(mission.Kind==2&&following&&(tasks&4)==0)
                 FieldWorldLabel(game.View.WorldToScreenPoint(escort.transform.position+Vector3.up*2.1f),"보호 대상 / 가까이 동행",240,36,scale);
@@ -769,7 +772,7 @@ namespace Plugin.AncientCivilization
                             GUI.Label(new Rect(x-100,Screen.height-195,200,30),(position.x<game.hero.transform.position.x?"◀ ":"▶ ")+giver.Name,label);
                     }
                 }
-                if(!Active&&game.Story.Stage>=8)
+                if(!Active&&game.Story.Stage>=8&&!game.Story.NearLiftTerminal)
                 {
                     int next=AncientCampaignRules.Next(completed,floor);
                     string hint=next==19&&(game.City.Cleared&16)==0?"전방 저격수와 대치 / 동결된 통행 심사의 단서 확인":
@@ -784,6 +787,8 @@ namespace Plugin.AncientCivilization
         {
             if(journalFloor<0)journalFloor=game.Story.CurrentFloor;
             for(int floor=0;floor<5;floor++)if(GUI.Button(new Rect(area.x+floor*165,area.y,155,30),AncientCityLayout.Name(floor),AncientHUD.Button)){journalFloor=floor;journalMission=journalCitizen=-1;}
+            if(journalFloor<2&&game.LowerRoute&&GUI.Button(new Rect(area.x+240,area.y+40,220,30),routeJournal?"기존 사건 기록":"하층 현장 증언",AncientHUD.Button))routeJournal=!routeJournal;
+            if(routeJournal&&journalFloor<2&&game.LowerRoute){game.LowerRoute.DrawJournal(journalFloor,new Rect(area.x,area.y+80,area.width,area.height-80),text,small);return;}
             if(GUI.Button(new Rect(area.x,area.y+40,220,30),journalPeople?"사건 기록 보기":"주민 대화 기록",AncientHUD.Button))journalPeople=!journalPeople;
             if(journalPeople&&journalCitizen>=0&&journalCitizen/5==journalFloor)
             {

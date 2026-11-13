@@ -39,8 +39,9 @@ namespace Plugin.AncientCivilization.EditorChecks
             SetTime("Started",Now);SetStage(0);
             Set(profile,"questStage",8);Set(profile,"cityFloor",0);Set(profile,"storyBoss",1);Set(profile,"storyCores",7);
             Set(profile,"residencePoints",5000);Set(profile,"started",1);Set(profile,"campaignVersion",AncientCampaignRules.RouteVersion);
+            for(int m=0;m<8;m++)Set(profile,AncientLowerRoute.ProgressKeys[m],AncientLowerRouteRules.Mask);
             PlayerPrefs.Save();Append("START: isolated continuous-chapter structural smoke. Leave controls untouched.");
-            Append("Uses directed positions/objective seeds to test streaming, retry, save and resource recovery; this does not verify a human traversal playthrough.");
+            Append("Uses directed positions/objective seeds with lower local stops seeded complete to test streaming, retry, save and resource recovery; this does not verify a human traversal playthrough.");
             Append("Normal profile: "+NormalPrefix+"; test profile: "+profile);
             EditorApplication.isPlaying=true;
         }
@@ -101,7 +102,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         static int NearestResident(AncientCampaign campaign)
         {return (int)typeof(AncientCampaign).GetMethod("NearestCitizen",PrivateInstance).Invoke(campaign,null);}
         static void MoveToSector(AncientGame game,int sector)
-        {game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(game.Campaign.CurrentRoom)+AncientFieldExpansion.EntranceOf(sector),1.3f));}
+        {game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(game.Campaign.CurrentRoom)+AncientFieldExpansion.EntranceOf(game.Campaign.CurrentRoom,sector),1.3f));}
         static AncientWorkshopCircuit Workshop(AncientGame game)
         {return (AncientWorkshopCircuit)typeof(AncientCampaign).GetField("workshopCircuit",PrivateInstance).GetValue(game.Campaign);}
         static void CheckRestoredWorkshop(AncientGame game)
@@ -277,26 +278,19 @@ namespace Plugin.AncientCivilization.EditorChecks
             game.hero.TravelTo(view.transform.position+Vector3.up*1.3f);
             Assert(NearestResident(game.Campaign)==4,"The independent foreman remains an actual visible interaction target");game.hero.TravelTo(previous);
         }
-        static void CheckNamedResidentRescue(AncientGame game)
+        static void CheckLivingWitness(AncientGame game)
         {
             var campaign=game.Campaign;Call(campaign,"LeaveFloor");
             typeof(AncientStory).GetProperty("CurrentFloor").GetSetMethod(true).Invoke(game.Story,new object[]{1});
             typeof(AncientCampaign).GetField("completed",PrivateInstance).SetValue(campaign,campaign.CompletedMask|(1<<4));
-            Call(campaign,"Begin",5);var view=Resident(campaign,6);
-            Assert(campaign.CurrentRoom==5&&view&&!view.enabled,"Sora's static resident is hidden during her own active rescue");
-            game.hero.TravelTo(new Vector2(AncientCampaignData.Citizens[6].X,1.3f));
-            Assert(NearestResident(campaign)!=6,"A hidden duplicate cannot remain an invisible interaction target");
-            // Seed only objective progress; the probe checks real renderers and actor lookup, not human escort pacing.
-            Call(campaign,"Mark",0);Call(campaign,"Mark",1);Call(campaign,"RestoreEscort");Call(campaign,"Refresh");
-            var escort=(SpriteRenderer)typeof(AncientCampaign).GetField("escort",PrivateInstance).GetValue(campaign);Transform actor;float offset;
-            Assert(escort&&escort.enabled&&!view.enabled&&campaign.TryDialogueActor("배달원 소라",out actor,out offset)&&actor==escort.transform,"The rescued speaker uses one moving escort renderer and its real dialogue anchor");
-            Call(campaign,"Mark",2);float exit=AncientCampaignRules.Left(5)+AncientCampaignRules.RoomWidth-16;
-            Assert(!escort.enabled&&view.enabled&&Mathf.Abs(view.transform.position.x-exit)<.001f&&Mathf.Abs(view.transform.position.y)<.001f,"Completing rescue swaps Sora to the protected ground-level exit in the same transition");
+            Call(campaign,"Begin",5);var view=Resident(campaign,6);Transform actor;float offset;
+            Assert(campaign.CurrentRoom==5&&view&&view.enabled,"Sora remains a static bridge witness during the living trail");
             game.hero.TravelTo(view.transform.position+Vector3.up*1.3f);
-            Assert(NearestResident(campaign)==6&&campaign.TryDialogueActor("배달원 소라",out actor,out offset)&&actor==view.transform,"Interaction and speech anchors follow the rescued resident's rendered exit position");
-            game.hero.TravelTo(new Vector2(AncientCampaignData.Citizens[6].X,1.3f));Assert(NearestResident(campaign)!=6,"The rescued resident no longer interacts from her old authored bridge");
+            Assert(NearestResident(campaign)==6&&campaign.TryDialogueActor("배달원 소라",out actor,out offset)&&actor==view.transform,"Sora interaction and speech use the same real bridge actor");
+            var escort=(SpriteRenderer)typeof(AncientCampaign).GetField("escort",PrivateInstance).GetValue(campaign);
+            Assert(!escort.enabled&&AncientCampaignData.Missions[5].Kind==0,"Living trail does not create a retired Sora escort duplicate");
             Call(campaign,"LeaveFloor");Call(campaign,"EnterFloor");
-            Assert(AncientGame.Saved("routeTask5")==7&&view.enabled&&Mathf.Abs(view.transform.position.x-exit)<.001f&&!escort.enabled,"Existing saved rescue tasks preserve the single exit resident after floor re-entry");
+            Assert(view.enabled&&!escort.enabled,"Floor re-entry preserves the static living witness");
         }
         static void FinishOptionalDialogue(AncientGame game)
         {
@@ -412,8 +406,8 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Physics2D.SyncTransforms();
                     for(int sector=0;sector<3;sector++)
                     {
-                        float left=AncientCampaignRules.Left(0)+AncientFieldExpansion.SectorStart(sector);
-                        Assert(Physics2D.OverlapPoint(new Vector2(left+AncientFieldExpansion.SectorSpan-12,-.1f),1<<8),"Sector "+sector+" has its broad terminal collision platform");
+                        float left=AncientCampaignRules.Left(0)+AncientFieldExpansion.SectorStart(0,sector);
+                        Assert(Physics2D.OverlapPoint(new Vector2(left+AncientFieldExpansion.Span(0)-12,-.1f),1<<8),"Sector "+sector+" has its broad terminal collision platform");
                         Assert(Physics2D.Raycast(new Vector2(left+75,9),Vector2.up,2,1<<8),"Sector "+sector+" has a wire-capable solid ceiling");
                     }
                     Call(campaign,"Mark",2);Assert(Tasks(campaign)==0,"A future objective cannot be granted before its prerequisites");
@@ -468,7 +462,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(campaign.CurrentSector==2&&game.hero.transform.position.y>0,"A field fall recovers to the earned final entrance");
                     Assert(campaign.DefeatedMask==15&&LiveEnemies(game)==2,"Fall recovery does not clear or duplicate living threats");
                     DefeatCurrent(game);Call(campaign,"RecordDefeats");Call(campaign,"Mark",2);
-                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(0)+AncientCampaignRules.RoomWidth-6,1.3f));
+                    game.hero.TravelTo(new Vector2(AncientChapterLayout.CaseRight(0)-6,1.3f));
                     var body=game.hero.GetComponent<Rigidbody2D>();Vector2 position=body.position,motion=new Vector2(9,1);body.linearVelocity=motion;
                     // Synthetic attachment tests state preservation only; casting and swinging still need a human playthrough.
                     var wired=typeof(AncientHero).GetField("wired",PrivateInstance);wired.SetValue(game.hero,true);
@@ -509,7 +503,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Vector2 receiver=Point("NodePoint",1,2);campaign.OnLaser(receiver-Vector2.right*3,receiver+Vector2.right*3);
                     Assert(Tasks(campaign)==7,"A visible ray through the final receiver completes the power objective");
                     circuit.Update(campaign.RecordedTasks(1));Assert(circuit.PoweredOn&&circuit.RestorationWave,"The actual receiver laser switches on the workshop and starts one restoration wave");CheckRestoredWorkshop(game);
-                    game.hero.TravelTo(new Vector2(AncientCampaignRules.Left(1)+AncientCampaignRules.RoomWidth-6,1.3f));Call(campaign,"Update");
+                    game.hero.TravelTo(new Vector2(AncientChapterLayout.CaseRight(1)-6,1.3f));Call(campaign,"Update");
                     Assert(campaign.CurrentRoom==1&&(campaign.CompletedMask&2)==0,"The onward road still refuses a live final encounter");
                     DefeatCurrent(game);Call(campaign,"RecordDefeats");Vector2 position=game.hero.transform.position;Call(campaign,"Update");
                     Assert(campaign.CurrentRoom==2&&((Vector2)game.hero.transform.position-position).sqrMagnitude<.001f,"The power case hands off to the escort without a report trip");
@@ -521,7 +515,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     CheckWorkshopRevisit(game);
                     CheckIndependentForeman(game);
                     float left=AncientCampaignRules.Left(2);
-                    for(int i=1;i<AncientCampaignRules.RoomWidth/10;i++)Assert(Physics2D.OverlapPoint(new Vector2(left+i*10,-.1f),1<<8),"Escort ground remains continuous at local x="+(i*10));
+                    for(int i=1;i<AncientChapterLayout.Width(2)/10;i++)Assert(Physics2D.OverlapPoint(new Vector2(left+i*10,-.1f),1<<8),"Escort ground remains continuous at local x="+(i*10));
                     DefeatCurrent(game);Call(campaign,"Mark",0);MoveToSector(game,1);SetStage(14);return;
                 }
                 if(stage==14)
@@ -530,7 +524,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {Assert(campaign.Retry(),"An escort retry is accepted at the final entrance");SetStage(16);return;}
                 if(stage==16)
                 {
-                    if(game.Paused||game.hero.bike||Time.deltaTime<=0||Input.GetKey(KeyCode.F))return;
+                    if(game.Paused||game.hero.bike||Time.deltaTime<=0)return;
                     var escort=(SpriteRenderer)typeof(AncientCampaign).GetField("escort",PrivateInstance).GetValue(campaign);
                     Assert(escort&&escort.enabled&&Mathf.Abs(escort.transform.position.x-game.hero.transform.position.x)<3,"A rescued witness resumes near the earned safe entrance instead of becoming stranded behind the player");
                     Assert(Tasks(campaign)==3,"Witness recovery does not grant escort completion");
@@ -541,7 +535,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     floorSetter.Invoke(game.Story,new object[]{0});game.hero.TravelTo(arrival);Call(campaign,"EnterFloor");
                     Assert(campaign.CurrentRoom==2&&Tasks(campaign)==3&&campaign.EarnedCheckpoint==2&&campaign.DefeatedMask==15,"Returning to the escort chapter restores its own goals, checkpoint and defeat bits");
                     Assert(((Vector2)game.hero.transform.position-arrival).sqrMagnitude<.001f,"The floor resume never replaces the lift's actual arrival with a field teleport");
-                    CheckRehaRescue(game);CheckNamedResidentRescue(game);
+                    CheckRehaRescue(game);CheckLivingWitness(game);
                     CheckCompletedCrane(game);
                     AncientProjectileSmokeChecks.RunInQAProfile(game);
                     Append("PASS: isolated real-object projectile wall/hero ordering and clock-hand floor probes completed.");

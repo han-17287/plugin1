@@ -9,7 +9,7 @@ namespace Plugin.AncientCivilization
         {
             if(float.IsNaN(x)||float.IsInfinity(x))return 0;
             int floor=AncientChapterLayout.FloorAt(x);if(floor>=0)return floor;
-            if(x>=AncientFinaleRules.Start)return 5;
+            if(x>=AncientFinaleRules.Start||x>=AncientChapterLayout.OpeningChaseStart&&x<=AncientChapterLayout.OpeningChaseEnd)return 5;
             return 0;
         }
         public static float Left(int floor){return floor<=0?-5:AncientChapterLayout.FloorStart(floor);}
@@ -45,6 +45,28 @@ namespace Plugin.AncientCivilization
         }
         public static bool SafeResume(int floor,float x,float y)
         {return floor>=0&&floor<=LastFloor&&!float.IsNaN(x)&&!float.IsInfinity(x)&&!float.IsNaN(y)&&!float.IsInfinity(y)&&x>Left(floor)&&x<Right(floor)&&y>=.5f&&y<8.5f;}
+        public static float LiftArrivalX(int floor,int completedCases,int cleared)
+        {
+            floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));
+            if(completedCases<4||floor==LastFloor)return Entry(floor);
+            if(floor==0||(cleared&(1<<floor))!=0)return AncientChapterLayout.ExitLift(floor);
+            return floor==1?AncientChapterLayout.LivingApproachLift:Entry(floor);
+        }
+        public static float MigratedCheckpointX(int floor,int completedCases,int cleared,bool secretaryCleared)
+        {
+            floor=System.Math.Max(0,System.Math.Min(LastFloor,floor));
+            // Finishing the road does not imply defeating its boss. An old save
+            // must resume before a still-locked arena, never behind its exit seal.
+            if(floor==LastFloor&&completedCases>=3)
+            {
+                if((cleared&(1<<floor))==0)return AncientChapterLayout.SniperLeft-2;
+                if(completedCases<4)return AncientChapterLayout.CaseLeft(19)+6;
+                return secretaryCleared?AncientChapterLayout.ExitLift(floor):AncientChapterLayout.SecretaryLeft-2;
+            }
+            if(completedCases>=4)
+                return floor>0&&(cleared&(1<<floor))==0?ArenaLeft(floor)-2:AncientChapterLayout.ExitLift(floor);
+            return Entry(floor);
+        }
         public static bool CanLift(int stage,int points,int cleared,int current,int target)
         {
             if(current<0||current>LastFloor||target<0||target>=LastFloor||current==target)return false;

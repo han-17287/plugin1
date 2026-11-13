@@ -6,6 +6,23 @@ static class LivingChecks
     static void Check(bool ok,string why){checks++;if(!ok)throw new Exception(why);}
     static void Main()
     {
+        foreach(int hz in new[]{15,30,60,120,144,240})foreach(float immunity in new[]{0f,.2f,.7f,1f})
+        {
+            var area=new AncientClockAreaDamage();area.Begin();float hp=100,immuneUntil=immunity;int hits=0;
+            for(int frame=0;frame<=Math.Ceiling(hz*.75f);frame++)
+            {
+                float time=frame/(float)hz;if(!area.CanHit)continue;float before=hp;
+                if(time>=immuneUntil){hp-=32;immuneUntil=time+.65f;hits++;}
+                area.RecordHealth(before,hp,0,0);
+            }
+            Check(hits<2,"One X blast never damages twice after immunity expires at "+hz+" FPS");
+            Check(immunity<=.7f?hits==1:hits==0,"Only actual damage consumes an X activation");
+            area.Begin();Check(area.CanHit,"The next X attack has a fresh damage window");
+        }
+        Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Bullets).Contains("파괴 불가"),"Non-breakable bullet tell never recommends a blade");
+        Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Cannon).Contains("파괴 불가"),"Non-breakable shells are labelled for evasion");
+        Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Rocket).Contains("와이어"),"Rocket tell names the correct counter");
+        Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Missiles).Contains("베기"),"Missile tell preserves the particle opportunity");
         var first=new AncientLivingRules();
         for(int cycle=0;cycle<500;cycle++)
         {
@@ -20,6 +37,11 @@ static class LivingChecks
         {Check(first.Next()==AncientLivingAttack.Cannon,"background cannon first");Check(first.Next()==AncientLivingAttack.Bullets,"double bullets second");Check(first.Next()==AncientLivingAttack.Grab,"barrier grab third");}
         Check(AncientLivingRules.BulletCount(2)==AncientLivingRules.BulletCount(1)*2,"exact doubled bullet count");
         Check(AncientLivingRules.RocketCharge==3,"both fist tells use 3 seconds");
+        first.RaiseBarrier();Check(!first.HitBarrier(AncientLivingHit.Laser,40)&&first.Barrier==42,"A partial-energy laser weakens the shield but cannot pretend to be full charge");
+        Check(!first.HitBarrier(AncientLivingHit.Laser,40)&&first.Barrier==14,"Separate partial beams accumulate their real energy contribution");
+        Check(first.HitBarrier(AncientLivingHit.Laser,20)&&first.Barrier==0,"Combined partial laser energy can complete a shield break");
+        foreach(float energy in new[]{0f,-1,float.NaN,float.PositiveInfinity})Check(AncientLivingRules.LaserBarrierDamage(energy)==0,"Invalid or empty laser energy cannot break a shield");
+        Check(AncientLivingRules.LaserBarrierDamage(99)<70&&AncientLivingRules.LaserBarrierDamage(100)==70,"Only a full particle gauge guarantees a one-shot laser break");
         foreach(var kind in new[]{AncientLivingHit.Laser,AncientLivingHit.Throw,AncientLivingHit.Blade})
         {
             first.RaiseBarrier();int count=kind==AncientLivingHit.Laser?1:kind==AncientLivingHit.Throw?10:7;

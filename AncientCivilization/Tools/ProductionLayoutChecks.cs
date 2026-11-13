@@ -216,7 +216,7 @@ class ProductionLayoutChecks
         Check(AncientProductionLayout.TutorialLeft<AncientProductionLayout.TutorialSpawn-6,"The opening spawn has a safe margin from its retaining wall");
         Check(AncientProductionLayout.StockX>AncientProductionLayout.SectionStarts[4]&&AncientProductionLayout.StockX<AncientProductionLayout.BreachX-6,"The stock console stands in the inventory hall before the breach wall");
         Check(AncientProductionLayout.TutorialRight<=AncientChapterLayout.CaseLeft(0),"The production route leaves the established continuous chapter entrance intact");
-        Check(AncientProductionLayout.ChaseStart>AncientFinaleRules.Finish+256,"The introductory chase cannot overlap the final chase");
+        Check((AncientProductionLayout.ChaseStart>AncientFinaleRules.Finish+256||AncientProductionLayout.ChaseEnd+256<AncientFinaleRules.Start),"The introductory chase cannot overlap the final chase");
         Check(AncientProductionLayout.ChaseEnd>AncientProductionLayout.ChaseStart+1200,"The auto-drive lane has a long uninterrupted roadway");
         Check(AncientChapterLayout.FloorAt(AncientProductionLayout.ChaseStart)<0,"The chase lane does not accidentally become a city investigation case");
         float shortHop=AncientMovementRules.LaunchSpeed(AncientJumpKind.Ground,false),shortHeight=shortHop*shortHop/(2*32);

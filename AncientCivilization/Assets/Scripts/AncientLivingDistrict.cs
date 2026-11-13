@@ -7,7 +7,7 @@ namespace Plugin.AncientCivilization
         AncientGame game;readonly List<AncientWireObject> objects=new List<AncientWireObject>();readonly List<AncientWireObject> rockets=new List<AncientWireObject>();
         readonly List<AncientEnemy> guards=new List<AncientEnemy>();readonly List<AncientLivingSpotlight> lights=new List<AncientLivingSpotlight>();
         readonly MissileCue[] missiles=new MissileCue[24];AncientWireObject held;bool wave,announced;int wavesSpawned;float waveAt;
-        SpriteRenderer leader;GUIStyle hint;LineRenderer targetRing;
+        SpriteRenderer leader;GUIStyle hint;LineRenderer targetRing;AncientLivingAftermath aftermath;
         sealed class MissileCue {public LineRenderer line;public Vector2 start,end;public float until;public bool active;}
         public AncientLivingBoss Boss {get;set;}
         public bool WaveActive {get{return wave;}}
@@ -18,16 +18,16 @@ namespace Plugin.AncientCivilization
         public void Initialize(AncientGame owner)
         {
             game=owner;
-            for(int id=4;id<=7;id++)for(int sector=0;sector<3;sector++)
+            for(int id=4;id<=7;id++)for(int sector=0;sector<3;sector++)for(int block=0;block<AncientFieldExpansion.Blocks(id);block++)
             {
-                float left=AncientChapterLayout.CaseLeft(id)+AncientFieldExpansion.SectorStart(sector);
-                var segment=AncientFieldExpansion.Segment(id,sector,3);var second=AncientFieldExpansion.Segment(id,sector,6);
+                float left=AncientChapterLayout.CaseLeft(id)+AncientFieldExpansion.SectorStart(id,sector)+block*AncientFieldExpansion.SectorSpan;
+                var segment=AncientFieldExpansion.BlockSegment(id,sector,block,3);var second=AncientFieldExpansion.BlockSegment(id,sector,block,6);
                 bool jumping=AncientFieldExpansion.IsJumpSector(id,sector);float baseX=AncientChapterLayout.CaseLeft(id);
                 AddObject(new Vector2(jumping?baseX+(segment.left+segment.right)*.5f:left+52,segment.top+1),sector%2==1);
                 AddObject(new Vector2(jumping?baseX+(second.left+second.right)*.5f:left+148,second.top+1),false);
                 if(id>=6)
                 {
-                    var support=AncientFieldExpansion.Segment(id,sector,4);float coverX=jumping?baseX+(support.left+support.right)*.5f:left+103;
+                    var support=AncientFieldExpansion.BlockSegment(id,sector,block,4);float coverX=jumping?baseX+(support.left+support.right)*.5f:left+103;
                     var spot=new GameObject("Gang searchlight").AddComponent<AncientLivingSpotlight>();spot.Initialize(game,this,new Vector2(coverX+5,8.7f),(sector+id)%2==0);lights.Add(spot);
                     var cover=game.Box("Searchlight cover column",new Vector2(coverX,support.top+1.8f),new Vector2(1.5f,3.6f),new Color(.17f,.23f,.29f),2);cover.layer=8;cover.AddComponent<BoxCollider2D>();
                 }
@@ -42,7 +42,16 @@ namespace Plugin.AncientCivilization
             targetRing=game.Line("Throwable target bracket",AncientGame.Cyan,.045f,21);targetRing.loop=true;targetRing.positionCount=4;targetRing.enabled=false;
             leader=AncientArt.Display("Gang leader above hangar",AncientArt.Enemy(5),new Vector2(AncientCityLayout.ArenaRight(1)-6,6.4f),9,transform);leader.enabled=false;
             game.StaticBox("Gang leader gantry",new Vector2(AncientCityLayout.ArenaRight(1)-6,6.2f),new Vector2(5,.25f),new Color(.3f,.38f,.42f),3);
+            if((AncientGame.Saved("cityCleared")&2)!=0)BeginAftermath(null,new Vector2(AncientCityLayout.ArenaRight(1)-6,0),true);
         }
+        public void BeginAftermath(Transform rig,Vector2 point,bool restored=false)
+        {
+            if(aftermath)return;
+            aftermath=new GameObject("Living district arrest scene").AddComponent<AncientLivingAftermath>();aftermath.transform.SetParent(transform,false);
+            aftermath.Initialize(game,rig,leader,point,restored);leader.enabled=!restored;
+        }
+        public bool TryInteract(){return aftermath&&aftermath.TryInteract();}
+        public void AddRouteObject(Vector2 point,bool car){AddObject(point,car);}
         void AddObject(Vector2 point,bool car)
         {var o=new GameObject(car?"Wire throwable car":"Wire throwable crate").AddComponent<AncientWireObject>();o.Initialize(game,this,point,car);objects.Add(o);}
         AncientWireObject Pick(Vector2 cursor)
@@ -106,10 +115,15 @@ namespace Plugin.AncientCivilization
         }
         public void SpawnGuard(Vector2 point,bool drone)
         {
+            if(drone)
+            {
+                var support=Physics2D.Raycast(new Vector2(point.x,9.6f),Vector2.down,13,1<<8);
+                if(support)point.y=Mathf.Min(8.2f,Mathf.Max(point.y,support.point.y+.65f));
+            }
             var e=new GameObject(drone?"Gang guard robot":"Gang hangar guard").AddComponent<AncientEnemy>();e.Initialize(drone?4:0);e.ConfigureDistrict(1,false);e.transform.position=point;game.enemies.Add(e);guards.Add(e);
         }
         public int NearbyGuards(float x)
-        {int n=0;foreach(var guard in guards)if(guard&&guard.IsAlive&&Mathf.Abs(guard.transform.position.x-x)<35)n++;return n;}
+        {int n=0;foreach(var guard in game.enemies)if(guard&&guard.IsAlive&&!guard.IsBoss&&guard.DistrictFloor==1&&Mathf.Abs(guard.transform.position.x-x)<35)n++;return n;}
         void Update()
         {
             if(!game||!game.hero||!game.Story||game.Paused)return;
@@ -146,7 +160,7 @@ namespace Plugin.AncientCivilization
         AncientGame game;AncientLivingDistrict district;Vector2 origin,locked;bool robot;LineRenderer cone,beam;float scan,alarm,cooldown;SpriteRenderer lamp;
         public void Initialize(AncientGame g,AncientLivingDistrict d,Vector2 point,bool robotGuard)
         {
-            game=g;district=d;origin=point;robot=robotGuard;transform.position=point;
+            game=g;district=d;origin=point;robot=robotGuard;transform.position=point;scan=point.x*.037f;
             lamp=AncientArt.Display("Searchlight lamp",AncientLivingArt.Part(6),point,5);lamp.transform.SetParent(transform,true);
             cone=game.Line("Searchlight cone",new Color(1,.8f,.3f,.3f),.05f,4);cone.transform.SetParent(transform,true);cone.positionCount=3;
             beam=game.Line("Searchlight security laser",AncientGame.Orange,.8f,14);beam.transform.SetParent(transform,true);beam.enabled=false;
@@ -156,7 +170,7 @@ namespace Plugin.AncientCivilization
         {
             if(!game||!game.hero||!game.Story)return;
             bool near=game.Story.CurrentFloor==1&&Mathf.Abs(game.hero.transform.position.x-origin.x)<30;lamp.enabled=cone.enabled=near;
-            if(!near){beam.enabled=false;return;}if(game.Paused)return;
+            if(!near){alarm=0;beam.enabled=false;return;}if(game.Paused)return;
             float dt=Time.deltaTime;scan+=dt;cooldown=Mathf.Max(0,cooldown-dt);
             float a=-Mathf.PI*.5f+Mathf.Sin(scan*.65f)*.65f;Vector2 direction=new Vector2(Mathf.Cos(a),Mathf.Sin(a));
             for(int i=0;i<3;i++)

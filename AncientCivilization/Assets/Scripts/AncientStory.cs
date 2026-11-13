@@ -11,6 +11,7 @@ namespace Plugin.AncientCivilization
         public int CurrentFloor {get;private set;}
         public bool InUpperCity {get{return CurrentFloor>0;}}
         public bool LiftBusy {get{return liftMenu||liftTravelling;}}
+        public bool NearLiftTerminal {get{return Stage>=8&&CurrentFloor<4&&game&&game.hero&&Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f;}}
         bool choiceOpen;string choicePrompt;string[] choiceEvidence,choiceOptions;Action<int> choiceAction;
         bool liftMenu,liftTravelling;int liftDestination;float liftElapsed;
         float LiftX
@@ -18,7 +19,10 @@ namespace Plugin.AncientCivilization
             get
             {
                 float entry=AncientCityLayout.Entry(CurrentFloor),exit=AncientChapterLayout.ExitLift(CurrentFloor);
-                return game&&game.hero&&Mathf.Abs(game.hero.transform.position.x-exit)<Mathf.Abs(game.hero.transform.position.x-entry)?exit:entry;
+                if(!game||!game.hero)return entry;
+                float player=game.hero.transform.position.x,nearest=Mathf.Abs(player-exit)<Mathf.Abs(player-entry)?exit:entry;
+                if(CurrentFloor==1&&Mathf.Abs(player-AncientChapterLayout.LivingApproachLift)<Mathf.Abs(player-nearest))nearest=AncientChapterLayout.LivingApproachLift;
+                return nearest;
             }
         }
         public AncientTruck Truck {get;private set;}
@@ -302,7 +306,7 @@ namespace Plugin.AncientCivilization
         }
         public bool TryUseLift()
         {
-            if(Stage<8||(game.Finale&&game.Finale.Active)||CurrentFloor==4||!game.hero||Mathf.Abs(game.hero.transform.position.x-LiftX)>2.5f)return false;
+            if(!NearLiftTerminal||(game.Finale&&game.Finale.Active))return false;
             if(DialogueOpen||LiftBusy)return true;
             if(game.hero.bike){game.Notice("오토바이를 주차한 뒤 이동 엘리베이터에 탑승하세요.");return false;}
             if(!game.hero.IsOnGround){game.Notice("지면에 착지한 뒤 엘리베이터를 이용하세요.");return true;}
@@ -319,8 +323,8 @@ namespace Plugin.AncientCivilization
         {
             bool firstArrival=liftDestination==1&&Stage==8;
             CurrentFloor=liftDestination;if(firstArrival)Stage=9;
-            bool finished=AncientCampaignRules.FloorCount(game.Campaign.CompletedMask,CurrentFloor)==4;
-            Vector2 arrival=new Vector2(finished?AncientChapterLayout.ExitLift(CurrentFloor):AncientCityLayout.Entry(CurrentFloor),1.3f);
+            int finishedCases=AncientCampaignRules.FloorCount(game.Campaign.CompletedMask,CurrentFloor);
+            Vector2 arrival=new Vector2(AncientCityLayout.LiftArrivalX(CurrentFloor,finishedCases,game.City.Cleared),1.3f);
             AncientGame.SetSaved("cityFloor",CurrentFloor);AncientGame.SetSaved("upperCity",InUpperCity?1:0);AncientGame.SetSaved("questStage",Stage);
             game.hero.TravelTo(arrival);game.City.OnEnterFloor();game.SetLiftCheckpoint(CurrentFloor,arrival);game.Campaign.EnterFloor();
             Persist();game.SnapCameraToHero();liftTravelling=false;game.BlockGameplayInput();
@@ -395,7 +399,7 @@ namespace Plugin.AncientCivilization
                     {portrait=-100-npc.Id;break;}
                 if(speakers[i]=="비서실장")portrait=-3;
                 if(speakers[i].Contains("작업반장")||speakers[i].Contains("재하"))portrait=-104;
-                script[i]=new Line(speakers[i],words[i],speakers[i]=="백명"?0:speakers[i]=="통신관"?1:portrait);
+                script[i]=new Line(speakers[i],words[i],IsHero(speakers[i])?0:speakers[i]=="통신관"||speakers[i]=="사령관"?1:portrait);
             }
             Talk(done,script);
         }
@@ -414,7 +418,17 @@ namespace Plugin.AncientCivilization
             else if(floor==3)
                 Talk(done,new Line("통신관","구역은 확보했다. 하지만 네 포인트 심사가 보류됐다. 최상층은 승진 대상도 아니야. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
                     new Line("백명","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
-            else if(floor==1)Talk(done,new Line("백 경위","코어와 거래 원장을 확보했습니다. 조직이 훔친 물량을 합쳐도 미수령량과 맞지 않습니다.",0),new Line("사령관","원장의 수령처 수정 기록은 행정구로 이어진다. 동쪽 엘리베이터에서 올라가 확인해라.",1));
+            else if(floor==1)Talk(done,
+                new Line("백 경위","기계는 멈췄다. 코어에서 손 떼고 내려와. 더 다칠 사람은 없어야 한다.",0),
+                new Line("두목","승인 도장이 찍힌 코어야. 정상 출력이라고 했는데 왜 이렇게 된 거지?",-3),
+                new Line("백 경위","미완성 코어를 무기에 넣은 건 네 선택이다. 훔친 코어와 거래 장부부터 내놔.",0),
+                new Line("두목","원장은 조종석 밑에 있어. 받은 수량은 전부 적었다. 수령처를 바꾼 건 내가 아니야.",-3),
+                new Line("백 경위","바뀌기 전 수령처도 남겼나?",0),
+                new Line("두목","진료소, 배급소, 생산장. 행정구 승인 번호가 붙으면 그 줄이 한꺼번에 지워졌어.",-3),
+                new Line("백 경위","사령관님, 코어와 원장을 확보했습니다. 조직이 훔친 물량을 합쳐도 미수령량과 맞지 않습니다.",0),
+                new Line("사령관","현장 인계반을 보내겠다. 회수한 코어는 필요한 주민에게 먼저 돌리고, 원본은 네가 보관해라.",1),
+                new Line("백 경위","도둑을 잡는 것만으로는 끝나지 않는군요. 수령처를 고친 사람을 확인하겠습니다.",0),
+                new Line("사령관","수정 기록은 행정구로 이어진다. 출입 권한은 열렸다. 동쪽 엘리베이터에서 올라가라.",1));
             else Talk(done,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 동쪽 이동 엘리베이터에서 목적지를 선택해라.",1));
         }
         public void TravelBySidePassage(int destination)
@@ -481,6 +495,7 @@ namespace Plugin.AncientCivilization
             Transform actor=null;float offset=2;
             bool found=(game.Production&&game.Production.TryDialogueActor(speaker,out actor,out offset));
             if(!found)found=game.ProductionResidents&&game.ProductionResidents.TryDialogueActor(speaker,out actor,out offset);
+            if(!found)found=game.LowerRoute&&game.LowerRoute.TryActor(speaker,out actor,out offset);
             if(!found)found=game.Living&&game.Living.TryActor(speaker,out actor,out offset);
             if(!found)found=game.City&&game.City.TryDialogueActor(speaker,out actor,out offset);
             if(!found)found=game.Campaign&&game.Campaign.TryDialogueActor(speaker,out actor,out offset);
@@ -548,7 +563,7 @@ namespace Plugin.AncientCivilization
                         GUI.Label(new Rect(w/2-236,24,472,52),cachedObjective,small);
                     }
                     GUI.Label(new Rect(28,200,285,42),cachedResidence,small);
-                    if(Stage>=8&&CurrentFloor<4&&Mathf.Abs(game.hero.transform.position.x-LiftX)<2.5f)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
+                    if(NearLiftTerminal)GUI.Label(new Rect(w/2-260,h-145,520,35),(game.hero.bike?"먼저 오토바이를 주차하세요":"E / 이동 엘리베이터 · 목적 층 선택"),nameStyle);
                 }
             }
             GUI.matrix=old;GUI.color=color;GUI.depth=depth;

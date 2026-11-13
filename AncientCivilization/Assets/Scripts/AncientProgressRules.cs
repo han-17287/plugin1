@@ -24,8 +24,11 @@ namespace Plugin.AncientCivilization
         }
         public static bool KnowsEvidence(int evidence,int stage,int cityCleared)
         {return KnowsEvidence(evidence,stage,cityCleared,0);}
-        public static bool KnowsEvidence(int evidence,int stage,int cityCleared,int cases)
+        public static bool KnowsEvidence(int evidence,int stage,int cityCleared,int cases,int campaign=0)
         {
+            // The continuous living route now establishes the clinic shortage
+            // before the optional legacy backup-power terminal is visited.
+            if(evidence==6&&(campaign&(1<<4))!=0)return true;
             if(evidence>=6&&evidence<=8)return (cases&(1<<(evidence-6)))!=0;
             if(evidence==0)return stage>=1;if(evidence==1)return stage>=8;if(evidence==2)return stage>=8;
             if(evidence==3)return stage>=9;if(evidence==4)return (cityCleared&(1<<3))!=0;

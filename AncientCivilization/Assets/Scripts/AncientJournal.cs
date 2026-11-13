@@ -13,7 +13,7 @@ namespace Plugin.AncientCivilization
             "첫 윗층의 엘리베이터에서도 C-00이 보인다. 생산소 배정과 이동 관제가 같은 체계인가?",
             "최상층은 포인트를 모아도 승진으로 진입할 수 없다. 상층 거주구 동쪽의 외벽 샛길을 이용한다.",
             "샛길의 저격수도 포인트가 동결되고 정식 출입을 거부당했다. 서로 더 싸울 이유가 없음을 확인했을 뿐, 이름과 과거는 알지 못한다.",
-            "비상 전력을 복구한 진료소 기록에 따르면, 코어 미수령은 도난 사건 전부터 시작됐다.",
+            "진료소의 배정 기록에 따르면, 코어 미수령은 오늘의 도난 사건 전부터 시작됐다. 이번 절도만으로 모든 부족분이 설명되지는 않는다.",
             "원본 캐시와 사본을 대조했다. 수량은 같은데 C-00 승인 뒤 수령처만 지워졌다.",
             "재배치 명단과 하층 배정 물량의 번호가 같다. 코어는 주민 배급이 아니라 최상층 직할 운송에 묶였다.",
             "중앙행정정보처리기관 회장의 노트에는 최하층 아래의 매몰 문명이 적혀 있다. 기동 준비된 코어의 보호부를 깨면 연쇄 활성화한다는 회수 계획의 경고를 확인했다."};
@@ -49,7 +49,7 @@ namespace Plugin.AncientCivilization
                 float row=y+136;
                 for(int i=evidencePage*6;i<Mathf.Min(entries.Length,evidencePage*6+6);i++)
                 {
-                    bool known=i==9?(game.Finale.Phase>0||AncientGame.Saved("firstRunCleared")!=0):AncientProgressRules.KnowsEvidence(i,game.Story.Stage,game.City.Cleared,game.Cases.CompleteMask);
+                    bool known=i==9?(game.Finale.Phase>0||AncientGame.Saved("firstRunCleared")!=0):AncientProgressRules.KnowsEvidence(i,game.Story.Stage,game.City.Cleared,game.Cases.CompleteMask,game.Campaign.CompletedMask);
                     GUI.color=known?new Color(.8f,.93f,.95f):new Color(.4f,.5f,.55f);
                     GUI.Label(new Rect(x+28,row,880,24),(known?"● ":"○ ")+(known?names[i]:"미확인 단서"),small);
                     GUI.Label(new Rect(x+28,row+25,880,38),known?entries[i]:"조사와 사건 진행을 통해 확인합니다.",small);row+=58;
@@ -69,7 +69,8 @@ namespace Plugin.AncientCivilization
                     string state=current?"현재 위치":floor==4?"정식 출입 불가":ready?"엘리베이터 해금":approved?"통행 승인 · 하층 운송로 조사 중":"통행 잠김";
                     string line=AncientCityLayout.Name(floor)+" / "+state+" / 보급품 "+AncientProgressRules.CachesOnFloor(game.Exploration.CacheMask,floor)+" / 2";
                     GUI.color=current?new Color(1,.85f,.2f):visited?Color.white:new Color(.5f,.6f,.65f);
-                    GUI.Label(new Rect(x+28,y+145+floor*64,880,50),line,text);
+                    GUI.Label(new Rect(x+28,y+145+floor*64,880,28),line,text);
+                    if(floor<2&&game.Playtime)GUI.Label(new Rect(x+28,y+175+floor*64,880,28),game.Playtime.Summary(floor),small);
                 }
                 GUI.color=Color.white;GUI.Label(new Rect(x+28,y+477,880,44),"목적지 이동은 실제 엘리베이터에서 합니다. 최상층은 동쪽 샛길로 침입합니다.",small);
             }

@@ -63,8 +63,8 @@ namespace Plugin.AncientCivilization.EditorChecks
         {
             if(!EditorApplication.isPlaying||!AncientGame.IsQAProfile||!game||game!=AncientGame.Instance||game.Paused)
                 throw new InvalidOperationException("Projectile probes require an isolated QA profile in unpaused Play Mode.");
-            if(game.hero.bike||Input.GetKey(KeyCode.F)||Time.deltaTime<=0)
-                throw new InvalidOperationException("Dismount and leave F untouched during projectile probes.");
+            if(game.hero.bike||Time.deltaTime<=0)
+                throw new InvalidOperationException("Dismount and keep the game running during projectile probes.");
             var hero=game.hero;var body=hero.GetComponent<Rigidbody2D>();Vector2 original=hero.transform.position;
             if(hero.Wired||(game.Sniper&&game.Sniper.InputLocked)||(hero.Combat&&(hero.Combat.Firing||hero.Combat.Charging||hero.Combat.BladeAnimating||hero.Combat.BladeBuffered)))
                 throw new InvalidOperationException("Projectile probes require an idle hero without a wire, attack, charge or encounter lock.");

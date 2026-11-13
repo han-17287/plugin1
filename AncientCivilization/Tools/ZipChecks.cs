@@ -72,10 +72,10 @@ class ZipChecks
         foreach(int hz in new[]{30,50,60,120,240})
         {
             Check(!OldMovingArrival(17,hz),"The regression reproduces the former endless carrierSpeed*deltaTime gap at "+hz+"Hz");
-            foreach(float carrier in new[]{-17f,-7f,0f,7f,17f})foreach(float origin in new[]{0f,30000f,31570f})
+            foreach(float carrier in new[]{-17f,-7f,0f,7f,17f})foreach(float origin in new[]{0f,30000f,31570f,AncientChapterLayout.OpeningChaseStart,AncientChapterLayout.OpeningChaseEnd-30,AncientFinaleRules.Start,AncientFinaleRules.Finish-30})
                 for(int gap=8;gap<=14;gap++)MovingTrace(gap,carrier,origin,new[]{1f/hz});
         }
-        foreach(float carrier in new[]{0f,7f,17f})for(int gap=8;gap<=14;gap++)MovingTrace(gap,carrier,30000,new[]{1/60f,.1f,1/144f,.2f});
+        foreach(float origin in new[]{AncientChapterLayout.OpeningChaseStart,AncientFinaleRules.Start})foreach(float carrier in new[]{0f,7f,17f})for(int gap=8;gap<=14;gap++)MovingTrace(gap,carrier,origin,new[]{1/60f,.1f,1/144f,.2f});
         Check(AncientZipRules.ReachesThisStep(1,0,1,0)&&AncientZipRules.ReachesThisStep(1,0,2,0),"Exact arrival and a forward segment through the arrival circle finish once");
         Check(!AncientZipRules.ReachesThisStep(1,0,-2,0)&&!AncientZipRules.ReachesThisStep(1,0,0,2),"Backward and perpendicular movement cannot claim a forward target");
         Check(!AncientZipRules.ReachesThisStep(1,0,.9f,0)&&AncientZipRules.ReachesThisStep(1,0,.96f,0),"A collision-clipped short step finishes only when its actual endpoint reaches the arrival tolerance");

@@ -7,7 +7,7 @@ namespace Plugin.AncientCivilization
     public static class AncientProductionLayout
     {
         public const float TutorialLeft=-244,TutorialSpawn=-234,TutorialRight=118,StockX=92;
-        public const float ChaseStart=30000,ChaseEnd=31600,RoadY=0,Ceiling=10,TunnelCeiling=11;
+        public const float ChaseStart=AncientChapterLayout.OpeningChaseStart,ChaseEnd=AncientChapterLayout.OpeningChaseEnd,RoadY=0,Ceiling=10,TunnelCeiling=11;
         public const float BreachX=104,ConveyorLeft=-175,ConveyorRight=-159;
         public const float JumpCrateX=-185,JumpCrateWidth=1.4f,JumpCrateHeight=.55f;
         public struct Span

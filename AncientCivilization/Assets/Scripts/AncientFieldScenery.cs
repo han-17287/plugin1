@@ -17,33 +17,9 @@ namespace Plugin.AncientCivilization
                 else if(floor==1)
                 {
                     int districtCase=AncientCampaignRules.RoomAt(x),zone=districtCase>=4&&districtCase<=7?districtCase-4:0;
-                    if(zone==0)
-                    {
-                        B(game,x,4,6,5,new Color(.24f,.32f,.34f));B(game,x,4,5.5f,4.5f,dark);
-                        B(game,x-1.7f,3.7f,1.2f,.6f,white);B(game,x+.8f,3.5f,2.9f,.45f,white*.8f);
-                        B(game,x,2.8f,5.7f,.15f,steel);B(game,x-2.4f,4.8f,.12f,2.5f,steel);
-                        B(game,x+2,6.3f,.65f,.2f,new Color(.7f,.25f,.23f));B(game,x+2,6.3f,.2f,.65f,new Color(.7f,.25f,.23f));
-                    }
-                    else if(zone==1)
-                    {
-                        for(int stack=0;stack<3;stack++)
-                        {float y=1.1f+stack*1.7f,bx=x+(stack%2)*.8f;B(game,bx,y,5.2f,1.1f,new Color(.36f,.23f,.17f));B(game,bx,y+.15f,4.7f,.45f,steel);B(game,bx-1.5f,y-.5f,.8f,.8f,dark);B(game,bx+1.5f,y-.5f,.8f,.8f,dark);}
-                        B(game,x,7.8f,.22f,2.4f,steel);B(game,x+.65f,6.7f,1.5f,.2f,new Color(.7f,.49f,.2f));
-                    }
-                    else if(zone==2)
-                    {
-                        B(game,x,4.3f,6,7.8f,steel);B(game,x,4.3f,5.4f,7.2f,dark);
-                        for(int row=0;row<6;row++)B(game,x,1.2f+row*1.1f,5.3f,.12f,new Color(.27f,.36f,.39f));
-                        B(game,x-2,7.5f,.45f,.45f,AncientGame.Orange);B(game,x+2,7.5f,.45f,.45f,AncientGame.Orange);
-                        B(game,x,8.4f,7,.18f,new Color(.5f,.35f,.16f));
-                    }
-                    else
-                    {
-                        B(game,x,3.4f,6,5.4f,new Color(.18f,.24f,.32f));
-                        for(int row=0;row<2;row++)for(int col=0;col<3;col++)
-                        {float cx=x-1.9f+col*1.9f,cy=1.8f+row*2.1f;B(game,cx,cy,1.6f,1.8f,dark);B(game,cx,cy,.55f,1.2f,new Color(.13f,.42f,.63f));B(game,cx,cy,.15f,1.1f,AncientGame.Cyan);}
-                        B(game,x,7.4f,7.5f,.3f,steel);B(game,x,8.8f,.18f,2.5f,steel);
-                    }
+                    // A cached native-pixel facade replaces many repeated box renderers.
+                    // The road and all gameplay props retain their separate colliders.
+                    game.WorldBatch.Sprite(AncientLivingWallArt.Get(zone,i+variant),new Vector2(x,0),Vector2.one,new Color(.84f,.9f,.92f),-5);
                 }
                 else if(floor==2)
                 {

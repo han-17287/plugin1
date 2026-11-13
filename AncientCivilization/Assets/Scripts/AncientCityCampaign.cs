@@ -72,6 +72,7 @@ namespace Plugin.AncientCivilization
                 game.StaticBox("Illegal maintenance hatch",new Vector2(x+4,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
                 game.StaticBox("Sealed chairman office",new Vector2(right-2,2),new Vector2(2,4),new Color(.23f,.13f,.18f),1);
             }
+            if(floor==1)game.BuildLiftTerminal(AncientChapterLayout.LivingApproachLift);
             var gate=BuildExitGate("District arena exit",AncientCityLayout.ArenaRight(floor)+.45f);
             exitGates[floor]=gate.GetComponent<SpriteRenderer>();exitSolids[floor]=gate.GetComponent<BoxCollider2D>();
             var entry=BuildExitGate("District arena entrance",AncientCityLayout.ArenaLeft(floor)-.45f);

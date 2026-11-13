@@ -317,6 +317,9 @@ class RulesChecks
         Check(AncientFinaleRules.CanBoardEnd(AncientFinaleRules.Finish-7,AncientFinaleRules.Finish-7,4.25f,true),"Standing on the final truck roof triggers the climax");
         Check(!AncientProgressRules.KnowsEvidence(6,9,31,0),"Optional clinic evidence stays unknown until earned");
         Check(AncientProgressRules.KnowsEvidence(6,9,31,1),"Clinic job records its discovered evidence");
+        Check(AncientProgressRules.KnowsEvidence(6,9,0,0,1<<4),"Finishing the living clinic trail records the shortage without forcing a second optional power job");
+        Check(!AncientProgressRules.KnowsEvidence(6,9,0,0,15),"Earlier production investigations do not reveal the living clinic evidence");
+        Check(!AncientProgressRules.KnowsEvidence(7,9,0,0,1<<4)&&!AncientProgressRules.KnowsEvidence(8,9,0,0,1<<4),"A living trail discovery cannot reveal later administrative or residential evidence");
         Check(!AncientProgressRules.KnowsEvidence(7,9,31,1),"Clinic job cannot unlock the administrative evidence");
         Check(AncientProgressRules.KnowsEvidence(7,9,31,2),"Original/snapshot comparison records the second field case");
         Check(AncientProgressRules.KnowsEvidence(8,9,31,4),"Guarded terminal records its own field evidence");
@@ -358,8 +361,8 @@ class RulesChecks
             Check(!AncientCampaignRules.CanStart(campaignMask,id,floor,0,31),"Field cases cannot bypass the opening tutorial");
             Check(mission.Tasks.Length==3&&AncientCampaignData.Details[id].Length==3,"Every case has three concrete objectives and evidence details");
             Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+6)==id,"Each continuous case entry maps to the correct objective owner");
-            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+AncientCampaignRules.RoomWidth-1)==id,"Each field exit remains in its room");
-            Check(AncientCampaignRules.RoomAt(AncientCampaignRules.Left(id)+AncientCampaignRules.RoomWidth+(AncientCampaignRules.RoomStride-AncientCampaignRules.RoomWidth)*.5f)==-1,"A physical connecting bridge is not mistaken for an active objective room");
+            Check(AncientCampaignRules.RoomAt(AncientChapterLayout.CaseRight(id)-1)==id,"Each field exit remains in its room");
+            Check(AncientCampaignRules.RoomAt(AncientChapterLayout.CaseRight(id)+AncientChapterLayout.BridgeWidth*.5f)==-1,"A physical connecting bridge is not mistaken for an active objective room");
             Check(AncientCityLayout.VisualSector(AncientCampaignRules.Left(id)+42)==floor,"Field scenery displays on its actual city floor");
             campaignMask=AncientCampaignRules.Claim(campaignMask,id);
             Check(AncientCampaignRules.Claim(campaignMask,id)==campaignMask,"Field reward claim is idempotent");
@@ -455,7 +458,7 @@ class RulesChecks
             }
             Check(AncientCampaignRules.ResidentVisible(citizen.Id,mission,7),"The static resident replaces the moving escort as soon as the rescue finishes");
             Check(AncientCampaignRules.ResidentVisible(citizen.Id,-1,0)&&AncientCampaignRules.ResidentVisible(citizen.Id,mission+1,3),"Other cases and elevator travel do not hide an available resident");
-            float exit=AncientCampaignRules.Left(mission)+AncientCampaignRules.RoomWidth-16;
+            float exit=AncientChapterLayout.CaseRight(mission)-16;
             Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,0,7)==exit,"Finishing escort tasks moves optional dialogue to the actual rescue exit before case handoff");
             Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,0,4)==exit,"Saved rescue task progress keeps the resident at the exit after floor travel or reload");
             Check(AncientCampaignRules.ResidentPositionX(citizen.Id,citizen.X,1<<mission,0)==exit,"Completed-case saves restore the rescued resident even without cached task progress");

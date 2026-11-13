@@ -3,7 +3,7 @@ using System;
 namespace Plugin.AncientCivilization
 {
     // Three authored traversal sections replace each short investigation interior.
-    // Coordinates are local to the full field room; existing city/boss coordinates stay unchanged.
+    // Lower districts contain four traversable blocks per sector. Upper districts retain one.
     public static class AncientFieldExpansion
     {
         public const int SectorCount=3,SectorSpan=208,Width=SectorCount*SectorSpan,Stride=Width+64,RouteCount=27;
@@ -31,6 +31,35 @@ namespace Plugin.AncientCivilization
             new[]{"흔적 정비대","미승인 우회로","회장실 전방교"},
             new[]{"연구 색인고","회수 승인실","출발 관제실"}
         };
+        public static int Blocks(int mission){return mission>=0&&mission<8?4:1;}
+        public static int Span(int mission){return SectorSpan*Blocks(mission);}
+        public static int WidthFor(int mission){return SectorCount*Span(mission);}
+        public static float SectorStart(int mission,int sector){return Sector(sector)*Span(mission);}
+        public static int SectorAt(int mission,float localX)
+        {return SectorAt(localX/Blocks(mission));}
+        public static float EntranceOf(int mission,int sector){return SectorStart(mission,sector)+6;}
+        public static float ExitOf(int mission,int sector){return SectorStart(mission,sector)+Span(mission)-12;}
+        public static AncientTraversalLayout.Ledge GroundRoad(int mission,int sector)
+        {float start=SectorStart(mission,sector);return new AncientTraversalLayout.Ledge(start,start+Span(mission),0);}
+        public static AncientTraversalLayout.Ledge BlockLanding(int mission,int sector,int block,bool end)
+        {float start=SectorStart(mission,sector)+Math.Max(0,Math.Min(Blocks(mission)-1,block))*SectorSpan;return new AncientTraversalLayout.Ledge(start+(end?180:0),start+(end?208:14),0);}
+        static readonly float[,] ProductionHeights={
+            {.6f,1.2f,2f,3f,3.4f,2f,1.2f,2f,1f},
+            {.8f,1.8f,3f,4.2f,3.4f,2.4f,3.2f,2f,.8f},
+            {.6f,1.6f,2.8f,4f,3.3f,2.4f,1.5f,2.4f,1.1f}};
+        static readonly float[,] LivingHeights={
+            {.6f,1.6f,2.7f,3.8f,3f,2.2f,3.1f,1.8f,.8f},
+            {.8f,2f,3.3f,4.4f,3.2f,2f,1.4f,2.5f,1f},
+            {.6f,1.4f,2.6f,3.6f,3.1f,2.2f,3.3f,2.1f,.8f}};
+        public static AncientTraversalLayout.Ledge BlockSegment(int mission,int sector,int block,int index)
+        {
+            mission=Math.Max(0,Math.Min(19,mission));block=Math.Max(0,Math.Min(Blocks(mission)-1,block));index=Math.Max(0,Math.Min(8,index));
+            var ledge=Segment(mission,sector,index);float shift=(block-(Blocks(mission)-1))*SectorSpan,top=ledge.top;
+            if(mission<8&&block<3&&IsJumpSector(mission,sector))top=(mission==3?ProductionHeights:LivingHeights)[block,index]+.15f;
+            return new AncientTraversalLayout.Ledge(ledge.left+shift,ledge.right+shift,top);
+        }
+        public static AncientTraversalLayout.Ledge BlockExpertSegment(int mission,int sector,int block,int index)
+        {var support=BlockSegment(mission,sector,block,index);return new AncientTraversalLayout.Ledge(support.left+1,support.left+3.2f,Math.Max(6.2f,support.top+2.45f));}
         static int Sector(int sector){return Math.Max(0,Math.Min(SectorCount-1,sector));}
         public static float SectorStart(int sector){return Sector(sector)*SectorSpan;}
         public static int SectorAt(float localX)
@@ -52,9 +81,9 @@ namespace Plugin.AncientCivilization
         {float start=SectorStart(sector);return new AncientTraversalLayout.Ledge(start+SectorSpan-28,start+SectorSpan,0);}
         public static AncientTraversalLayout.Ledge Segment(int mission,int sector,int index)
         {
-            int section=Sector(sector),row=(Math.Max(0,Math.Min(19,mission))+section*7)%20;
+            mission=Math.Max(0,Math.Min(19,mission));int section=Sector(sector),row=(mission+section*7)%20;
             var ledge=AncientFieldLayout.Segment(row,index);
-            int slot=Math.Max(0,Math.Min(8,index));float offset=SectorStart(section);
+            int slot=Math.Max(0,Math.Min(8,index));float offset=SectorStart(mission,section)+(Blocks(mission)-1)*SectorSpan;
             float variation=ledge.left-(16+slot*11.1f),left=offset+16+slot*18.4f+variation*.35f;
             float width=15+(ledge.right-ledge.left-8)*.8f;
             return new AncientTraversalLayout.Ledge(left,left+width,IsJumpSector(mission,section)?ledge.top+section*.15f:0);
@@ -116,7 +145,7 @@ namespace Plugin.AncientCivilization
                 var landing=Segment(mission,section,slot==0?2:6);
                 x=(landing.left+landing.right)*.5f;y=landing.top;return;
             }
-            x=SectorStart(section)+EncounterOffsets[Math.Max(0,Math.Min(3,kind)),section*2+slot];y=0;
+            x=SectorStart(mission,section)+(Blocks(mission)-1)*SectorSpan+EncounterOffsets[Math.Max(0,Math.Min(3,kind)),section*2+slot];y=0;
         }
         public static int EncounterType(int floor,int kind,int sector,int enemy)
         {
@@ -131,17 +160,20 @@ namespace Plugin.AncientCivilization
         // A fast wire move must not abandon a rescued resident. Distant catch-up
         // only crosses cleared ground sectors, and never crosses an unearned gate.
         public static float EscortStep(float witness,float player,float playerSpeed,float deltaTime,int tasks,int defeated,bool danger)
+        {return EscortStep(-1,witness,player,playerSpeed,deltaTime,tasks,defeated,danger);}
+        public static float EscortStep(int mission,float witness,float player,float playerSpeed,float deltaTime,int tasks,int defeated,bool danger)
         {
+            float width=WidthFor(mission);
             if(danger||!Finite(witness)||!Finite(player)||!Finite(playerSpeed)||!Finite(deltaTime)||deltaTime<=0||player<=witness+1.2f)return witness;
-            float distance=player-witness,target=Math.Min(Width-16,player-1.2f);
+            float distance=player-witness,target=Math.Min(width-16,player-1.2f);
             int checkpoint=MaximumCheckpoint(tasks,defeated);
-            target=Math.Min(target,checkpoint>=SectorCount-1?Width-16:SectorStart(checkpoint+1)-1.4f);
+            target=Math.Min(target,checkpoint>=SectorCount-1?width-16:SectorStart(mission,checkpoint+1)-1.4f);
             bool far=distance>=12;
             if(far)
             {
-                int section=SectorAt(witness);if(!SectorClear(defeated,section))return witness;
+                int section=SectorAt(mission,witness);if(!SectorClear(defeated,section))return witness;
                 for(int next=section+1;next<SectorCount;next++)if(!SectorClear(defeated,next))
-                {target=Math.Min(target,SectorStart(next)-1.4f);break;}
+                {target=Math.Min(target,SectorStart(mission,next)-1.4f);break;}
             }
             if(target<=witness)return witness;
             float speed=far?Math.Min(18,Math.Max(12,Math.Abs(playerSpeed)+3)):Math.Min(12,Math.Max(4.3f,Math.Abs(playerSpeed)+1));

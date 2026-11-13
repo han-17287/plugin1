@@ -23,10 +23,12 @@ namespace Plugin.AncientCivilization
             return Math.Max(0,Math.Min(damage,hp-floor));
         }
         public void RaiseBarrier(){Barrier=70;}
-        public bool HitBarrier(AncientLivingHit kind)
+        public static int LaserBarrierDamage(float energy)
+        {return float.IsNaN(energy)||float.IsInfinity(energy)||energy<=0?0:Math.Max(1,(int)Math.Floor(Math.Min(100,energy)*.7f));}
+        public bool HitBarrier(AncientLivingHit kind,float energy=100)
         {
             if(Barrier<=0)return false;
-            int hit=kind==AncientLivingHit.Laser?70:kind==AncientLivingHit.Throw?7:kind==AncientLivingHit.Blade?10:0;
+            int hit=kind==AncientLivingHit.Laser?LaserBarrierDamage(energy):kind==AncientLivingHit.Throw?7:kind==AncientLivingHit.Blade?10:0;
             Barrier=Math.Max(0,Barrier-hit);return Barrier==0;
         }
         public AncientLivingAttack Next()
@@ -42,6 +44,19 @@ namespace Plugin.AncientCivilization
             return next==0?AncientLivingAttack.DoubleRocket:next==1?AncientLivingAttack.XBlast:next==2?AncientLivingAttack.Suction:AncientLivingAttack.CrossMissiles;
         }
         public void ResolveSuction(bool overloaded){extraPair=!overloaded;turn=overloaded?3:0;}
+        public static string TelegraphHint(AncientLivingAttack attack)
+        {
+            switch(attack)
+            {
+                case AncientLivingAttack.Bullets:case AncientLivingAttack.Cannon:return "파괴 불가 · 회피";
+                case AncientLivingAttack.Rocket:case AncientLivingAttack.DoubleRocket:return "와이어 반격";
+                case AncientLivingAttack.Missiles:case AncientLivingAttack.CrossMissiles:return "베기 / 회피";
+                case AncientLivingAttack.Leap:return "착지점 회피";
+                case AncientLivingAttack.Grab:return "팔 궤도 회피";
+                case AncientLivingAttack.XBlast:return "빈 공간으로 이동";
+                default:return "와이어 고정 / 레이저";
+            }
+        }
         public static int BulletCount(int phase){return phase>=2?20:10;}
         public static bool InSpotlight(float dx,float dy,float directionX,float directionY,float range,float cosine)
         {float d=dx*dx+dy*dy;return d>.0001f&&d<=range*range&&(dx*directionX+dy*directionY)/Math.Sqrt(d)>=cosine;}

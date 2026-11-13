@@ -143,7 +143,7 @@ namespace Plugin.AncientCivilization
         }
         void ResolveBladeHit()
         {
-            Vector2 origin=BladeOrigin;bool rebound=(game.Living&&game.Living.TryBlade(origin,bladeDirection))||(game.Sniper&&game.Sniper.TryBlade(origin,bladeDirection))||(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
+            Vector2 origin=BladeOrigin;bool rebound=(game.LowerRoute&&game.LowerRoute.TryBlade(origin,bladeDirection))||(game.Living&&game.Living.TryBlade(origin,bladeDirection))||(game.Sniper&&game.Sniper.TryBlade(origin,bladeDirection))||(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
                 var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
@@ -246,11 +246,12 @@ namespace Plugin.AncientCivilization
                 if(i>=game.enemies.Count)continue;
                 var enemy=game.enemies[i];if(!enemy||!enemy.IsAlive)continue;
                 Vector2 target=enemy.AimPoint-beamStart;
-                if(AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,radius,.6f)&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8)&&laserPulse.TryHit(enemy,Time.time)){if(enemy.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Laser,damage);else enemy.Hit(damage,true);}
+                if(AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,radius,.6f)&&!Physics2D.Linecast(beamStart,enemy.AimPoint,1<<8)&&laserPulse.TryHit(enemy,Time.time)){if(enemy.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Laser,damage,laserPulse.Energy);else enemy.Hit(damage,true);}
                 // Hit can synchronously open dialogue or start the automatic sniper finale.
                 if(PulseInterrupted||!Firing){CancelLaser();return;}
             }
             if(game.Sniper)game.Sniper.OnLaser(beamStart,beamEnd,radius,pulseId);
+            if(game.LowerRoute)game.LowerRoute.OnLaser(beamStart,beamEnd,radius);
             if(game.Campaign)game.Campaign.OnLaser(beamStart,beamEnd,radius);
             if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage,radius,pulseId);
             if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage,radius,pulseId);

@@ -66,28 +66,38 @@ namespace Plugin.AncientCivilization
             Vector2 previous=Point;
             if(mode==Mode.Hostile&&!rethrown)
             {Vector2 desired=((Vector2)game.hero.transform.position-previous).normalized*10;velocity=Vector2.MoveTowards(velocity,desired,10*dt);}
-            Vector2 end=previous+velocity*dt;var terrain=Physics2D.Linecast(previous,end,1<<8);if(terrain)end=terrain.point;
+            Vector2 step=velocity*dt,end=previous+step;var terrain=Physics2D.Linecast(previous,end,1<<8);
+            float first=terrain?terrain.fraction:1;
             if(mode==Mode.Flying)
             {
+                AncientEnemy nearest=null;float routeContact=0;bool routeFirst=game.LowerRoute&&game.LowerRoute.TryThrownContact(previous,end,out routeContact);
+                if(routeFirst&&routeContact<first)first=routeContact;else routeFirst=false;
                 for(int i=game.enemies.Count-1;i>=0;i--)
                 {
                     var enemy=game.enemies[i];if(!enemy||!enemy.IsAlive)continue;
-                    float radius=enemy.IsLivingBoss?2.1f:car?1.25f:.8f;Vector2 target=enemy.AimPoint;
-                    if(!AncientLivingRules.BeamHit(previous.x,previous.y,end.x,end.y,target.x,target.y,radius))continue;
-                    if(enemy.IsLivingBoss&&boss&&doubleRocket&&reflections==1&&boss.CanCatchRocket)
+                    float radius=enemy.IsLivingBoss?2.1f:car?1.25f:.8f,contact;Vector2 target=enemy.AimPoint,offset=target-previous;
+                    if(!AncientProjectileRules.CircleEntry(step.x,step.y,offset.x,offset.y,radius,out contact)||contact>=first||Physics2D.Linecast(previous,target,1<<8))continue;
+                    first=contact;nearest=enemy;routeFirst=false;
+                }
+                if(routeFirst&&game.LowerRoute.HitThrown(previous,end))
+                {transform.position=Vector2.Lerp(previous,end,first);Shatter();return;}
+                if(nearest)
+                {
+                    transform.position=Vector2.Lerp(previous,end,first);
+                    if(nearest.IsLivingBoss&&boss&&doubleRocket&&reflections==1&&boss.CanCatchRocket)
                     {mode=Mode.Caught;age=0;locked=game.hero.transform.position;boss.ShowCatch();return;}
-                    if(enemy.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Throw,rocket?68:car?52:36);
-                    else enemy.Hit(car?65:42,true);
-                    transform.position=end;Shatter();return;
+                    if(nearest.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Throw,rocket?68:car?52:36);
+                    else nearest.Hit(car?65:42,true);
+                    Shatter();return;
                 }
             }
             else
             {
-                Vector2 player=game.hero.transform.position;
-                if(AncientLivingRules.BeamHit(previous.x,previous.y,end.x,end.y,player.x,player.y,.9f))
-                {game.hero.Hurt(24);transform.position=end;Shatter();return;}
+                Vector2 player=game.hero.transform.position,offset=player-previous;float contact;
+                if(AncientProjectileRules.CircleEntry(step.x,step.y,offset.x,offset.y,.9f,out contact)&&contact<first&&!Physics2D.Linecast(previous,player,1<<8))
+                {game.hero.Hurt(24);transform.position=Vector2.Lerp(previous,end,contact);Shatter();return;}
             }
-            transform.position=end;transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(velocity.y,velocity.x)*Mathf.Rad2Deg);
+            transform.position=terrain?terrain.point:end;transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(velocity.y,velocity.x)*Mathf.Rad2Deg);
             if(terrain||age>7)Shatter();
         }
         void LateUpdate(){if(Orbiting&&game&&!game.Paused)game.hero.CinematicPose(false,game.hero.Facing);}
