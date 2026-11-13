@@ -137,6 +137,18 @@ namespace Plugin.AncientCivilization
                 default:return "확인한 사실을 그대로 기록하겠습니다.";
             }
         }
+        public static string ShortHint(AncientRouteAction action)
+        {
+            switch(action)
+            {
+                case AncientRouteAction.Blade:return "고정판 베기";
+                case AncientRouteAction.Relay:return "입자 수집 후 레이저";
+                case AncientRouteAction.Ambush:return "경비 2명 제압";
+                case AncientRouteAction.Wire:return "상부 접속점에서 E";
+                case AncientRouteAction.Throw:return "와이어 물체 투척";
+                default:return "E: 증언";
+            }
+        }
         public static string Hint(AncientRouteAction action)
         {
             switch(action)

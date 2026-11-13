@@ -10,6 +10,7 @@ namespace Plugin.AncientCivilization
         readonly List<AncientEnemy> guards=new List<AncientEnemy>(2);
         AncientRouteResidents residents;readonly SpriteRenderer[] devices=new SpriteRenderer[AncientLowerRouteRules.StopCount];
         SpriteRenderer actor,target,supply,gate;BoxCollider2D gateSolid;GUIStyle label;
+        readonly GUIContent promptMeasure=new GUIContent();
         System.Func<int,bool> knownPredicate,availablePredicate;
         public static readonly string[] ProgressKeys=BuildKeys();
         static string[] BuildKeys(){var keys=new string[24];for(int i=0;i<8;i++){keys[i]="lowerStopMask"+i;keys[i+8]="lowerHeardMask"+i;keys[i+16]="lowerActionMask"+i;}return keys;}
@@ -65,7 +66,7 @@ namespace Plugin.AncientCivilization
         bool AvailableConversation(int id)
         {return Known(id)||id>=0&&id<AncientLowerRouteRules.StopCount&&AncientLowerRouteRules.Done(done[id/9],id);}
         public bool TryGuide(out Vector2 p,out string text)
-        {p=Vector2.zero;text="";if(current<0||Stop.Optional)return false;p=Started&&!resolved?Point(current):BasePoint(current)+new Vector2(-6,-.3f);text=Stop.Title+" · "+(!Started||resolved?"E: 대화":AncientLowerRouteData.Hint(Stop.Action));return true;}
+        {p=Vector2.zero;text="";if(current<0||Stop.Optional)return false;p=Started&&!resolved?Point(current):BasePoint(current)+new Vector2(-6,-.3f);text=Stop.Title+" · "+(!Started||resolved?"E: 대화":AncientLowerRouteData.ShortHint(Stop.Action));return true;}
         public void ResetEncounter()
         {
             ClearGuards();spawned=resolved=false;current=-1;
@@ -247,14 +248,16 @@ namespace Plugin.AncientCivilization
             int previous=residents.NearestKnown(availablePredicate);bool archive=previous>=0&&previous!=current;
             if(!archive&&(current<0||!actor.enabled||!residents.InPlace(current)))return;
             if(label==null)label=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=13,alignment=TextAnchor.MiddleCenter,wordWrap=true};
+            float scale=Mathf.Clamp(Mathf.Min(Screen.width/1280f,Screen.height/720f),.8f,2f);label.fontSize=Mathf.RoundToInt(13*scale);
             Vector2 point=archive?(Vector2)residents.At(previous).transform.position+Vector2.up:Started&&!resolved?Point(current):(Vector2)actor.transform.position+Vector2.up;
             Vector3 screen=game.View.WorldToScreenPoint(point+Vector2.up*2.5f);if(screen.z<=0||screen.x<-120||screen.x>Screen.width+120)return;
             string text=archive?Known(previous)?"E · 증언 다시 듣기":"E · 이전 현장 증언 확인":!Started?(Stop.Optional?"선택 · E · ":"E · ")+Stop.Speaker:resolved?"E · 확인하고 계속 이동":AncientLowerRouteData.Hint(Stop.Action);
-            var rect=new Rect(Mathf.Clamp(screen.x-150,12,Mathf.Max(12,Screen.width-312)),Mathf.Clamp(Screen.height-screen.y-36,216,Mathf.Max(216,Screen.height-148)),300,38);
+            promptMeasure.text=text;float width=Mathf.Min(340*scale,Screen.width-24*scale),height=Mathf.Max(38*scale,label.CalcHeight(promptMeasure,width-12*scale)+8*scale);
+            var rect=new Rect(Mathf.Clamp(screen.x-width*.5f,12*scale,Mathf.Max(12*scale,Screen.width-width-12*scale)),Mathf.Clamp(Screen.height-screen.y-height,216*scale,Mathf.Max(216*scale,Screen.height-110*scale-height)),width,height);
             Vector3 lo=game.View.WorldToScreenPoint(game.hero.transform.position+new Vector3(-.6f,-1.15f,0)),hi=game.View.WorldToScreenPoint(game.hero.transform.position+new Vector3(.6f,1.15f,0));
             if(rect.Overlaps(Rect.MinMaxRect(Mathf.Min(lo.x,hi.x),Screen.height-Mathf.Max(lo.y,hi.y),Mathf.Max(lo.x,hi.x),Screen.height-Mathf.Min(lo.y,hi.y))))return;
             Color color=GUI.color;GUI.color=new Color(.05f,.08f,.12f,.88f);GUI.DrawTexture(rect,Texture2D.whiteTexture);
-            GUI.color=Color.white;GUI.Label(rect,text,label);GUI.color=color;
+            GUI.color=Color.white;GUI.Label(new Rect(rect.x+6*scale,rect.y+4*scale,rect.width-12*scale,rect.height-8*scale),text,label);GUI.color=color;
         }
     }
 }

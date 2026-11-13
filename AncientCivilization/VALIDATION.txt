@@ -55,12 +55,13 @@ in temporary copies. The shipping Unity 6000 source keeps .linearVelocity.
 PASS: those 107 runtime files plus all 8 Editor fixtures compile together with
 UNITY_EDITOR, warnings as errors, the same references and narrow Editor API stubs.
 PASS: all 115 temporary source copies match current shipping files except that alias.
-The final visual-only sort-order adjustment was type-checked again; rule logic is unchanged.
+The final sort-order and prompt-layout adjustments were type-checked again;
+all 25 portable suites were rerun successfully after the final source change.
 This is NOT a native Unity 6000 import/build. Native smoke fixtures were NOT executed.
 
 Source fingerprint: SHA256 of UTF-8 lines, sorted by repo-relative Assets/**/*.cs path,
 each line '<SHA256(raw file bytes)>  <repo-relative POSIX path>\n'.
-115-file manifest SHA256: 9edef386908411de1bfc4b18ec157c8ec700b897e2c7ff399c214c031542a104
+115-file manifest SHA256: 83507dd8b60a695a3f0aedc74dfa9c82d4019d740278b4f827fb5c3aa581b3cc
 
 SOURCE-DATA VISUAL REVIEW
 PASS: actual C# layout export contains 8 cases, 24 sectors and 72 stop scripts.

@@ -51,6 +51,7 @@ namespace UnityEngine
         public const float PI=(float)Math.PI,Rad2Deg=180/PI;
         public static float Atan2(float a,float b)=>(float)Math.Atan2(a,b);public static float Sin(float x)=>(float)Math.Sin(x);public static float Cos(float x)=>(float)Math.Cos(x);
         public static float Clamp01(float x)=>Math.Clamp(x,0,1);public static float Sign(float x)=>x>=0?1:-1;
+        public static int RoundToInt(float x)=>(int)Math.Round(x);
     }
     public class Sprite:Object {public int Id;public Sprite(int id=0){Id=id;}}
     public class SpriteRenderer:Component {public bool enabled=true,flipX;public Sprite sprite;public Color color;}
@@ -77,7 +78,8 @@ namespace UnityEngine
         public static Rect MinMaxRect(float x,float y,float right,float top)=>new Rect(x,y,right-x,top-y);public bool Overlaps(Rect r)=>false;
     }
     public class Font:Object{}public enum TextAnchor{MiddleCenter}
-    public class GUIStyle {public Font font;public int fontSize;public TextAnchor alignment;public bool wordWrap;public GUIStyle(){}public GUIStyle(GUIStyle s){}}
+    public class GUIContent {public string text;}
+    public class GUIStyle {public Font font;public int fontSize;public TextAnchor alignment;public bool wordWrap;public GUIStyle(){}public GUIStyle(GUIStyle s){}public float CalcHeight(GUIContent content,float width)=>fontSize*2;}
     public class GUISkin {public GUIStyle label=new GUIStyle();}
     public class Texture2D {public static readonly Texture2D whiteTexture=new Texture2D();}
     public static class GUI {public static GUISkin skin=new GUISkin();public static Color color;public static bool enabled=true;public static bool Button(Rect r,string text,GUIStyle s)=>false;public static void Label(Rect r,string text,GUIStyle s){}public static void DrawTexture(Rect r,Texture2D t){}}
