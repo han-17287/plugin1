@@ -23,6 +23,9 @@ namespace Plugin.AncientCivilization
         }
         public static readonly Ramp[] GentleRamps={new Ramp(-158,-150,0,.8f),new Ramp(-136,-128,.8f,0)};
         public static readonly Span[] RaisedRoad={new Span(-150,-136,.8f)};
+        // Three forgiving maintenance wells teach jump -> wire -> release. A missed
+        // upper landing falls only 1.4m onto a local recovery floor, never a death pit.
+        public static readonly Span[] TutorialRoad={new Span(TutorialLeft,-111,0),new Span(-111,-103,-1.4f),new Span(-103,-91,0),new Span(-91,-83,-1.4f),new Span(-83,-71,0),new Span(-71,-63,-1.4f),new Span(-63,TutorialRight,0)};
         public static readonly Span[] WireShortcut={new Span(-120,-112,3.2f),new Span(-100,-92,4.2f),new Span(-80,-72,4.2f),new Span(-60,-52,3.2f)};
         public static readonly float[] WireHookX={-120.55f,-100.55f,-80.55f,-60.55f};
         public const float WireHookY=8.8f,CatwalkThickness=.18f;
@@ -51,6 +54,7 @@ namespace Plugin.AncientCivilization
             foreach(var ramp in GentleRamps)if(x>=ramp.Left&&x<=ramp.Right)return ramp.Height(x);
             foreach(var span in RaisedRoad)if(x>=span.Left&&x<=span.Right)return span.Top;
             if(Math.Abs(x-JumpCrateX)<=JumpCrateWidth*.5f)return JumpCrateHeight;
+            foreach(var span in TutorialRoad)if(x>span.Left&&x<span.Right)return span.Top;
             return RoadY;
         }
         public static int SectionAt(float x)

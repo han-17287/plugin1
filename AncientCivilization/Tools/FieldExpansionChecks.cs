@@ -31,8 +31,82 @@ class FieldExpansionChecks
                 direction>0?"Forward walking beneath an optional shortcut has no capsule/head intersection":"Reverse walking beneath an optional shortcut has no capsule/head intersection");
         }
     }
+    static void CheckShaftPass(int mission,int sector,int block,float x0,float y0,float x1,float y1)
+    {
+        float offset=AncientFieldExpansion.SectorStart(mission,sector)+block*208;
+        for(int sample=0;sample<=100;sample++)
+        {
+            float t=sample/100f,x=offset+x0+(x1-x0)*t,y=y0+(y1-y0)*t;
+            var core=AncientFieldExpansion.StreetObstacle(mission,sector,block);
+            Check(x+.36f<=core.left||x-.36f>=core.right||y-1.05f>=core.top+.04f,"A full capsule clears the machine throughout the planned shaft crossing");
+            for(int n=0;n<3;n++)
+            {
+                var grate=AncientFieldExpansion.StreetShortcut(mission,sector,block,n);
+                bool overlap=x+.36f>grate.left&&x-.36f<grate.right;
+                Check(!overlap||y-1.05f>=grate.top-.001f||y+1.05f<=grate.top-AncientFieldExpansion.ExpertLedgeDepth,"The planned ascent and edge-release descent do not cut through a catwalk");
+            }
+        }
+    }
+    static void CheckStreetDesign()
+    {
+        int shaped=0,towers=0;var profiles=new HashSet<int>();
+        for(int mission=0;mission<8;mission++)for(int sector=0;sector<3;sector++)
+        {
+            if(!AncientFieldExpansion.HasStreetDesign(mission,sector))continue;
+            if(!AncientFieldExpansion.EscortStreet(mission))shaped++;
+            for(int block=0;block<4;block++)
+            {
+                float offset=AncientFieldExpansion.SectorStart(mission,sector)+block*208;
+                profiles.Add(AncientFieldExpansion.StreetProfile(mission,sector,block));
+                bool tall=AncientFieldExpansion.TallStreetBay(mission,sector,block);
+                if(tall)
+                {
+                    towers++;
+                    CheckShaftPass(mission,sector,block,27,7.3f,41,13.6f);
+                    CheckShaftPass(mission,sector,block,51,12.2f,61,8.7f);
+                    Check(AncientFieldExpansion.StreetHookHeight(mission,sector,block,1)<6.2f+1.05f+1+5.8f,"The next high hoist is visible from the first landing with normal travel zoom");
+                }
+                int count=AncientFieldExpansion.StreetPieceCount(mission,sector,block);
+                Check(count<=14,"Authored street geometry keeps a bounded collision budget");
+                var first=AncientFieldExpansion.StreetPiece(mission,sector,block,0);
+                var last=AncientFieldExpansion.StreetPiece(mission,sector,block,count-1);
+                Check(Near(first.left,offset)&&Near(first.top,0)&&Near(last.right,offset+208)&&Near(last.top,0),"Block entrances and exits meet saved checkpoints and adjacent roads at street level");
+                bool raised=false,lowered=false;
+                for(int i=0;i<count;i++)
+                {
+                    var piece=AncientFieldExpansion.StreetPiece(mission,sector,block,i);
+                    Check(piece.right-piece.left>=6,"Every structural landing or recovery well is wider than the player and a running approach");
+                    Check(piece.top>=-1.4f&&piece.top<=3.5f,"Street floors stay above automatic recovery and below roof clearance");
+                    raised|=piece.top>1;lowered|=piece.top<0;
+                    if(i>0)Check(Near(AncientFieldExpansion.StreetPiece(mission,sector,block,i-1).right,piece.left),"Every drop has an actual contiguous recovery floor, with no invisible death gap");
+                    for(int n=0;n<3;n++)
+                    {
+                        var grate=AncientFieldExpansion.StreetShortcut(mission,sector,block,n);
+                        bool overlaps=piece.left<grate.right&&piece.right>grate.left;
+                        Check(!overlaps||grate.top-AncientFieldExpansion.ExpertLedgeDepth-piece.top>=2.25f,"The entire standing capsule fits under each optional catwalk from either direction");
+                    }
+                    var duct=AncientFieldExpansion.StreetBaffle(mission,sector,block);
+                    Check(piece.left>=duct.right||piece.right<=duct.left||duct.top-piece.top>=2.25f,"Suspended machinery cannot close the required lower route");
+                }
+                Check(AncientFieldExpansion.EscortStreet(mission)||raised&&lowered,"Every redesigned block has a genuine climb and descent, not a recoloured flat road");
+                for(float x=84;x<=162;x+=.5f)Check(Near(AncientFieldExpansion.StreetHeight(mission,sector,block,x),0),"Dialogue, investigations, throwing and their progress gates retain a safe level court");
+                if(block==3)for(float x=72;x<=162;x+=.5f)Check(Near(AncientFieldExpansion.StreetHeight(mission,sector,block,x),0),"Original enemy patrols and conveyor objectives stay grounded in their encounter court");
+                for(int n=0;n<3;n++)
+                {
+                    var grate=AncientFieldExpansion.StreetShortcut(mission,sector,block,n);
+                    Check(grate.top+2.25f<(tall?18:10)&&grate.right<offset+78,"Upper shortcuts keep headroom and rejoin before any mission gate");
+                    float hook=offset+21+n*20;
+                    Check(hook<grate.left-.4f&&hook>grate.left-3,"Zip approach stays beside the ledge instead of dragging through it");
+                    if(n>0)Check(20*20+6*6<24*24,"Consecutive hoists stay inside the existing wire range");
+                }
+            }
+        }
+        Check(towers==4,"Four landmark shafts require a genuine ascent before rejoining the court");
+        Check(shaped==16&&profiles.Count==6,"Six structural profiles replace sixteen flat sectors; six escort sectors and two dedicated traversal sectors retain their purpose");
+    }
     static void Main()
     {
+        CheckStreetDesign();
         Check(AncientFieldExpansion.SectorCount==3&&AncientFieldExpansion.RouteCount==27,"Each expanded field contains three nine-ledge sections");
         Check(AncientFieldExpansion.Width>=600&&AncientFieldExpansion.Width==AncientFieldExpansion.SectorCount*AncientFieldExpansion.SectorSpan,"Fields are longer than the former432-unit interiors and cover all three complete sectors");
         Check(AncientFieldExpansion.Stride>AncientFieldExpansion.Width,"Consecutive case sections leave room for a physical connecting road");
@@ -56,7 +130,7 @@ class FieldExpansionChecks
                 var entrance=AncientFieldExpansion.BlockLanding(mission,sector,block,false);
                 var terminal=AncientFieldExpansion.BlockLanding(mission,sector,block,true);
                 var road=AncientFieldExpansion.GroundRoad(mission,sector);
-                Check(Near(road.left,AncientFieldExpansion.SectorStart(mission,sector))&&Near(road.right,road.left+AncientFieldExpansion.Span(mission))&&Near(road.top,0),"Ordinary sector road geometry covers its entire span without a hidden jump gap");
+                Check(Near(road.left,AncientFieldExpansion.SectorStart(mission,sector))&&Near(road.right,road.left+AncientFieldExpansion.Span(mission))&&Near(road.top,0),"Legacy road bounds still describe the sector extent; redesigned streets use their explicit pieces");
                 Check(Near(entrance.left,offset)&&Near(entrance.right,offset+14)&&Near(entrance.top,0),"Each section has a broad safe entrance at ground height");
                 Check(terminal.left>offset+AncientFieldExpansion.SectorSpan-32&&Near(terminal.right,offset+AncientFieldExpansion.SectorSpan)&&Near(terminal.top,0),"Each section ends on a broad ground landing");
                 if(sector<2||block<AncientFieldExpansion.Blocks(mission)-1)

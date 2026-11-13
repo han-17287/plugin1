@@ -1,15 +1,15 @@
 # PLUGIN · Ancient Civilization
 
-**v0.25.0 — 하층 생산구·생활부 확장 Unity 소스**
+**v0.26.0 — 하층 이동 지형 재설계 Unity 소스**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.25.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.26.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
 
-두 구역의 연속 수사로를 각각 **10,400단위**로 늘리고, **필수 현장 48곳·선택 현장 24곳과 새 화자 48명의 한국어 대화**를 연결했습니다. 현장별 진행 저장, 선택 현장 재방문, 들은 증언 다시 읽기와 실제 플레이 시간 기록을 추가했습니다. **첫 플레이 합계 2시간 30분은 제작 목표이며 실제 Unity 완주로 측정한 시간이 아닙니다.**
+평지 위주였던 하층 일반 구간 16곳을 하역 단차·배관 아래길·지붕·폐차 더미로 바꿨습니다. 그중 네 곳은 **위로 올라 건너 내려오는 수직 정비실**입니다. 초반 연습길에는 얕은 회수 바닥이 있는 운반 틈 세 곳을 추가했습니다. 기존 수사·대화·보스·저장은 유지하며, 호송 구간은 주민이 따라올 수 있는 평지입니다. [지형 변경·확인 사항](AncientCivilization/MAP_REDESIGN_KO.md)
 
 - 생산구: 재고 보고 중 코어 절도 → 자동주행 오토바이/트럭 갑판 전투 → 코어 회수·생존 검거 → 야간 장부·전력 복구·재하 구조·사본 전송. 검거 뒤 무전 지시로 동쪽 수사로가 바로 열립니다.
 - 생활부: 도둑의 흔적을 따라 주거 골목·폐차장·감시 외벽·창고를 통과합니다. 상자·차량 와이어 투척, 탐조등 엄폐, 경비 로봇, 조직원전 뒤 거대 로봇 3페이즈로 이어집니다.
 - 로봇 전투: 체력 68%/34% 전환, 로켓 반격, 부분/풀게이지 레이저 배리어 판정, 흡입 때 천장 와이어 고정, X 공격 중복 피해 방지, 제압 뒤 잔해와 두목 진술을 보완했습니다.
-- 맵: 일반 길은 지상 중심, 지정된 점프 구간은 이동 크레인·반동 부유체·천장 와이어를 사용합니다. 생활부의 용도를 구분하는 도트 배경 8종을 추가했습니다. 경비는 한 번에 둘씩, 역할 조합은 구간에 따라 달라집니다.
+- 맵: 일반 길은 단차와 하부 통로·상부 지름길을 사용하며, 지정된 점프 구간은 이동 크레인·반동 부유체·천장 와이어를 사용합니다. 생활부의 용도를 구분하는 도트 배경 8종을 추가했습니다. 경비는 한 번에 둘씩, 역할 조합은 구간에 따라 달라집니다.
 - 저장: 완료한 수사와 보스 제압을 따로 복구하며, 남은 보스의 잠긴 출구 뒤에 배치되는 구버전 위치 오류를 수정했습니다.
 
 [하층 진행 구조도](AncientCivilization/LowerDistrictOverview.svg) · [현장 목록·목표 시간](AncientCivilization/LOWER_DISTRICTS_KO.md) · [도트 배경 소스 미리보기](AncientCivilization/LowerDistrictWalls.png)

@@ -30,14 +30,14 @@ aside h2{font-size:19px;margin-top:0}.line{padding:10px 0;border-top:1px solid #
 @media(max-width:950px){main{grid-template-columns:1fr}aside{max-height:none}canvas{height:360px}}
 </style>
 <header><h1>PLUGIN / 최하층·하층 지도 데이터 검토</h1>
-<p>연속 이동로 · 필수 현장 48곳 · 선택 현장 24곳 · 첫 플레이 목표 150분</p>
+<p>연속 이동로 · 필수 현장 48곳 · 선택 현장 24곳 · 단차 · 정비 통로 · 지붕 지름길</p>
 <p class="muted">실제 C# 배치와 대사에서 추출한 검토 도면입니다. Unity 실행 화면과 완주 시간 측정 결과가 아닙니다.</p></header>
 <nav><select id="chapter" aria-label="사건 경로"></select><span id="sectors" style="display:flex;gap:8px;flex-wrap:wrap"></span>
 <button id="fit">전체 구간</button><button id="previous">이전 블록</button><button id="next">다음 블록</button></nav>
 <main><section class="map"><canvas id="map" aria-label="현재 경로의 발판과 현장 위치" tabindex="0"></canvas>
 <div class="bar"><span><i class="dot" style="background:#f7bc62"></i>필수 현장 / 미해결 통제선</span><span><i class="dot" style="background:#76b5fb"></i>선택 현장</span><span><i class="dot" style="background:#57d7b2"></i>구간 인계 지점</span></div>
 <div id="stops"></div><p id="hint" class="muted">드래그로 이동 · 휠로 확대 · 현장 버튼으로 대사 확인 · 좌우 방향키로 이동</p></section>
-<aside id="detail"></aside></main><footer>천장 전체에 와이어 가능. 일반 이동로는 바닥 중심, 지정된 두 구간은 크레인·블레이드 반동을 사용하는 점프 경로입니다. 도면의 통제선은 해당 필수 현장을 해결하면 열립니다.</footer>
+<aside id="detail"></aside></main><footer>천장에 와이어 가능. 하역 단차·낮은 배관로·지붕 길과 상부 정비 발판을 이용합니다. 주민 호송 길은 안전한 평지를 유지합니다. 도면의 통제선은 해당 필수 현장을 해결하면 열립니다.</footer>
 <script>
 const data=__DATA__,canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
 const chapter=document.querySelector('#chapter'),sectors=document.querySelector('#sectors'),detail=document.querySelector('#detail');
@@ -51,16 +51,17 @@ function load(){
  sectors.replaceChildren();for(let i=0;i<3;i++){const b=document.createElement('button');b.textContent=cases[caseIndex].sectors[i].name;b.setAttribute('aria-pressed',String(i===sectorIndex));b.onclick=()=>{sectorIndex=i;load()};sectors.append(b)}
  const route=current();centre=route.left+route.width/2;span=route.width+20;selected=-1;
  const stops=document.querySelector('#stops');stops.replaceChildren();for(const stop of route.stops){const b=document.createElement('button');b.textContent=(stop.optional?'선택 · ':'')+stop.title;b.onclick=()=>{centre=stop.x;span=65;showStop(stop)};stops.append(b)}
- detail.innerHTML='<h2>'+escape(route.name)+'</h2><p>'+escape(cases[caseIndex].title)+'</p><p>'+(route.jump?'점프 구간 · 완만한 높이 변화와 중간 착지대':'일반 구간 · 바닥 이동로 중심')+'</p><p>208 단위 블록 4개, 합계 '+route.width+' 단위입니다. 첫 두 현장은 필수이며, 세 번째는 선택입니다. 마지막 블록에서 사건의 주요 단서를 확인합니다.</p><p class="muted">현장 버튼을 선택하면 위치와 대사를 함께 볼 수 있습니다. 가로축과 세로축은 서로 다른 축척입니다.</p>';draw()
+ detail.innerHTML='<h2>'+escape(route.name)+'</h2><p>'+escape(cases[caseIndex].title)+'</p><p>'+(route.jump?'점프 구간 · 완만한 높이 변화와 중간 착지대':'구조물 이동 구간 · 단차와 하부 통로 / 상부 지름길')+'</p><p>208 단위 블록 4개, 합계 '+route.width+' 단위입니다. 첫 두 현장은 필수이며, 세 번째는 선택입니다. 마지막 블록에서 사건의 주요 단서를 확인합니다.</p><p class="muted">현장 버튼을 선택하면 위치와 대사를 함께 볼 수 있습니다. 가로축과 세로축은 서로 다른 축척입니다.</p>';draw()
 }
 function draw(){
  const box=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;canvas.width=Math.round(box.width*dpr);canvas.height=Math.round(box.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
- const w=box.width,h=box.height,pad=32,route=current(),scale=(w-2*pad)/span,ys=(h-100)/15;
+ const w=box.width,h=box.height,pad=32,route=current(),scale=(w-2*pad)/span,ys=(h-100)/23;
  const X=x=>w/2+(x-centre)*scale,Y=y=>h-65-y*ys;ctx.clearRect(0,0,w,h);ctx.font='12px system-ui';
- ctx.fillStyle='#193547';ctx.fillRect(0,Y(11),w,Y(10)-Y(11));ctx.strokeStyle='#43b3c7';ctx.beginPath();ctx.moveTo(0,Y(10));ctx.lineTo(w,Y(10));ctx.stroke();ctx.fillStyle='#89c4d1';ctx.fillText('와이어 천장 Y 10',12,Y(10)-8);
- ctx.strokeStyle='#1a3040';for(let y=-2;y<=8;y+=2){ctx.beginPath();ctx.moveTo(0,Y(y));ctx.lineTo(w,Y(y));ctx.stroke();ctx.fillStyle='#628395';ctx.fillText(String(y),5,Y(y)-4)}
- for(let block=0;block<4;block++){const x=route.left+block*208;ctx.fillStyle=block%2?'#ffffff04':'#ffffff09';ctx.fillRect(X(x),Y(10),208*scale,Y(-3)-Y(10));ctx.fillStyle='#88a9bc';ctx.fillText('블록 '+(block+1),X(x)+8,28)}
+ for(const c of route.ceilings){ctx.fillStyle='#193547';ctx.fillRect(X(c.x),Y(20),(c.right-c.x)*scale,Y(c.y)-Y(20));ctx.strokeStyle='#43b3c7';ctx.beginPath();ctx.moveTo(X(c.x),Y(c.y));ctx.lineTo(X(c.right),Y(c.y));ctx.stroke()}
+ ctx.strokeStyle='#1a3040';for(let y=-2;y<=18;y+=2){ctx.beginPath();ctx.moveTo(0,Y(y));ctx.lineTo(w,Y(y));ctx.stroke();ctx.fillStyle='#628395';ctx.fillText(String(y),5,Y(y)-4)}
+ for(let block=0;block<4;block++){const x=route.left+block*208;ctx.fillStyle=block%2?'#ffffff04':'#ffffff09';ctx.fillRect(X(x),Y(18),208*scale,Y(-3)-Y(18));ctx.fillStyle='#88a9bc';ctx.fillText('블록 '+(block+1),X(x)+8,28)}
  for(const p of route.platforms){ctx.fillStyle=p.depth<.5?'#678c9e':'#2d5367';ctx.fillRect(X(p.x),Y(p.top),(p.right-p.x)*scale,p.depth*ys);ctx.fillStyle='#6ec6cf';ctx.fillRect(X(p.x),Y(p.top),(p.right-p.x)*scale,2)}
+ for(const hook of route.hooks){ctx.strokeStyle="#5de9ff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(X(hook.x),Y(hook.y),4,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1}
  for(const s of route.stops){
    const color=s.optional?'#76b5fb':'#f7bc62',x=X(s.x),y=Y(s.y);
    if(!s.optional){ctx.strokeStyle='#f7bc6266';ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(X(s.gateX),Y(0));ctx.lineTo(X(s.gateX),Y(10));ctx.stroke();ctx.setLineDash([])}
@@ -69,7 +70,7 @@ function draw(){
  }
  const objective=route.objective;ctx.fillStyle='#57d7b2';ctx.fillRect(X(objective.x)-5,Y(objective.y)-5,10,10);
  if(X(objective.x)>5&&X(objective.x)<w-5){ctx.fillText('주요 단서',Math.min(w-70,X(objective.x)-20),Y(objective.y)-20)}
- ctx.fillStyle='#8eacbd';ctx.fillText('X '+(centre-span/2).toFixed(0)+' → '+(centre+span/2).toFixed(0)+' / 세로 Y -3~11',16,h-16);
+ ctx.fillStyle='#8eacbd';ctx.fillText('X '+(centre-span/2).toFixed(0)+' → '+(centre+span/2).toFixed(0)+' / 세로 Y -3~20',16,h-16);
 }
 chapter.onchange=()=>{caseIndex=Number(chapter.value);sectorIndex=0;load()};document.querySelector('#fit').onclick=()=>{centre=current().left+current().width/2;span=current().width+20;draw()};
 function blockStep(n){let b=Math.floor((centre-current().left)/208);b=Math.max(0,Math.min(3,b+n));centre=current().left+b*208+104;span=224;draw()}

@@ -22,9 +22,9 @@ namespace Plugin.AncientCivilization
             {
                 float left=AncientChapterLayout.CaseLeft(id)+AncientFieldExpansion.SectorStart(id,sector)+block*AncientFieldExpansion.SectorSpan;
                 var segment=AncientFieldExpansion.BlockSegment(id,sector,block,3);var second=AncientFieldExpansion.BlockSegment(id,sector,block,6);
-                bool jumping=AncientFieldExpansion.IsJumpSector(id,sector);float baseX=AncientChapterLayout.CaseLeft(id);
-                AddObject(new Vector2(jumping?baseX+(segment.left+segment.right)*.5f:left+52,segment.top+1),sector%2==1);
-                AddObject(new Vector2(jumping?baseX+(second.left+second.right)*.5f:left+148,second.top+1),false);
+                bool jumping=AncientFieldExpansion.IsJumpSector(id,sector);float baseX=AncientChapterLayout.CaseLeft(id),cargoX=AncientFieldExpansion.TallStreetBay(id,sector,block)?58:52;
+                AddObject(new Vector2(jumping?baseX+(segment.left+segment.right)*.5f:left+cargoX,(jumping?segment.top:AncientFieldExpansion.StreetHeight(id,sector,block,cargoX))+1),sector%2==1);
+                AddObject(new Vector2(jumping?baseX+(second.left+second.right)*.5f:left+148,(jumping?second.top:AncientFieldExpansion.StreetHeight(id,sector,block,148))+1),false);
                 if(id>=6)
                 {
                     var support=AncientFieldExpansion.BlockSegment(id,sector,block,4);float coverX=jumping?baseX+(support.left+support.right)*.5f:left+103;
@@ -32,7 +32,7 @@ namespace Plugin.AncientCivilization
                     var cover=game.Box("Searchlight cover column",new Vector2(coverX,support.top+1.8f),new Vector2(1.5f,3.6f),new Color(.17f,.23f,.29f),2);cover.layer=8;cover.AddComponent<BoxCollider2D>();
                 }
                 // Forward environmental clues are visible on the continuous floor, not separate quest-room markers.
-                for(int j=0;j<4;j++)game.StaticBox("Core crate drag trail",new Vector2(left+24+j*36,.035f),new Vector2(2,.07f),new Color(.25f,.62f,.76f),3);
+                for(int j=0;j<4;j++)game.StaticBox("Core crate drag trail",new Vector2(left+24+j*36,(jumping?0:AncientFieldExpansion.StreetHeight(id,sector,block,24+j*36))+.035f),new Vector2(2,.07f),new Color(.25f,.62f,.76f),3);
             }
             for(int i=0;i<5;i++)AddObject(new Vector2(AncientCityLayout.ArenaLeft(1)+3+i*6,1),i==0||i==4);
             for(int i=0;i<12;i++)

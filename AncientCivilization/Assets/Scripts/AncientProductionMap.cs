@@ -87,7 +87,14 @@ namespace Plugin.AncientCivilization
         void BuildTutorial()
         {
             const float left=AncientProductionLayout.TutorialLeft,right=AncientProductionLayout.TutorialRight;
-            game.Platform(left,right,0);game.Ceiling(left-2,128,AncientProductionLayout.Ceiling);
+            foreach(var road in AncientProductionLayout.TutorialRoad)game.Platform(road.Left,road.Right,road.Top);
+            game.Ceiling(left-2,128,AncientProductionLayout.Ceiling);
+            foreach(var road in AncientProductionLayout.TutorialRoad)if(road.Top<0)
+            {
+                B("Maintenance well recessed panel",(road.Left+road.Right)*.5f,-.65f,road.Right-road.Left,1.25f,Back,-5);
+                foreach(float edge in new[]{road.Left-.3f,road.Right+.3f})B("Maintenance well warning rim",edge,.04f,.6f,.08f,Amber,4);
+                Arrow((road.Left+road.Right)*.5f,road.Top+.2f,Teal,.7f);
+            }
             Solid("Production west retaining wall",left-.3f,5,.6f,10);
             B("Production west retaining wall",left-.3f,5,.6f,10,Steel,2);
             foreach(var ramp in AncientProductionLayout.GentleRamps)Ramp(ramp);

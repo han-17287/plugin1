@@ -43,6 +43,82 @@ namespace Plugin.AncientCivilization
         {float start=SectorStart(mission,sector);return new AncientTraversalLayout.Ledge(start,start+Span(mission),0);}
         public static AncientTraversalLayout.Ledge BlockLanding(int mission,int sector,int block,bool end)
         {float start=SectorStart(mission,sector)+Math.Max(0,Math.Min(Blocks(mission)-1,block))*SectorSpan;return new AncientTraversalLayout.Ledge(start+(end?180:0),start+(end?208:14),0);}
+        // Structural street silhouettes, not nine equally spaced floating tiles.
+        // Coordinates are local to a block. Broad 80..164 work courts preserve
+        // witnesses, throw props, combat and unearned progress gates at street level.
+        public static bool HasStreetDesign(int mission,int sector)
+        {return mission>=0&&mission<8&&!IsJumpSector(mission,sector);}
+        static AncientTraversalLayout.Ledge L(float a,float b,float y)
+        {return new AncientTraversalLayout.Ledge(a,b,y);}
+        static readonly AncientTraversalLayout.Ledge[][] Streets={
+            // Loading dock: climb containers, cross a hoist well, descend to the yard.
+            new[]{L(0,16,0),L(16,27,1),L(27,39,2.2f),L(39,51,3.4f),L(51,60,-1.4f),L(60,70,1.6f),L(70,80,.7f),L(80,164,0),L(164,175,1.1f),L(175,186,2.3f),L(186,195,.9f),L(195,208,0)},
+            // Pressure conduit: descend under the machinery and climb its service stairs.
+            new[]{L(0,18,0),L(18,28,-.7f),L(28,43,-1.4f),L(43,54,-.6f),L(54,64,1.2f),L(64,74,1.7f),L(74,80,.7f),L(80,164,0),L(164,176,-.8f),L(176,188,-1.4f),L(188,198,-.6f),L(198,208,0)},
+            // Freight roofs: two broad loading roofs with a lower recovery trench.
+            new[]{L(0,16,0),L(16,26,1.2f),L(26,43,2.5f),L(43,51,-1.4f),L(51,65,3.5f),L(65,74,1.7f),L(74,80,.7f),L(80,164,0),L(164,176,1.2f),L(176,190,2.6f),L(190,199,1.2f),L(199,208,0)},
+            // Tenement stair: roof approach, sheltered lane and a low street exit.
+            new[]{L(0,18,0),L(18,28,.9f),L(28,39,1.8f),L(39,55,3),L(55,66,1.5f),L(66,80,.6f),L(80,164,0),L(164,176,-.7f),L(176,188,-1.4f),L(188,198,-.7f),L(198,208,0)},
+            // Scrap yard: successive broad wrecks and two recovery bays.
+            new[]{L(0,16,0),L(16,28,1.1f),L(28,41,2.2f),L(41,49,-1.4f),L(49,61,3.4f),L(61,71,1.7f),L(71,80,.7f),L(80,164,0),L(164,176,1.2f),L(176,184,-1.4f),L(184,196,1.5f),L(196,208,0)},
+            // Security service lane: descend out of sight, then scale the hangar plinth.
+            new[]{L(0,18,0),L(18,28,-.7f),L(28,46,-1.4f),L(46,57,-.6f),L(57,68,.7f),L(68,80,1.5f),L(80,164,0),L(164,174,1.2f),L(174,186,2.5f),L(186,198,1.2f),L(198,208,0)}
+        };
+        // Explicit sequencing gives each sector a different approach/release rhythm.
+        // Escort cases retain a continuous ground lane; their optional upper route
+        // still rewards the player, without making a rescued worker cross a pit.
+        static readonly int[,] StreetSequence={
+            {0,1,0,2},{1,0,2,0},{2,1,0,2},
+            {1,2,1,0},{2,1,2,1},{1,0,1,2},
+            {0,1,0,1},{1,0,1,0},{0,1,0,1},
+            {2,0,1,2},{0,2,1,0},{2,1,2,0},
+            {3,5,3,4},{5,3,4,3},{3,4,5,3},
+            {4,3,4,5},{3,4,5,4},{4,5,4,3},
+            {5,3,5,4},{4,5,3,5},{5,4,5,3},
+            {4,5,4,3},{5,4,3,4},{4,3,5,4}};
+        public static int StreetProfile(int mission,int sector,int block)
+        {return StreetSequence[Math.Max(0,Math.Min(7,mission))*3+Sector(sector),Math.Max(0,Math.Min(3,block))];}
+        public static bool EscortStreet(int mission){return mission==2||mission==5;}
+        public static int StreetPieceCount(int mission,int sector,int block)
+        {return EscortStreet(mission)?1:Streets[StreetProfile(mission,sector,block)].Length;}
+        public static AncientTraversalLayout.Ledge StreetPiece(int mission,int sector,int block,int index)
+        {
+            float offset=SectorStart(mission,sector)+block*SectorSpan;
+            var local=EscortStreet(mission)?L(0,208,0):Streets[StreetProfile(mission,sector,block)][index];
+            // The last block hosts the original encounter/conveyor and must keep
+            // its complete enemy patrol and supply panel grounded.
+            if(block==3&&local.right>64&&local.right<=80)local=L(local.left,local.right,0);
+            return L(offset+local.left,offset+local.right,local.top);
+        }
+        public static float StreetHeight(int mission,int sector,int block,float localX)
+        {
+            float x=SectorStart(mission,sector)+block*SectorSpan+localX,top=-1.4f;
+            for(int i=0;i<StreetPieceCount(mission,sector,block);i++)
+            {var p=StreetPiece(mission,sector,block,i);if(x>=p.left&&x<=p.right)top=Math.Max(top,p.top);}
+            return top;
+        }
+        // Four landmark rooms break the horizontal rhythm: an actual 18m shaft
+        // with a 9m machine core forces an ascent, crossing and controlled descent.
+        public static bool TallStreetBay(int mission,int sector,int block)
+        {return mission==1&&sector==1&&block==1||mission==3&&sector==0&&block==1||mission==6&&sector==2&&block==0||mission==7&&sector==1&&block==1;}
+        public static float StreetHookHeight(int mission,int sector,int block,int index)
+        {return TallStreetBay(mission,sector,block)&&index==1?13.6f:8.7f;}
+        public static AncientTraversalLayout.Ledge StreetObstacle(int mission,int sector,int block)
+        {float offset=SectorStart(mission,sector)+block*SectorSpan;return L(offset+34,offset+50,9);}
+        public static AncientTraversalLayout.Ledge StreetShortcut(int mission,int sector,int block,int index)
+        {
+            float offset=SectorStart(mission,sector)+block*SectorSpan;
+            // Upper grates end before the court; none bridge an investigation gate.
+            float a=index==0?23:index==1?43:63;
+            return L(offset+a,offset+a+7,index==1?(TallStreetBay(mission,sector,block)?11.1f:6.9f):6.2f);
+        }
+        public static AncientTraversalLayout.Ledge StreetBaffle(int mission,int sector,int block)
+        {
+            float offset=SectorStart(mission,sector)+block*SectorSpan;
+            // Over the second staircase, a suspended duct blocks straight roof-zipping
+            // and asks for a controlled drop; the whole capsule fits below it.
+            return L(offset+177,offset+183,6.1f);
+        }
         static readonly float[,] ProductionHeights={
             {.6f,1.2f,2f,3f,3.4f,2f,1.2f,2f,1f},
             {.8f,1.8f,3f,4.2f,3.4f,2.4f,3.2f,2f,.8f},

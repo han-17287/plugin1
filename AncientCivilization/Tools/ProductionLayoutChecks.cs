@@ -227,9 +227,24 @@ class ProductionLayoutChecks
         {
             float top=AncientProductionLayout.GroundHeight(x);
             Check(AncientProductionLayout.InTutorial(x),"Every authored ground sample stays inside the novice route");
-            Check(top>=0&&top<=.8f,"The mandatory road never creates a death pit or a tall wall");
+            Check(top>=-1.4f&&top<=.8f,"Maintenance wells have a shallow recovery floor instead of a death pit");
             Check(top+2.1f+3.1f<AncientProductionLayout.Ceiling,"The normal road leaves clearance for a full jump and the player's body");
         }
+        int recoveryWells=0;
+        for(int i=0;i<AncientProductionLayout.TutorialRoad.Length;i++)
+        {
+            var road=AncientProductionLayout.TutorialRoad[i];
+            Check(road.Right>road.Left,"Tutorial collision pieces have positive width");
+            if(i>0)Check(Near(AncientProductionLayout.TutorialRoad[i-1].Right,road.Left),"The tutorial has no bottomless gaps between road pieces");
+            if(road.Top<0)
+            {
+                recoveryWells++;
+                Check(Near(road.Top,-1.4f)&&road.Right-road.Left>=8,"Each training well has a wide shallow landing");
+                Check(-road.Top+.2f<14*14/(2*32f),"Holding jump can leave a training well without an air-jump upgrade");
+                Check(road.Top+1.05f>-2.5f,"Missing a training jump never triggers the chapter recovery threshold");
+            }
+        }
+        Check(recoveryWells==3,"The opening teaches three successive crossings before the equipment room");
         foreach(var ramp in AncientProductionLayout.GentleRamps)
         {
             Check(ramp.Right>ramp.Left&&Math.Abs((ramp.High-ramp.Low)/(ramp.Right-ramp.Left))<=.101f,"The novice road ramps stay at a gentle one-in-ten slope");

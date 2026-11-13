@@ -118,7 +118,18 @@ namespace Plugin.AncientCivilization
                 var start=game.Box("Chapter assignment checkpoint",new Vector2(left-2,4.8f),new Vector2(.2f,10.4f),new Color(.2f,.7f,.8f,.35f),5);
                 start.layer=8;chapterEntries[mission.Floor]=start.GetComponent<SpriteRenderer>();chapterEntrySolids[mission.Floor]=start.AddComponent<BoxCollider2D>();
             }
-            game.Ceiling(left,right,10);game.Platform(left,right,-4.5f);
+            if(mission.Id<8)
+            {
+                for(int s=0;s<3;s++)for(int b=0;b<4;b++)
+                {
+                    float origin=left+AncientFieldExpansion.SectorStart(mission.Id,s)+b*AncientFieldExpansion.SectorSpan;
+                    if(AncientFieldExpansion.TallStreetBay(mission.Id,s,b))
+                    {game.Ceiling(origin,origin+12,10);game.Ceiling(origin+12,origin+78,18);game.Ceiling(origin+78,origin+208,10);}
+                    else game.Ceiling(origin,origin+208,10);
+                }
+            }
+            else game.Ceiling(left,right,10);
+            game.Platform(left,right,-4.5f);
             Color tint=mission.Floor==0?new Color(.12f,.17f,.2f):mission.Floor==1?new Color(.13f,.21f,.2f):mission.Floor==2?new Color(.12f,.18f,.28f):mission.Floor==3?new Color(.24f,.23f,.19f):new Color(.19f,.13f,.24f);
             Color facade=tint;facade.a=.68f;Color window=tint*1.55f;window.a=.30f;
             for(int sector=0;sector<AncientFieldExpansion.SectorCount;sector++)
@@ -135,7 +146,8 @@ namespace Plugin.AncientCivilization
                     game.StaticBox("Investigation window",new Vector2(x,6.6f),new Vector2(5,1.4f),window,-7);
                     game.StaticBox("District floor stripe",new Vector2(x,9.88f),new Vector2(8,.06f),new Color(.2f,.65f,.7f),3);
                 }
-                if(!jumping){var road=AncientFieldExpansion.GroundRoad(mission.Id,sector);game.Platform(left+road.left,left+road.right,road.top);}
+                if(AncientFieldExpansion.HasStreetDesign(mission.Id,sector))BuildStreet(mission,left,sector);
+                else if(!jumping){var road=AncientFieldExpansion.GroundRoad(mission.Id,sector);game.Platform(left+road.left,left+road.right,road.top);}
                 else
                 {
                     for(int block=0;block<AncientFieldExpansion.Blocks(mission.Id);block++)
@@ -146,7 +158,7 @@ namespace Plugin.AncientCivilization
                 {
                     var segment=AncientFieldExpansion.BlockSegment(mission.Id,sector,block,i);float x=left+segment.left,top=segment.top;
                     if(jumping)game.Platform(x,left+segment.right,top);
-                    game.StaticBox("Field route edge",new Vector2(left+(segment.left+segment.right)*.5f,(mission.Kind==2?0:top)+.025f),new Vector2(segment.right-segment.left,.05f),AncientGame.Cyan,3);
+                    if(jumping||mission.Id>=8)game.StaticBox("Field route edge",new Vector2(left+(segment.left+segment.right)*.5f,(mission.Kind==2?0:top)+.025f),new Vector2(segment.right-segment.left,.05f),AncientGame.Cyan,3);
                     if(jumping&&i%3==1)
                         BuildExpertCatwalk(left,AncientFieldExpansion.BlockExpertSegment(mission.Id,sector,block,i));
                 }
@@ -200,6 +212,55 @@ namespace Plugin.AncientCivilization
             {
                 var lampPositions=new Vector2[3];for(int sector=0;sector<3;sector++)lampPositions[sector]=NodePoint(1,sector);
                 workshopCircuit=new AncientWorkshopCircuit(game,transform,left,lampPositions,RecordedTasks(1));
+            }
+        }
+        void BuildStreet(AncientMission mission,float left,int sector)
+        {
+            for(int block=0;block<AncientFieldExpansion.Blocks(mission.Id);block++)
+            {
+                for(int i=0;i<AncientFieldExpansion.StreetPieceCount(mission.Id,sector,block);i++)
+                {
+                    var piece=AncientFieldExpansion.StreetPiece(mission.Id,sector,block,i);
+                    game.Platform(left+piece.left,left+piece.right,piece.top);
+                    // Grounded machinery/roof foundations make raised surfaces read as
+                    // industrial architecture rather than unexplained floating slabs.
+                    if(piece.top>1)
+                    {
+                        float x=left+(piece.left+piece.right)*.5f;
+                        var foundation=new GameObject("Solid street structural foundation");foundation.layer=8;foundation.transform.SetParent(transform,false);
+                        foundation.transform.position=new Vector2(x,(piece.top-5)*.5f);foundation.AddComponent<BoxCollider2D>().size=new Vector2(piece.right-piece.left,piece.top+3);
+                        game.StaticBox("Street structural foundation",new Vector2(x,(piece.top-4)*.5f),new Vector2(piece.right-piece.left,piece.top+4),new Color(.08f,.14f,.18f),-1);
+                    }
+                    if(piece.top!=0)
+                    {
+                        foreach(float edge in new[]{piece.left+.25f,piece.right-.25f})
+                            game.StaticBox("Traversal edge warning paint",new Vector2(left+edge,piece.top+.035f),new Vector2(.38f,.07f),new Color(1,.76f,.3f),4);
+                    }
+                }
+                if(AncientFieldExpansion.TallStreetBay(mission.Id,sector,block))
+                {
+                    var core=AncientFieldExpansion.StreetObstacle(mission.Id,sector,block);float width=core.right-core.left;
+                    game.StaticBox("Tall service hall rear wall",new Vector2(left+core.left+5,13),new Vector2(66,10),new Color(.035f,.075f,.11f),-9);
+                    for(int rib=0;rib<5;rib++)game.StaticBox("Tall service hall structural ribs",new Vector2(left+core.left-17+rib*12,13),new Vector2(.22f,10),new Color(.12f,.24f,.29f),-4);
+                    var solid=game.Box("Vertical service shaft machine",new Vector2(left+(core.left+core.right)*.5f,2.5f),new Vector2(width,13),new Color(.1f,.19f,.23f),1);
+                    solid.layer=8;solid.AddComponent<BoxCollider2D>();
+                    for(int rib=0;rib<5;rib++)game.StaticBox("Shaft machine cooling ribs",new Vector2(left+(core.left+core.right)*.5f,1+rib*1.7f),new Vector2(width-.5f,.15f),new Color(.25f,.47f,.51f),2);
+                    game.StaticBox("Shaft machine walkable crown",new Vector2(left+(core.left+core.right)*.5f,core.top),new Vector2(width,.12f),AncientGame.Cyan,4);
+                }
+                for(int i=0;i<3;i++)BuildExpertCatwalk(left,AncientFieldExpansion.StreetShortcut(mission.Id,sector,block,i));
+                var duct=AncientFieldExpansion.StreetBaffle(mission.Id,sector,block);
+                game.Ceiling(left+duct.left,left+duct.right,duct.top);
+                float origin=left+AncientFieldExpansion.SectorStart(mission.Id,sector)+block*AncientFieldExpansion.SectorSpan;
+                // Hoists lead toward the upper route. The landing and next socket
+                // remain visible within one camera view and a single wire reach.
+                for(int i=0;i<3;i++)
+                {
+                    float x=origin+21+i*20,y=AncientFieldExpansion.StreetHookHeight(mission.Id,sector,block,i),roof=AncientFieldExpansion.TallStreetBay(mission.Id,sector,block)?18:10;game.anchors.Add(new Vector2(x,y));
+                    game.StaticBox("Street hoist suspension",new Vector2(x,(roof+y)*.5f),new Vector2(.08f,roof-y),new Color(.25f,.42f,.46f),2);
+                    game.WorldBatch.Sprite(AncientArt.WireParticle(),new Vector2(x,y),Vector2.one*.65f,AncientGame.Cyan,5);
+                }
+                if(mission.Floor==1)
+                {var buoy=new GameObject("Alley blade rebound shortcut").AddComponent<AncientAirTarget>();buoy.Initialize(game,new Vector2(origin+54,5.6f));buoys.Add(buoy);}
             }
         }
         void BuildExpertCatwalk(float roomLeft,AncientTraversalLayout.Ledge span)

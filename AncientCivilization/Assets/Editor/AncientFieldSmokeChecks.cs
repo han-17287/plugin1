@@ -194,6 +194,32 @@ namespace Plugin.AncientCivilization.EditorChecks
                 game.View.transform.position=oldCamera;game.View.orthographicSize=oldZoom;game.View.aspect=oldAspect;dirty.SetValue(visuals,true);late.Invoke(visuals,null);
             }
         }
+        static void CheckAuthoredStreets(AncientHero hero)
+        {
+            Physics2D.SyncTransforms();Vector2 size=hero.GetComponent<CapsuleCollider2D>().size;
+            for(int id=0;id<8;id++)for(int sector=0;sector<3;sector++)for(int block=0;block<4;block++)
+            {
+                if(!AncientFieldExpansion.HasStreetDesign(id,sector))continue;
+                float left=AncientChapterLayout.CaseLeft(id);bool tall=AncientFieldExpansion.TallStreetBay(id,sector,block);
+                var core=AncientFieldExpansion.StreetObstacle(id,sector,block);
+                for(int n=0;n<AncientFieldExpansion.StreetPieceCount(id,sector,block);n++)
+                {
+                    var piece=AncientFieldExpansion.StreetPiece(id,sector,block,n);float x=(piece.left+piece.right)*.5f;
+                    if(tall&&x>=core.left&&x<=core.right)continue;
+                    var hit=Physics2D.Raycast(new Vector2(left+x,piece.top+.35f),Vector2.down,.5f,1<<8);
+                    Assert(hit&&Mathf.Abs(hit.point.y-piece.top)<.03f,"Actual street collision agrees with the authored climb/drop; no old flat road fills a well");
+                    if(piece.top>1)Assert(Physics2D.OverlapPoint(new Vector2(left+x,piece.top-1.2f),1<<8),"Raised street foundations are physical walls, not scenery the player can walk through");
+                }
+                if(!tall)continue;
+                float middle=left+(core.left+core.right)*.5f;
+                var crown=Physics2D.Raycast(new Vector2(middle,9.4f),Vector2.down,.7f,1<<8);
+                Assert(crown&&Mathf.Abs(crown.point.y-9)<.03f,"The shaft machine is a physical nine-metre obstacle");
+                var roof=Physics2D.Raycast(new Vector2(middle,15),Vector2.up,4,1<<8);
+                Assert(roof&&Mathf.Abs(roof.point.y-18)<.03f,"The shaft roof is closed at eighteen metres instead of retaining the old ten-metre ceiling");
+                var landing=AncientFieldExpansion.StreetShortcut(id,sector,block,1);
+                Assert(!Physics2D.OverlapCapsule(new Vector2(left+(landing.left+landing.right)*.5f,landing.top+size.y*.5f+.02f),size,CapsuleDirection2D.Vertical,0,1<<8),"The high landing supports the whole player without ceiling or machine overlap");
+            }
+        }
         static void CheckExpertCatwalkGeometry(AncientHero hero)
         {
             Physics2D.SyncTransforms();int grates=0;Vector2 size=hero.GetComponent<CapsuleCollider2D>().size;float standing=size.y*.5f+.01f;
@@ -403,6 +429,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(LiveEnemies(game)==2,"Exactly two criminals are active in the first sector");
                     CheckAnchorHaloPool(game);
                     CheckExpertCatwalkGeometry(game.hero);
+                    CheckAuthoredStreets(game.hero);
                     Physics2D.SyncTransforms();
                     for(int sector=0;sector<3;sector++)
                     {
