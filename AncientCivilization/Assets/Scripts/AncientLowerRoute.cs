@@ -31,14 +31,14 @@ namespace Plugin.AncientCivilization
                 AncientGame.SetSaved(ProgressKeys[mission],done[mission]);AncientGame.SetSaved(ProgressKeys[mission+8],heard[mission]);AncientGame.SetSaved(ProgressKeys[mission+16],acted[mission]);
             }
             residents=new AncientRouteResidents(game,transform,knownPredicate);actor=residents.At(0);
-            supply=AncientArt.Display("Repeatable route energy plate",AncientArt.MetalProjectile(1),Vector2.zero,10,transform);supply.transform.localScale=Vector3.one*.5f;
+            supply=AncientArt.Display("Repeatable route energy plate",AncientArt.MetalProjectile(1),Vector2.zero,7,transform);supply.transform.localScale=Vector3.one*.5f;
             var wall=game.Box("Local route checkpoint gate",Vector2.zero,new Vector2(.18f,10.4f),new Color(.15f,.65f,.85f,.35f),5);
             wall.layer=8;wall.transform.SetParent(transform,true);gate=wall.GetComponent<SpriteRenderer>();gateSolid=wall.AddComponent<BoxCollider2D>();
             supply.enabled=gate.enabled=gateSolid.enabled=false;
             for(int id=0;id<AncientLowerRouteRules.StopCount;id++)
             {
                 Vector2 p=Point(id),basePoint=BasePoint(id);var action=AncientLowerRouteData.Stops[id].Action;
-                var device=AncientArt.Display("Persistent route device "+id,AncientRouteDeviceArt.Get(action),p,10,transform);
+                var device=AncientArt.Display("Persistent route device "+id,AncientRouteDeviceArt.Get(action),p,7,transform);
                 device.enabled=false;devices[id]=device;
                 game.StaticBox("Route safe rest marker",new Vector2(basePoint.x,basePoint.y-1.27f),new Vector2(5,.06f),new Color(.24f,.62f,.75f),3);
                 if(action==AncientRouteAction.Wire)
