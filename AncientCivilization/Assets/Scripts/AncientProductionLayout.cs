@@ -33,6 +33,18 @@ namespace Plugin.AncientCivilization
         public const float SwingHookY=7.5f;
         public static readonly float[] TrainingEmitterX={-42,-18,7,28,56,86};
         public const float TrainingEmitterY=1.6f,TrainingEmitterRange=16;
+        public const float TrainingReceiverX=34,TrainingReceiverY=3.1f,TrainingGateX=38;
+        static bool BeamFinite(float value){return !float.IsNaN(value)&&!float.IsInfinity(value);}
+        public static bool TrainingBeamHits(float ax,float ay,float bx,float by,float radius)
+        {
+            if(!BeamFinite(ax)||!BeamFinite(ay)||!BeamFinite(bx)||!BeamFinite(by)||!BeamFinite(radius))return false;
+            if(radius<0)return false;
+            float dx=bx-ax,dy=by-ay,length=dx*dx+dy*dy;
+            if(length<.0001f||float.IsInfinity(length))return false;
+            float t=Math.Max(0,Math.Min(1,((TrainingReceiverX-ax)*dx+(TrainingReceiverY-ay)*dy)/length));
+            float x=ax+t*dx-TrainingReceiverX,y=ay+t*dy-TrainingReceiverY,r=radius+.6f;
+            return x*x+y*y<=r*r;
+        }
         public static readonly float[] SectionStarts={TutorialLeft,-194,-128,-52,38};
         public static readonly string[] SectionNames={"교대 통로","운송 벨트","검수 회랑","장비 검수실","코어 재고 관리실"};
         // Zero means a real outlet can serve this position. Outside its reach,

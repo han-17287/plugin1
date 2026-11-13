@@ -77,6 +77,14 @@ namespace Plugin.AncientCivilization
             if(Stage==3&&bit==5)nextTrainingShot=Mathf.Max(nextTrainingShot,Time.time+6);
             if(Has(bit))return;flags|=1<<bit;Persist();
         }
+        public bool TrainingDoorPowered {get{return Stage>=4||Has(7);}}
+        public bool OnTrainingLaser(Vector2 start,Vector2 end,float radius)
+        {
+            if(Stage!=3||Has(7)||!Has(5)||!Has(6)||!AncientProductionLayout.TrainingBeamHits(start.x,start.y,end.x,end.y,radius))return false;
+            var receiver=new Vector2(AncientProductionLayout.TrainingReceiverX,AncientProductionLayout.TrainingReceiverY);
+            if(Physics2D.Linecast(start,receiver,1<<8))return false;
+            OnTraining(7);game.Sound(2);game.Impact(receiver,AncientGame.Cyan,true);return true;
+        }
         public void Begin()
         {
             if(Stage==0)
@@ -205,8 +213,8 @@ namespace Plugin.AncientCivilization
             ClearProductionRadio();
             if(step==0)RadioBark("통신관","장비 검수 배출구다. 휠을 위로 돌린 뒤, 다가오는 빈 하우징을 짧은 좌클릭으로 베어라. 훈련 물체는 안전하다.");
             else if(step==1)RadioBark("통신관",Has(6)?"입자가 비었군. 빈 하우징을 다시 베고, 파란 입자 가까이에서 우클릭을 누르고 있어라.":"베인 물체가 파란 입자로 변했다. 가까이 가서 우클릭을 누르고 있으면 수집된다. 모드는 그대로 둬도 된다.");
-            else if(step==2)RadioBark("통신관","입자가 모였다. 빈 공간을 겨냥하고 좌클릭을 유지해라. 조준선이 금색이 되면 놓아서 레이저를 발사한다.");
-            else RadioBark("통신관","장비 확인 완료. 동쪽 재고 단말에서 E를 눌러 장부와 실제 수량을 대조해라.");
+            else if(step==2)RadioBark("통신관","입자가 모였다. 동쪽 검수문 앞의 파란 수광부를 겨냥해라. 좌클릭을 유지하고, 금색 조준선이 뜨면 놓아서 전력을 넣어라.");
+            else RadioBark("통신관","검수문 전력이 복구됐다. 열린 문을 지나 재고 단말에서 E를 눌러 실제 수량을 확인해라.");
             nextTrainingHint=Time.time+18;
         }
         void TickTraining()
@@ -475,7 +483,7 @@ namespace Plugin.AncientCivilization
                 if(step==0)return "장비 확인 1 / 휠 위 ▶ 짧은 좌클릭으로 빈 하우징 베기";
                 if(step==1&&TooCloseToTrainingEmitter())return "장비 확인 2 / 파란 입자 우클릭 수집 · 새 물체는 배출구에서 두 걸음 뒤로";
                 if(step==1)return "장비 확인 2 / 파란 입자 근처에서 우클릭 유지 · 놓쳤다면 다시 베기";
-                if(step==2)return "장비 확인 3 / 좌클릭 유지 ▶ 금색 조준선 확인 ▶ 놓아서 레이저";
+                if(step==2)return "장비 확인 3 / 동쪽 파란 수광부에 레이저 ▶ 좌클릭 유지 · 금색일 때 놓기";
                 return "장비 확인 완료 / 동쪽 재고 단말 앞에서 E로 수량 확인";
             }
             if(Stage==4)return "생산장 재고 보고 / 장부 120기 · 실제 117기";

@@ -5,6 +5,7 @@ namespace Plugin.AncientCivilization
     // A chapter is one physical road. Case milestones advance without moving the player.
     public sealed class AncientCampaign : MonoBehaviour
     {
+        int restMission=-1,restSlot=-1;readonly SpriteRenderer[,] restBeacons=new SpriteRenderer[8,24];
         AncientGame game;int completed,seen,beforeSeen,afterSeen,chapters,active=-1,restoreId=-1,taskMission=-1,tasks,checkpoint,defeated,encounterSector=-1;bool restored,legacy;
         readonly SpriteRenderer[,] nodes=new SpriteRenderer[20,3];readonly SpriteRenderer[] citizens=new SpriteRenderer[25];
         readonly SpriteRenderer[,] fieldGates=new SpriteRenderer[20,2],terminals=new SpriteRenderer[20,3],powerStations=new SpriteRenderer[20,3];
@@ -81,6 +82,7 @@ namespace Plugin.AncientCivilization
         public void Initialize(AncientGame owner)
         {
             game=owner;completed=AncientCampaignRules.SanitizeMask(AncientGame.Saved("campaignComplete"));seen=AncientGame.Saved("campaignSeen");beforeSeen=AncientGame.Saved("campaignBeforeSeen");afterSeen=AncientGame.Saved("campaignAfterSeen");
+            restMission=AncientGame.Saved("campaignRestMission",-1);restSlot=AncientGame.Saved("campaignRestSlot",-1);
             restoreId=AncientGame.Saved("campaignActive",-1);taskMission=AncientGame.Saved("campaignTaskMission",-1);tasks=AncientGame.Saved("campaignTasks")&7;
             checkpoint=AncientGame.Saved("campaignCheckpoint");defeated=AncientFieldExpansion.SanitizeEnemies(AncientGame.Saved("campaignDefeated"));
             chapters=AncientCampaignRules.RestoreChapters(AncientGame.Saved("campaignChapterStarted"),completed,restoreId);
@@ -92,6 +94,7 @@ namespace Plugin.AncientCivilization
             }
             if(taskMission>=0&&taskMission<20&&!AncientCampaignRules.Complete(completed,taskMission))
             {routeTasks[taskMission]=tasks;routeDefeated[taskMission]=defeated;routeCheckpoints[taskMission]=checkpoint;}
+            if(restMission<0||restMission>=8||restSlot<0||restSlot>=24||restSlot/8>routeCheckpoints[restMission]){restMission=-1;restSlot=-1;}
             legacy=AncientGame.Saved("campaignLegacy")!=0||(AncientGame.Saved("campaignVersion")==0&&AncientGame.Saved("questStage")>0);
             AncientGame.SetSaved("campaignVersion",AncientCampaignRules.RouteVersion);AncientGame.SetSaved("campaignLegacy",legacy?1:0);
             foreach(var mission in AncientCampaignData.Missions)BuildRoom(mission);
@@ -167,6 +170,13 @@ namespace Plugin.AncientCivilization
                     var segment=AncientFieldExpansion.Segment(mission.Id,sector,index);
                     float top=mission.Kind==2?0:segment.top,x=left+segment.left,width=segment.right-segment.left;
                     game.StaticBox("Visible field conveyor",new Vector2(x+width*.5f,top+.04f),new Vector2(width,.08f),index==3?AncientGame.Cyan:AncientGame.Orange,4);
+                }
+                if(mission.Id<8)for(int pad=0;pad<8;pad++)
+                {
+                    float px,py;if(!AncientFieldExpansion.TryRestPoint(mission.Id,sector,pad,out px,out py))continue;
+                    var beacon=AncientArt.Display("Traversal retry beacon",AncientArt.World(2),new Vector2(left+px,.45f),5,transform);
+                    beacon.transform.localScale=Vector3.one*.16f;beacon.color=new Color(.3f,.7f,.8f);restBeacons[mission.Id,sector*8+pad]=beacon;
+                    game.StaticBox("Safe landing paint",new Vector2(left+px,.04f),new Vector2(3,.08f),new Color(.25f,.85f,.75f),4);
                 }
                 terminals[mission.Id,sector]=AncientArt.Display("Field safety terminal",AncientArt.World(2),new Vector2(sectorLeft+6,1),5,transform);
                 terminals[mission.Id,sector].transform.localScale=Vector3.one*.22f;terminals[mission.Id,sector].enabled=false;
@@ -300,6 +310,7 @@ namespace Plugin.AncientCivilization
         public void WriteSave()
         {
             StoreProgress();
+            AncientGame.SetSaved("campaignRestMission",restMission);AncientGame.SetSaved("campaignRestSlot",restSlot);
             AncientGame.SetSaved("campaignComplete",completed);AncientGame.SetSaved("campaignSeen",seen);AncientGame.SetSaved("campaignBeforeSeen",beforeSeen);AncientGame.SetSaved("campaignAfterSeen",afterSeen);AncientGame.SetSaved("campaignActive",active);
             AncientGame.SetSaved("campaignTaskMission",taskMission);AncientGame.SetSaved("campaignTasks",tasks);
             AncientGame.SetSaved("campaignCheckpoint",checkpoint);AncientGame.SetSaved("campaignDefeated",defeated);
@@ -342,7 +353,28 @@ namespace Plugin.AncientCivilization
             }
         }
         Vector2 CheckpointPoint()
-        {var point=new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(active,checkpoint),1.3f);return game.LowerRoute?game.LowerRoute.Checkpoint(active,checkpoint,point):point;}
+        {
+            var point=new Vector2(AncientCampaignRules.Left(active)+AncientFieldExpansion.EntranceOf(active,checkpoint),1.3f);
+            if(game.LowerRoute)point=game.LowerRoute.Checkpoint(active,checkpoint,point);
+            float x,y;
+            if(restMission==active&&restSlot>=0&&restSlot<24&&restSlot/8==checkpoint&&AncientFieldExpansion.TryRestPoint(active,checkpoint,restSlot%8,out x,out y))
+            {x+=AncientCampaignRules.Left(active);if(x>point.x&&(!game.LowerRoute||x<=game.LowerRoute.RecoveryLimit(active,checkpoint)))return new Vector2(x,y);}
+            return point;
+        }
+        void RememberLanding(int sector,Vector2 player)
+        {
+            if(active<0||active>=8||sector!=checkpoint||!game.hero.IsOnGround)return;
+            float left=AncientCampaignRules.Left(active),limit=game.LowerRoute?game.LowerRoute.RecoveryLimit(active,sector):left+AncientFieldExpansion.WidthFor(active);
+            for(int pad=0;pad<8;pad++)
+            {
+                int slot=sector*8+pad;float x,y;
+                if(restMission==active&&slot<=restSlot||!AncientFieldExpansion.TryRestPoint(active,sector,pad,out x,out y))continue;
+                x+=left;if(x>limit||Mathf.Abs(player.x-x)>2||Mathf.Abs(player.y-y)>.4f)continue;
+                if(restMission>=0&&restMission<8&&restSlot>=0&&restSlot<24&&restBeacons[restMission,restSlot])restBeacons[restMission,restSlot].color=new Color(.3f,.7f,.8f);
+                restMission=active;restSlot=slot;restBeacons[active,slot].color=new Color(.35f,1,.55f);
+                Persist();game.Impact(new Vector2(x,.45f),new Color(.35f,1,.55f),false);game.Notice("안전 발판 저장",1.2f);return;
+            }
+        }
         void RestoreEscort()
         {
             if(AncientCampaignData.Missions[active].Kind!=2||(tasks&2)==0||(tasks&4)!=0)return;

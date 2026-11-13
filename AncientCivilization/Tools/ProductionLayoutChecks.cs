@@ -230,6 +230,13 @@ class ProductionLayoutChecks
             Check(top>=-1.4f&&top<=.8f,"Maintenance wells have a shallow recovery floor instead of a death pit");
             Check(top+2.1f+3.1f<AncientProductionLayout.Ceiling,"The normal road leaves clearance for a full jump and the player's body");
         }
+        Check(AncientProductionLayout.TrainingReceiverX<AncientProductionLayout.TrainingGateX-2,"The laser receiver is reachable on the approach side of its physical shutter");
+        Check(AncientProductionLayout.TrainingBeamHits(20,3.1f,37,3.1f,.2f),"A real beam crossing the receiver powers the inspection gate");
+        Check(!AncientProductionLayout.TrainingBeamHits(20,6,37,6,.2f),"Firing into empty space does not complete the practical laser lesson");
+        Check(!AncientProductionLayout.TrainingBeamHits(20,3.1f,32,3.1f,.2f),"A beam clipped before the receiver cannot power it");
+        Check(!AncientProductionLayout.TrainingBeamHits(34,3.1f,34,3.1f,.2f),"A zero-length pulse is not a successful target shot");
+        foreach(float invalid in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+            Check(!AncientProductionLayout.TrainingBeamHits(invalid,3.1f,37,3.1f,.2f),"Invalid beam coordinates cannot unlock the tutorial door");
         int recoveryWells=0;
         for(int i=0;i<AncientProductionLayout.TutorialRoad.Length;i++)
         {

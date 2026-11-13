@@ -37,7 +37,7 @@ aside h2{font-size:19px;margin-top:0}.line{padding:10px 0;border-top:1px solid #
 <main><section class="map"><canvas id="map" aria-label="현재 경로의 발판과 현장 위치" tabindex="0"></canvas>
 <div class="bar"><span><i class="dot" style="background:#f7bc62"></i>필수 현장 / 미해결 통제선</span><span><i class="dot" style="background:#76b5fb"></i>선택 현장</span><span><i class="dot" style="background:#57d7b2"></i>구간 인계 지점</span></div>
 <div id="stops"></div><p id="hint" class="muted">드래그로 이동 · 휠로 확대 · 현장 버튼으로 대사 확인 · 좌우 방향키로 이동</p></section>
-<aside id="detail"></aside></main><footer>천장에 와이어 가능. 하역 단차·낮은 배관로·지붕 길과 상부 정비 발판을 이용합니다. 주민 호송 길은 안전한 평지를 유지합니다. 도면의 통제선은 해당 필수 현장을 해결하면 열립니다.</footer>
+<aside id="detail"></aside></main><footer>녹색 작은 표식은 착지하면 저장되는 안전 발판입니다. 천장에 와이어 가능. 하역 단차·낮은 배관로·지붕 길과 상부 정비 발판을 이용합니다. 주민 호송 길은 안전한 평지를 유지합니다. 필수 행동 현장은 해결 즉시 열리며, 증언 현장은 대화로 진행합니다.</footer>
 <script>
 const data=__DATA__,canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
 const chapter=document.querySelector('#chapter'),sectors=document.querySelector('#sectors'),detail=document.querySelector('#detail');
@@ -61,6 +61,7 @@ function draw(){
  ctx.strokeStyle='#1a3040';for(let y=-2;y<=18;y+=2){ctx.beginPath();ctx.moveTo(0,Y(y));ctx.lineTo(w,Y(y));ctx.stroke();ctx.fillStyle='#628395';ctx.fillText(String(y),5,Y(y)-4)}
  for(let block=0;block<4;block++){const x=route.left+block*208;ctx.fillStyle=block%2?'#ffffff04':'#ffffff09';ctx.fillRect(X(x),Y(18),208*scale,Y(-3)-Y(18));ctx.fillStyle='#88a9bc';ctx.fillText('블록 '+(block+1),X(x)+8,28)}
  for(const p of route.platforms){ctx.fillStyle=p.depth<.5?'#678c9e':'#2d5367';ctx.fillRect(X(p.x),Y(p.top),(p.right-p.x)*scale,p.depth*ys);ctx.fillStyle='#6ec6cf';ctx.fillRect(X(p.x),Y(p.top),(p.right-p.x)*scale,2)}
+ for(const rest of route.rests){ctx.fillStyle="#6ef2a9";ctx.fillRect(X(rest.x)-3,Y(.6),6,8)}
  for(const hook of route.hooks){ctx.strokeStyle="#5de9ff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(X(hook.x),Y(hook.y),4,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1}
  for(const s of route.stops){
    const color=s.optional?'#76b5fb':'#f7bc62',x=X(s.x),y=Y(s.y);

@@ -155,6 +155,20 @@ namespace Plugin.AncientCivilization.EditorChecks
                 story.ClearProductionRadio();MoveHero(hero,original);Call(story,"Persist");
             }
         }
+        static void CheckTrainingReceiver(AncientGame game)
+        {
+            var story=game.Story;int original=(int)Field(typeof(AncientStory),"flags").GetValue(story),saved=AncientGame.Saved("questFlags");
+            try
+            {
+                Field(typeof(AncientStory),"flags").SetValue(story,(1<<5)|(1<<6));Physics2D.SyncTransforms();
+                Assert(!story.TrainingDoorPowered,"A cut and collected particles alone do not power the inspection gate");
+                Assert(!story.OnTrainingLaser(new Vector2(20,6),new Vector2(37,6),.2f),"A real tutorial callback rejects a beam aimed above the receiver");
+                Assert(story.OnTrainingLaser(new Vector2(20,3.1f),new Vector2(37,3.1f),.2f)&&story.TrainingDoorPowered,"A visible unobstructed receiver hit powers the actual tutorial state");
+                Assert((AncientGame.Saved("questFlags")&(1<<7))!=0,"Receiver activation is saved for reopening the gate after reload");
+                Assert(!story.OnTrainingLaser(new Vector2(20,3.1f),new Vector2(37,3.1f),.2f),"Later ticks of the same continuous laser cannot repeat completion");
+            }
+            finally{Field(typeof(AncientStory),"flags").SetValue(story,original);AncientGame.SetSaved("questFlags",saved);}
+        }
         static void CheckTrainingGuidance(AncientGame game)
         {
             var story=game.Story;var hero=game.hero;Vector2 original=hero.transform.position;
@@ -612,7 +626,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     if(Time.time<.5f)return;
                     Assert(game.Story.Stage==3&&!game.Story.DialogueOpen&&!game.Production.Active,"Completed weapon practice leaves the stock objective available without starting the chase");
-                    CheckOptionalWorkers(game);CheckTrainingFeeder(game);CheckTrainingGuidance(game);
+                    CheckOptionalWorkers(game);CheckTrainingFeeder(game);CheckTrainingGuidance(game);CheckTrainingReceiver(game);
                     CheckStockApproach(game);game.Story.TryProductionStock();
                     Assert(game.Story.Stage==4&&game.Story.DialogueOpen&&!game.Production.Active,"An actual stock-terminal request opens the discrepancy report before the breach");
                     SetStage(1);return;

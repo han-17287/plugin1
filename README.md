@@ -1,10 +1,10 @@
 # PLUGIN · Ancient Civilization
 
-**v0.26.0 — 하층 이동 지형 재설계 Unity 소스**
+**v0.27.0 — 초반 학습·연속 진행·재도전 개선 Unity 소스**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.26.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.27.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
 
-평지 위주였던 하층 일반 구간 16곳을 하역 단차·배관 아래길·지붕·폐차 더미로 바꿨습니다. 그중 네 곳은 **위로 올라 건너 내려오는 수직 정비실**입니다. 초반 연습길에는 얕은 회수 바닥이 있는 운반 틈 세 곳을 추가했습니다. 기존 수사·대화·보스·저장은 유지하며, 호송 구간은 주민이 따라올 수 있는 평지입니다. [지형 변경·확인 사항](AncientCivilization/MAP_REDESIGN_KO.md)
+이번 버전은 초반 학습과 하층 진행 흐름을 바꿉니다. 베기·입자 수집·수광부 레이저로 실제 검수문을 열고, 필수 행동 현장은 접근 안내 후 해결 즉시 다음 길로 이어집니다. 경비는 등장 전에 위치를 예고하며, 고정된 안전 발판에 착지하면 재도전 지점이 저장됩니다. 기존 지형·이야기·보스는 유지합니다. **실제 Unity 플레이와 난이도·완주 시간 검증은 아직 남아 있습니다.** [변경 내용과 확인할 점](AncientCivilization/GAMEPLAY_FLOW_KO.md)
 
 - 생산구: 재고 보고 중 코어 절도 → 자동주행 오토바이/트럭 갑판 전투 → 코어 회수·생존 검거 → 야간 장부·전력 복구·재하 구조·사본 전송. 검거 뒤 무전 지시로 동쪽 수사로가 바로 열립니다.
 - 생활부: 도둑의 흔적을 따라 주거 골목·폐차장·감시 외벽·창고를 통과합니다. 상자·차량 와이어 투척, 탐조등 엄폐, 경비 로봇, 조직원전 뒤 거대 로봇 3페이즈로 이어집니다.

@@ -39,6 +39,14 @@ namespace Plugin.AncientCivilization
         {return SectorAt(localX/Blocks(mission));}
         public static float EntranceOf(int mission,int sector){return SectorStart(mission,sector)+6;}
         public static float ExitOf(int mission,int sector){return SectorStart(mission,sector)+Span(mission)-12;}
+        // Only fixed, authored landings can become retry points. Moving cranes,
+        // combat roofs and arbitrary saved coordinates are deliberately excluded.
+        public static bool TryRestPoint(int mission,int sector,int pad,out float x,out float y)
+        {
+            x=y=0;
+            if(mission<0||mission>=8||sector<0||sector>=3||pad<0||pad>=8||IsJumpSector(mission,sector)&&pad%2==1)return false;
+            x=SectorStart(mission,sector)+(pad/2)*SectorSpan+(pad%2==0?6:86);y=1.3f;return true;
+        }
         public static AncientTraversalLayout.Ledge GroundRoad(int mission,int sector)
         {float start=SectorStart(mission,sector);return new AncientTraversalLayout.Ledge(start,start+Span(mission),0);}
         public static AncientTraversalLayout.Ledge BlockLanding(int mission,int sector,int block,bool end)

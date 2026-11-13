@@ -146,14 +146,16 @@ class LowerControllerChecks
             game.Story.CurrentFloor=id/36;game.hero.transform.position=upper?AncientLowerRoute.Point(id):AncientLowerRoute.BasePoint(id)+Vector2.left*6;
             game.View.transform.position=(Vector3)game.hero.transform.position+new Vector3(0,3,-10);Frame();
         }
-        public void Frame(){Time.time+=.1f;Call(route,"Update");Call(route,"LateUpdate");}
+        public void Frame(float seconds=.1f){Time.deltaTime=game.Paused?0:seconds;Time.time+=Time.deltaTime;Call(route,"Update");Call(route,"LateUpdate");}
         public void Dialogue(){Check(route.TryInteract()&&game.Story.DialogueOpen,"Nearby ground interaction opens the real controller's conversation");game.Story.Finish();}
         public void FinishStop(int id)
         {
             Move(id);Check(route.CurrentStop==id,"The runtime selects physical stop "+id+" in order");
             var data=AncientLowerRouteData.Stops[id];int beforeCredits=game.credits;
             Check(((BoxCollider2D)Get(route,"gateSolid")).enabled==!data.Optional,"Only required stops close their actual local gate");
-            Check(!route.TryBlade(AncientLowerRoute.Point(id)-Vector2.right,Vector2.right),"Unbriefed input cannot finish a new action");
+            bool automatic=AncientLowerRouteRules.AutomaticAction(id);
+            if(!automatic)Check(!route.TryBlade(AncientLowerRoute.Point(id)-Vector2.right,Vector2.right),"Unaccepted optional input cannot finish a new action");
+            else Check(AncientLowerRouteRules.Done(AncientGame.Saved("lowerHeardMask"+(id/9)),id)&&!game.Story.DialogueOpen,"Required action starts on approach without stopping movement for dialogue");
             Dialogue();
             if(data.Action!=AncientRouteAction.Talk)
             {
@@ -170,6 +172,7 @@ class LowerControllerChecks
                         Physics2D.Blocked=true;route.OnLaser(p-Vector2.right*3,p+Vector2.right*3,.5f);Check(!(bool)Get(route,"resolved"),"A blocked beam does not power the receiver");Physics2D.Blocked=false;
                         route.OnLaser(p-Vector2.right*3,p+Vector2.right*3,.5f);break;
                     case AncientRouteAction.Ambush:
+                        Check(game.enemies.Count==0,"A new ambush warns before creating damaging bodies");Frame(1);
                         Check(game.enemies.Count==2,"A local battle creates exactly two real controller-owned guards");
                         foreach(var enemy in game.enemies){Check(enemy.Kind!=3&&enemy.Floor==id/36,"Local enemies are non-bosses assigned to their actual floor");enemy.IsAlive=false;}Frame();break;
                     case AncientRouteAction.Wire:
@@ -177,19 +180,77 @@ class LowerControllerChecks
                     case AncientRouteAction.Throw:
                         Check(!route.HitThrown(p+Vector2.up*3,p+new Vector2(3,3)),"A missed throw leaves the objective unresolved");Check(route.HitThrown(p-Vector2.right*3,p+Vector2.right*3),"A swept throw reaches the receiver");break;
                 }
-                Check((bool)Get(route,"resolved")&&!AncientLowerRouteRules.Done(route.CompletedMask(id/9),id),"Action success still requires the witness's result confirmation");
                 int[] progress=(int[])Get(route,"acted");
-                Check(AncientLowerRouteRules.Done(progress[id/9],id)&&AncientLowerRouteRules.Done(AncientGame.Saved("lowerActionMask"+(id/9)),id),"Action success is saved before its witness confirmation");
-                route.ResetEncounter();Move(id);
-                Check((bool)Get(route,"resolved")&&game.enemies.Count==0,"Resetting a solved action keeps it solved and does not respawn defeated guards");
-                Move(id);Dialogue();
+                Check(AncientLowerRouteRules.Done(progress[id/9],id)&&AncientLowerRouteRules.Done(AncientGame.Saved("lowerActionMask"+(id/9)),id),"Action success is saved independently of result dialogue");
+                if(automatic)
+                {
+                    Frame();Check(AncientLowerRouteRules.Done(route.CompletedMask(id/9),id)&&!game.Story.DialogueOpen,"Resolving a required action opens the path without returning to its witness");
+                    route.ResetEncounter();Move(id);Check(game.enemies.Count==0,"Completed action does not respawn its guards on reset");
+                }
+                else
+                {
+                    Check((bool)Get(route,"resolved")&&!AncientLowerRouteRules.Done(route.CompletedMask(id/9),id),"An optional task retains its deliberate result conversation");
+                    route.ResetEncounter();Move(id);
+                    Check((bool)Get(route,"resolved")&&game.enemies.Count==0,"Resetting a solved optional action preserves its result");
+                    Dialogue();
+                }
             }
             Check(AncientLowerRouteRules.Done(route.CompletedMask(id/9),id),"Finishing the conversation saves earned progress");
             Check(game.credits==beforeCredits+(data.Optional?3:0)&&game.hero.hp<=game.hero.MaxHP,"Optional reward is exact and healing respects maximum health");
-            Check(!((BoxCollider2D)Get(route,"gateSolid")).enabled,"The completed gate opens immediately");
+            Check(!((BoxCollider2D)Get(route,"gateSolid")).enabled||route.CurrentStop!=id&&((SpriteRenderer)Get(route,"gate")).transform.position.x>AncientLowerRoute.Point(id).x+18,"The completed position is open; a reused gate can only belong to the next stop");
             int credited=game.credits;float hp=game.hero.hp;Dialogue();
             Check(game.credits==credited&&game.hero.hp==hp,"Replaying a completed witness cannot duplicate rewards");
         }
+    }
+    static void ContinuousActionFlow()
+    {
+        int automaticCount=0;
+        for(int id=0;id<72;id++)
+        {
+            var f=new Fixture();var data=AncientLowerRouteData.Stops[id];
+            var mask=(int[])Get(f.route,"done");
+            for(int n=0;n<id%3;n++)mask[id/9]=AncientLowerRouteRules.Mark(mask[id/9],id-id%3+n);
+            f.Move(id);
+            if(!AncientLowerRouteRules.AutomaticAction(id))
+            {Check(f.game.Story.RadioCalls==0&&f.game.enemies.Count==0,"Passing an optional task or story witness cannot silently accept or complete it");continue;}
+            automaticCount++;Check(f.game.Story.RadioCalls==1&&!f.game.Story.DialogueOpen,"A required action gives one moving radio instruction instead of taking input focus");
+            Vector2 p=AncientLowerRoute.Point(id);
+            if(data.Action==AncientRouteAction.Ambush)
+            {
+                var cues=(LineRenderer[])Get(f.route,"guardWarnings");
+                Check(f.game.enemies.Count==0&&cues[0].enabled&&cues[1].enabled,"Both spawn locations are announced before either guard exists");
+                f.game.MainMenu=true;f.Frame(5);Check(f.game.enemies.Count==0,"A paused warning cannot spawn attacking enemies");f.game.MainMenu=false;
+                f.Frame(.5f);Check(f.game.enemies.Count==0,"The warning reserves a real reaction window");f.Frame(.4f);
+                Check(f.game.enemies.Count==2&&!cues[0].enabled&&!cues[1].enabled,"The warning resolves to exactly two guards and retires its markers");
+                foreach(var enemy in f.game.enemies)enemy.IsAlive=false;
+            }
+            else if(data.Action==AncientRouteAction.Blade)Check(f.route.TryBlade(p-Vector2.right,Vector2.right),"A required plate accepts a real cut without a preliminary E dialogue");
+            else if(data.Action==AncientRouteAction.Relay)f.route.OnLaser(p-Vector2.right*4,p+Vector2.right*4,.5f);
+            else if(data.Action==AncientRouteAction.Throw)Check(f.route.HitThrown(p-Vector2.right*4,p+Vector2.right*4),"A required throw receiver accepts the actual thrown sweep without a dialogue round trip");
+            else {f.Move(id,true);Check(f.route.TryInteract(),"Upper wire receiver still requires its physical interaction");}
+            f.Frame();
+            Check(AncientLowerRouteRules.Done(f.route.CompletedMask(id/9),id)&&!f.game.Story.DialogueOpen,"Finishing the physical action alone completes the required stop");
+            Check(f.game.Story.RadioCalls==1,"Completion does not restart the same approach instruction");
+            int credits=f.game.credits;float hp=f.game.hero.hp;f.route.ResetEncounter();f.Move(id);
+            Check(f.game.credits==credits&&f.game.hero.hp==hp,"Reloading a resolved action never duplicates its recovery reward");
+        }
+        Check(automaticCount>20,"The flow change affects the campaign's actual required action encounters");
+        var limits=new Fixture();var done=(int[])Get(limits.route,"done");
+        for(int mission=0;mission<8;mission++)for(int sector=0;sector<3;sector++)
+        {
+            int first=AncientLowerRouteRules.Id(mission,sector,0),second=first+1;
+            done[mission]=0;float a=limits.route.RecoveryLimit(mission,sector);
+            Check(a<AncientLowerRoute.Point(first).x+18,"A saved landing cannot resume beyond the first unresolved gate");
+            done[mission]=AncientLowerRouteRules.Mark(0,first);float b=limits.route.RecoveryLimit(mission,sector);
+            Check(b>a&&b<AncientLowerRoute.Point(second).x+18,"Only completing the first stop permits retry landings toward the next one");
+            done[mission]=AncientLowerRouteRules.Mark(done[mission],second);
+            Check(limits.route.RecoveryLimit(mission,sector)>b,"Both required stops must be earned before the final traversal landings are eligible");
+        }
+        var patrol=new Fixture();var patrolDone=(int[])Get(patrol.route,"done");patrolDone[4]=1;patrol.game.Living.ExistingGuards=1;patrol.Move(37);
+        patrol.game.hero.transform.position=AncientLowerRoute.Point(37)+Vector2.right*20;patrol.Frame();
+        Check(patrol.game.hero.TravelCount==1&&!AncientLowerRouteRules.Done(patrol.route.CompletedMask(4),37),"Waiting for an existing patrol cannot skip the unresolved-gate recovery check");
+        foreach(float invalid in new[]{float.NaN,float.PositiveInfinity,float.NegativeInfinity})
+            Check(!AncientLowerRouteRules.CanApproach(3,invalid,0)&&!AncientLowerRouteRules.CanApproach(3,0,invalid),"Invalid proximity cannot start an encounter");
     }
     static void Main()
     {
@@ -210,28 +271,28 @@ class LowerControllerChecks
         migratedAgain.Move(1,false,false);migratedAgain.Dialogue();
         Check(AncientGame.Saved("lowerHeardMask0")==3,"The same resident can give its second physical landmark's testimony on a return trip");
 
-        var retry=new Fixture(true,2,-1);retry.Move(17,false,false);retry.Dialogue();retry.Frame();
+        var retry=new Fixture(true,2,-1);retry.Move(17,false,false);retry.Dialogue();retry.Frame();retry.Frame(1);
         Check(retry.game.enemies.Count==2,"A skipped optional battle can start after its case is already complete");
         var previous=new List<AncientEnemy>(retry.game.enemies);retry.route.ResetEncounter();
         Check(retry.game.enemies.Count==0&&!AncientLowerRouteRules.Done(retry.route.CompletedMask(1),17),"Retry clears living guards without marking the encounter complete");
         foreach(var enemy in previous)Check(!enemy,"Reset destroys the old encounter's components");
-        retry.Frame();Check(retry.game.enemies.Count==2&&!(bool)Get(retry.route,"resolved"),"Returning after reset respawns a live optional encounter instead of inferring victory from removed guards");
+        retry.Frame();retry.Frame(1);Check(retry.game.enemies.Count==2&&!(bool)Get(retry.route,"resolved"),"Returning after reset respawns a live optional encounter instead of inferring victory from removed guards");
 
         var guards=new Fixture();AncientGame.SetSaved("lowerStopMask4",1);AncientGame.SetSaved("lowerHeardMask4",1);guards=new Fixture(false);
-        guards.Move(37);guards.Dialogue();guards.game.Living.ExistingGuards=1;guards.Frame();Check(guards.game.enemies.Count==0,"A living ambush waits for nearby spotlight guards instead of stacking another pair");
-        guards.game.Living.ExistingGuards=0;guards.Frame();Check(guards.game.enemies.Count==2,"The waiting ambush starts when the nearby threat is resolved");
+        guards.game.Living.ExistingGuards=1;guards.Move(37);guards.Dialogue();guards.Frame();Check(guards.game.enemies.Count==0,"A living ambush waits for nearby spotlight guards instead of stacking another pair");
+        guards.game.Living.ExistingGuards=0;guards.Frame();guards.Frame(1);Check(guards.game.enemies.Count==2,"The waiting ambush starts when the nearby threat is resolved");
         var gate=new Fixture();gate.Move(0);gate.game.hero.transform.position=AncientLowerRoute.Point(0)+Vector2.right*20;gate.Frame();
         Check(gate.game.hero.TravelCount==1&&gate.game.CameraSnaps==1&&!AncientLowerRouteRules.Done(gate.route.CompletedMask(0),0),"A fast gate bypass returns to earned progress without granting the objective");
         var pending=new Fixture();pending.Move(3);pending.Dialogue();var plate=AncientLowerRoute.Point(3);
         Check(pending.route.TryBlade(plate-Vector2.right,Vector2.right),"A pending plate can be resolved before leaving the game");
         var reopened=new Fixture(false);reopened.Move(3);
-        Check((bool)Get(reopened.route,"resolved")&&!AncientLowerRouteRules.Done(reopened.route.CompletedMask(0),3),"A fresh controller restores action success without inventing the final witness conversation");
-        Check(!reopened.route.TryBlade(plate-Vector2.right,Vector2.right),"A restored solved plate cannot be harvested again before confirmation");
-        reopened.Dialogue();Check(reopened.game.Story.LastLines.Length==2&&AncientLowerRouteRules.Done(reopened.route.CompletedMask(0),3),"Restored success resumes with only the witness's two result lines");
+        Check(AncientLowerRouteRules.Done(reopened.route.CompletedMask(0),3),"A saved successful required action opens on reload without another confirmation trip");
+        Check(!reopened.route.TryBlade(plate-Vector2.right,Vector2.right),"A restored solved plate cannot be harvested again");
+        reopened.Dialogue();Check(reopened.game.Story.LastLines.Length==3&&AncientLowerRouteRules.Done(reopened.route.CompletedMask(0),3),"The completed witness remains available for optional outcome dialogue");
         AncientGame.Prefs.Clear();AncientGame.SetSaved("lowerActionMask0",511);var corrupt=new Fixture(false);corrupt.Move(3);
         Check(!(bool)Get(corrupt.route,"resolved")&&AncientGame.Saved("lowerActionMask0")==0,"An unbriefed orphan action mask cannot bypass a new scene");
         Check(AncientLowerRoute.ProgressKeys.Length==24&&new HashSet<string>(AncientLowerRoute.ProgressKeys).Count==24,"Completion, heard dialogue and action results have separate unique save keys");
-        ThrownOrdering();CounterRocket();PlaytimeIntegration();
+        ThrownOrdering();CounterRocket();PlaytimeIntegration();ContinuousActionFlow();
         Console.WriteLine("PASS: "+checks+" shipping lower-route/resident/throw/playtime lifecycle, all72 stops, collisions, rewards, focus/pause and save checks with service doubles; native traversal/physics/input not simulated");
     }
 }

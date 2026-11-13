@@ -6,6 +6,7 @@ namespace Plugin.AncientCivilization
     public sealed class AncientLowerRoute : MonoBehaviour
     {
         AncientGame game;int current=-1,journalCase,journalStop=-1,journalFloor=-1;bool spawned,resolved;float supplyReady;
+        float guardReadyAt=-1;readonly LineRenderer[] guardWarnings=new LineRenderer[2];
         readonly int[] done=new int[8],heard=new int[8],acted=new int[8];
         readonly List<AncientEnemy> guards=new List<AncientEnemy>(2);
         AncientRouteResidents residents;readonly SpriteRenderer[] devices=new SpriteRenderer[AncientLowerRouteRules.StopCount];
@@ -32,6 +33,8 @@ namespace Plugin.AncientCivilization
                 AncientGame.SetSaved(ProgressKeys[mission],done[mission]);AncientGame.SetSaved(ProgressKeys[mission+8],heard[mission]);AncientGame.SetSaved(ProgressKeys[mission+16],acted[mission]);
             }
             residents=new AncientRouteResidents(game,transform,knownPredicate);actor=residents.At(0);
+            for(int i=0;i<guardWarnings.Length;i++)
+            {var cue=game.Line("Incoming guard warning",new Color(1,.65f,.18f),.07f,14);cue.transform.SetParent(transform,true);cue.positionCount=5;cue.enabled=false;guardWarnings[i]=cue;}
             supply=AncientArt.Display("Repeatable route energy plate",AncientArt.MetalProjectile(1),Vector2.zero,7,transform);supply.transform.localScale=Vector3.one*.5f;
             var wall=game.Box("Local route checkpoint gate",Vector2.zero,new Vector2(.18f,10.4f),new Color(.15f,.65f,.85f,.35f),5);
             wall.layer=8;wall.transform.SetParent(transform,true);gate=wall.GetComponent<SpriteRenderer>();gateSolid=wall.AddComponent<BoxCollider2D>();
@@ -53,6 +56,13 @@ namespace Plugin.AncientCivilization
         {float x,y,feet;AncientLowerRouteRules.Location(id,out x,out y,out feet);return new Vector2(x,y);}
         public bool SectorComplete(int mission,int sector)
         {return !AncientLowerRouteRules.Supports(mission)||AncientLowerRouteRules.SectorComplete(mission,sector,done[mission]);}
+        public float RecoveryLimit(int mission,int sector)
+        {
+            if(!AncientLowerRouteRules.Supports(mission))return float.PositiveInfinity;
+            for(int stop=0;stop<2;stop++)
+            {int id=AncientLowerRouteRules.Id(mission,sector,stop);if(!AncientLowerRouteRules.Done(done[mission],id))return Point(id).x+16;}
+            return AncientChapterLayout.CaseLeft(mission)+AncientFieldExpansion.SectorStart(mission,sector)+AncientFieldExpansion.Span(mission)-1.4f;
+        }
         public Vector2 Checkpoint(int mission,int sector,Vector2 fallback)
         {
             if(!AncientLowerRouteRules.Supports(mission))return fallback;
@@ -66,14 +76,25 @@ namespace Plugin.AncientCivilization
         bool AvailableConversation(int id)
         {return Known(id)||id>=0&&id<AncientLowerRouteRules.StopCount&&AncientLowerRouteRules.Done(done[id/9],id);}
         public bool TryGuide(out Vector2 p,out string text)
-        {p=Vector2.zero;text="";if(current<0||Stop.Optional)return false;p=Started&&!resolved?Point(current):BasePoint(current)+new Vector2(-6,-.3f);text=Stop.Title+" · "+(!Started||resolved?"E: 대화":AncientLowerRouteData.ShortHint(Stop.Action));return true;}
+        {p=Vector2.zero;text="";if(current<0||Stop.Optional)return false;p=Started&&!resolved?Point(current):BasePoint(current)+new Vector2(-6,-.3f);text=Stop.Title+" · "+(!Started&&AncientLowerRouteRules.AutomaticAction(current)?"접근 시 목표 안내":!Started||resolved?"E: 대화":AncientLowerRouteData.ShortHint(Stop.Action));return true;}
         public void ResetEncounter()
         {
             ClearGuards();spawned=resolved=false;current=-1;
             if(supply)supply.enabled=gate.enabled=gateSolid.enabled=false;
         }
         void ClearGuards()
-        {foreach(var foe in guards)if(foe){game.enemies.Remove(foe);foe.gameObject.SetActive(false);Destroy(foe.gameObject);}guards.Clear();}
+        {guardReadyAt=-1;HideGuardWarnings();foreach(var foe in guards)if(foe){game.enemies.Remove(foe);foe.gameObject.SetActive(false);Destroy(foe.gameObject);}guards.Clear();}
+        void HideGuardWarnings(){foreach(var cue in guardWarnings)if(cue)cue.enabled=false;}
+        Vector2 GuardSpawn(int slot)
+        {var b=BasePoint(current);int kind=AncientLowerRouteRules.GuardType(current,slot);return new Vector2(b.x+4+slot*8,b.y-1.3f+(kind==4?2.8f:0));}
+        void ShowGuardWarnings()
+        {
+            for(int i=0;i<guardWarnings.Length;i++)
+            {
+                var cue=guardWarnings[i];Vector2 p=GuardSpawn(i)+Vector2.up*.35f;cue.enabled=true;
+                cue.SetPosition(0,p+Vector2.left*1.2f);cue.SetPosition(1,p+Vector2.up*.45f);cue.SetPosition(2,p+Vector2.right*1.2f);cue.SetPosition(3,p-Vector2.up*.3f);cue.SetPosition(4,p+Vector2.left*1.2f);
+            }
+        }
         void Select(int id)
         {
             ClearGuards();current=id;spawned=false;resolved=id>=0&&AncientLowerRouteRules.Done(acted[id/9],id);supplyReady=0;
@@ -122,7 +143,7 @@ namespace Plugin.AncientCivilization
             if(current<0)return false;
             Vector2 player=game.hero.transform.position,witness=(Vector2)actor.transform.position+Vector2.up,p=Point(current);
             if(Started&&!resolved&&Stop.Action==AncientRouteAction.Wire&&(p-player).sqrMagnitude<2.5f*2.5f)
-            {ResolveAction();game.hero.ReleaseWire();game.Notice("상부 접속 완료 · 아래 작업자에게 확인",2);return true;}
+            {ResolveAction();game.hero.ReleaseWire();game.Notice(Stop.Optional?"상부 접속 완료 · 아래 작업자에게 확인":"상부 접속 완료 · 동쪽 통로로 계속 이동",2);return true;}
             if(!residents.InPlace(current)||(witness-player).sqrMagnitude>3.2f*3.2f)return false;
             int id=current;var data=Stop;
             if(!game.hero.IsOnGround){game.Notice("작업대에 착지한 뒤 대화하세요.");return true;}
@@ -134,7 +155,7 @@ namespace Plugin.AncientCivilization
             }
             else if(resolved)
                 game.Story.Conversation(()=>Finish(id),id%4,new[]{data.Speaker,"백 경위"},new[]{data.Outcome,data.Closing});
-            else game.Notice(AncientLowerRouteData.Hint(data.Action),4);
+            else game.Story.Conversation(null,id%4,new[]{data.Speaker,"백 경위",data.Speaker},new[]{data.Problem,data.Reply,data.Evidence});
             return true;
         }
         public bool TryBlade(Vector2 origin,Vector2 direction)
@@ -182,25 +203,45 @@ namespace Plugin.AncientCivilization
             if(next!=current)Select(next);
             if(current<0)return;
             Vector2 p=Point(current);float distance=Mathf.Abs(game.hero.transform.position.x-p.x);
+            Vector2 approach=(Vector2)game.hero.transform.position-BasePoint(current);
+            if(!Started&&AncientLowerRouteRules.CanApproach(current,approach.x,approach.y))
+            {
+                StartAction(current);
+                game.Story.RadioBark("통신관",Stop.Title+". "+AncientLowerRouteData.Hint(Stop.Action));
+            }
+            // Legacy saved action results also open immediately. Optional tasks retain
+            // their deliberate acceptance/confirmation, while story testimony stays interactive.
+            if(resolved&&AncientLowerRouteRules.AutomaticAction(current)){Finish(current);return;}
             target.enabled=distance<65&&Started&&!resolved&&Stop.Action!=AncientRouteAction.Ambush&&Stop.Action!=AncientRouteAction.Talk;
             supply.enabled=distance<65&&Started&&!resolved&&Stop.Action==AncientRouteAction.Relay;
             if(Started&&!resolved&&Stop.Action==AncientRouteAction.Ambush&&distance<32)
             {
                 if(!spawned)
                 {
-                    if(mission>=4&&game.Living.NearbyGuards(p.x)>0)return;
-                    spawned=true;Vector2 b=BasePoint(current);
-                    for(int i=0;i<2;i++)
+                    bool waitForPatrol=mission>=4&&game.Living.NearbyGuards(p.x)>0;
+                    if(waitForPatrol){guardReadyAt=-1;HideGuardWarnings();}
+                    else
                     {
-                        int kind=AncientLowerRouteRules.GuardType(current,i);
-                        var enemy=new GameObject("Local route guard").AddComponent<AncientEnemy>();enemy.Initialize(kind);
-                        enemy.transform.position=new Vector2(b.x+4+i*8,b.y-1.3f+(kind==4?2.8f:0));
-                        enemy.ConfigureDistrict(mission/4,false);guards.Add(enemy);game.enemies.Add(enemy);
+                        if(guardReadyAt<0)guardReadyAt=Time.time+.85f;
+                        ShowGuardWarnings();
+                        if(Time.time>=guardReadyAt)
+                        {
+                            spawned=true;HideGuardWarnings();
+                            for(int i=0;i<2;i++)
+                            {
+                                int kind=AncientLowerRouteRules.GuardType(current,i);
+                                var enemy=new GameObject("Local route guard").AddComponent<AncientEnemy>();enemy.Initialize(kind);
+                                enemy.transform.position=GuardSpawn(i);enemy.ConfigureDistrict(mission/4,false);
+                                guards.Add(enemy);game.enemies.Add(enemy);
+                            }
+                        }
                     }
                 }
-                bool alive=false;foreach(var enemy in guards)if(enemy&&enemy.IsAlive)alive=true;
-                if(!alive)ResolveAction();
+                if(spawned)
+                {bool alive=false;foreach(var enemy in guards)if(enemy&&enemy.IsAlive)alive=true;if(!alive)ResolveAction();}
             }
+            else {guardReadyAt=-1;HideGuardWarnings();}
+            if(resolved&&AncientLowerRouteRules.AutomaticAction(current)){Finish(current);return;}
             if(resolved)target.enabled=supply.enabled=false;
             // A fast wire move cannot bypass an unresolved gate between physics ticks.
             if(!Stop.Optional&&game.hero.transform.position.x>p.x+18.5f)

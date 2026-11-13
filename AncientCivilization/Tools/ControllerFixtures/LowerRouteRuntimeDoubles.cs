@@ -112,6 +112,7 @@ namespace Plugin.AncientCivilization
     public sealed class RouteCombatFixture {public float Emitted;public int EmissionCount;public void EmitParticles(Vector2 p,float amount){Emitted+=amount;EmissionCount++;}public void CancelAttacks(){}}
     public sealed class RouteStoryFixture:Object
     {
+        public int RadioCalls;public string RadioText;public void RadioBark(string speaker,string text){RadioCalls++;RadioText=text;}
         public int CurrentFloor;public bool DialogueOpen,LiftBusy;public Action Pending;public string[] LastLines,LastSpeakers;
         public void Conversation(Action done,int art,string[] people,string[] lines){Pending=done;LastLines=lines;LastSpeakers=people;DialogueOpen=true;}
         public void Finish(){var done=Pending;Pending=null;DialogueOpen=false;done?.Invoke();}

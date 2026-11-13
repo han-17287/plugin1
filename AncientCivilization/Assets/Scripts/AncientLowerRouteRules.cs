@@ -4,6 +4,10 @@ namespace Plugin.AncientCivilization
     public static class AncientLowerRouteRules
     {
         public const int CaseCount=8,StopsPerCase=9,StopsPerSector=3,RequiredPerSector=2,StopCount=CaseCount*StopsPerCase,Mask=(1<<StopsPerCase)-1;
+        public static bool AutomaticAction(int id)
+        {return id>=0&&id<StopCount&&!AncientLowerRouteData.Stops[id].Optional&&AncientLowerRouteData.Stops[id].Action!=AncientRouteAction.Talk;}
+        public static bool CanApproach(int id,float dx,float dy)
+        {return AutomaticAction(id)&&Finite(dx)&&Finite(dy)&&Math.Abs(dx)<=24&&Math.Abs(dy)<=9&&dx<=18;}
         public static bool Supports(int mission){return mission>=0&&mission<CaseCount;}
         static readonly int[,] guardPairs={{0,1},{1,2},{0,5},{4,1},{0,1},{5,1},{4,0},{5,2}};
         public static int GuardType(int id,int slot)

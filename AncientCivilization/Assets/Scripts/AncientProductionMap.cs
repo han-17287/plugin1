@@ -20,6 +20,7 @@ namespace Plugin.AncientCivilization
         CapsuleCollider2D officerShape;BoxCollider2D motorcycleShape;
         Transform inspectionCarrier;SpriteRenderer stockWarning;Sprite paint;float ambientAge,stockAge,beltTravel,pressAge;
         readonly SpriteRenderer[] beltTreads=new SpriteRenderer[10];readonly PressMotion[] presses=new PressMotion[3];
+        Transform trainingGate;BoxCollider2D trainingGateSolid;SpriteRenderer trainingReceiver;float trainingGateOpen;
         public bool BreachOpen {get;private set;}
         readonly Sign[] signs={
             new Sign(-229,4.2f,"교대 통로\nA/D 이동 · Ctrl 달리기 전환"),
@@ -29,7 +30,8 @@ namespace Plugin.AncientCivilization
             new Sign(-77,7.7f,"작업 고리 지름길 / 아래는 안전한 통로",340),
             new Sign(-26,4.6f,"장비 검수실\n휠 위: 공격 · 짧은 좌클릭: 베기"),
             new Sign(7,7.3f,"장비 검수 배출구 / 훈련용 빈 하우징",330),
-            new Sign(38,4.6f,"코어 재고 관리실 ▶"),
+            new Sign(31,6.1f,"검수문 전력 수광부\n입자 레이저로 전력 복구",280),
+            new Sign(42,4.6f,"코어 재고 관리실 ▶"),
             new Sign(60,8.8f,"C-00 예비분 / 별도 계량",260),
             new Sign(80.2f,7.9f,"반출 기록 없음",180),
             new Sign(92,3.6f,"재고 관리 단말\nE: 코어 수량 확인"),
@@ -214,6 +216,13 @@ namespace Plugin.AncientCivilization
         void BuildEquipmentRoom()
         {
             Portal(-9,80,Ivory*.55f);
+            float gateX=AncientProductionLayout.TrainingGateX;
+            trainingGateOpen=(AncientGame.Saved("questFlags")&(1<<7))!=0||AncientGame.Saved("questStage")>=4?1:0;
+            var shutter=game.Box("Powered inspection shutter",new Vector2(gateX,5+trainingGateOpen*10),new Vector2(.45f,10),Steel,6);
+            shutter.layer=8;trainingGate=shutter.transform;trainingGate.SetParent(transform,true);trainingGateSolid=shutter.AddComponent<BoxCollider2D>();trainingGateSolid.enabled=trainingGateOpen<1;
+            trainingReceiver=AncientArt.Display("Inspection laser receiver",AncientRouteDeviceArt.Get(AncientRouteAction.Relay),new Vector2(AncientProductionLayout.TrainingReceiverX,AncientProductionLayout.TrainingReceiverY),8,transform);
+            B("Inspection receiver support",AncientProductionLayout.TrainingReceiverX,1.3f,.2f,2.6f,Steel,2);
+            B("Inspection shutter header",gateX,9.6f,2.3f,.6f,Steel,4);
             for(int index=0;index<4;index++)
             {
                 float x=index==0?-42:index==1?-18:index==2?7:28;
@@ -418,6 +427,12 @@ namespace Plugin.AncientCivilization
             if(inspectionCarrier.gameObject.activeSelf!=visibleInspection)inspectionCarrier.gameObject.SetActive(visibleInspection);
             if(stockWarning)stockWarning.enabled=!game.MainMenu&&heroX>54&&heroX<107&&game.Story.CurrentFloor==0;
             if(externalPause)return;
+            bool powered=game.Story.TrainingDoorPowered;
+            trainingGateOpen=Mathf.MoveTowards(trainingGateOpen,powered?1:0,activeDelta*1.5f);
+            trainingGate.position=new Vector2(AncientProductionLayout.TrainingGateX,5+trainingGateOpen*10);
+            trainingGateSolid.enabled=trainingGateOpen<1;
+            trainingReceiver.color=powered?new Color(.3f,1,.55f):Color.white;
+
             if(visibleInspection)
             {
                 ambientAge+=activeDelta;

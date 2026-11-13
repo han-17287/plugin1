@@ -210,6 +210,13 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(hit&&Mathf.Abs(hit.point.y-piece.top)<.03f,"Actual street collision agrees with the authored climb/drop; no old flat road fills a well");
                     if(piece.top>1)Assert(Physics2D.OverlapPoint(new Vector2(left+x,piece.top-1.2f),1<<8),"Raised street foundations are physical walls, not scenery the player can walk through");
                 }
+                for(int n=block*2;n<block*2+2;n++)
+                {
+                    float px,py;if(!AncientFieldExpansion.TryRestPoint(id,sector,n,out px,out py))continue;
+                    var support=Physics2D.Raycast(new Vector2(left+px,.3f),Vector2.down,.5f,1<<8);
+                    Assert(support&&Mathf.Abs(support.point.y)<.03f,"Retry beacons stand on actual fixed ground");
+                    Assert(!Physics2D.OverlapCapsule(new Vector2(left+px,py),size,CapsuleDirection2D.Vertical,0,1<<8),"A restored retry position fits the native player capsule");
+                }
                 if(!tall)continue;
                 float middle=left+(core.left+core.right)*.5f;
                 var crown=Physics2D.Raycast(new Vector2(middle,9.4f),Vector2.down,.7f,1<<8);

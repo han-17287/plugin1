@@ -107,6 +107,16 @@ class FieldExpansionChecks
     static void Main()
     {
         CheckStreetDesign();
+        for(int mission=-1;mission<=8;mission++)for(int sector=-1;sector<=3;sector++)for(int pad=-1;pad<=24;pad++)
+        {
+            float x,y;bool validPad=AncientFieldExpansion.TryRestPoint(mission,sector,pad,out x,out y);
+            bool expected=mission>=0&&mission<8&&sector>=0&&sector<3&&pad>=0&&pad<8&&(!AncientFieldExpansion.IsJumpSector(mission,sector)||pad%2==0);
+            Check(validPad==expected,"Recovery rejects corrupt/out-of-chapter slots and platforms that do not exist on a jump route");
+            if(!validPad)continue;
+            Check(Near(y,1.3f),"The standing capsule spawns above fixed safe-ground pads");
+            if(!AncientFieldExpansion.IsJumpSector(mission,sector))for(float dx=-.36f;dx<=.36f;dx+=.12f)
+                Check(Near(AncientFieldExpansion.StreetHeight(mission,sector,pad/2,x-AncientFieldExpansion.SectorStart(mission,sector)-(pad/2)*208+dx),0),"The complete respawn capsule footprint has flat physical support");
+        }
         Check(AncientFieldExpansion.SectorCount==3&&AncientFieldExpansion.RouteCount==27,"Each expanded field contains three nine-ledge sections");
         Check(AncientFieldExpansion.Width>=600&&AncientFieldExpansion.Width==AncientFieldExpansion.SectorCount*AncientFieldExpansion.SectorSpan,"Fields are longer than the former432-unit interiors and cover all three complete sectors");
         Check(AncientFieldExpansion.Stride>AncientFieldExpansion.Width,"Consecutive case sections leave room for a physical connecting road");

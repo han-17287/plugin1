@@ -224,7 +224,7 @@ namespace Plugin.AncientCivilization
             laserUntil=laserPulse.Until;beamWidth=AncientBeamRules.BodyWidth(energy);beam.startWidth=beam.endWidth=beamWidth;
             beamCore.startWidth=beamCore.endWidth=AncientBeamRules.CoreWidth(energy);
             beamGlow.startWidth=beamGlow.endWidth=AncientBeamRules.SheathWidth(energy);
-            LaserShots++;game.Story.OnTraining(7);game.Sound(4);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
+            LaserShots++;game.Sound(4);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
             ResolveLaserHits();
             if(PulseInterrupted)CancelLaser();
         }
@@ -250,6 +250,7 @@ namespace Plugin.AncientCivilization
                 // Hit can synchronously open dialogue or start the automatic sniper finale.
                 if(PulseInterrupted||!Firing){CancelLaser();return;}
             }
+            game.Story.OnTrainingLaser(beamStart,beamEnd,radius);
             if(game.Sniper)game.Sniper.OnLaser(beamStart,beamEnd,radius,pulseId);
             if(game.LowerRoute)game.LowerRoute.OnLaser(beamStart,beamEnd,radius);
             if(game.Campaign)game.Campaign.OnLaser(beamStart,beamEnd,radius);

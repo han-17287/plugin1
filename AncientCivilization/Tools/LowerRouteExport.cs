@@ -14,7 +14,8 @@ class LowerRouteExport
             float left=AncientChapterLayout.CaseLeft(id);var sectors=new List<object>();
             for(int sector=0;sector<3;sector++)
             {
-                var platforms=new List<object>();var ceilings=new List<object>();var hooks=new List<object>();
+                var platforms=new List<object>();var ceilings=new List<object>();var hooks=new List<object>();var rests=new List<object>();
+                for(int n=0;n<8;n++){float px,py;if(AncientFieldExpansion.TryRestPoint(id,sector,n,out px,out py))rests.Add(new{x=left+px,y=py});}
                 for(int b=0;b<4;b++){float origin=left+AncientFieldExpansion.SectorStart(id,sector)+b*208;if(AncientFieldExpansion.TallStreetBay(id,sector,b)){ceilings.Add(new{x=origin,right=origin+12,y=10f});ceilings.Add(new{x=origin+12,right=origin+78,y=18f});ceilings.Add(new{x=origin+78,right=origin+208,y=10f});}else ceilings.Add(new{x=origin,right=origin+208,y=10f});}
                 bool jump=AncientFieldExpansion.IsJumpSector(id,sector);
                 if(AncientFieldExpansion.HasStreetDesign(id,sector))for(int block=0;block<4;block++)
@@ -43,10 +44,10 @@ class LowerRouteExport
                     if(data.Action==AncientRouteAction.Wire)platforms.Add(new{x=x-2.3f,right=x+2.3f,top=6f,depth=1f});
                 }
                 var node=AncientFieldExpansion.Segment(id,sector,5);
-                sectors.Add(new{id=sector,name=AncientFieldExpansion.Names[id][sector],left=left+AncientFieldExpansion.SectorStart(id,sector),width=AncientFieldExpansion.Span(id),jump,platforms,ceilings,hooks,stops,objective=new{x=left+(node.left+node.right)*.5f,y=node.top+1.3f}});
+                sectors.Add(new{id=sector,name=AncientFieldExpansion.Names[id][sector],left=left+AncientFieldExpansion.SectorStart(id,sector),width=AncientFieldExpansion.Span(id),jump,platforms,ceilings,hooks,rests,stops,objective=new{x=left+(node.left+node.right)*.5f,y=node.top+1.3f}});
             }
             cases.Add(new{id,floor=id/4,title=AncientCampaignData.Missions[id].Title,left,right=AncientChapterLayout.CaseRight(id),sectors});
         }
-        Console.Write(JsonSerializer.Serialize(new{version="0.26.0",source="Actual C# layout/data export. Not a Unity render or playthrough.",targetMinutes=150,cases},new JsonSerializerOptions{WriteIndented=true,Encoder=JavaScriptEncoder.UnsafeRelaxedJsonEscaping}));
+        Console.Write(JsonSerializer.Serialize(new{version="0.27.0",source="Actual C# layout/data export. Not a Unity render or playthrough.",targetMinutes=150,cases},new JsonSerializerOptions{WriteIndented=true,Encoder=JavaScriptEncoder.UnsafeRelaxedJsonEscaping}));
     }
 }
