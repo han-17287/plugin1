@@ -1,0 +1,75 @@
+v0.26.0 lower district terrain redesign — 2026-11-13
+
+LIMITS
+Unity Editor 6000.6.7f1 is unavailable. Native import, Play, real input,
+physics, FPS, builds and a full playthrough were NOT run. The 150-minute
+content target remains unmeasured. No completion percentage is claimed.
+
+PORTABLE CHECKS
+.NET SDK 8.0.416: all 25 isolated check projects passed.
+Source/assets: 1654 PASS. No skipped dependencies or failures.
+PASS: BeamChecks = 11591
+PASS: BladeChecks = 4600
+PASS: BossReadabilityChecks = 1748
+PASS: ChapterRouteChecks = 26693
+PASS: ChapterVisibilityChecks = 13813
+PASS: FieldExpansionChecks = 64862
+PASS: LivingChecks = 4327
+PASS: LivingControllerChecks = 471
+PASS: LowerControllerChecks = 1020
+PASS: LowerRouteChecks = 345733
+PASS: MovementChecks = 9400
+PASS: PlaytimeChecks = 52
+PASS: ProductionHazardChecks = 767
+PASS: ProductionLayoutChecks = 522151
+PASS: ProductionMotionChecks = 48172
+PASS: ProductionSequenceChecks = 193072
+PASS: ProjectileOrderingChecks = 7024
+PASS: PulseChecks = 137
+PASS: RouteRadioChecks = 106
+PASS: RulesChecks = 3824
+PASS: SniperChecks = 76
+PASS: SpeechLayoutChecks = 3997
+PASS: SwingChecks = 596
+PASS: ThreatChecks = 359
+PASS: ZipChecks = 60408
+TOTAL: 1324999 assertions, including parameter sweeps.
+
+New terrain coverage checks contiguous recovery floors, entry/exit heights,
+mission/escort courts, whole-body clearance below grates and suspended ducts,
+hoist approach spacing, high-hoist visibility and planned capsule paths across
+four vertical rooms. The opening has three shallow recoverable crossing wells.
+These mathematical checks do not simulate Unity traversal.
+The existing boss/route/movement/save checks retain their narrow service doubles.
+After the full run, a living-district cargo coordinate was moved from local52 to58
+inside tall rooms so its artwork clears the machine; type checks were rerun.
+
+SUPPLEMENTAL TYPE CHECK
+107 runtime scripts: warnings-as-errors against Unity2021.3.33 NuGet assemblies,
+with .linearVelocity replaced by .velocity only in temporary copies.
+All107 runtime plus8 Editor fixtures also compile with UNITY_EDITOR and narrow
+Editor API stubs. Shipping source retains Unity6000 APIs. This is not a native
+Unity6000 build. Native field smoke checks now include actual street floor hits,
+solid foundations, nine-metre machines, eighteen-metre ceilings and capsule fit;
+those fixtures were authored and type-checked but NOT executed in Unity.
+
+SOURCE FINGERPRINT
+SHA256 of sorted UTF-8 '<file SHA256>  <repo-relative Assets/**/*.cs path>\n' lines:
+115 files: 7378611b964d3882256a91c56a85a1f8168c38cb333b3bb24a40972620ebcb77
+
+MAP DATA REVIEW
+Actual C# export: 8 cases,24 sectors,72 dialogue stops; street pieces, structural
+foundations, grates, ceilings and useful hoist positions. MapTraversalPreview.html
+is a standalone source-data diagram, NOT a game or Unity screenshot.
+Chromium: all8 case selectors,24 sectors,72 conversation panels,720px responsive
+layout; no browser script errors. Loading dock and vertical room diagrams reviewed.
+
+REPRODUCE
+python -m pip install -r AncientCivilization/Tools/requirements-checks.txt
+python AncientCivilization/Tools/run_checks.py --dotnet /path/to/dotnet-8-sdk/dotnet
+python AncientCivilization/Tools/package_project.py --output /path/outside/project/PLUGIN_v0.26.0.zip
+
+PACKAGING
+Source archive only. Package tool verifies CRC, inventory and byte equality.
+Public v0.26.0-download exports AncientCivilization,ArtReferences and root README.md.
+Use MAP_REDESIGN_KO.md and PLAYTEST_KO.md for native traversal and timing follow-up.
