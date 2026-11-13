@@ -1,0 +1,92 @@
+v0.25.0 lower production / living district source validation — 2026-11-13
+
+TARGET AND LIMITS
+The requested 150-minute first playthrough is a content target, not a measured result.
+Unity Editor 6000.6.7f1 is not installed in this environment. Native import, Play,
+rendering, physics, real input, FPS, player build and a complete playthrough were NOT run.
+Passing assertions below are not a completion percentage or a playtime estimate.
+
+PORTABLE CHECKS
+.NET SDK 8.0.416 built and executed all 25 isolated check projects.
+Source/assets: 1654 PASS, no skipped dependencies or failures.
+PASS: BeamChecks = 11591
+PASS: BladeChecks = 4600
+PASS: BossReadabilityChecks = 1748
+PASS: ChapterRouteChecks = 26693
+PASS: ChapterVisibilityChecks = 13813
+PASS: FieldExpansionChecks = 37549
+PASS: LivingChecks = 4327
+PASS: LivingControllerChecks = 471
+PASS: LowerControllerChecks = 1020
+PASS: LowerRouteChecks = 345733
+PASS: MovementChecks = 9400
+PASS: PlaytimeChecks = 52
+PASS: ProductionHazardChecks = 767
+PASS: ProductionLayoutChecks = 522128
+PASS: ProductionMotionChecks = 48172
+PASS: ProductionSequenceChecks = 193072
+PASS: ProjectileOrderingChecks = 7024
+PASS: PulseChecks = 137
+PASS: RouteRadioChecks = 106
+PASS: RulesChecks = 3824
+PASS: SniperChecks = 76
+PASS: SpeechLayoutChecks = 3997
+PASS: SwingChecks = 596
+PASS: ThreatChecks = 359
+PASS: ZipChecks = 60408
+TOTAL: 1297663 assertions, including parameter/geometry/frame sweeps.
+
+The living-controller suite executes the shipping boss scheduler against narrow
+service doubles at 15/30/60/120/144/240 Hz. It covers scheduled bullets, missiles,
+cannon, X damage, grab release, health phases, suction overload and barrier state.
+The lower-controller suite executes the shipping route/resident/throw controllers
+against doubles: all 72 stop callbacks, action/confirmation persistence, migrated
+unheard dialogue, optional return visits, death resets, reward uniqueness, earliest
+throw contact, thin-wall occlusion and the double-rocket catch/straight rethrow.
+The same suite exercises the shipping playtime controller: focus loss, OS pause,
+first resumed frames, menu/journal/lift exclusion, QA isolation, first-clear freezing
+and restored/partial old-save records. The collision double is one explicitly
+specified vertical wall; it is not Unity physics.
+
+SUPPLEMENTAL TYPE CHECK
+PASS: 107 runtime C# files compile with warnings as errors against Unity 2021.3.33
+NuGet reference assemblies, after replacing .linearVelocity with .velocity only
+in temporary copies. The shipping Unity 6000 source keeps .linearVelocity.
+PASS: those 107 runtime files plus all 8 Editor fixtures compile together with
+UNITY_EDITOR, warnings as errors, the same references and narrow Editor API stubs.
+PASS: all 115 temporary source copies match current shipping files except that alias.
+The final sort-order and prompt-layout adjustments were type-checked again;
+all 25 portable suites were rerun successfully after the final source change.
+This is NOT a native Unity 6000 import/build. Native smoke fixtures were NOT executed.
+
+Source fingerprint: SHA256 of UTF-8 lines, sorted by repo-relative Assets/**/*.cs path,
+each line '<SHA256(raw file bytes)>  <repo-relative POSIX path>\n'.
+115-file manifest SHA256: 83507dd8b60a695a3f0aedc74dfa9c82d4019d740278b4f827fb5c3aa581b3cc
+
+SOURCE-DATA VISUAL REVIEW
+PASS: actual C# layout export contains 8 cases, 24 sectors and 72 stop scripts.
+Chromium review checked case/sector selection, all 72 conversation panels and
+720-pixel responsive layout without console errors. Production/living jump sectors
+and the overview SVG were visually inspected. These are map data, not a playable build.
+PASS: C# generated pixel buffers for 8 living wall furnishings and 4 local devices
+were drawn in Chromium and visually inspected. LowerDistrictWalls.png and
+LowerDistrictMechanisms.png explicitly identify themselves as source previews.
+PASS: relative documentation links resolve; git diff --check has no whitespace errors.
+
+REPRODUCE
+python -m pip install -r AncientCivilization/Tools/requirements-checks.txt
+python AncientCivilization/Tools/run_checks.py --dotnet /path/to/dotnet-8-sdk/dotnet
+python AncientCivilization/Tools/package_project.py --output /path/outside/project/PLUGIN_v0.25.0.zip
+
+Packaging selects AncientCivilization and ArtReferences, excluding build/editor caches,
+work folders, symlinks and VCS data, then checks CRC, inventory and byte equality.
+The public v0.25.0-download tag contains those trees plus the root README.md.
+Packaging is a source archive operation, not an executable player build.
+
+NATIVE FOLLOW-UP
+Use PLAYTEST_KO.md for first-time, all-dialogue and experienced-route timings.
+In Unity, the opt-in PLUGIN/검사 menus include the lower route, living boss, blade,
+production, movement, continuous-field and projectile smoke fixtures. They use an
+isolated QA save profile and verify that the normal save remains unchanged.
+Validate native traversal, every boss pattern, saves, low-frame collision and UI
+before treating this version as a tested game release or claiming a 150-minute run.

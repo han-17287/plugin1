@@ -1,0 +1,359 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="1320" viewBox="0 0 1480 1320" role="img" aria-labelledby="title description">
+<title id="title">PLUGIN 하층 생산구와 생활부의 연속 수사로</title>
+<desc id="description">실제 코드에서 추출한 여덟 이정표, 필수 현장 48곳과 선택 현장 24곳. Unity 실행 화면과 실측 완주 시간이 아닌 구조도.</desc>
+<!-- Source JSON SHA-256: 480f7d304f37ec3dcb8208122c4b139a3176e8afd0a9d576d7ff84fc2c3713e9 -->
+<rect width="1480" height="1320" fill="#08131e"/>
+<style>text{font-family:"Noto Sans CJK KR","Malgun Gothic",sans-serif;fill:#dbe9ee}.muted{fill:#8ca9ba}.title{font-size:30px;font-weight:700}.head{font-size:22px;font-weight:700}.small{font-size:13px}.body{font-size:16px}</style>
+<text x="40" y="53" class="title" >PLUGIN / 두 구역의 연속 수사로</text>
+<text x="40" y="85" class="body muted" >v0.25.0 · 필수 현장 48곳 + 선택 현장 24곳 · 새 현장 화자 48명</text>
+<text x="40" y="112" class="body muted" >첫 플레이 목표 150분 · 실제 완주 시간은 미측정 · 이 그림은 코드 기반 구조도입니다.</text>
+<text x="40" y="163" class="head" >하층 생산구 / 최하층</text>
+<text x="775" y="163" class="head" >하부 생활구 / 그 위층</text>
+<text x="40" y="190" class="small muted" >재고 보고 → 코어 트럭 추격·검거 → 아래 수사로</text>
+<text x="775" y="190" class="small muted" >실제 엘리베이터 → 도둑이 지나갔다는 길 → 본거지</text>
+<rect x="40" y="212" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="58" y="243" class="head" >01  사라진 야간 배정</text>
+<text x="58" y="266" class="small muted" >연속 이정표 2,496단위 · X 128–2,624</text>
+<text x="58" y="292" class="small" >야간 하역장</text>
+<rect x="195" y="278" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="291" class="small" >남겨진 교대표</text>
+<text x="201" y="316" class="small muted" >필수 · 증언</text>
+<rect x="338" y="278" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="291" class="small" >증언을 막는 사람들</text>
+<text x="344" y="316" class="small muted" >필수 · 경비전</text>
+<rect x="481" y="278" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="291" class="small" >식지 않은 도시락</text>
+<text x="487" y="316" class="small muted" >선택 · 증언</text>
+<rect x="624" y="278" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="294" class="small" >주요 목표</text>
+<text x="631" y="310" class="small muted" >단서·인계</text>
+<text x="58" y="341" class="small" >분리 계량실</text>
+<rect x="195" y="327" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="340" class="small" >덧씌운 봉인</text>
+<text x="201" y="365" class="small muted" >필수 · 베기</text>
+<rect x="338" y="327" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="340" class="small" >두 개의 계량기</text>
+<text x="344" y="365" class="small muted" >필수 · 증언</text>
+<rect x="481" y="327" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="340" class="small" >막힌 냉각 밸브</text>
+<text x="487" y="365" class="small muted" >선택 · 베기</text>
+<rect x="624" y="327" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="343" class="small" >주요 목표</text>
+<text x="631" y="359" class="small muted" >단서·인계</text>
+<text x="58" y="390" class="small" >밀봉 출고로</text>
+<rect x="195" y="376" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="389" class="small" >출고로 봉쇄</text>
+<text x="201" y="414" class="small muted" >필수 · 경비전</text>
+<rect x="338" y="376" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="389" class="small" >빈 수령인 칸</text>
+<text x="344" y="414" class="small muted" >필수 · 증언</text>
+<rect x="481" y="376" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="389" class="small" >수리한 출근 시계</text>
+<text x="487" y="414" class="small muted" >선택 · 증언</text>
+<rect x="624" y="376" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="392" class="small" >주요 목표</text>
+<text x="631" y="408" class="small muted" >단서·인계</text>
+<rect x="40" y="451" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="58" y="482" class="head" >02  끊어진 작업장</text>
+<text x="58" y="505" class="small muted" >연속 이정표 2,496단위 · X 2,688–5,184</text>
+<text x="58" y="531" class="small" >압력 배관구</text>
+<rect x="195" y="517" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="530" class="small" >눌린 비상 도관</text>
+<text x="201" y="555" class="small muted" >필수 · 베기</text>
+<rect x="338" y="517" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="530" class="small" >수동 예비 전원</text>
+<text x="344" y="555" class="small muted" >필수 · 레이저</text>
+<rect x="481" y="517" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="530" class="small" >작은 휴게실</text>
+<text x="487" y="555" class="small muted" >선택 · 레이저</text>
+<rect x="624" y="517" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="533" class="small" >주요 목표</text>
+<text x="631" y="549" class="small muted" >단서·인계</text>
+<text x="58" y="580" class="small" >고장 도관실</text>
+<rect x="195" y="566" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="579" class="small" >복구를 막는 경비</text>
+<text x="201" y="604" class="small muted" >필수 · 경비전</text>
+<rect x="338" y="566" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="579" class="small" >승인보다 빠른 구조</text>
+<text x="344" y="604" class="small muted" >필수 · 증언</text>
+<rect x="481" y="566" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="579" class="small" >벽에 남은 키 자국</text>
+<text x="487" y="604" class="small muted" >선택 · 증언</text>
+<rect x="624" y="566" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="582" class="small" >주요 목표</text>
+<text x="631" y="598" class="small muted" >단서·인계</text>
+<text x="58" y="629" class="small" >수동 배전소</text>
+<rect x="195" y="615" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="628" class="small" >비상등 연결</text>
+<text x="201" y="653" class="small muted" >필수 · 레이저</text>
+<rect x="338" y="615" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="628" class="small" >밝아진 작업장</text>
+<text x="344" y="653" class="small muted" >필수 · 증언</text>
+<rect x="481" y="615" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="628" class="small" >예비 부품 보관소</text>
+<text x="487" y="653" class="small muted" >선택 · 경비전</text>
+<rect x="624" y="615" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="631" class="small" >주요 목표</text>
+<text x="631" y="647" class="small muted" >단서·인계</text>
+<rect x="40" y="690" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="58" y="721" class="head" >03  마지막 작업자</text>
+<text x="58" y="744" class="small muted" >연속 이정표 2,496단위 · X 5,248–7,744</text>
+<text x="58" y="770" class="small" >봉쇄 작업선</text>
+<rect x="195" y="756" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="769" class="small" >폐쇄 작업선</text>
+<text x="201" y="794" class="small muted" >필수 · 베기</text>
+<rect x="338" y="756" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="769" class="small" >빈 대피 구역</text>
+<text x="344" y="794" class="small muted" >필수 · 경비전</text>
+<rect x="481" y="756" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="769" class="small" >이름을 쓰는 자리</text>
+<text x="487" y="794" class="small muted" >선택 · 증언</text>
+<rect x="624" y="756" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="772" class="small" >주요 목표</text>
+<text x="631" y="788" class="small muted" >단서·인계</text>
+<text x="58" y="819" class="small" >야간 잔류실</text>
+<rect x="195" y="805" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="818" class="small" >먼저 작성된 확인서</text>
+<text x="201" y="843" class="small muted" >필수 · 증언</text>
+<rect x="338" y="805" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="818" class="small" >잔류실 통신함</text>
+<text x="344" y="843" class="small muted" >필수 · 베기</text>
+<rect x="481" y="805" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="818" class="small" >놓고 간 작업 가방</text>
+<text x="487" y="843" class="small muted" >선택 · 베기</text>
+<rect x="624" y="805" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="821" class="small" >주요 목표</text>
+<text x="631" y="837" class="small muted" >단서·인계</text>
+<text x="58" y="868" class="small" >노동자 귀환로</text>
+<rect x="195" y="854" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="867" class="small" >귀환로 확보</text>
+<text x="201" y="892" class="small muted" >필수 · 경비전</text>
+<rect x="338" y="854" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="867" class="small" >실제 인원</text>
+<text x="344" y="892" class="small muted" >필수 · 증언</text>
+<rect x="481" y="854" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="867" class="small" >비어 있는 작업복</text>
+<text x="487" y="892" class="small muted" >선택 · 증언</text>
+<rect x="624" y="854" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="870" class="small" >주요 목표</text>
+<text x="631" y="886" class="small muted" >단서·인계</text>
+<rect x="40" y="929" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="58" y="960" class="head" >04  사본을 남기는 이유</text>
+<text x="58" y="983" class="small muted" >연속 이정표 2,496단위 · X 7,808–10,304</text>
+<text x="58" y="1009" class="small" >인계 정비동</text>
+<rect x="195" y="995" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="1008" class="small" >돌아온 회수품</text>
+<text x="201" y="1033" class="small muted" >필수 · 증언</text>
+<rect x="338" y="995" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="1008" class="small" >잘린 송신선</text>
+<text x="344" y="1033" class="small muted" >필수 · 베기</text>
+<rect x="481" y="995" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="1008" class="small" >복사기의 마지막 용</text>
+<text x="487" y="1020" class="small" >지</text>
+<text x="487" y="1033" class="small muted" >선택 · 증언</text>
+<rect x="624" y="995" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="1011" class="small" >주요 목표</text>
+<text x="631" y="1027" class="small muted" >단서·인계</text>
+<text x="58" y="1058" class="small" >교체 승인실</text>
+<text x="58" y="1076" class="small muted" >점프·와이어 구간</text>
+<rect x="195" y="1044" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="1057" class="small" >하부 정비교</text>
+<text x="201" y="1082" class="small muted" >필수 · 와이어</text>
+<rect x="338" y="1044" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="1057" class="small" >움직이는 정비 크레</text>
+<text x="344" y="1069" class="small" >인</text>
+<text x="344" y="1082" class="small muted" >필수 · 와이어</text>
+<rect x="481" y="1044" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="1057" class="small" >상부 점검 기록</text>
+<text x="487" y="1082" class="small muted" >선택 · 와이어</text>
+<rect x="624" y="1044" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="1060" class="small" >주요 목표</text>
+<text x="631" y="1076" class="small muted" >단서·인계</text>
+<text x="58" y="1107" class="small" >사본 송신탑</text>
+<rect x="195" y="1093" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="201" y="1106" class="small" >사본 송신탑</text>
+<text x="201" y="1131" class="small muted" >필수 · 경비전</text>
+<rect x="338" y="1093" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="344" y="1106" class="small" >올라갈 권리</text>
+<text x="344" y="1131" class="small muted" >필수 · 증언</text>
+<rect x="481" y="1093" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="487" y="1106" class="small" >아래로 보내는 편지</text>
+<text x="487" y="1131" class="small muted" >선택 · 증언</text>
+<rect x="624" y="1093" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="631" y="1109" class="small" >주요 목표</text>
+<text x="631" y="1125" class="small muted" >단서·인계</text>
+<rect x="775" y="212" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="793" y="243" class="head" >05  도둑이 지나간 길</text>
+<text x="793" y="266" class="small muted" >연속 이정표 2,496단위 · X 12,416–14,912</text>
+<text x="793" y="292" class="small" >생활부 골목</text>
+<rect x="930" y="278" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="291" class="small" >배급 줄 끝</text>
+<text x="936" y="316" class="small muted" >필수 · 증언</text>
+<rect x="1073" y="278" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="291" class="small" >골목의 길막이</text>
+<text x="1079" y="316" class="small muted" >필수 · 경비전</text>
+<rect x="1216" y="278" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="291" class="small" >나란한 식권</text>
+<text x="1222" y="316" class="small muted" >선택 · 증언</text>
+<rect x="1359" y="278" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="294" class="small" >주요 목표</text>
+<text x="1366" y="310" class="small muted" >단서·인계</text>
+<text x="793" y="341" class="small" >진료소 앞길</text>
+<rect x="930" y="327" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="340" class="small" >빈 냉장 장치</text>
+<text x="936" y="365" class="small muted" >필수 · 증언</text>
+<rect x="1073" y="327" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="340" class="small" >진료소 뒷문</text>
+<text x="1079" y="365" class="small muted" >필수 · 베기</text>
+<rect x="1216" y="327" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="340" class="small" >진료소 보조 냉각기</text>
+<text x="1222" y="365" class="small muted" >선택 · 레이저</text>
+<rect x="1359" y="327" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="343" class="small" >주요 목표</text>
+<text x="1366" y="359" class="small muted" >단서·인계</text>
+<text x="793" y="390" class="small" >운반함 흔적</text>
+<rect x="930" y="376" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="389" class="small" >흔적 지우는 경비</text>
+<text x="936" y="414" class="small muted" >필수 · 경비전</text>
+<rect x="1073" y="376" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="389" class="small" >같은 천 조각</text>
+<text x="1079" y="414" class="small muted" >필수 · 증언</text>
+<rect x="1216" y="376" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="389" class="small" >이사하지 못한 열쇠</text>
+<text x="1222" y="414" class="small muted" >선택 · 증언</text>
+<rect x="1359" y="376" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="392" class="small" >주요 목표</text>
+<text x="1366" y="408" class="small muted" >단서·인계</text>
+<rect x="775" y="451" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="793" y="482" class="head" >06  폐차장 너머</text>
+<text x="793" y="505" class="small muted" >연속 이정표 2,496단위 · X 14,976–17,472</text>
+<text x="793" y="531" class="small" >폐차 적치장</text>
+<rect x="930" y="517" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="530" class="small" >막힌 폐차 통로</text>
+<text x="936" y="555" class="small muted" >필수 · 투척</text>
+<rect x="1073" y="517" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="530" class="small" >적치장 감시원</text>
+<text x="1079" y="555" class="small muted" >필수 · 경비전</text>
+<rect x="1216" y="517" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="530" class="small" >고철과 배급함</text>
+<text x="1222" y="555" class="small muted" >선택 · 투척</text>
+<rect x="1359" y="517" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="533" class="small" >주요 목표</text>
+<text x="1366" y="549" class="small muted" >단서·인계</text>
+<text x="793" y="580" class="small" >상자 운송로</text>
+<rect x="930" y="566" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="579" class="small" >상자 운송문</text>
+<text x="936" y="604" class="small muted" >필수 · 투척</text>
+<rect x="1073" y="566" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="579" class="small" >포장만 바뀐 코어</text>
+<text x="1079" y="604" class="small muted" >필수 · 증언</text>
+<rect x="1216" y="566" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="579" class="small" >팔리지 않는 부품</text>
+<text x="1222" y="604" class="small muted" >선택 · 증언</text>
+<rect x="1359" y="566" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="582" class="small" >주요 목표</text>
+<text x="1366" y="598" class="small muted" >단서·인계</text>
+<text x="793" y="629" class="small" >창고 연결로</text>
+<rect x="930" y="615" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="628" class="small" >연결로의 매복</text>
+<text x="936" y="653" class="small muted" >필수 · 경비전</text>
+<rect x="1073" y="615" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="628" class="small" >주민 우회문</text>
+<text x="1079" y="653" class="small muted" >필수 · 레이저</text>
+<rect x="1216" y="615" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="628" class="small" >배달 상자를 지키는</text>
+<text x="1222" y="640" class="small" > 사람</text>
+<text x="1222" y="653" class="small muted" >선택 · 경비전</text>
+<rect x="1359" y="615" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="631" class="small" >주요 목표</text>
+<text x="1366" y="647" class="small muted" >단서·인계</text>
+<rect x="775" y="690" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="793" y="721" class="head" >07  감시하는 빛</text>
+<text x="793" y="744" class="small muted" >연속 이정표 2,496단위 · X 17,536–20,032</text>
+<text x="793" y="770" class="small" >감시 통로</text>
+<rect x="930" y="756" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="769" class="small" >빛이 지나가는 시간</text>
+<text x="936" y="794" class="small muted" >필수 · 증언</text>
+<rect x="1073" y="756" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="769" class="small" >감시망 보조함</text>
+<text x="1079" y="794" class="small muted" >필수 · 베기</text>
+<rect x="1216" y="756" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="769" class="small" >꺼지지 않는 감시등</text>
+<text x="1222" y="794" class="small muted" >선택 · 증언</text>
+<rect x="1359" y="756" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="772" class="small" >주요 목표</text>
+<text x="1366" y="788" class="small muted" >단서·인계</text>
+<text x="793" y="819" class="small" >경비 로봇 구역</text>
+<text x="793" y="837" class="small muted" >점프·와이어 구간</text>
+<rect x="930" y="805" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="818" class="small" >상부 감시 통로</text>
+<text x="936" y="843" class="small muted" >필수 · 와이어</text>
+<rect x="1073" y="805" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="818" class="small" >외벽 우회교</text>
+<text x="1079" y="843" class="small muted" >필수 · 와이어</text>
+<rect x="1216" y="805" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="818" class="small" >외벽 대피 신호</text>
+<text x="1222" y="843" class="small muted" >선택 · 와이어</text>
+<rect x="1359" y="805" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="821" class="small" >주요 목표</text>
+<text x="1366" y="837" class="small muted" >단서·인계</text>
+<text x="793" y="868" class="small" >본거지 외벽</text>
+<rect x="930" y="854" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="867" class="small" >본거지 외벽 경비</text>
+<text x="936" y="892" class="small muted" >필수 · 경비전</text>
+<rect x="1073" y="854" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="867" class="small" >보급 승인판</text>
+<text x="1079" y="892" class="small muted" >필수 · 증언</text>
+<rect x="1216" y="854" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="867" class="small" >검문을 통과한 물건</text>
+<text x="1222" y="892" class="small muted" >선택 · 증언</text>
+<rect x="1359" y="854" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="870" class="small" >주요 목표</text>
+<text x="1366" y="886" class="small muted" >단서·인계</text>
+<rect x="775" y="929" width="665" height="220" rx="7" fill="#102433" stroke="#284151"/>
+<text x="793" y="960" class="head" >08  밀매 조직 본거지</text>
+<text x="793" y="983" class="small muted" >연속 이정표 2,496단위 · X 20,096–22,592</text>
+<text x="793" y="1009" class="small" >밀매 창고</text>
+<rect x="930" y="995" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="1008" class="small" >창고 화물문</text>
+<text x="936" y="1033" class="small muted" >필수 · 투척</text>
+<rect x="1073" y="995" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="1008" class="small" >적재실 경비</text>
+<text x="1079" y="1033" class="small muted" >필수 · 경비전</text>
+<rect x="1216" y="995" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="1008" class="small" >갇힌 청소 장비</text>
+<text x="1222" y="1033" class="small muted" >선택 · 베기</text>
+<rect x="1359" y="995" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="1011" class="small" >주요 목표</text>
+<text x="1366" y="1027" class="small muted" >단서·인계</text>
+<text x="793" y="1058" class="small" >코어 적재실</text>
+<rect x="930" y="1044" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="1057" class="small" >이중 적재함</text>
+<text x="936" y="1082" class="small muted" >필수 · 베기</text>
+<rect x="1073" y="1044" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="1057" class="small" >서로 다른 수량</text>
+<text x="1079" y="1082" class="small muted" >필수 · 증언</text>
+<rect x="1216" y="1044" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="1057" class="small" >장부 소각 준비</text>
+<text x="1222" y="1082" class="small muted" >선택 · 경비전</text>
+<rect x="1359" y="1044" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="1060" class="small" >주요 목표</text>
+<text x="1366" y="1076" class="small muted" >단서·인계</text>
+<text x="793" y="1107" class="small" >로봇 격납고</text>
+<rect x="930" y="1093" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="936" y="1106" class="small" >격납고 안전 전원</text>
+<text x="936" y="1131" class="small muted" >필수 · 레이저</text>
+<rect x="1073" y="1093" width="135" height="43" rx="4" fill="#172d3e" stroke="#f7bc62"/>
+<text x="1079" y="1106" class="small" >격납고 앞의 침묵</text>
+<text x="1079" y="1131" class="small muted" >필수 · 증언</text>
+<rect x="1216" y="1093" width="135" height="43" rx="4" fill="#172d3e" stroke="#76b5fb"/>
+<text x="1222" y="1106" class="small" >로봇을 고친 사람</text>
+<text x="1222" y="1131" class="small muted" >선택 · 증언</text>
+<rect x="1359" y="1093" width="63" height="43" rx="4" fill="#123d37" stroke="#57d7b2"/>
+<text x="1366" y="1109" class="small" >주요 목표</text>
+<text x="1366" y="1125" class="small muted" >단서·인계</text>
+<text x="40" y="1195" class="body" >수사로 각 10,400단위 / 일반 구간은 바닥 이동 / 모든 구간 천장 와이어 / 점프 구간은 안전 착지대와 상부 경로</text>
+<text x="40" y="1225" class="body" >생산구 끝 → 생활부 엘리베이터     생활부 끝 → 조직원전 → 로봇 3페이즈 → 두목 진술 → 행정구 엘리베이터</text>
+<text x="40" y="1255" class="small muted" >선택 현장을 건너뛰어도 진행 가능. 완료한 이정표로 돌아와 선택 현장을 해결하고 주민 증언을 다시 확인할 수 있습니다.</text>
+<text x="40" y="1281" class="small muted" >막히는 시간으로 플레이 분량을 강제하지 않습니다. 150분 목표는 실제 Unity 완주 측정과 조정이 필요합니다.</text>
+</svg>
