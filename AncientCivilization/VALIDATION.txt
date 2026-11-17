@@ -1,0 +1,82 @@
+v0.28.0 P1 Input System, mode and player movement foundation — 2026-11-17
+
+SCOPE AND LIMITS
+P1 is implemented in PlayerMovementPractice.unity. Main.unity retains the existing
+AncientHero controller. P2 grapple and P3-P7 combat services are NOT implemented by
+P1's reserved external states. URP conversion is deferred to the rendering stage.
+Unity 6000.6.7f1 Editor is unavailable: native package resolution/import, Play,
+2D physics, actual input, rendering, FPS and a playthrough were NOT executed.
+
+PORTABLE CHECKS
+All 26 .NET rule/controller suites passed, including 688 new input-buffer and wheel
+cadence assertions. These cover 30/60/144/240Hz render cadence versus 30/50/60/120Hz
+fixed cadence, one-time consumption, expiry, mode/focus cancellation, wheel noise,
+continuous packet suppression, neutral rearming, cooldown and invalid input clocks.
+PASS: BeamChecks = 11591
+PASS: BladeChecks = 4600
+PASS: BossReadabilityChecks = 1748
+PASS: ChapterRouteChecks = 26693
+PASS: ChapterVisibilityChecks = 13813
+PASS: FieldExpansionChecks = 67578
+PASS: LivingChecks = 4327
+PASS: LivingControllerChecks = 471
+PASS: LowerControllerChecks = 1309
+PASS: LowerRouteChecks = 345733
+PASS: MovementChecks = 9400
+PASS: PlayerCoreChecks = 688
+PASS: PlaytimeChecks = 52
+PASS: ProductionHazardChecks = 767
+PASS: ProductionLayoutChecks = 522159
+PASS: ProductionMotionChecks = 48172
+PASS: ProductionSequenceChecks = 193072
+PASS: ProjectileOrderingChecks = 7024
+PASS: PulseChecks = 137
+PASS: RouteRadioChecks = 106
+PASS: RulesChecks = 3824
+PASS: SniperChecks = 76
+PASS: SpeechLayoutChecks = 3997
+PASS: SwingChecks = 596
+PASS: ThreatChecks = 359
+PASS: ZipChecks = 60408
+TOTAL: 1328700 assertions including parameter sweeps.
+Source/assets: 1698 checks after final package-manifest change.
+
+Input contract check passed:13 actions, keyboard/mouse bindings, unique IDs,
+S+Space composite, official ScriptedImporter GUID, package/settings, scene/data
+references and new controller's 2D/new Input API usage.
+The validation runner now invokes that contract and all 26 rule suites.
+
+SUPPLEMENTAL COMPILATION
+114 runtime files compile with warnings as errors against Unity 2021.3.33
+reference assemblies, after replacing .linearVelocity with .velocity in temporary
+copies only. Shipping source retains Unity6 linearVelocity.
+Those runtime files plus all 9 Editor fixtures also compile with UNITY_EDITOR
+and narrow Editor API stubs. The Input System-disabled diagnostic branch is included.
+The ENABLE_INPUT_SYSTEM branch also compiles with warnings as errors against an
+assembly compiled from the unmodified official Input System 1.11.2 runtime sources.
+That dependency compile uses Unity 2021 reference APIs and omits optional UI/XR paths;
+its dependency-internal warnings are not shipping player-code warnings.
+The official package metadata declares minimum Unity 2019.4 and the importer GUID
+8404be70184654265930450def6a9037. UGUI 2.0.0 is declared for its assembly UI reference.
+Unity6-only Tilemap CompositeOperation.Merge is excluded from this older-reference
+compile and still requires native Unity6 verification. These are NOT Unity6 builds.
+
+NATIVE FOLLOW-UP
+Open Assets/Scenes/PlayerMovementPractice.unity; allow package import/restart.
+Run PLUGIN/P1/연습 씬 구성과 상태 검사 in Play, then P1_MOVEMENT_KO.md's checklist.
+The new Editor menu is authored and type-checked but NOT run in Unity.
+Verify jump feel, coyote/buffer, wall locking, drop collision restoration,
+fast dash against corners, tile seams, pause/focus, input import and legacy Main.
+
+SOURCE FINGERPRINT
+SHA256 of sorted UTF-8 '<file SHA256>  <repo-relative Assets/**/*.cs path>\n':
+123 files: 0855330f725559d8e462db118a29550892a4d63d455bb5921ecff3a9090fe411
+
+REPRODUCE
+python -m pip install -r AncientCivilization/Tools/requirements-checks.txt
+python AncientCivilization/Tools/run_checks.py --dotnet /path/to/dotnet-8-sdk/dotnet
+python AncientCivilization/Tools/package_project.py --output /path/outside/project/PLUGIN_v0.28.0.zip
+
+PACKAGING
+Source archive only. CRC/inventory/byte comparison do not validate native import.
+Public v0.28.0-download exports AncientCivilization,ArtReferences and root README.md.
