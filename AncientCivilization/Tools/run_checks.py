@@ -19,6 +19,7 @@ def main():
     if not any(line.startswith('8.') for line in sdk.stdout.splitlines()):
         parser.error('The selected dotnet host needs an installed .NET 8 SDK; a runtime alone cannot build these projects.')
     subprocess.run([sys.executable, str(root / 'Tools/validate_project.py')], cwd=root, check=True)
+    subprocess.run([sys.executable, str(root / 'Tools/check_player_core_contract.py')], cwd=root, check=True)
     projects = sorted((root / 'Tools').glob('*Checks.csproj'))
     if not projects:
         raise RuntimeError('No rule check projects found in Tools.')

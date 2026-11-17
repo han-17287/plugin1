@@ -6,11 +6,11 @@ PlayerSettings:
   serializedVersion: 28
   companyName: PLUGIN
   productName: PLUGIN - Ancient Civilization
-  bundleVersion: 0.27.0
+  bundleVersion: 0.28.0
   defaultScreenWidth: 1920
   defaultScreenHeight: 1080
   defaultIsNativeResolution: 0
   fullScreenMode: 3
   runInBackground: 1
-  activeInputHandler: 0
+  activeInputHandler: 2
   colorSpace: 0

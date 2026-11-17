@@ -1,4 +1,6 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.27.0
+# PLUGIN — ANCIENT CIVILIZATION v0.28.0
+
+**P1 새 컨트롤러:** `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play합니다. [전체 구성·인스펙터 값·테스트·흔한 버그](P1_MOVEMENT_KO.md). 새 씬은 A/D·Space·Shift·S+Space·Q/휠·Esc를 사용하며, 후속 무기 입력의 연결 지점을 제공합니다. 기존 Main 씬의 조작은 아래 기존 게임 설명을 따릅니다.
 
 한국인 하층 치안경찰 **백 경위**가 코어 절도와 지워진 배정 기록을 수사하는 Unity **6000.6.7f1**용 2D 도트 액션 소스 프로젝트입니다.
 

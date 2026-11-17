@@ -1,8 +1,12 @@
 # PLUGIN · Ancient Civilization
 
-**v0.27.0 — 초반 학습·연속 진행·재도전 개선 Unity 소스**
+**v0.28.0 — P1 입력·모드·이동 연습 기반**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.27.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.28.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+
+P1을 추가했습니다. **새 이동을 확인하려면 `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play**하세요. 신 Input System, 모드별 입력 연결, 상태 패턴, 가변 점프·벽 점프·대시·발판 하강과 디버그 표시를 포함합니다. [설정·스크립트 구성·튜닝 값·테스트·흔한 버그](AncientCivilization/P1_MOVEMENT_KO.md). 기존 `Main.unity`는 아직 기존 조작을 사용합니다. 갈고리·무기·입자·레이저의 새 구현은 P2 이후 순서대로 연결합니다.
+
+Input System 1.11.2를 추가하고 입력 설정을 Both로 변경했습니다. Unity가 요청하면 재시작하세요. 실제 Unity 임포트·Play·물리·FPS는 이 환경에서 실행하지 못했습니다.
 
 이번 버전은 초반 학습과 하층 진행 흐름을 바꿉니다. 베기·입자 수집·수광부 레이저로 실제 검수문을 열고, 필수 행동 현장은 접근 안내 후 해결 즉시 다음 길로 이어집니다. 경비는 등장 전에 위치를 예고하며, 고정된 안전 발판에 착지하면 재도전 지점이 저장됩니다. 기존 지형·이야기·보스는 유지합니다. **실제 Unity 플레이와 난이도·완주 시간 검증은 아직 남아 있습니다.** [변경 내용과 확인할 점](AncientCivilization/GAMEPLAY_FLOW_KO.md)
 

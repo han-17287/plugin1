@@ -86,6 +86,7 @@ namespace Plugin.AncientCivilization
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
         {
+            if(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name=="PlayerMovementPractice")return;
             if(!Object.FindAnyObjectByType<AncientGame>())new GameObject("Ancient Civilization").AddComponent<AncientGame>();
         }
         public static int Saved(string key,int fallback=0){return PlayerPrefs.GetInt(SaveKey+key,fallback);}
