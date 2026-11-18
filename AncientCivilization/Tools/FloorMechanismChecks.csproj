@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="FloorMechanismChecks.cs"/><Compile Include="ControllerFixtures/GrappleRuntimeDoubles.cs"/>
+    <Compile Include="../Assets/Scripts/PlayerInputBuffer.cs"/><Compile Include="../Assets/Scripts/GrappleRules.cs"/>
+    <Compile Include="../Assets/Scripts/GrappleData.cs"/><Compile Include="../Assets/Scripts/GrappleAnchorData.cs"/>
+    <Compile Include="../Assets/Scripts/GrappleAnchor.cs"/><Compile Include="../Assets/Scripts/FixedGrappleAnchor.cs"/>
+    <Compile Include="../Assets/Scripts/OneUseGrappleAnchor.cs"/><Compile Include="../Assets/Scripts/MovingGrappleAnchor.cs"/>
+    <Compile Include="../Assets/Scripts/PlayerGrapple.cs"/>
+    <Compile Include="../Assets/Scripts/FloorTraversalLayout.cs"/><Compile Include="../Assets/Scripts/FloorTraversalProfile.cs"/><Compile Include="../Assets/Scripts/TraversalFloorMechanism.cs"/><Compile Include="../Assets/Scripts/TraversalLayout.cs"/>
+  </ItemGroup>
+</Project>

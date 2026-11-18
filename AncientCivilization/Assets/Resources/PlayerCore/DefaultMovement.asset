@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0772a58cb3404070b833861fbce212cb, type: 3}
+  m_Name: DefaultMovement
+  runSpeed: 9
+  acceleration: 65
+  deceleration: 85
+  airAcceleration: 32
+  jumpSpeed: 14
+  gravity: 32
+  fallMultiplier: 1.65
+  maxFallSpeed: 24
+  jumpReleaseMultiplier: 0.5
+  coyoteTime: 0.12
+  inputBuffer: 0.15
+  apexSpeed: 1.5
+  apexDuration: 0.08
+  apexGravityMultiplier: 0.45
+  wallSlideSpeed: 3
+  wallJumpX: 10
+  wallJumpY: 13
+  wallInputLock: 0.16
+  airDashes: 1
+  dashSpeed: 22
+  dashDuration: 0.17
+  dashCooldown: 0.18
+  solidLayers: {serializedVersion: 2, m_Bits: 256}
+  skin: 0.025
+  groundProbe: 0.09
+  wallProbe: 0.12
+  dropDuration: 0.22
+  groundNormal: 0.65
+  scrollCooldown: 0.16
+  scrollThreshold: 0.1

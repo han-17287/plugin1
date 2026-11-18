@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="650" viewBox="0 0 1280 650">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0 0L7 3L0 6" fill="none" stroke="#66d7e8" stroke-width="1.4" />
+    </marker>
+  </defs>
+  <rect width="1280" height="650" fill="#07141d" />
+  <g font-family="Malgun Gothic, Noto Sans KR, sans-serif" fill="#d8e6e8">
+    <text x="56" y="38" font-size="25" font-weight="bold">하층 생산구 · 재고 관리로 향하는 길</text>
+    <text x="56" y="66" font-size="14" fill="#91aeb8">안전한 지상 통로 + 선택 와이어 지름길 → 수량 보고 → 벽 돌파 → 화물 터널 추격</text>
+    <rect x="60.00" y="100.00" width="157.50" height="192.00" fill="#1e313b" opacity="0.8" />
+    <text x="138.75" y="116" font-size="16" fill="#d6e6e8" text-anchor="middle">교대 통로</text>
+    <rect x="217.50" y="100.00" width="207.90" height="192.00" fill="#423625" opacity="0.8" />
+    <text x="321.45" y="116" font-size="16" fill="#d6e6e8" text-anchor="middle">운송 벨트</text>
+    <rect x="425.40" y="100.00" width="239.40" height="192.00" fill="#143941" opacity="0.8" />
+    <text x="545.10" y="116" font-size="16" fill="#d6e6e8" text-anchor="middle">검수 회랑</text>
+    <rect x="664.80" y="100.00" width="283.50" height="192.00" fill="#253840" opacity="0.8" />
+    <text x="806.55" y="116" font-size="16" fill="#d6e6e8" text-anchor="middle">장비 검수실</text>
+    <rect x="948.30" y="100.00" width="252.00" height="192.00" fill="#173c3e" opacity="0.8" />
+    <text x="1074.30" y="116" font-size="16" fill="#d6e6e8" text-anchor="middle">재고 관리실</text>
+    <line x1="60.00" y1="122.00" x2="1200.30" y2="122.00" stroke="#5ab5c2" stroke-width="4" />
+    <text x="1220.00" y="127.00" font-size="12" fill="#8ed6df" text-anchor="end">연속 천장</text>
+    <rect x="60.00" y="292.00" width="1140.30" height="22.00" fill="#687f83" opacity="1" />
+    <line x1="60.00" y1="292.00" x2="1200.30" y2="292.00" stroke="#bfd1cf" stroke-width="3" />
+    <rect x="243.65" y="282.65" width="4.41" height="9.35" fill="#efbd60" opacity="1" />
+    <text x="245.85" y="316.00" font-size="12" fill="#efbd60" text-anchor="middle">낮은 점프 화물</text>
+    <path d="M330.90 292 L356.10 278.40 L400.20 278.40 L425.40 292Z" fill="#a18a5b" />
+    <rect x="450.60" y="237.60" width="25.20" height="3.06" fill="#57c0ce" opacity="1" />
+    <rect x="513.60" y="220.60" width="25.20" height="3.06" fill="#57c0ce" opacity="1" />
+    <rect x="576.60" y="220.60" width="25.20" height="3.06" fill="#57c0ce" opacity="1" />
+    <rect x="639.60" y="237.60" width="25.20" height="3.06" fill="#57c0ce" opacity="1" />
+    <line x1="448.87" y1="122.00" x2="448.87" y2="142.40" stroke="#749499" stroke-width="1" />
+    <circle cx="448.87" cy="142.40" r="5" fill="#78e8ef" />
+    <line x1="511.87" y1="122.00" x2="511.87" y2="142.40" stroke="#749499" stroke-width="1" />
+    <circle cx="511.87" cy="142.40" r="5" fill="#78e8ef" />
+    <line x1="574.87" y1="122.00" x2="574.87" y2="142.40" stroke="#749499" stroke-width="1" />
+    <circle cx="574.87" cy="142.40" r="5" fill="#78e8ef" />
+    <line x1="637.87" y1="122.00" x2="637.87" y2="142.40" stroke="#749499" stroke-width="1" />
+    <circle cx="637.87" cy="142.40" r="5" fill="#78e8ef" />
+    <path d="M419.1 268 L446.83 152 Q448 190 453.94 219.75 Q475 197 492.34 232.44 L509.82 151.82 Q511 185 515.24 202.75 Q537 195 556.38 229.55 L572.82 151.82 Q574 185 578.23 202.75 Q600 195 619.38 229.55 L635.82 152 Q638 190 642.94 219.75" fill="none" stroke="#66d7e8" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)" />
+    <text x="545.10" y="274" font-size="11" fill="#91eced" text-anchor="middle">선택: 견인 → 착지 → 스윙 → 견인</text>
+    <text x="545.10" y="288" font-size="10" fill="#9abec4" text-anchor="middle">실패해도 아래는 안전한 지면</text>
+    <circle cx="91.50" cy="273.30" r="7" fill="#edf7f2" />
+    <text x="91.50" y="335.00" font-size="12" fill="#c2d5d7" text-anchor="middle">시작 −234</text>
+    <rect x="1115.88" y="264.80" width="5.04" height="27.20" fill="#7de3e6" opacity="1" />
+    <text x="1118.40" y="335.00" font-size="12" fill="#91eced" text-anchor="middle">92 / E 재고 확인</text>
+    <rect x="1155.57" y="122.00" width="1.42" height="170.00" fill="#d99c5a" opacity="1" />
+    <text x="1146.2" y="153.00" font-size="11" fill="#ffcf86" text-anchor="end">돌파 벽</text>
+    <text x="60.00" y="371.00" font-size="19" fill="#dce9e8" text-anchor="start">하층 동부 화물 터널 · 추격 전용 별도 도로</text>
+    <rect x="60.00" y="390.00" width="369.20" height="82.00" fill="#293326" opacity="1" />
+    <text x="244.60" y="421.00" font-size="16" fill="#dce9e8" text-anchor="middle">적재 운송로</text>
+    <rect x="429.20" y="390.00" width="369.20" height="82.00" fill="#153a43" opacity="1" />
+    <text x="613.80" y="421.00" font-size="16" fill="#dce9e8" text-anchor="middle">냉각 배관선</text>
+    <rect x="798.40" y="390.00" width="397.60" height="82.00" fill="#3b3327" opacity="1" />
+    <text x="997.20" y="421.00" font-size="16" fill="#dce9e8" text-anchor="middle">긴급 화물 분리 구간</text>
+    <line x1="60.00" y1="472.00" x2="1196.00" y2="472.00" stroke="#b9d0d1" stroke-width="4" />
+    <line x1="60.00" y1="390.00" x2="1196.00" y2="390.00" stroke="#5ab5c2" stroke-width="3" />
+    <rect x="60.00" y="505.00" width="212.00" height="46.00" fill="#385164" opacity="1" />
+    <text x="166.00" y="533.00" font-size="14" fill="#f0f4eb" text-anchor="middle">오토바이 ①</text>
+    <path d="M275 528H287" stroke="#66d7e8" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="292.00" y="505.00" width="212.00" height="46.00" fill="#25616a" opacity="1" />
+    <text x="398.00" y="533.00" font-size="14" fill="#f0f4eb" text-anchor="middle">와이어 → 트럭전 ①</text>
+    <path d="M507 528H519" stroke="#66d7e8" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="524.00" y="505.00" width="212.00" height="46.00" fill="#385164" opacity="1" />
+    <text x="630.00" y="533.00" font-size="14" fill="#f0f4eb" text-anchor="middle">오토바이 ②</text>
+    <path d="M739 528H751" stroke="#66d7e8" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="756.00" y="505.00" width="212.00" height="46.00" fill="#25616a" opacity="1" />
+    <text x="862.00" y="533.00" font-size="14" fill="#f0f4eb" text-anchor="middle">와이어 → 트럭전 ②</text>
+    <path d="M971 528H983" stroke="#66d7e8" stroke-width="2" marker-end="url(#arrow)" />
+    <rect x="988.00" y="505.00" width="212.00" height="46.00" fill="#65502d" opacity="1" />
+    <text x="1094.00" y="533.00" font-size="14" fill="#f0f4eb" text-anchor="middle">오토바이 ③ / 컷신</text>
+    <text x="60.00" y="581.00" font-size="16" fill="#e0d3b1" text-anchor="start">컷신: 나란히 가속 → 노란 블레이드로 코어 짐칸 분리 → 높은 백덤블링 → 입자 레이저 → 트럭 폭파</text>
+    <text x="60.00" y="615.00" font-size="13" fill="#8daeb7" text-anchor="start">좌표 설계도 · 실제 Unity 플레이 화면이 아닙니다. 추격 중 장애물·폭탄·대장 패턴은 전투 컨트롤러에서 배치합니다.</text>
+    <rect x="694.10" y="260.8" width="4.4" height="6" fill="#eab96b" />
+    <path d="M692.30 268H700.30" stroke="#eab96b" stroke-width="1" />
+    <rect x="769.70" y="260.8" width="4.4" height="6" fill="#eab96b" />
+    <path d="M767.90 268H775.90" stroke="#eab96b" stroke-width="1" />
+    <rect x="848.45" y="260.8" width="4.4" height="6" fill="#eab96b" />
+    <path d="M846.65 268H854.65" stroke="#eab96b" stroke-width="1" />
+    <rect x="914.60" y="260.8" width="4.4" height="6" fill="#eab96b" />
+    <path d="M912.80 268H920.80" stroke="#eab96b" stroke-width="1" />
+    <rect x="1002.80" y="260.8" width="4.4" height="6" fill="#eab96b" />
+    <path d="M1001.00 268H1009.00" stroke="#eab96b" stroke-width="1" />
+    <rect x="1097.30" y="260.8" width="4.4" height="6" fill="#eab96b" />
+    <path d="M1095.50 268H1103.50" stroke="#eab96b" stroke-width="1" />
+    <text x="810" y="335" font-size="12" fill="#efbd60" text-anchor="middle">보이는 배출구 6곳 · 베기 → 수집 → 레이저 연습</text>
+    <rect x="1070.04" y="180" width="6" height="15" fill="none" stroke="#efbd60" stroke-width="1.4" stroke-dasharray="2 1" />
+    <rect x="1078.23" y="180" width="6" height="15" fill="none" stroke="#efbd60" stroke-width="1.4" stroke-dasharray="2 1" />
+    <rect x="1086.42" y="180" width="6" height="15" fill="none" stroke="#efbd60" stroke-width="1.4" stroke-dasharray="2 1" />
+    <text x="1081" y="174" font-size="11" fill="#efbd60" text-anchor="middle">빈 받침 3개 / 반출 기록 없음</text>
+    <circle cx="327.75" cy="273.3" r="4" fill="#c5ddd8" />
+    <text x="327.75" y="335" font-size="11" fill="#a9c5c4" text-anchor="middle">램프 전 안전 체크포인트</text>
+    <line x1="478.95" y1="122" x2="478.95" y2="164.50" stroke="#749499" stroke-width=".8" />
+    <path d="M473.95 160.50V169.50H483.95V160.50" fill="none" stroke="#c2e6e4" stroke-width="1.5" />
+    <circle cx="478.95" cy="164.50" r="2.3" fill="#78e8ef" />
+    <line x1="541.95" y1="122" x2="541.95" y2="164.50" stroke="#749499" stroke-width=".8" />
+    <path d="M536.95 160.50V169.50H546.95V160.50" fill="none" stroke="#c2e6e4" stroke-width="1.5" />
+    <circle cx="541.95" cy="164.50" r="2.3" fill="#78e8ef" />
+    <line x1="604.95" y1="122" x2="604.95" y2="164.50" stroke="#749499" stroke-width=".8" />
+    <path d="M599.95 160.50V169.50H609.95V160.50" fill="none" stroke="#c2e6e4" stroke-width="1.5" />
+    <circle cx="604.95" cy="164.50" r="2.3" fill="#78e8ef" />
+  </g>
+</svg>

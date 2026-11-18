@@ -1,0 +1,97 @@
+v0.30.0 five-floor traversal profiles and mechanism prototypes
+
+SCOPE AND LIMITS
+Added eight living/administration/residence/top Room Prefabs and five floor profiles.
+Together with production:10 Room Prefabs x3 difficulty profiles =30 trial combinations.
+Implemented mechanisms: timed searchlight exposure, periodic physical shutter with
+safe-close deferral, movement-owner queued vent lift, timed anchor availability with
+lease protection. Room reset restores all timers/availability/anchor state.
+The new four floors have20 planned sections and48 adapted challenge designs;
+all five floors have25 rhythm sections and60 designs. Most design rooms, rewards,
+weapons and bosses are not implemented by these trial variants. Main.unity's existing
+map/story/bosses were NOT replaced. Ancient-civilization gameplay remains second-run scope.
+M1 remains a provisional code-derived envelope. Unity6000.6.7f1 Editor is unavailable:
+native package import, Play, input, physics/lighting, success rate, retry timing,
+FPS and full playthroughs were NOT run or measured.
+
+PORTABLE CHECKS
+All30 .NET rule/controller suites passed.
+PASS: BeamChecks = 11591
+PASS: BladeChecks = 4600
+PASS: BossReadabilityChecks = 1748
+PASS: ChapterRouteChecks = 26693
+PASS: ChapterVisibilityChecks = 13813
+PASS: FieldExpansionChecks = 67578
+PASS: FloorMechanismChecks = 22
+PASS: FloorTraversalChecks = 104299
+PASS: GrappleControllerChecks = 645
+PASS: GrappleLayoutChecks = 10976
+PASS: LivingChecks = 4327
+PASS: LivingControllerChecks = 471
+PASS: LowerControllerChecks = 1309
+PASS: LowerRouteChecks = 345733
+PASS: MovementChecks = 9400
+PASS: PlayerCoreChecks = 688
+PASS: PlaytimeChecks = 52
+PASS: ProductionHazardChecks = 767
+PASS: ProductionLayoutChecks = 522159
+PASS: ProductionMotionChecks = 48172
+PASS: ProductionSequenceChecks = 193072
+PASS: ProjectileOrderingChecks = 7024
+PASS: PulseChecks = 137
+PASS: RouteRadioChecks = 106
+PASS: RulesChecks = 3824
+PASS: SniperChecks = 76
+PASS: SpeechLayoutChecks = 3997
+PASS: SwingChecks = 596
+PASS: ThreatChecks = 359
+PASS: ZipChecks = 60408
+TOTAL: 1444642 assertions including parameter sweeps.
+
+Final asset/design contracts also passed after the export-width adjustment:
+13 actual prefabs (10 rooms+3 anchors), five floor-data GUID links, positive timing
+windows,30 trial combinations,60 tile diagrams, two solutions each and the25 planned
+75/25 rhythm sections. Geometry is not a native traversal result.
+
+NEW MECHANISM COVERAGE
+FloorTraversalChecks sweeps floor/tier/anchor-motion phases, range reserve, complete
+capsule roof clearance, forward framing, the five-tile shutter waiting ledge,
+periodic timing and scan/shutter overlap. FloorMechanismChecks executes the shipping
+TraversalFloorMechanism with narrow engine/player-owner doubles: harmless teaching
+scan, sustained-exposure retry, pause, leaving beam, safe-close deferral, initial
+opening reset, vent request only for ordinary motion, leased timed sockets, closed
+availability and retry reset. It does NOT execute real body integration/occlusion.
+The existing shipping grapple controller suite now verifies that clicking an inactive
+socket cannot unexpectedly choose a wall behind it. Native PlayerStateMachine is not
+simulated by that suite; its actual vent-force integration still needs Unity testing.
+
+SUPPLEMENTAL COMPILATION
+130 runtime scripts compile with warnings-as-errors against Unity2021.3.33
+reference assemblies after aliasing .linearVelocity to .velocity only in temporary
+copies. Shipping source uses Unity6 linearVelocity. The ENABLE_INPUT_SYSTEM branch
+also compiles against an assembly built from official Input System1.11.2 runtime
+sources. The dependency's optional UI/XR paths are omitted in that older-reference build.
+All runtime +10 Editor fixtures compile with older Unity references and narrow
+Editor API stubs. These are NOT native Unity6 imports/builds. The Unity6-only Tilemap
+CompositeOperation branch remains a native follow-up. No new native Editor fixture
+was executed; the existing P2 flight fixture can be used in each safe floor room.
+
+SOURCE FINGERPRINT
+SHA256 of sorted UTF-8 '<file SHA256>  <repo-relative Assets/**/*.cs path>\n':
+140 files: 92fa2d4df8a88ef371d1c2e7c495413e5a2bb2904765ab9425601f6022feb0e8
+
+SOURCE-DATA VISUAL REVIEW
+TraversalExport reads actual floor layout and shipping profile fields. Chromium
+checked all5 floor selectors,60 design panels,30 actual room/profile previews,
+safe/danger toggling and720px layout, without script errors. The final administration
+waiting-platform diagram was visually reviewed. These are source diagrams, not Unity renders.
+
+REPRODUCE
+python -m pip install -r AncientCivilization/Tools/requirements-checks.txt
+python AncientCivilization/Tools/run_checks.py --dotnet /path/to/dotnet-8-sdk/dotnet
+python AncientCivilization/Tools/package_project.py --output /path/outside/project/PLUGIN_v0.30.0.zip
+See OTHER_FLOORS_RHYTHM_KO.md for component/settings/native checklists and limitations.
+
+PACKAGING
+Source archive only. CRC/inventory/byte checks do not validate Unity import.
+Public v0.30.0-download exports AncientCivilization,ArtReferences and root README.md.

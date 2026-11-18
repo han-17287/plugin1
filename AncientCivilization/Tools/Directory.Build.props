@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Each check project must own its apphost and restore state. Sharing obj/apphost
+         can otherwise launch a previous project's DLL after an incremental build. -->
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin/$(MSBuildProjectName)/</BaseOutputPath>
+  </PropertyGroup>
+</Project>
