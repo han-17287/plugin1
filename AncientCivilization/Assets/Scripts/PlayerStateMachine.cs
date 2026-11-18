@@ -15,16 +15,18 @@ namespace Plugin.PlayerCore
         readonly List<Collider2D> ignoredPlatforms=new List<Collider2D>();
         Rigidbody2D body;CapsuleCollider2D shape;PlayerInputReader input;PlayerModeController mode;
         ContactFilter2D filter;PhysicsMaterial2D material;IPlayerState state;Vector2 velocity;
-        float clock,groundAt=-100,jumpedAt=-100,lockUntil,dashUntil,dashReady,dropUntil,apexAge,facing=1;
-        int dashes;bool cutJump,wallLeft,wallRight,wasGrounded,paused,lastSimulation=true;float hitUntil;
+        float momentumUntil;float clock,groundAt=-100,jumpedAt=-100,lockUntil,dashUntil,dashReady,dropUntil,apexAge,facing=1;
+        int dashes;bool arrivalJump;bool cutJump,wallLeft,wallRight,wasGrounded,paused,lastSimulation=true;float hitUntil;
         public PlayerStateId State=>state==null?PlayerStateId.Idle:state.Id;
         public Vector2 Velocity=>body?body.linearVelocity:Vector2.zero;
         public bool Grounded {get;private set;} public float Facing=>facing;
         public int RemainingDashes=>dashes;
+        public bool ArrivalJumpAvailable=>arrivalJump;
         public PlayerMode Mode=>mode.Mode;
         // P2~P6 서비스는 성공적으로 행동을 시작했을 때만 true를 반환한다.
         public event Func<PlayerCommand,PlayerStateId,bool> ActionRequested;
         public event Action<float> ExternalStep;
+        public event Action<PlayerStateId,PlayerStateId> StateChanged;
         public void Configure(PlayerMovementData value){data=value;input=GetComponent<PlayerInputReader>();input.data=value;}
         void Awake()
         {
@@ -41,17 +43,22 @@ namespace Plugin.PlayerCore
         }
         bool ownedData;
         void Add(IPlayerState value){states.Add(value.Id,value);}
-        void Change(PlayerStateId next){if(state!=null&&state.Id==next)return;state?.Exit();state=states[next];state.Enter();}
+        void Change(PlayerStateId next){if(state!=null&&state.Id==next)return;var previous=State;state?.Exit();state=states[next];state.Enter();StateChanged?.Invoke(previous,next);}
         public bool BeginExternal(PlayerStateId next)
         {if(State==PlayerStateId.Dead||State==PlayerStateId.Hurt||next<PlayerStateId.GrappleAim||next>PlayerStateId.LaserFire)return false;Change(next);return true;}
         public void FinishExternal(Vector2 launch,bool resetAirActions)
-        {if(resetAirActions)ResetAirActions();velocity=launch;body.linearVelocity=launch;Change(launch.y>0?PlayerStateId.Jump:PlayerStateId.Fall);}
-        public void ResetAirActions(){dashes=data.airDashes;cutJump=false;dashReady=clock;}
+        {if(State==PlayerStateId.Dead||State==PlayerStateId.Hurt)return;if(resetAirActions){ResetAirActions();arrivalJump=true;}velocity=launch;body.linearVelocity=launch;cutJump=true;groundAt=-100;momentumUntil=clock+.18f;Change(launch.y>0?PlayerStateId.Jump:PlayerStateId.Fall);}
+        // 외부 상태의 속도는 물리 틱의 최종 쓰기에도 보존되어야 한다.
+        public void SetExternalVelocity(Vector2 value)
+        {if(State<PlayerStateId.GrappleAim||State>PlayerStateId.LaserFire)return;velocity=value;body.linearVelocity=value;}
+        public bool TryExternalDash()
+        {if(State!=PlayerStateId.GrappleAim&&State!=PlayerStateId.GrappleDash||dashes<=0||clock<dashReady)return false;Change(PlayerStateId.Dash);return true;}
+        public void ResetAirActions(){arrivalJump=false;dashes=data.airDashes;cutJump=false;dashReady=clock;}
         public void ReceiveHurt(Vector2 knockback,float duration)
-        {if(State==PlayerStateId.Dead)return;input.Buffer.Clear();velocity=knockback;body.linearVelocity=velocity;hitUntil=clock+Mathf.Max(.01f,duration);Change(PlayerStateId.Hurt);}
+        {if(State==PlayerStateId.Dead)return;arrivalJump=false;input.Buffer.Clear();velocity=knockback;body.linearVelocity=velocity;hitUntil=clock+Mathf.Max(.01f,duration);Change(PlayerStateId.Hurt);}
         public void Die(){input.ClearTransient();velocity=Vector2.zero;body.linearVelocity=Vector2.zero;Change(PlayerStateId.Dead);}
         public void Respawn(Vector2 point)
-        {RestorePlatforms();input.ClearTransient();body.position=point;velocity=Vector2.zero;body.linearVelocity=velocity;groundAt=-100;jumpedAt=-100;lockUntil=clock;apexAge=0;ResetAirActions();Change(PlayerStateId.Fall);}
+        {RestorePlatforms();input.ClearTransient();body.position=point;velocity=Vector2.zero;body.linearVelocity=velocity;groundAt=-100;jumpedAt=-100;lockUntil=clock;momentumUntil=clock;apexAge=0;ResetAirActions();Change(PlayerStateId.Fall);}
         void FixedUpdate()
         {
             bool freeze=input.Paused||!Application.isFocused||!input.Ready;
@@ -93,13 +100,14 @@ namespace Plugin.PlayerCore
             if(State==PlayerStateId.WallJump&&clock<lockUntil)return;
             if(!Grounded&&(wallLeft||wallRight))
             {input.Buffer.Take(PlayerCommand.Jump,now);velocity=new Vector2(wallLeft?data.wallJumpX:-data.wallJumpX,data.wallJumpY);facing=Mathf.Sign(velocity.x);lockUntil=clock+data.wallInputLock;JumpStarted();Change(PlayerStateId.WallJump);}
-            else if(Grounded||clock-groundAt<=data.coyoteTime)
+            else if(Grounded||clock-groundAt<=data.coyoteTime||arrivalJump)
             {input.Buffer.Take(PlayerCommand.Jump,now);velocity.y=data.jumpSpeed;JumpStarted();Change(PlayerStateId.Jump);}
         }
-        void JumpStarted(){Grounded=false;groundAt=-100;jumpedAt=clock;cutJump=false;apexAge=0;}
+        void JumpStarted(){arrivalJump=false;Grounded=false;groundAt=-100;jumpedAt=clock;cutJump=false;apexAge=0;}
         void Horizontal(float dt)
         {
             if(clock<lockUntil)return;
+            if(!Grounded&&clock<momentumUntil&&Mathf.Abs(velocity.x)>data.runSpeed&&(Mathf.Abs(input.Move.x)<.05f||Mathf.Sign(input.Move.x)==Mathf.Sign(velocity.x)))return;
             float target=input.Move.x*data.runSpeed,error=Mathf.Abs(target-velocity.x)/Mathf.Max(1,data.runSpeed);
             bool stop=Mathf.Abs(input.Move.x)<.01f;
             float rate=Grounded?(stop?data.deceleration:data.acceleration):data.airAcceleration;

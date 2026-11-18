@@ -1,4 +1,6 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.28.0
+# PLUGIN — ANCIENT CIVILIZATION v0.29.0
+
+**P2/M3.5 시험:** `Assets/Scenes/TraversalRhythmPractice.unity`에서 안전 흐름 방과 짧은 난관을 시험합니다. [구성·튜닝·검사](P2_TRAVERSAL_KO.md), [리듬과12개 설계](M35_RHYTHM_KO.md). 기존 Main은 기존 스토리 조작을 사용합니다.
 
 **P1 새 컨트롤러:** `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play합니다. [전체 구성·인스펙터 값·테스트·흔한 버그](P1_MOVEMENT_KO.md). 새 씬은 A/D·Space·Shift·S+Space·Q/휠·Esc를 사용하며, 후속 무기 입력의 연결 지점을 제공합니다. 기존 Main 씬의 조작은 아래 기존 게임 설명을 따릅니다.
 

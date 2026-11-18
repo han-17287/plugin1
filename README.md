@@ -1,14 +1,20 @@
 # PLUGIN · Ancient Civilization
 
-**v0.28.0 — P1 입력·모드·이동 연습 기반**
+**v0.29.0 — 직선 갈고리·두 시험 방·생산구 리듬 설계**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.28.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.29.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
 
-P1을 추가했습니다. **새 이동을 확인하려면 `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play**하세요. 신 Input System, 모드별 입력 연결, 상태 패턴, 가변 점프·벽 점프·대시·발판 하강과 디버그 표시를 포함합니다. [설정·스크립트 구성·튜닝 값·테스트·흔한 버그](AncientCivilization/P1_MOVEMENT_KO.md). 기존 `Main.unity`는 아직 기존 조작을 사용합니다. 갈고리·무기·입자·레이저의 새 구현은 P2 이후 순서대로 연결합니다.
+**새 시험 씬:** `Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play합니다. 고정·일회용·움직이는 앵커, 벽/천장 직선 돌진, 위험 레이어 무적, 도착 관성·공중 점프/대시 회복을 연결했습니다. 안전 흐름 방과 짧은 난관 방을 쉬움/보통/어려움 데이터로 바꿔 시험할 수 있습니다.
+
+[생산구5구간 리듬·12개 난관·타일 도면·복구 규칙](AncientCivilization/M35_RHYTHM_KO.md) · [P2 스크립트·Prefab·인스펙터·테스트](AncientCivilization/P2_TRAVERSAL_KO.md) · [지형 검토 HTML](AncientCivilization/TraversalPreview.html)
+
+전체 리듬은 흐름75%·필수 난관25%인 설계안입니다. 기존 Main 맵을 이 배치로 교체하지 않았습니다. 실제 구현은 별도 두 시험 방이며, 투척·충전·거울 등 나머지 설계는 P3~P6 이후 검증합니다. M1은 코드 수치로 계산한 잠정 표이고 실제 Unity 플레이·성공률·재도전 시간·FPS는 미측정입니다.
+
+P1 이동 연습도 포함합니다. **새 이동을 확인하려면 `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play**하세요. 신 Input System, 모드별 입력 연결, 상태 패턴, 가변 점프·벽 점프·대시·발판 하강과 디버그 표시를 포함합니다. [설정·스크립트 구성·튜닝 값·테스트·흔한 버그](AncientCivilization/P1_MOVEMENT_KO.md). 기존 `Main.unity`는 아직 기존 조작을 사용합니다. 추가 앵커와 무기·입자·레이저는 후속 단계에서 순서대로 연결합니다.
 
 Input System 1.11.2를 추가하고 입력 설정을 Both로 변경했습니다. Unity가 요청하면 재시작하세요. 실제 Unity 임포트·Play·물리·FPS는 이 환경에서 실행하지 못했습니다.
 
-이번 버전은 초반 학습과 하층 진행 흐름을 바꿉니다. 베기·입자 수집·수광부 레이저로 실제 검수문을 열고, 필수 행동 현장은 접근 안내 후 해결 즉시 다음 길로 이어집니다. 경비는 등장 전에 위치를 예고하며, 고정된 안전 발판에 착지하면 재도전 지점이 저장됩니다. 기존 지형·이야기·보스는 유지합니다. **실제 Unity 플레이와 난이도·완주 시간 검증은 아직 남아 있습니다.** [변경 내용과 확인할 점](AncientCivilization/GAMEPLAY_FLOW_KO.md)
+Main 씬에는 기존 초반 학습과 하층 진행 개선도 포함돼 있습니다. 베기·입자 수집·수광부 레이저로 실제 검수문을 열고, 필수 행동 현장은 접근 안내 후 해결 즉시 다음 길로 이어집니다. 경비는 등장 전에 위치를 예고하며, 고정된 안전 발판에 착지하면 재도전 지점이 저장됩니다. 기존 지형·이야기·보스는 유지합니다. **실제 Unity 플레이와 난이도·완주 시간 검증은 아직 남아 있습니다.** [변경 내용과 확인할 점](AncientCivilization/GAMEPLAY_FLOW_KO.md)
 
 - 생산구: 재고 보고 중 코어 절도 → 자동주행 오토바이/트럭 갑판 전투 → 코어 회수·생존 검거 → 야간 장부·전력 복구·재하 구조·사본 전송. 검거 뒤 무전 지시로 동쪽 수사로가 바로 열립니다.
 - 생활부: 도둑의 흔적을 따라 주거 골목·폐차장·감시 외벽·창고를 통과합니다. 상자·차량 와이어 투척, 탐조등 엄폐, 경비 로봇, 조직원전 뒤 거대 로봇 3페이즈로 이어집니다.

@@ -1,0 +1,26 @@
+"""Generate a standalone authoring review. This is not a playable game or Unity render."""
+from pathlib import Path
+import json
+import argparse
+HTML='''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLUGIN 흐름·난관 배치 검토</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#09131d;color:#d5e7ef;font:15px system-ui}header,main{max-width:1280px;margin:auto;padding:24px}h1{font-size:25px}p{line-height:1.7}nav{display:flex;gap:12px;flex-wrap:wrap}button,select{font:inherit;background:#183246;color:#d5e7ef;padding:9px;border:1px solid #38627c;border-radius:5px}svg{width:100%;background:#0e2030;min-height:260px;margin-top:20px;border:1px solid #264d61}article{background:#112838;padding:22px;border-radius:6px;margin-top:20px}small{color:#8facbf}.rhythm{display:flex;height:24px;margin:6px 0 20px}.flow{background:#2d9fba}.challenge{background:#d88b43}.rest{background:#739785}li{margin:9px 0;line-height:1.7}</style>
+<header><h1>생산구의 흐름과 난관</h1><p>필수 이동: 흐름 75% · 난관 25% / 구간당 필수 난관 1개</p><small>실제 코드·데이터를 이용한 배치 검토입니다. Unity 게임 실행 화면·성공률·플레이 시간 측정 결과가 아닙니다.</small></header>
+<main><nav><select id="room" aria-label="방 선택"></select><select id="tier" aria-label="시험 방 난도"><option value="Easy">쉬움</option><option value="Normal" selected>보통</option><option value="Hard">어려움·선택</option></select><button id="safe">안전 흐름 방</button></nav><svg id="map" role="img" aria-label="타일 좌표 배치"></svg><p><small>A 고정 · a 일회용 · M 이동 · C 재시도 · E 출구 / 파랑 흐름 · 주황 난관 · 녹색 호흡</small></p><article id="detail"></article><article><h2>다섯 구간 리듬</h2><div id="rhythm"></div><small>흐름612타일·필수 난관204타일·호흡96타일. 선택 분기와 보스는 비율에서 제외합니다. 기존 Main 씬에 이912타일 배치를 적용한 것은 아닙니다.</small></article></main>
+<script>const data=__DATA__,select=document.querySelector('#room'),tier=document.querySelector('#tier'),map=document.querySelector('#map'),detail=document.querySelector('#detail');let safe=false;
+const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+for(const r of data.rooms){const o=document.createElement('option');o.value=r.id;o.textContent=r.id+' '+r.title;select.append(o)}
+function show(){const design=data.rooms.find(r=>r.id===select.value),live=design.id==='C01'||design.id==='C02';tier.disabled=!live;document.querySelector('#safe').disabled=!live;if(!live)safe=false;
+const r=live?data.prototypes.find(p=>p.tier===tier.value&&p.precision===!safe):design,w=r.width,h=r.height;map.setAttribute('viewBox','-1 -1 '+(w+2)+' '+(h+2));
+let svg='<defs><pattern id="grid" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#274052" stroke-width=".02"/></pattern></defs><rect width="'+w+'" height="'+h+'" fill="url(#grid)"/><rect width="'+w+'" height=".5" fill="#46738a"/>';
+for(const [a,b,y,t] of r.blocks)svg+='<rect x="'+a+'" y="'+(14-t)+'" width="'+(b-a+1)+'" height="'+Math.max(1,t-y+1)+'" fill="#32596b"/>';
+for(const [a,b,y] of r.hazards)svg+='<rect x="'+a+'" y="'+(14-y-.9)+'" width="'+(b-a+1)+'" height=".9" fill="#d96543"/>';
+for(const [x,y,c] of r.points){const color=c==='M'?'#68e2ad':c==='a'?'#ffc66a':c==='A'?'#67d3ff':'#e0eaf1';svg+='<circle cx="'+x+'" cy="'+(14-y)+'" r=".38" fill="none" stroke="'+color+'" stroke-width=".08"/><text x="'+x+'" y="'+(14-y-.6)+'" fill="'+color+'" font-size=".8" text-anchor="middle">'+escape(c)+'</text>';if(c==='M'&&live)svg+='<path d="M'+(x-r.amplitude)+' '+(14-y)+'H'+(x+r.amplitude)+'" stroke="#68e2ad" stroke-width=".06"/>';}
+map.innerHTML=svg;detail.innerHTML='<small>'+(live?'시험 씬의 실제 데이터 / '+tier.options[tier.selectedIndex].text+' / '+(safe?'안전 바닥':'위험 구간'):'설계안 / 관련 기믹 구현 대기')+'</small><h2>'+escape(design.title)+'</h2><p>'+escape(design.purpose)+'</p><ol>'+design.solutions.map(s=>'<li>'+escape(s)+'</li>').join('')+'</ol><p>실패: '+escape(design.penalty)+'</p><p>보상: '+escape(design.reward)+'</p><p><small>'+escape(design.dependency.join(' / '))+'</small></p>';}
+select.onchange=()=>{safe=false;if(select.value==='C02')tier.value='Hard';show()};tier.onchange=show;document.querySelector('#safe').onclick=()=>{safe=!safe;show()};
+const names=['교대 통로','운송 벨트','검수 회랑','장비 검수실','코어 재고 관리실'],flows=[96,144,180,120,72],challenges=[32,48,60,40,24],rests=[16,16,20,20,24];document.querySelector('#rhythm').innerHTML=names.map((n,i)=>'<div>'+n+' / '+flows[i]+' + '+challenges[i]+' + '+rests[i]+'타일</div><div class="rhythm"><span class="flow" style="flex:'+flows[i]+'"></span><span class="challenge" style="flex:'+challenges[i]+'"></span><span class="rest" style="flex:'+rests[i]+'"></span></div>').join('');show();</script></html>'''
+def main():
+    p=argparse.ArgumentParser();p.add_argument('export',type=Path);args=p.parse_args();root=Path(__file__).resolve().parents[1]
+    source=json.loads(args.export.read_text());source['rooms']=json.loads((root/'Design/TraversalDesigns.json').read_text());assert len(source['rooms'])==12 and len(source['prototypes'])==6
+    payload=json.dumps(source,ensure_ascii=False).replace('<','\\u003c');(root/'TraversalPreview.html').write_text(HTML.replace('__DATA__',payload))
+    print('PASS:12 designs and6 actual room/profile combinations exported into TraversalPreview.html')
+if __name__=='__main__':main()

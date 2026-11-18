@@ -7,6 +7,7 @@ Logs/
 UserSettings/
 *.csproj
 !Tools/LowerRouteExport.csproj
+!Tools/TraversalExport.csproj
 *.sln
 
 !Tools/RulesChecks.csproj
