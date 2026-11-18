@@ -1,10 +1,10 @@
 # PLUGIN · Ancient Civilization
 
-**v0.32.0 — 기록 집행관 3페이즈 전투**
+**v0.33.0 — 기록 집행관 원화와 등장 컷신 개편**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.32.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.33.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
 
-중층 행정구에 기록 집행관의 등장 컷신과 3페이즈를 추가했습니다. 하늘색 직사각형 입자의 조형, 생활구 로봇 복제, 반격과 15초 폭발 저지가 포함됩니다. `Main.unity`를 열고 **PLUGIN → 검사 → 기록 집행관 바로 플레이**로 확인할 수 있습니다. [조작과 확인 순서](AncientCivilization/ENFORCER_BOSS_KO.md)
+중층 행정구의 기록 집행관과 감사 기록실을 새 원화로 교체했습니다. 등장 컷신은 접근, 조형, 낙하와 회피, 집행관 공개, 전투장 전경 순으로 컷을 전환합니다. 하늘색 직사각형 입자의 조형, 생활구 로봇 복제, 반격과 15초 폭발 저지가 포함됩니다. `Main.unity`를 열고 **PLUGIN → 검사 → 기록 집행관 바로 플레이**로 확인할 수 있습니다. [조작과 확인 순서](AncientCivilization/ENFORCER_BOSS_KO.md)
 
 Main 메인 화면에서 **새 지역 맵 둘러보기**를 선택합니다. 생산구 하역장, 생활부 주거 골목, 행정구 보안 기록동, 거주구 온실 테라스, 최상층 정비 외벽을 서로 다른 실제 지형으로 만들었습니다. 각 지도는112~120타일이며 지상 길·건물 위 정비로·중앙 난관·착지 체크포인트3곳을 연결합니다. 연속 천장, 하역·주거 원화, 구조 지지대·창문·간판을 추가했고, 임시 사각형 주인공은 기존 백 경위 원화로 교체했습니다.
 

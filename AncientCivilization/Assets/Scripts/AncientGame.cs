@@ -356,6 +356,12 @@ namespace Plugin.AncientCivilization
             {cameraFollow=new Vector3(productionFocus.x,productionFocus.y,-10);view.orthographicSize=productionZoom;}
             view.transform.position=cameraFollow;
         }
+        internal void CutCamera(Vector2 focus,float zoom)
+        {
+            cameraFollow=new Vector3(focus.x,focus.y,-10);
+            view.transform.position=cameraFollow;
+            view.orthographicSize=zoom;
+        }
         public void BlockGameplayInput(){inputReadyFrame=Time.frameCount+1;}
         public void ReturnToMainMenu()
         {
@@ -410,14 +416,17 @@ namespace Plugin.AncientCivilization
             Vector2 productionFocus;float productionZoom;
             if(Production&&Production.TryCamera(out productionFocus,out productionZoom))
             {target=new Vector3(productionFocus.x,productionFocus.y,-10);if(!dialogue)zoom=productionZoom;}
-            if(Enforcer&&Enforcer.TryCamera(out Vector2 enforcerFocus,out float enforcerZoom))
+            Vector2 enforcerFocus=Vector2.zero;
+            float enforcerZoom=zoom;
+            bool enforcerShot=Enforcer&&Enforcer.TryCamera(out enforcerFocus,out enforcerZoom);
+            if(enforcerShot)
             {target=new Vector3(enforcerFocus.x,enforcerFocus.y,-10);zoom=enforcerZoom;}
             if(dialogue)target=new Vector3(dialogueFocus.x,dialogueFocus.y,-10);
             // A fast ceiling zip can separate the officer from the moving deck faster
             // than a zoom-out lerp. Expand immediately; ease back into the close fight.
-            view.orthographicSize=Production&&Production.DeckCombat&&zoom>view.orthographicSize?zoom:
+            view.orthographicSize=enforcerShot||Production&&Production.DeckCombat&&zoom>view.orthographicSize?zoom:
                 Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
-            cameraFollow=Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
+            cameraFollow=enforcerShot?target:Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
             var p=cameraFollow;
             if(shake>0&&!skills)
             {

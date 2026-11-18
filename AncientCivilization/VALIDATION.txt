@@ -1,9 +1,9 @@
-v0.32.0 Record Enforcer
+v0.33.0 Record Enforcer art and intro
 
 The main Administration route starts the three-phase encounter after the four cases.
 The Unity Editor preview menu uses a temporary save and enters by the same route.
-The sky-blue rectangular particles, orbiting objects, record hall, intro camera,
-formal-coat sprites, blade and wire interrupts, and light layers are shipping code.
+The intro uses an 8.65-second authored camera sequence, replacement pose atlas,
+archive panorama, and dedicated pooled light, condensation, fall and impact effects.
 
 PORTABLE VERIFICATION
 Source and asset checks and 32 .NET suites passed. The Enforcer suite exercises
@@ -43,21 +43,24 @@ ThreatChecks.csproj   PASS: 359 combat threat visibility and stagger safety chec
 ZipChecks.csproj   PASS: 60408 straight-wire movement, planned-step arrival, simultaneous moving-support trace and collision-budget checks
 
 SUPPLEMENTAL COMPILATION
-139 runtime scripts and 12 Editor scripts compile with warnings as errors using
+141 runtime scripts and 12 Editor scripts compile with warnings as errors using
 Unity 2021.3 reference assemblies and narrow Editor stubs. Temporary copies substitute
 the older Rigidbody2D.velocity name for linearVelocity. The shipping source targets
 6000.6.7f1. The runtime also compiles with the official Input System 1.11.2 source
 reference and ENABLE_INPUT_SYSTEM. Unity 6 native-only paths require the Unity Editor.
 
-The drawn enforcer poses were rasterized directly from the production sprite code and
-inspected as pixel art. Native Unity 6000.6.7f1 import, Play, physics, shader output, FPS
-and end-to-end play time still require Editor or build verification. The preview menu
-provides direct access to those checks. See ENFORCER_BOSS_KO.md for the procedure.
+The generated source atlas and background were visually inspected. Inspection of the
+actual atlas rectangles confirmed six non-overlapping RGBA frames, the unchanged
+standing world scale, measured foot pivots, and the background floor cut and import
+limits. Key shot margins were checked at 4:3, 16:9 and 21:9. The intro FX component's
+service-double sample exercised 600 updates and cleanup without spawning renderers
+per frame. Native Unity 6000.6.7f1 import, Play, physics, shader output, FPS and complete
+cutscene playback still require the Editor. See ENFORCER_BOSS_KO.md for direct access.
 
 SOURCE FINGERPRINT
-151 C# files, sorted repository paths and their SHA-256 values:
-888c880d05b0ce3156d66422ddd0f0a32cbdb2f0ff19e9b8807e63f84552283b
+153 C# files, sorted repository paths and their SHA-256 values:
+bf3dc7c660d242cb862aa599506f6ba7e7127e641f494f31962982be1fc19fc8
 
 DOWNLOAD
-The v0.32.0-download tag contains the Unity project and retained ArtReferences.
+The v0.33.0-download tag contains the Unity project and retained ArtReferences.
 The archive contains source files for opening in Unity 6000.6.7f1.

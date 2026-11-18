@@ -3,9 +3,8 @@ using UnityEngine;
 namespace Plugin.AncientCivilization
 {
     // 본편 행정구 아레나의 컷신, 페이즈 전환, 공격 순서 및 재도전 정리.
-    public sealed class AncientEnforcerEncounter : MonoBehaviour
+    public sealed partial class AncientEnforcerEncounter : MonoBehaviour
     {
-        const float IntroDuration = 4.55f;
         const float DrainPerSecond = 8f;
         const float StunSeconds = 3.2f;
         const float WaveCrossingSeconds = 6.5f;
@@ -22,12 +21,12 @@ namespace Plugin.AncientCivilization
         LineRenderer counterMark, explosionCore, explosionGlow;
         Material explosionMaterial;
         AncientEnforcerMove move;
-        Vector2 introStart, introDrop, introReveal, counterTarget;
+        Vector2 counterTarget;
         Vector2 retreatStart, explosionCenter;
-        float left, right, middle, stageTime, nextEvent, introTime, rest, recoveryLength;
+        float left, right, middle, stageTime, nextEvent, rest, recoveryLength;
         float counterTime, counterCooldown, counterLight, absorbed, targetX, retreatTime = -1f, explosionTime = -1f;
         int phase = 1, moveIndex, emitted;
-        bool intro, dropped, activeMove, barrier, stopped, inBack;
+        bool intro, activeMove, barrier, stopped, inBack;
 
         public bool InputLocked => intro && !stopped;
         public int Phase => phase;
@@ -79,106 +78,6 @@ namespace Plugin.AncientCivilization
             game.Enforcer = this;
             if (game.EnforcerIntroSeen) BeginRecovery(.85f);
             else BeginIntro();
-        }
-
-        void BeginIntro()
-        {
-            intro = true;
-            game.ClearBattleProjectiles();
-            game.hero.HoldForEncounter(true);
-            introStart = new Vector2(Mathf.Clamp(game.hero.transform.position.x, left + 1.45f, right - 7f), 1.3f);
-            introDrop = introStart + Vector2.right * 2.5f;
-            introReveal = new Vector2(Mathf.Min(right - 3.2f, introDrop.x + 4.5f), 1.15f);
-            game.hero.CinematicMove(introStart);
-            owner.SetEnforcerPose(4, -1, 1, 0);
-        }
-
-        void Update()
-        {
-            if (retreatTime >= 0)
-            {
-                if (!game || game.MainMenu || game.Story.CurrentFloor != 2) { Destroy(gameObject); return; }
-                if (game.skills || !Application.isFocused) return;
-                retreatTime += Time.unscaledDeltaTime;
-                float fade = Ease((retreatTime - .32f) / .64f);
-                transform.position = retreatStart + new Vector2(1.8f * fade, .9f * fade);
-                owner.SetEnforcerPose(5, -1, Mathf.Lerp(1, .8f, fade), 1 - fade);
-                if (retreatTime >= .98f) Destroy(gameObject);
-                return;
-            }
-            if (!InputLocked || game.MainMenu || game.skills || !Application.isFocused ||
-                (game.Story && (game.Story.DialogueOpen || game.Story.LiftBusy)) || (game.Journal && game.Journal.Open)) return;
-            introTime += Time.unscaledDeltaTime;
-            if (introTime >= IntroDuration) { EndIntro(); return; }
-
-            float approach = Ease(introTime / .65f);
-            float dodge = Ease((introTime - 1.77f) / .38f);
-            Vector2 step = Vector2.Lerp(introStart, introDrop, approach);
-            step.x = Mathf.Lerp(step.x, introStart.x - .2f, dodge);
-            step.y += Mathf.Sin(dodge * Mathf.PI) * .41f;
-            game.hero.CinematicMove(step);
-            if (introTime < .65f) game.hero.ProductionCinematicRun(introTime, 1);
-            else game.hero.CinematicPose(introTime >= 1.77f && introTime < 2.5f, 1);
-
-            float shape = Ease((introTime - .64f) / 1.08f);
-            float fall = Mathf.Clamp01((introTime - 1.76f) / .53f);
-            Vector2 center = new Vector2(introDrop.x, Mathf.Lerp(7.25f, .81f, fall * fall));
-            if (introTime >= .52f && introTime < 1.87f) visuals.Vortex(center, shape, introTime, 2.7f);
-            else visuals.ClearVortex();
-            if (introTime >= 1.25f && introTime < 3.45f)
-                ShowSculpture(0, center, new Vector2(2.7f, 1.62f), Mathf.Min(shape, 1 - Mathf.Clamp01((introTime - 2.94f) / .51f)), -8 * (1 - fall));
-            else sculpture.enabled = false;
-            if (!dropped && fall >= 1)
-            {
-                dropped = true;
-                game.Impact(new Vector2(introDrop.x, .32f), Light, true);
-                game.Shake(.22f);
-                game.Sound(8);
-            }
-
-            float reveal = Ease((introTime - 2.55f) / .56f);
-            transform.position = introReveal + new Vector2((1 - reveal) * 1.8f, .24f * Mathf.Sin(introTime * 3.1f));
-            owner.SetEnforcerPose(4, -1, Mathf.Lerp(.86f, 1, reveal), reveal);
-            visuals.Intro(Vector2.Lerp(center, introReveal + Vector2.up * 1.3f, reveal), .66f * (1 - Ease((introTime - 3.9f) / .65f)));
-            if (introTime < .5f) return;
-            if (game.GameplayInputReady && Input.GetKeyDown(KeyCode.Space)) EndIntro();
-        }
-
-        void EndIntro()
-        {
-            intro = false;
-            game.EnforcerIntroSeen = true;
-            transform.position = introReveal;
-            owner.SetEnforcerPose(0, -1, 1, 1);
-            game.hero.CinematicMove(new Vector2(introStart.x, 1.3f));
-            game.hero.HoldForEncounter(false);
-            game.BlockGameplayInput();
-            ClearPresentation();
-            BeginRecovery(1.15f);
-            game.Notice("기록 집행관 / 입자가 모이는 곳을 피하세요.", 2.8f);
-        }
-
-        public bool TryCamera(out Vector2 focus, out float zoom)
-        {
-            focus = Vector2.zero;
-            zoom = 5.8f;
-            if (!InputLocked) return false;
-            Vector2 composition = new Vector2(introDrop.x - 1.25f, 3.6f);
-            Vector2 impact = new Vector2(introDrop.x - .45f, 2.9f);
-            Vector2 reveal = introReveal + new Vector2(-.5f, 1.45f);
-            focus = Vector2.Lerp(composition, impact, Ease((introTime - 1.47f) / .9f));
-            focus = Vector2.Lerp(focus, reveal, Ease((introTime - 2.5f) / .8f));
-            zoom = Mathf.Lerp(5.25f, 3.6f, Ease((introTime - 2.5f) / .8f));
-            float wide = Ease((introTime - 3.7f) / .85f);
-            focus = Vector2.Lerp(focus, new Vector2(middle, 4.6f), wide);
-            zoom = Mathf.Lerp(zoom, Mathf.Max(5.8f, (right - left + 3) / (2 * Mathf.Max(.5f, game.View.aspect))), wide);
-            return true;
-        }
-
-        void OnGUI()
-        {
-            if (!game || game.MainMenu || game.skills || stopped || Event.current.type != EventType.Repaint) return;
-            if (intro) visuals.DrawIntroOverlay(introTime, IntroDuration);
         }
 
         public void Tick()
@@ -621,6 +520,7 @@ namespace Plugin.AncientCivilization
             hazards?.Clear();
             echoes?.Clear();
             ClearPresentation();
+            ClearIntroEffects();
             if (game && game.Enforcer == this) game.Enforcer = null;
         }
 

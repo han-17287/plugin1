@@ -289,7 +289,16 @@ namespace Plugin.AncientCivilization
             Object.Destroy(additive);
         }
 
-        // 발밑 피벗을 유지한다. 한쪽 눈의 렌즈와 기계장갑은 화면을 향한 면에 놓인다.
+        // 투명 원화의 실제 발 위치에 피벗을 두어 넓은 코트와 팔 동작에도 몸의 중심을 유지한다.
+        static readonly Rect[] PoseCells = {
+            new Rect(168, 3, 185, 459), new Rect(619, 7, 238, 455), new Rect(1027, 13, 414, 450),
+            new Rect(83, 570, 306, 434), new Rect(571, 480, 300, 504), new Rect(1024, 691, 405, 315)
+        };
+        static readonly Vector2[] PoseFeet = {
+            new Vector2(256, 456), new Vector2(761, 456), new Vector2(1247, 457),
+            new Vector2(254, 997), new Vector2(768, 977), new Vector2(1300, 1001)
+        };
+        static readonly float[] PosePixelsPerUnit = { 131, 130, 129, 137, 145, 131 };
         static readonly Sprite[] Poses = new Sprite[6];
         static readonly Sprite[] Objects = new Sprite[5];
         static readonly Color32 Ink = new Color32(11, 19, 29, 255);
@@ -297,189 +306,18 @@ namespace Plugin.AncientCivilization
         static readonly Color32 Seam = new Color32(55, 81, 96, 255);
         static readonly Color32 Steel = new Color32(101, 131, 142, 255);
         static readonly Color32 Edge = new Color32(170, 194, 196, 255);
-        static readonly Color32 Ivory = new Color32(226, 232, 218, 255);
-        static readonly Color32 Paper = new Color32(244, 226, 181, 255);
-        static readonly Color32 Skin = new Color32(196, 151, 111, 255);
-        static readonly Color32 SkinShade = new Color32(124, 87, 74, 255);
         static readonly Color32 Blue = new Color32(71, 175, 231, 255);
         static readonly Color32 Ice = new Color32(155, 230, 255, 255);
         static readonly Color32 Pearl = new Color32(223, 251, 255, 255);
-
-        static readonly Color32 CoatShadow = new Color32(15, 22, 34, 255);
-        static readonly Color32 CoatDeep = new Color32(22, 31, 47, 255);
-        static readonly Color32 Coat = new Color32(38, 52, 72, 255);
-        static readonly Color32 CoatLight = new Color32(63, 79, 100, 255);
-        static readonly Color32 CoatRim = new Color32(102, 121, 143, 255);
-        static readonly Color32 Trim = new Color32(140, 113, 75, 255);
-        static readonly Color32 TrimLight = new Color32(205, 176, 119, 255);
-        static readonly Color32 MetalDark = new Color32(42, 64, 81, 255);
-        static readonly Color32 HairDark = new Color32(47, 54, 69, 255);
-        static readonly Color32 Hair = new Color32(125, 137, 149, 255);
-        static readonly Color32 HairLight = new Color32(190, 198, 201, 255);
 
         public static Sprite PoseSprite(int pose)
         {
             pose = Mathf.Clamp(pose, 0, Poses.Length - 1);
             if (Poses[pose]) return Poses[pose];
-
-            var sprite = new PixelCanvas(90, 126);
-            bool airborne = pose == 4;
-            bool staggered = pose == 3 || pose == 5;
-            int rise = airborne ? 3 : pose == 5 ? -9 : staggered ? -5 : 0;
-            int lean = pose == 5 ? -8 : staggered ? -5 : pose == 2 ? 3 : 0;
-            int sweep = airborne ? -10 : pose == 5 ? -7 : pose == 2 ? -6 : staggered ? -3 : 0;
-            DrawFormalLegs(sprite, airborne, rise);
-            DrawFormalCoat(sprite, rise, lean, sweep);
-            DrawHeldRecord(sprite, rise, lean, pose);
-            DrawGauntlet(sprite, rise, lean, pose);
-            DrawEnforcerHead(sprite, rise, lean, staggered);
-
-            return Poses[pose] = sprite.Make("기록 집행관 자세 " + pose, new Vector2(44f / 90f, 0f), 35f);
-        }
-
-        static void DrawFormalLegs(PixelCanvas sprite, bool airborne, int y)
-        {
-            // 허리와 발 위치를 기준으로 휴식 자세와 부유 자세의 무게 중심을 다르게 잡는다.
-            if (airborne)
-            {
-                sprite.Polygon(Ink, 34, 57, 48, 57, 43, 40, 35, 28, 32, 18, 28, 10, 23, 12, 23, 19, 28, 33);
-                sprite.Polygon(Coat, 36, 54, 44, 54, 40, 40, 32, 29, 30, 20, 26, 14, 26, 18, 30, 33);
-                sprite.Polygon(Ink, 44, 58, 57, 56, 62, 39, 60, 32, 49, 24, 47, 16, 41, 12, 36, 16, 40, 25, 49, 37);
-                sprite.Polygon(CoatLight, 47, 55, 55, 54, 59, 39, 57, 34, 46, 26, 43, 18, 40, 16, 42, 24, 53, 37);
-                sprite.Stroke(40, 15, 45, 18, 1, Trim);
-                return;
-            }
-
-            sprite.Polygon(Ink, 32, 58 + y, 46, 58 + y, 44, 42 + y, 40, 26, 37, 13, 39, 7, 38, 3, 24, 3, 23, 7, 30, 13, 32, 29);
-            sprite.Polygon(CoatDeep, 35, 56 + y, 43, 56 + y, 41, 43 + y, 37, 26, 34, 14, 31, 11, 32, 17, 34, 30);
-            sprite.Polygon(CoatRim, 31, 13, 36, 12, 35, 8, 30, 7);
-            sprite.Polygon(Coat, 24, 6, 31, 11, 37, 7, 36, 5, 25, 5);
-
-            sprite.Polygon(Ink, 44, 58 + y, 58, 59 + y, 57, 43 + y, 54, 28, 56, 12, 64, 7, 65, 3, 48, 3, 46, 10, 46, 24, 45, 39 + y);
-            sprite.Polygon(Coat, 47, 56 + y, 55, 56 + y, 54, 43 + y, 51, 28, 53, 15, 49, 12, 49, 26, 48, 40 + y);
-            sprite.Polygon(CoatLight, 51, 44 + y, 54, 41 + y, 51, 27, 52, 17, 50, 19, 49, 28);
-            sprite.Polygon(CoatDeep, 49, 12, 54, 12, 57, 9, 62, 6, 62, 5, 50, 5);
-            sprite.Stroke(54, 11, 61, 6, 1, CoatRim);
-            sprite.Rect(49, 7, 5, 1, Trim);
-        }
-
-        static void DrawFormalCoat(PixelCanvas sprite, int y, int lean, int sweep)
-        {
-            // 길게 떨어지는 두 코트 자락. 자락 끝의 실루엣과 안쪽 원단을 다른 값으로 분리한다.
-            sprite.Polygon(Ink, 27 + lean, 91 + y, 37 + lean, 97 + y, 50 + lean, 96 + y,
-                60 + lean, 89 + y, 60, 70 + y, 55, 61 + y, 58 + sweep / 2, 31 + y, 62 + sweep, 17 + y,
-                49 + sweep, 11 + y, 44 + sweep, 19 + y, 39 + sweep, 29 + y, 30 + sweep, 13 + y,
-                19 + sweep, 15 + y, 14 + sweep, 21 + y, 23 + sweep / 2, 42 + y, 29, 62 + y, 25, 77 + y);
-            sprite.Polygon(CoatDeep, 28 + lean, 89 + y, 38 + lean, 94 + y, 50 + lean, 93 + y,
-                57 + lean, 88 + y, 57, 72 + y, 53, 62 + y, 55 + sweep / 2, 30 + y, 59 + sweep, 18 + y,
-                50 + sweep, 14 + y, 45 + sweep, 21 + y, 40 + sweep, 35 + y, 29 + sweep, 16 + y,
-                20 + sweep, 18 + y, 17 + sweep, 22 + y, 25 + sweep / 2, 42 + y, 32, 62 + y, 28, 77 + y);
-            sprite.Polygon(Coat, 30 + lean, 88 + y, 39 + lean, 91 + y, 43, 75 + y, 37, 63 + y,
-                31 + sweep / 2, 42 + y, 25 + sweep, 21 + y, 18 + sweep, 22 + y, 25 + sweep / 2, 44 + y, 31, 61 + y, 27, 76 + y);
-            sprite.Polygon(CoatShadow, 45, 62 + y, 50, 64 + y, 51 + sweep / 2, 43 + y,
-                56 + sweep, 19 + y, 50 + sweep, 16 + y, 45 + sweep, 28 + y, 41 + sweep / 2, 48 + y);
-            sprite.Polygon(CoatLight, 38, 61 + y, 43, 63 + y, 39 + sweep / 2, 45 + y,
-                28 + sweep, 17 + y, 24 + sweep, 19 + y, 34 + sweep / 2, 46 + y);
-            sprite.Polygon(Seam, 46, 61 + y, 49, 63 + y, 49 + sweep / 2, 42 + y, 53 + sweep, 21 + y,
-                50 + sweep, 18 + y, 46 + sweep, 28 + y, 43 + sweep / 2, 46 + y);
-            sprite.Stroke(25 + sweep / 2, 43 + y, 17 + sweep, 22 + y, 1, CoatRim);
-            sprite.Stroke(17 + sweep, 22 + y, 28 + sweep, 17 + y, 1, TrimLight);
-            sprite.Stroke(50 + sweep, 15 + y, 58 + sweep, 18 + y, 1, Trim);
-
-            // 높은 깃, 유광 라펠, 좁은 셔츠 선, 비대칭 견장.
-            sprite.Polygon(CoatLight, 28 + lean, 89 + y, 38 + lean, 94 + y, 44 + lean, 89 + y,
-                41, 83 + y, 44, 80 + y, 39, 65 + y, 35, 74 + y);
-            sprite.Polygon(CoatRim, 36 + lean, 93 + y, 40 + lean, 96 + y, 45 + lean, 89 + y, 42, 84 + y, 44, 81 + y, 39, 67 + y, 40, 80 + y);
-            sprite.Polygon(Coat, 50 + lean, 94 + y, 57 + lean, 87 + y, 51, 83 + y, 53, 79 + y, 44, 64 + y, 46, 81 + y);
-            sprite.Polygon(Ivory, 45 + lean, 92 + y, 49 + lean, 92 + y, 47, 81 + y, 42, 69 + y, 43, 83 + y);
-            sprite.Polygon(CoatShadow, 45 + lean, 94 + y, 48 + lean, 93 + y, 45, 84 + y, 43, 80 + y, 43, 85 + y);
-            sprite.Stroke(49, 77 + y, 45, 62 + y, 1, CoatRim);
-            sprite.Stroke(41, 65 + y, 37 + sweep / 2, 44 + y, 1, Trim);
-            sprite.Rect(47, 75 + y, 2, 2, TrimLight);
-            sprite.Rect(45, 68 + y, 2, 2, TrimLight);
-            sprite.Stroke(26 + lean, 88 + y, 33 + lean, 92 + y, 1, TrimLight);
-            sprite.Polygon(MetalDark, 51 + lean, 93 + y, 60 + lean, 90 + y, 59 + lean, 86 + y, 53 + lean, 87 + y);
-            sprite.Stroke(53 + lean, 92 + y, 59 + lean, 90 + y, 1, TrimLight);
-            sprite.Rect(35, 79 + y, 3, 2, Ice);
-            sprite.Stroke(35, 78 + y, 30, 72 + y, 1, Trim);
-            sprite.Stroke(30, 72 + y, 37, 73 + y, 1, Trim);
-            sprite.Polygon(CoatDeep, 40 + lean, 99 + y, 51 + lean, 99 + y, 51 + lean, 92 + y, 43 + lean, 90 + y, 39 + lean, 94 + y);
-            sprite.Stroke(42 + lean, 97 + y, 49 + lean, 96 + y, 1, CoatRim);
-        }
-
-        static void DrawHeldRecord(PixelCanvas sprite, int y, int lean, int pose)
-        {
-            int dx = pose == 4 ? -3 : pose == 2 ? -2 : 0;
-            int dy = pose == 1 ? 4 : pose == 3 || pose == 5 ? -5 : 0;
-            sprite.Polygon(Ink, 27 + lean, 91 + y, 34 + lean, 88 + y, 32, 81 + y,
-                27, 70 + y, 21 + dx, 60 + y + dy, 16 + dx, 63 + y + dy, 20, 73 + y, 22, 85 + y);
-            sprite.Polygon(Coat, 27 + lean, 88 + y, 31 + lean, 87 + y, 29, 80 + y,
-                25, 70 + y, 20 + dx, 63 + y + dy, 19 + dx, 65 + y + dy, 22, 74 + y, 24, 85 + y);
-            sprite.Stroke(25, 83 + y, 21, 73 + y, 1, CoatLight);
-            sprite.Stroke(22 + dx, 65 + y + dy, 18 + dx, 67 + y + dy, 1, TrimLight);
-
-            // 도장과 접힌 귀퉁이가 보이는 어두운 서류철.
-            sprite.Polygon(Ink, 7 + dx, 73 + y + dy, 24 + dx, 75 + y + dy, 29 + dx, 68 + y + dy,
-                28 + dx, 53 + y + dy, 11 + dx, 50 + y + dy);
-            sprite.Polygon(Trim, 9 + dx, 71 + y + dy, 23 + dx, 73 + y + dy, 27 + dx, 68 + y + dy,
-                26 + dx, 55 + y + dy, 13 + dx, 52 + y + dy);
-            sprite.Polygon(Paper, 10 + dx, 72 + y + dy, 23 + dx, 73 + y + dy, 27 + dx, 68 + y + dy,
-                25 + dx, 57 + y + dy, 13 + dx, 54 + y + dy);
-            sprite.Polygon(Ivory, 22 + dx, 72 + y + dy, 26 + dx, 68 + y + dy, 22 + dx, 68 + y + dy);
-            sprite.Rect(13 + dx, 68 + y + dy, 6, 1, Trim);
-            sprite.Rect(13 + dx, 65 + y + dy, 8, 1, Steel);
-            sprite.Rect(14 + dx, 62 + y + dy, 7, 1, Steel);
-            sprite.Rect(20 + dx, 58 + y + dy, 3, 3, new Color32(149, 74, 58, 255));
-            sprite.Stroke(25 + dx, 58 + y + dy, 27 + dx, 61 + y + dy, 2, Ivory);
-        }
-
-        static void DrawGauntlet(PixelCanvas sprite, int y, int lean, int pose)
-        {
-            int shoulderX = 57 + lean;
-            int elbowX = pose == 2 ? 66 : pose == 1 ? 62 : 59;
-            int elbowY = (pose == 2 ? 82 : pose == 1 ? 77 : 76) + y;
-            int handX = pose == 2 ? 81 : pose == 1 ? 69 : pose == 4 ? 70 : 61;
-            int handY = (pose == 2 ? 89 : pose == 1 ? 97 : pose == 4 ? 83 : 63) + y;
-            sprite.Stroke(shoulderX, 86 + y, elbowX, elbowY, 9, Ink);
-            sprite.Stroke(shoulderX, 86 + y, elbowX, elbowY, 6, Coat);
-            sprite.Stroke(shoulderX + 1, 87 + y, elbowX + 1, elbowY + 1, 2, CoatLight);
-            sprite.Stroke(elbowX, elbowY, handX, handY, 9, Ink);
-            sprite.Stroke(elbowX, elbowY, handX, handY, 6, MetalDark);
-            sprite.Stroke(elbowX + 1, elbowY + 1, handX + 1, handY + 1, 2, Steel);
-            sprite.Rect(elbowX - 3, elbowY + 1, 5, 2, TrimLight);
-            sprite.Polygon(Ink, handX - 4, handY - 4, handX - 5, handY + 2, handX - 2, handY + 6,
-                handX + 4, handY + 6, handX + 7, handY + 3, handX + 7, handY - 1, handX + 2, handY - 5);
-            sprite.Polygon(Steel, handX - 3, handY - 2, handX - 3, handY + 2, handX, handY + 4,
-                handX + 4, handY + 4, handX + 5, handY + 1, handX + 1, handY - 3);
-            sprite.Stroke(handX, handY + 3, handX + 4, handY + 3, 1, Edge);
-            sprite.Stroke(handX - 1, handY - 2, handX + 3, handY - 1, 1, pose == 1 || pose == 2 ? Pearl : Ice);
-            sprite.Rect(handX + 5, handY, 2, 1, Blue);
-        }
-
-        static void DrawEnforcerHead(PixelCanvas sprite, int y, int lean, bool staggered)
-        {
-            int x = lean + (staggered ? -1 : 0);
-            // 드러낸 얼굴, 뒤로 넘긴 은빛 머리, 한쪽 눈을 감싸는 작은 렌즈.
-            sprite.Polygon(Ink, 36 + x, 100 + y, 35 + x, 111 + y, 38 + x, 116 + y, 44 + x, 120 + y,
-                51 + x, 120 + y, 56 + x, 116 + y, 56 + x, 108 + y, 60 + x, 103 + y, 57 + x, 101 + y,
-                56 + x, 96 + y, 52 + x, 94 + y, 45 + x, 95 + y, 41 + x, 99 + y);
-            sprite.Polygon(SkinShade, 40 + x, 110 + y, 49 + x, 116 + y, 54 + x, 114 + y, 54 + x, 108 + y,
-                58 + x, 103 + y, 55 + x, 101 + y, 54 + x, 97 + y, 51 + x, 96 + y, 46 + x, 97 + y, 42 + x, 101 + y);
-            sprite.Polygon(Skin, 47 + x, 113 + y, 54 + x, 113 + y, 54 + x, 108 + y, 58 + x, 103 + y,
-                54 + x, 102 + y, 53 + x, 98 + y, 50 + x, 97 + y, 46 + x, 99 + y, 46 + x, 106 + y);
-            sprite.Polygon(HairDark, 37 + x, 107 + y, 37 + x, 111 + y, 40 + x, 115 + y, 45 + x, 119 + y,
-                51 + x, 119 + y, 55 + x, 116 + y, 52 + x, 112 + y, 46 + x, 112 + y, 44 + x, 105 + y, 42 + x, 103 + y);
-            sprite.Polygon(Hair, 38 + x, 110 + y, 41 + x, 115 + y, 46 + x, 118 + y, 51 + x, 118 + y,
-                54 + x, 116 + y, 50 + x, 113 + y, 44 + x, 114 + y, 39 + x, 109 + y);
-            sprite.Stroke(40 + x, 112 + y, 48 + x, 117 + y, 1, HairLight);
-            sprite.Stroke(43 + x, 113 + y, 51 + x, 117 + y, 1, HairLight);
-            sprite.Rect(45 + x, 107 + y, 8, 1, Ink);
-            sprite.Rect(51 + x, 105 + y, 7, 5, MetalDark);
-            sprite.Rect(52 + x, 106 + y, 5, 3, Blue);
-            sprite.Rect(53 + x, 107 + y, 4, 1, Ice);
-            sprite.Rect(55 + x, 108 + y, 2, 1, Pearl);
-            sprite.Rect(53 + x, 100 + y, 3, 1, CoatShadow);
-            sprite.Rect(47 + x, 101 + y, 2, 2, SkinShade);
+            Rect cell = PoseCells[pose];
+            Vector2 root = PoseFeet[pose];
+            Vector2 pivot = new Vector2((root.x - cell.x) / cell.width, (cell.yMax - root.y) / cell.height);
+            return Poses[pose] = AncientArt.Slice("RecordEnforcer", "기록 집행관 자세 " + pose, cell, PosePixelsPerUnit[pose], pivot, false);
         }
 
         // 컷신과 패턴에 쓰이는 물체는 같은 강철·서류 팔레트를 공유한다.

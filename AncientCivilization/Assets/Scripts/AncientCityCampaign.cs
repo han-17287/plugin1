@@ -91,27 +91,17 @@ namespace Plugin.AncientCivilization
         {
             float left=AncientCityLayout.ArenaLeft(2),right=AncientCityLayout.ArenaRight(2);
             float middle=(left+right)*.5f;
-            var shadow=new Color(.048f,.077f,.108f);
-            var panel=new Color(.09f,.145f,.19f);
-            var trim=new Color(.18f,.29f,.34f);
+            // 원화의 536번 행을 실제 지면에 맞춘다. 그림 속 보관함과 난간에는 충돌을 추가하지 않는다.
+            const float sourceWidth=2172, floorRow=536, pixelsPerUnit=60;
+            var wall=AncientArt.Slice("RecordsHallBackdrop","records-hall-wall",new Rect(0,0,sourceWidth,floorRow),
+                pixelsPerUnit,new Vector2(.5f,0),false);
+            var apron=AncientArt.Slice("RecordsHallBackdrop","records-hall-apron",new Rect(0,floorRow,sourceWidth,64),
+                pixelsPerUnit,new Vector2(.5f,1),false);
+            var scale=new Vector2((right-left+5f)*pixelsPerUnit/sourceWidth,12.2f*pixelsPerUnit/floorRow);
             var lamp=new Color(.31f,.7f,.84f);
-            game.StaticBox("감사 기록실 후벽",new Vector2(middle,5),new Vector2(33,10),shadow,-5);
-            game.StaticBox("기록실 천장 설비",new Vector2(middle,9.35f),new Vector2(32,.95f),panel,-4);
-            game.StaticBox("상부 조명",new Vector2(middle,8.86f),new Vector2(28,.06f),lamp,-3);
-            game.StaticBox("단말 배선 통로",new Vector2(middle,1.02f),new Vector2(32,.24f),trim,-4);
-            for(int i=0;i<6;i++)
-            {
-                float x=left+3.5f+i*5;
-                game.StaticBox("증거 보관 캐비닛",new Vector2(x,3.86f),new Vector2(3.8f,6.2f),panel,-4);
-                game.StaticBox("캐비닛 상단 프레임",new Vector2(x,6.94f),new Vector2(3.8f,.14f),trim,-3);
-                for(int slot=0;slot<5;slot++)
-                {
-                    float y=1.57f+slot*.98f;
-                    game.StaticBox("기록 서랍",new Vector2(x,y),new Vector2(3.45f,.7f),shadow,-3);
-                    game.StaticBox("서랍 손잡이",new Vector2(x,y+.04f),new Vector2(.5f,.1f),trim,-2);
-                    game.StaticBox("원본 봉인 표시",new Vector2(x+1.26f,y+.16f),new Vector2(.13f,.08f),slot==i%5?lamp:trim,-2);
-                }
-            }
+            Vector2 floorCenter=new Vector2(middle,0);
+            game.WorldBatch.Sprite(wall,floorCenter,scale,Color.white,-5);
+            game.WorldBatch.Sprite(apron,floorCenter,scale,Color.white,1);
             game.StaticBox("좌측 대피 경계",new Vector2(left+1.5f,.034f),new Vector2(3,.07f),lamp,3);
             game.StaticBox("우측 대피 경계",new Vector2(right-1.5f,.034f),new Vector2(3,.07f),lamp,3);
         }
