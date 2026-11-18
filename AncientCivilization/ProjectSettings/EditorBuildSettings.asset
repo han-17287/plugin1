@@ -11,7 +11,7 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/PlayerMovementPractice.unity
     guid: 8ca8aa6826504fe6b48be49721309818
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/TraversalRhythmPractice.unity
     guid: ffacffa49ab141b3b2020ae5e60c4fa3
   m_configObjects: {}

@@ -1,8 +1,8 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.30.0
+# PLUGIN — ANCIENT CIVILIZATION v0.31.0
 
-**다섯 층 시험:** `TraversalRhythmPractice.unity`를 Play하고 층 버튼을 선택합니다. [다른 네 층 구성·리듬·기믹·검사](OTHER_FLOORS_RHYTHM_KO.md). 생활부 탐조등·행정구 셔터·거주구 환기류·최상층 시간 앵커가 추가됐습니다.
+**새 지역 맵:** Main 메인 화면에서 **새 지역 맵 둘러보기**를 누르세요. 하역장·주거 골목·보안 기록동·정원 테라스·최상층 정비로의 서로 다른 지형을 만듭니다. 각 층112~120타일, 체크포인트3곳, 건물 위 경로와 중앙 난관, 닫힌 천장, 복구 앵커, 기존 백 경위 원화를 포함합니다. [실행·구성·설정·검사](DISTRICT_MAPS_KO.md), [코드 좌표 배치도](DistrictMapPreview.html).
 
-**P2/M3.5 시험:** `Assets/Scenes/TraversalRhythmPractice.unity`에서 안전 흐름 방과 짧은 난관을 시험합니다. [구성·튜닝·검사](P2_TRAVERSAL_KO.md), [리듬과12개 설계](M35_RHYTHM_KO.md). 기존 Main은 기존 스토리 조작을 사용합니다.
+새 맵은 `Assets/Scenes/TraversalRhythmPractice.unity`에서 생성됩니다. 기존 Main 순찰·스토리·무기·보스는 아직 이 좌표로 이전하지 않았습니다. 새 지도에서는 **지역 / 도움말**로 층·장치 난도·안전 바닥을 선택합니다. Unity 실제 Play·조명·물리·체감·FPS 확인은 남아 있습니다.
 
 **P1 새 컨트롤러:** `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play합니다. [전체 구성·인스펙터 값·테스트·흔한 버그](P1_MOVEMENT_KO.md). 새 씬은 A/D·Space·Shift·S+Space·Q/휠·Esc를 사용하며, 후속 무기 입력의 연결 지점을 제공합니다. 기존 Main 씬의 조작은 아래 기존 게임 설명을 따릅니다.
 

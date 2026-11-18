@@ -83,6 +83,13 @@ namespace Plugin.AncientCivilization
         public float DamageFlash {get{return damageFlash;}}
         public Camera View {get{return view;}}
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void InstallSceneBoot()
+        {
+            SceneManager.sceneLoaded-=OnSceneLoaded;
+            SceneManager.sceneLoaded+=OnSceneLoaded;
+        }
+        static void OnSceneLoaded(Scene scene,LoadSceneMode mode){Boot();}
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
         {

@@ -1,20 +1,16 @@
 # PLUGIN · Ancient Civilization
 
-**v0.30.0 — 다섯 층의 흐름·난관과 고유 기믹 시험**
+**v0.31.0 — 건물과 시설을 따라가는 다섯 지역 맵**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.30.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.31.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
 
-**다른 네 층도 추가:** 생활부의 탐조등, 행정구의 보안 셔터, 상층 거주구의 환기류, 최상층의 시간 앵커를 시험합니다. `Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play한 뒤 층 버튼을 누르세요. 5층×안전/난관×세 난도, 총30개 조합을 선택할 수 있습니다.
+Main 메인 화면에서 **새 지역 맵 둘러보기**를 선택합니다. 생산구 하역장, 생활부 주거 골목, 행정구 보안 기록동, 거주구 온실 테라스, 최상층 정비 외벽을 서로 다른 실제 지형으로 만들었습니다. 각 지도는112~120타일이며 지상 길·건물 위 정비로·중앙 난관·착지 체크포인트3곳을 연결합니다. 연속 천장, 하역·주거 원화, 구조 지지대·창문·간판을 추가했고, 임시 사각형 주인공은 기존 백 경위 원화로 교체했습니다.
 
-[다른 층의 리듬·48개 번안·Prefab·설정·체크리스트](AncientCivilization/OTHER_FLOORS_RHYTHM_KO.md) · [다섯 층의 지형 검토 HTML](AncientCivilization/TraversalPreview.html)
+[지역 구성·실행·코드·설정·체크리스트](AncientCivilization/DISTRICT_MAPS_KO.md) · [실제 좌표 배치도](AncientCivilization/DistrictMapPreview.html)
 
-실제 추가는 네 층의8개 시험 Room과 고유 기믹입니다. 20개 구간의75/25 리듬과48개 번안은 설계안이며, 기존 Main 전체 맵이나 보스를 교체하지 않았습니다. 고대 문명은2회차로 남겨 둡니다. 실제 Unity Play·성공률·재시도 시간·FPS는 미측정입니다.
+새 이동 컨트롤러의 지역 맵을 구현한 버전입니다. **기존 Main 순찰의 모든 현장·무기·보스를 새 좌표로 이전하지는 않았습니다.** 기존 스토리와 저장은 메인 순찰에서 계속 사용합니다. 새 지도에서는 오른쪽 위 도움말로 층·장치 난도·안전 바닥을 선택하며, 설정을 연 동안 이동·장치가 멈춥니다. 지도끼리의 연결문은 시험용 선택이며 스토리 승진/엘리베이터를 대체하지 않습니다. Unity6000.6.7f1 실기 임포트·Play·체감·FPS는 이 환경에서 확인하지 못했습니다.
 
-**기본 갈고리 시험:** `Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play합니다. 고정·일회용·움직이는 앵커, 벽/천장 직선 돌진, 위험 레이어 무적, 도착 관성·공중 점프/대시 회복을 연결했습니다. 각 층의 안전 흐름 방과 짧은 난관 방을 쉬움/보통/어려움 데이터로 바꿔 시험할 수 있습니다.
-
-[생산구5구간 리듬·12개 난관·타일 도면·복구 규칙](AncientCivilization/M35_RHYTHM_KO.md) · [P2 스크립트·Prefab·인스펙터·테스트](AncientCivilization/P2_TRAVERSAL_KO.md) · [지형 검토 HTML](AncientCivilization/TraversalPreview.html)
-
-전체 리듬은 흐름75%·필수 난관25%인 설계안입니다. 기존 Main 맵을 이 배치로 교체하지 않았습니다. 실제 구현은 별도 두 시험 방이며, 투척·충전·거울 등 나머지 설계는 P3~P6 이후 검증합니다. M1은 코드 수치로 계산한 잠정 표이고 실제 Unity 플레이·성공률·재도전 시간·FPS는 미측정입니다.
+기존 [60개 기믹 설계](AncientCivilization/TraversalPreview.html)와 [P2 구성](AncientCivilization/P2_TRAVERSAL_KO.md)은 기초 방/후속 무기 기믹 자료로 유지합니다. 그 단순 도면과 현재 실행되는 건축형 지역 지도는 구분합니다. 고대 문명 지역은2회차 범위로 남겨 둡니다.
 
 P1 이동 연습도 포함합니다. **새 이동을 확인하려면 `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play**하세요. 신 Input System, 모드별 입력 연결, 상태 패턴, 가변 점프·벽 점프·대시·발판 하강과 디버그 표시를 포함합니다. [설정·스크립트 구성·튜닝 값·테스트·흔한 버그](AncientCivilization/P1_MOVEMENT_KO.md). 기존 `Main.unity`는 아직 기존 조작을 사용합니다. 추가 앵커와 무기·입자·레이저는 후속 단계에서 순서대로 연결합니다.
 

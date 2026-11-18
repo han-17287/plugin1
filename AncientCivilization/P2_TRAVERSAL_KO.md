@@ -1,8 +1,10 @@
 # P2-A와 M3.5 시험 방 — 기본 구성
 
+> v0.31 안내: 현재 실행 씬은 [건축형 지역 맵](DISTRICT_MAPS_KO.md)으로 교체됐습니다. 아래의 단순 방 도면·난도별 간격은 기초 시험 코드와 후속 기믹 설계 자료입니다. 현재 실제 지형은 [지역 배치도](DistrictMapPreview.html)를 확인하세요.
+
 v0.30에서는 [다른 네 층](OTHER_FLOORS_RHYTHM_KO.md)의 고유 기믹과8개 Room을 같은 시험 씬에 추가했다. 아래는 생산구에서 시작한 공통 갈고리와 두 가지 Room 유형의 설명이다.
 
-`Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play한다. 처음에는 안전 흐름 방이 나오며, 버튼으로 짧은 난관 방과 세 난도 데이터를 바꿀 수 있다. 기존 Main 씬은 아직 기존 스토리 컨트롤러를 사용한다. 시험 씬은 기존 저장·재화·메인 보스를 변경하지 않는다.
+`Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play한다. 현재는 생산구의 위험 설비가 활성화된 지역 맵이 나오며, 오른쪽 위 도움말에서 안전 바닥과 장치 난도를 바꿀 수 있다. 기존 Main 씬은 아직 기존 스토리 컨트롤러를 사용한다. 시험 씬은 기존 저장·재화·메인 보스를 변경하지 않는다.
 
 [12개 난관·리듬 표·M1 잠정 허용치·복구 규칙](M35_RHYTHM_KO.md) / [타일 배치 검토 화면](TraversalPreview.html)
 

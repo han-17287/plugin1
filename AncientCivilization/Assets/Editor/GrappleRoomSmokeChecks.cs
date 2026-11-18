@@ -22,7 +22,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             original=player.transform.position;var mode=player.GetComponent<PlayerModeController>();originalMode=mode.Mode;
             try
             {
-                mode.Set(PlayerMode.Hook);player.Respawn(room.Checkpoint);Physics2D.SyncTransforms();
+                mode.Set(PlayerMode.Hook);player.Respawn(StartPoint());Physics2D.SyncTransforms();
                 Require(grapple.TryStartAt(room.Anchors[0]),"고정 앵커 발사 요청");
                 player.ReceiveHurt(new Vector2(-2,4),.2f);Require(!grapple.Active&&!room.Anchors[0].Leased&&player.State==PlayerStateId.Hurt,"피격이 돌진 예약을 해제하고 상태 우선순위를 유지");
                 player.Die();player.FinishExternal(Vector2.up,true);Require(player.State==PlayerStateId.Dead,"늦은 도착 콜백이 사망을 취소하지 않음");
@@ -33,8 +33,9 @@ namespace Plugin.AncientCivilization.EditorChecks
         static void StartLeg()
         {
             grapple.ResetForRetry();room.ResetForRetry();
-            target=stage==0?room.Anchors[0]:stage==1?room.Anchors[1]:room.Anchors[2];
-            Vector2 spawn=stage<2?room.Checkpoint:target.Point+Vector2.left*5-Vector2.up*3;
+            target=room.Anchors[0];
+            foreach(var item in room.Anchors)if(stage==1&&item is OneUseGrappleAnchor||stage==2&&item is MovingGrappleAnchor){target=item;break;}
+            Vector2 spawn=stage==0?StartPoint():target.Point+Vector2.left*4+Vector2.up*2;
             player.Respawn(spawn);Physics2D.SyncTransforms();from=spawn;captured=target.Point;
             Require(grapple.TryStartAt(target),"검사 대상 앵커 발사");started=Time.realtimeSinceStartup;
         }
@@ -68,6 +69,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             if(ok)Debug.Log("PASS: "+message);else Debug.LogError("P2 실물 검사 실패: "+message);
         }
         static void Require(bool ok,string message){if(!ok)throw new Exception(message);}
+        static Vector2 StartPoint(){if(room.District==null)return room.Checkpoint;var s=room.District.stops[0];return new Vector2(s.x,s.y+.02f);}
     }
 }
 #endif

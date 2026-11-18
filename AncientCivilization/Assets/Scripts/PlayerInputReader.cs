@@ -12,7 +12,11 @@ namespace Plugin.PlayerCore
         readonly ScrollModeGate scroll=new ScrollModeGate();PlayerModeController mode;
         public Vector2 Move {get;private set;} public Vector2 Pointer {get;private set;}
         public bool JumpHeld {get;private set;} public bool CollectHeld {get;private set;}
-        public bool LaserHeld {get;private set;} public bool Paused {get;private set;}
+        public bool LaserHeld {get;private set;} bool pauseRequested;
+        public bool InterfaceOpen {get;private set;}
+        public bool Paused=>pauseRequested||InterfaceOpen;
+        public void SetInterfaceOpen(bool value){InterfaceOpen=value;ClearTransient();}
+        public void Resume(){pauseRequested=false;InterfaceOpen=false;ClearTransient();}
         public bool Ready {get;private set;}
 #if ENABLE_INPUT_SYSTEM
         InputActionAsset asset;InputActionMap map;
@@ -38,7 +42,7 @@ namespace Plugin.PlayerCore
         {
 #if ENABLE_INPUT_SYSTEM
             if(!Ready)return;
-            if(pause.WasPressedThisFrame()){Paused=!Paused;ClearTransient();}
+            if(pause.WasPressedThisFrame()){pauseRequested=!pauseRequested;ClearTransient();}
             if(Paused||!Application.isFocused)return;
             double now=Time.timeAsDouble;float life=data?data.inputBuffer:.15f;
             Move=Vector2.ClampMagnitude(move.ReadValue<Vector2>(),1);Pointer=point.ReadValue<Vector2>();

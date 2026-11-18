@@ -175,6 +175,7 @@ namespace Plugin.AncientCivilization
                 if(MenuButton(new Rect(x,buttons+64,width,44),"새 게임")){confirmNew=true;controls=false;}
                 GUI.enabled=oldEnabled;
                 if(MenuButton(new Rect(x,buttons+116,width,44),"조작 안내")){controls=true;confirmNew=false;}
+                if(MenuButton(new Rect(x+width+18,buttons+116,270,44),"새 지역 맵 둘러보기"))UnityEngine.SceneManagement.SceneManager.LoadScene("TraversalRhythmPractice");
                 if(MenuButton(new Rect(x,buttons+168,width,44),"종료"))
                 {
 #if UNITY_EDITOR
@@ -184,7 +185,7 @@ namespace Plugin.AncientCivilization
 #endif
                 }
                 Label(new Rect(x+2,top+564,410,24),"F6 효과   F7 소리   F8 프레임 목표",caption,new Color(.48f,.61f,.67f));
-                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v0.25.0",eyebrow,new Color(.38f,.50f,.57f));
+                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v0.31.0",eyebrow,new Color(.38f,.50f,.57f));
                 Label(new Rect(w-334,h-39,280,22),backdropCaption,caption,new Color(.55f,.68f,.73f));
                 if(controls||confirmNew)DrawModal(w,h);
             }

@@ -1,97 +1,92 @@
-v0.30.0 five-floor traversal profiles and mechanism prototypes
+v0.31.0 authored architectural district routes
 
 SCOPE AND LIMITS
-Added eight living/administration/residence/top Room Prefabs and five floor profiles.
-Together with production:10 Room Prefabs x3 difficulty profiles =30 trial combinations.
-Implemented mechanisms: timed searchlight exposure, periodic physical shutter with
-safe-close deferral, movement-owner queued vent lift, timed anchor availability with
-lease protection. Room reset restores all timers/availability/anchor state.
-The new four floors have20 planned sections and48 adapted challenge designs;
-all five floors have25 rhythm sections and60 designs. Most design rooms, rewards,
-weapons and bosses are not implemented by these trial variants. Main.unity's existing
-map/story/bosses were NOT replaced. Ancient-civilization gameplay remains second-run scope.
-M1 remains a provisional code-derived envelope. Unity6000.6.7f1 Editor is unavailable:
-native package import, Play, input, physics/lighting, success rate, retry timing,
-FPS and full playthroughs were NOT run or measured.
+Five distinct runtime layouts replace the simple trial corridor in
+TraversalRhythmPractice: Production112,Living120,Administration114,Residence116,
+Top118 tiles. Closed ceilings,ground routes,building maintenance paths,one central
+hazard area,three grounded checkpoints/floor,and permanent recovery anchors.
+Includes structural/facade scenery,existing pixel hero,compact HUD,vertical camera,
+Main menu entry,and scene-loaded bootstrap for returning to Main.
+Settings pause input/movement/mechanism clocks and clear buffered commands.
+Existing Main patrol missions,weapons,bosses and saves were NOT migrated to these
+coordinates. The district connection door is a map selector,not a story elevator.
+Ancient-civilization gameplay remains second-run scope.
+
+Unity6000.6.7f1 Editor is unavailable here. Native import,Play,physics,input,
+URP rendering,visual quality,success rate,FPS and playthrough time were NOT measured.
+The supplied Editor smoke fixtures were compiled with supplemental stubs,NOT run.
 
 PORTABLE CHECKS
-All30 .NET rule/controller suites passed.
-PASS: BeamChecks = 11591
-PASS: BladeChecks = 4600
-PASS: BossReadabilityChecks = 1748
-PASS: ChapterRouteChecks = 26693
-PASS: ChapterVisibilityChecks = 13813
-PASS: FieldExpansionChecks = 67578
-PASS: FloorMechanismChecks = 22
-PASS: FloorTraversalChecks = 104299
-PASS: GrappleControllerChecks = 645
-PASS: GrappleLayoutChecks = 10976
-PASS: LivingChecks = 4327
-PASS: LivingControllerChecks = 471
-PASS: LowerControllerChecks = 1309
-PASS: LowerRouteChecks = 345733
-PASS: MovementChecks = 9400
-PASS: PlayerCoreChecks = 688
-PASS: PlaytimeChecks = 52
-PASS: ProductionHazardChecks = 767
-PASS: ProductionLayoutChecks = 522159
-PASS: ProductionMotionChecks = 48172
-PASS: ProductionSequenceChecks = 193072
-PASS: ProjectileOrderingChecks = 7024
-PASS: PulseChecks = 137
-PASS: RouteRadioChecks = 106
-PASS: RulesChecks = 3824
-PASS: SniperChecks = 76
-PASS: SpeechLayoutChecks = 3997
-PASS: SwingChecks = 596
-PASS: ThreatChecks = 359
-PASS: ZipChecks = 60408
-TOTAL: 1444642 assertions including parameter sweeps.
+All31 rule/controller suites and source/asset/font/action/design checks passed.
+DistrictRouteChecks uses the exact runtime layout and verifies the shipped HTML
+matches it. It sweeps moving-anchor phases,range with two-tile reserve,conservative
+capsule envelopes against actual rectangular solids,closed-ceiling clearance,
+restart floor support and permanent recovery routes. Found and corrected balcony
+and service-duct clipping during authoring. This is not Unity collision simulation.
+Legacy layout suites still cover the retained basic trial-room implementation;
+they do not stand in for the new district geometry checks.
 
-Final asset/design contracts also passed after the export-width adjustment:
-13 actual prefabs (10 rooms+3 anchors), five floor-data GUID links, positive timing
-windows,30 trial combinations,60 tile diagrams, two solutions each and the25 planned
-75/25 rhythm sections. Geometry is not a native traversal result.
-
-NEW MECHANISM COVERAGE
-FloorTraversalChecks sweeps floor/tier/anchor-motion phases, range reserve, complete
-capsule roof clearance, forward framing, the five-tile shutter waiting ledge,
-periodic timing and scan/shutter overlap. FloorMechanismChecks executes the shipping
-TraversalFloorMechanism with narrow engine/player-owner doubles: harmless teaching
-scan, sustained-exposure retry, pause, leaving beam, safe-close deferral, initial
-opening reset, vent request only for ordinary motion, leased timed sockets, closed
-availability and retry reset. It does NOT execute real body integration/occlusion.
-The existing shipping grapple controller suite now verifies that clicking an inactive
-socket cannot unexpectedly choose a wall behind it. Native PlayerStateMachine is not
-simulated by that suite; its actual vent-force integration still needs Unity testing.
+BeamChecks.csproj — PASS: 11591 thick-laser geometry, charge and presentation checks
+BladeChecks.csproj — PASS: 4600 blade timing, scheduled contact, facing, laser readiness and measured feedback placement checks
+BossReadabilityChecks.csproj — PASS: 1748 boss lane, per-activation damage and clock-pattern checks
+ChapterRouteChecks.csproj — PASS: 26693 continuous chapter layout, arena and save-boundary checks
+ChapterVisibilityChecks.csproj — PASS: 13813 continuous-chapter scenery, bridge, gimmick visibility and bounded nearest-anchor halo checks
+DistrictRouteChecks.csproj — PASS: 277271 authored district route range, capsule corridor, restart pocket, ceiling and topology checks. Native Unity physics not run.
+FieldExpansionChecks.csproj — PASS: 67578 expanded-field layout checks
+FloorMechanismChecks.csproj — PASS: 22 shipping floor-mechanism checks with service doubles; native illumination/collision/vent motion not simulated
+FloorTraversalChecks.csproj — PASS: 104299 five-floor link/capsule/camera,25-stage rhythm and mechanism timing rules; native physics not measured
+GrappleControllerChecks.csproj — PASS: 645 shipping grapple/anchor controller checks with a narrow wall and movement-owner double; native physics/input not simulated
+GrappleLayoutChecks.csproj — PASS: 10976 grapple stepping, motion-envelope, room clearance, provisional M1 and five-stage rhythm checks; native traversal unmeasured
+LivingChecks.csproj — PASS: 4327 living trail, boss HP transitions, barrier, branching and hit geometry checks
+LivingControllerChecks.csproj — PASS: 471 shipping living-controller scheduling/damage-state checks with service doubles; native Unity physics/rendering/input not simulated
+LowerControllerChecks.csproj — PASS: 1309 shipping lower-route/resident/throw/playtime lifecycle, all72 stops, collisions, rewards, focus/pause and save checks with service doubles; native traversal/physics/input not simulated
+LowerRouteChecks.csproj — PASS: 345733 lower-route content, migration, gate and geometry checks
+MovementChecks.csproj — Movement checks passed: 9400
+PlayerCoreChecks.csproj — PASS: 688 player input buffer and wheel cadence checks; Unity movement/input/physics not executed
+PlaytimeChecks.csproj — PASS: 52 active playtime, pause, retry and persistence checks
+ProductionHazardChecks.csproj — PASS: 767 production road-hazard sweep, bomb landing/fuse, rider timing and jump-clearance checks
+ProductionLayoutChecks.csproj — PASS: 522159 production tutorial, safe landing, wire reach and chase separation checks
+ProductionMotionChecks.csproj — PASS: 48172 production cinematic continuity, intentional takeoff impulse, roof/camera clearance, cargo/laser separation and motorcycle derivative checks
+ProductionSequenceChecks.csproj — PASS: 193072 production chase, boarding, health-gate, third-mount finale and active-clock checks
+ProjectileOrderingChecks.csproj — PASS: 7024 projectile ordering, terrain occlusion and frame-pacing checks
+PulseChecks.csproj — PASS: 137 pulse lifetime, locked release, bounded hit-ledger and frame-independence checks
+RouteRadioChecks.csproj — PASS: 106 live-radio queue, typewriter, paging and active-clock checks
+RulesChecks.csproj — PASS: 3824 combat and quest rule checks
+SniperChecks.csproj — PASS: 76 sniper rule checks
+SpeechLayoutChecks.csproj — PASS: 3997 speech-bubble geometry checks; standalone .NET rules only
+SwingChecks.csproj — PASS: 596 swing presentation rule checks
+ThreatChecks.csproj — PASS: 359 combat threat visibility and stagger safety checks
+ZipChecks.csproj — PASS: 60408 straight-wire movement, planned-step arrival, simultaneous moving-support trace and collision-budget checks
 
 SUPPLEMENTAL COMPILATION
-130 runtime scripts compile with warnings-as-errors against Unity2021.3.33
-reference assemblies after aliasing .linearVelocity to .velocity only in temporary
-copies. Shipping source uses Unity6 linearVelocity. The ENABLE_INPUT_SYSTEM branch
-also compiles against an assembly built from official Input System1.11.2 runtime
-sources. The dependency's optional UI/XR paths are omitted in that older-reference build.
-All runtime +10 Editor fixtures compile with older Unity references and narrow
-Editor API stubs. These are NOT native Unity6 imports/builds. The Unity6-only Tilemap
-CompositeOperation branch remains a native follow-up. No new native Editor fixture
-was executed; the existing P2 flight fixture can be used in each safe floor room.
+134 runtime scripts compile with warnings-as-errors against Unity2021.3.33
+reference assemblies after aliasing .linearVelocity to .velocity ONLY in temporary
+copies. Shipping source uses Unity6 linearVelocity.
+The ENABLE_INPUT_SYSTEM branch also compiled against an assembly built from official
+Input System1.11.2 runtime sources. Optional UI/XR dependency paths are omitted in
+that older-reference build. All runtime +11 Editor fixtures compile against older
+Unity references and narrow Editor stubs. These are NOT native Unity6 builds.
+The Unity6-only Tilemap CompositeOperation branch remains a native follow-up.
 
 SOURCE FINGERPRINT
 SHA256 of sorted UTF-8 '<file SHA256>  <repo-relative Assets/**/*.cs path>\n':
-140 files: 92fa2d4df8a88ef371d1c2e7c495413e5a2bb2904765ab9425601f6022feb0e8
+145 files: 84a39ba3e9d20e9293fb63693e820820f51f7683a4c08b2fb20178ac25f0aa19
 
 SOURCE-DATA VISUAL REVIEW
-TraversalExport reads actual floor layout and shipping profile fields. Chromium
-checked all5 floor selectors,60 design panels,30 actual room/profile previews,
-safe/danger toggling and720px layout, without script errors. The final administration
-waiting-platform diagram was visually reviewed. These are source diagrams, not Unity renders.
+DistrictMapPreview.html reads canonical runtime coordinates exported by the actual
+DistrictRouteChecks project. Chromium verified five maps,20 region framings,
+recovery markers,three checkpoint descriptions per floor,guide/safe controls,and
+390px layout with no script errors. Production and residence diagrams were visually
+inspected. These are source diagrams,NOT Unity screenshots or a browser game.
+TraversalPreview.html is explicitly retained as older basic-room/design material.
 
 REPRODUCE
 python -m pip install -r AncientCivilization/Tools/requirements-checks.txt
 python AncientCivilization/Tools/run_checks.py --dotnet /path/to/dotnet-8-sdk/dotnet
-python AncientCivilization/Tools/package_project.py --output /path/outside/project/PLUGIN_v0.30.0.zip
-See OTHER_FLOORS_RHYTHM_KO.md for component/settings/native checklists and limitations.
+python AncientCivilization/Tools/preview_districts.py --dotnet /path/to/dotnet-8-sdk/dotnet
+python AncientCivilization/Tools/package_project.py --output /path/outside/project/PLUGIN_v0.31.0.zip
+See DISTRICT_MAPS_KO.md for component settings,native checklists and scope.
 
 PACKAGING
-Source archive only. CRC/inventory/byte checks do not validate Unity import.
-Public v0.30.0-download exports AncientCivilization,ArtReferences and root README.md.
+Source archive only; CRC/inventory/byte checks do not validate Unity import.
+Public v0.31.0-download exports AncientCivilization,ArtReferences and root README.md.

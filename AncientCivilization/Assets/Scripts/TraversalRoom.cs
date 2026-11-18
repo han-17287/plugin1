@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Plugin.PlayerCore
 {
     // 같은 Room Prefab의 데이터를 바꾸어 형상을 다시 짓는다. Transform 스케일로 난도를 바꾸지 않는다.
-    public sealed class TraversalRoom : MonoBehaviour
+    public sealed partial class TraversalRoom : MonoBehaviour
     {
         public bool precision;public FloorTraversalProfile floorProfile;
         readonly List<TraversalFloorMechanism> mechanisms=new List<TraversalFloorMechanism>();
