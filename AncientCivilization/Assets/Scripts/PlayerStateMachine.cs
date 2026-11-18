@@ -15,7 +15,7 @@ namespace Plugin.PlayerCore
         readonly List<Collider2D> ignoredPlatforms=new List<Collider2D>();
         Rigidbody2D body;CapsuleCollider2D shape;PlayerInputReader input;PlayerModeController mode;
         ContactFilter2D filter;PhysicsMaterial2D material;IPlayerState state;Vector2 velocity;
-        float momentumUntil;float clock,groundAt=-100,jumpedAt=-100,lockUntil,dashUntil,dashReady,dropUntil,apexAge,facing=1;
+        float environmentalLift,liftUntil;float momentumUntil;float clock,groundAt=-100,jumpedAt=-100,lockUntil,dashUntil,dashReady,dropUntil,apexAge,facing=1;
         int dashes;bool arrivalJump;bool cutJump,wallLeft,wallRight,wasGrounded,paused,lastSimulation=true;float hitUntil;
         public PlayerStateId State=>state==null?PlayerStateId.Idle:state.Id;
         public Vector2 Velocity=>body?body.linearVelocity:Vector2.zero;
@@ -53,12 +53,15 @@ namespace Plugin.PlayerCore
         {if(State<PlayerStateId.GrappleAim||State>PlayerStateId.LaserFire)return;velocity=value;body.linearVelocity=value;}
         public bool TryExternalDash()
         {if(State!=PlayerStateId.GrappleAim&&State!=PlayerStateId.GrappleDash||dashes<=0||clock<dashReady)return false;Change(PlayerStateId.Dash);return true;}
+        // 환기류도 같은 속도 소유자에 전달해 입력 해제가 상승을 반감시키지 않게 한다.
+        public void ApplyEnvironmentalLift(float minimum)
+        {if(State>PlayerStateId.WallJump||!GrappleRules.Finite(minimum)||minimum<=0)return;environmentalLift=Mathf.Max(environmentalLift,minimum);liftUntil=clock+Time.fixedDeltaTime*1.5f;}
         public void ResetAirActions(){arrivalJump=false;dashes=data.airDashes;cutJump=false;dashReady=clock;}
         public void ReceiveHurt(Vector2 knockback,float duration)
-        {if(State==PlayerStateId.Dead)return;arrivalJump=false;input.Buffer.Clear();velocity=knockback;body.linearVelocity=velocity;hitUntil=clock+Mathf.Max(.01f,duration);Change(PlayerStateId.Hurt);}
-        public void Die(){input.ClearTransient();velocity=Vector2.zero;body.linearVelocity=Vector2.zero;Change(PlayerStateId.Dead);}
+        {if(State==PlayerStateId.Dead)return;environmentalLift=0;arrivalJump=false;input.Buffer.Clear();velocity=knockback;body.linearVelocity=velocity;hitUntil=clock+Mathf.Max(.01f,duration);Change(PlayerStateId.Hurt);}
+        public void Die(){environmentalLift=0;input.ClearTransient();velocity=Vector2.zero;body.linearVelocity=Vector2.zero;Change(PlayerStateId.Dead);}
         public void Respawn(Vector2 point)
-        {RestorePlatforms();input.ClearTransient();body.position=point;velocity=Vector2.zero;body.linearVelocity=velocity;groundAt=-100;jumpedAt=-100;lockUntil=clock;momentumUntil=clock;apexAge=0;ResetAirActions();Change(PlayerStateId.Fall);}
+        {environmentalLift=0;RestorePlatforms();input.ClearTransient();body.position=point;velocity=Vector2.zero;body.linearVelocity=velocity;groundAt=-100;jumpedAt=-100;lockUntil=clock;momentumUntil=clock;apexAge=0;ResetAirActions();Change(PlayerStateId.Fall);}
         void FixedUpdate()
         {
             bool freeze=input.Paused||!Application.isFocused||!input.Ready;
@@ -80,6 +83,12 @@ namespace Plugin.PlayerCore
                 else if(controlled&&State!=PlayerStateId.Dash&&input.Buffer.Has(PlayerCommand.Jump,now))TryJump(now);
                 if(State!=PlayerStateId.Dash&&clock>=lockUntil&&Mathf.Abs(input.Move.x)>.05f)facing=Mathf.Sign(input.Move.x);
                 RouteActions(now);state.Tick(dt);
+            }
+            if(clock>liftUntil)environmentalLift=0;
+            if(environmentalLift>0&&State<=PlayerStateId.WallJump)
+            {
+                velocity.y=Mathf.Max(velocity.y,environmentalLift);cutJump=true;
+                if(Grounded){Grounded=false;groundAt=-100;}if(State!=PlayerStateId.WallJump)Change(PlayerStateId.Jump);
             }
             if(State==PlayerStateId.Dash)SweepDash(dt);
             body.linearVelocity=velocity;

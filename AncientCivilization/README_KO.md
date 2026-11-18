@@ -1,4 +1,6 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.29.0
+# PLUGIN — ANCIENT CIVILIZATION v0.30.0
+
+**다섯 층 시험:** `TraversalRhythmPractice.unity`를 Play하고 층 버튼을 선택합니다. [다른 네 층 구성·리듬·기믹·검사](OTHER_FLOORS_RHYTHM_KO.md). 생활부 탐조등·행정구 셔터·거주구 환기류·최상층 시간 앵커가 추가됐습니다.
 
 **P2/M3.5 시험:** `Assets/Scenes/TraversalRhythmPractice.unity`에서 안전 흐름 방과 짧은 난관을 시험합니다. [구성·튜닝·검사](P2_TRAVERSAL_KO.md), [리듬과12개 설계](M35_RHYTHM_KO.md). 기존 Main은 기존 스토리 조작을 사용합니다.
 

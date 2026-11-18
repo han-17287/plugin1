@@ -29,3 +29,4 @@ MonoBehaviour:
   precision: 1
   difficulty: {fileID: 11400000, guid: 078398538efe492d90dc0c54c7a642a6, type: 2}
   clockOwner: {fileID: 0}
+  floorProfile: {fileID: 11400000, guid: c19388cb4e804239840716c84933bb23, type: 2}

@@ -1,10 +1,16 @@
 # PLUGIN · Ancient Civilization
 
-**v0.29.0 — 직선 갈고리·두 시험 방·생산구 리듬 설계**
+**v0.30.0 — 다섯 층의 흐름·난관과 고유 기믹 시험**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.29.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.30.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
 
-**새 시험 씬:** `Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play합니다. 고정·일회용·움직이는 앵커, 벽/천장 직선 돌진, 위험 레이어 무적, 도착 관성·공중 점프/대시 회복을 연결했습니다. 안전 흐름 방과 짧은 난관 방을 쉬움/보통/어려움 데이터로 바꿔 시험할 수 있습니다.
+**다른 네 층도 추가:** 생활부의 탐조등, 행정구의 보안 셔터, 상층 거주구의 환기류, 최상층의 시간 앵커를 시험합니다. `Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play한 뒤 층 버튼을 누르세요. 5층×안전/난관×세 난도, 총30개 조합을 선택할 수 있습니다.
+
+[다른 층의 리듬·48개 번안·Prefab·설정·체크리스트](AncientCivilization/OTHER_FLOORS_RHYTHM_KO.md) · [다섯 층의 지형 검토 HTML](AncientCivilization/TraversalPreview.html)
+
+실제 추가는 네 층의8개 시험 Room과 고유 기믹입니다. 20개 구간의75/25 리듬과48개 번안은 설계안이며, 기존 Main 전체 맵이나 보스를 교체하지 않았습니다. 고대 문명은2회차로 남겨 둡니다. 실제 Unity Play·성공률·재시도 시간·FPS는 미측정입니다.
+
+**기본 갈고리 시험:** `Assets/Scenes/TraversalRhythmPractice.unity`를 열고 Play합니다. 고정·일회용·움직이는 앵커, 벽/천장 직선 돌진, 위험 레이어 무적, 도착 관성·공중 점프/대시 회복을 연결했습니다. 각 층의 안전 흐름 방과 짧은 난관 방을 쉬움/보통/어려움 데이터로 바꿔 시험할 수 있습니다.
 
 [생산구5구간 리듬·12개 난관·타일 도면·복구 규칙](AncientCivilization/M35_RHYTHM_KO.md) · [P2 스크립트·Prefab·인스펙터·테스트](AncientCivilization/P2_TRAVERSAL_KO.md) · [지형 검토 HTML](AncientCivilization/TraversalPreview.html)
 

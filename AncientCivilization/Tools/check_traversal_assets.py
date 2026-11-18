@@ -21,5 +21,14 @@ def main():
     assert 'TraversalHazard' in (ROOT/'ProjectSettings/TagManager.asset').read_text()
     assert number((FOLDER/'SafeFlowRoom.prefab').read_text(),'precision')==0
     assert number((FOLDER/'GauntletRoom.prefab').read_text(),'precision')==1
-    print('PASS: five traversal prefabs, scene GUIDs, three authored difficulty profiles, real range/motion margins and hazard layer contract')
+    assert len(list(FOLDER.glob('*.prefab')))==13
+    for index,name in enumerate(['Production','Living','Administration','Residence','Top']):
+        profile=FOLDER/(name+'.asset');text=profile.read_text();assert number(text,'floor')==index
+        assert 0<number(text,'gateWarning')<number(text,'gateOpen')<number(text,'gatePeriod')
+        assert 0<number(text,'socketOpen')<number(text,'socketPeriod')
+        assert number(text,'scanHold')>0 and number(text,'scanWidth')>0 and number(text,'ventLift')>0
+        for kind in ['FlowRoom','ChallengeRoom']:
+            prefab=FOLDER/(('SafeFlowRoom' if kind=='FlowRoom' else 'GauntletRoom')+'.prefab') if index==0 else FOLDER/(name+kind+'.prefab')
+            assert guid(profile) in prefab.read_text(),prefab
+    print('PASS: thirteen traversal prefabs, scene GUIDs, three authored difficulty profiles, real range/motion margins and hazard layer contract')
 if __name__=='__main__':main()

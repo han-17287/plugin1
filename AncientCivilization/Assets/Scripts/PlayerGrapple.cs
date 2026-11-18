@@ -51,14 +51,17 @@ namespace Plugin.PlayerCore
         void SetCandidate(GrappleAnchor anchor){if(candidate==anchor)return;if(candidate)candidate.Highlight(false);candidate=anchor;if(candidate)candidate.Highlight(true);}
         bool Pick(Vector2 mouse,out Vector2 point,out GrappleAnchor anchor)
         {
-            point=Vector2.zero;anchor=null;float best=data.assistRadius*data.assistRadius;
+            point=Vector2.zero;anchor=null;bool closedSocketUnderCursor=false;float best=data.assistRadius*data.assistRadius;
             foreach(var item in GrappleAnchor.Registry)
             {
+                if(item&&item.isActiveAndEnabled&&!item.Spent&&!item.Operational)
+                {float radius=item.data?item.data.radius:.38f;if((item.Point-mouse).sqrMagnitude<=radius*radius)closedSocketUnderCursor=true;}
                 if(!item||!item.Available||!GrappleRules.Reachable(item.Point.x-body.position.x,item.Point.y-body.position.y,data.range))continue;
                 float score=(item.Point-mouse).sqrMagnitude;if(score>best||Physics2D.Linecast(body.position,item.Point,data.solids))continue;
                 best=score;anchor=item;
             }
             if(anchor){point=anchor.Point;return (point-body.position).sqrMagnitude>.25f;}
+            if(closedSocketUnderCursor)return false;
             Vector2 ray=(mouse-body.position).normalized;if(ray.sqrMagnitude<.5f)return false;
             var hit=Physics2D.Raycast(body.position,ray,data.range,data.solids);
             if(!hit||hit.distance<.6f)return false;

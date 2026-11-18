@@ -70,6 +70,11 @@ class GrappleControllerChecks
             Check(f.grapple.Active==!allow&&a.Leased==!allow,"Dash interruption follows the inspector cancellation policy and releases the lease");
             if(allow)Check(f.player.State==PlayerStateId.Dash&&!f.input.Buffer.Has(PlayerCommand.Dash,Time.time),"An accepted dash cancellation consumes its buffered command exactly once");
         }
+        {
+            var f=new Fixture();var anchor=f.Anchor<FixedGrappleAnchor>(new Vector2(10,0));anchor.SetOperational(false);f.input.Pointer=new Vector2(10,0);Physics2D.WallX=12;
+            Check(!f.player.Primary()&&!f.grapple.Active,"Clicking a closed timed socket cannot unexpectedly fall through to a wall behind it");
+            anchor.SetOperational(true);Check(f.player.Primary(),"The same socket becomes a valid target when its window opens");
+        }
         Console.WriteLine("PASS: "+checks+" shipping grapple/anchor controller checks with a narrow wall and movement-owner double; native physics/input not simulated");
     }
 }
