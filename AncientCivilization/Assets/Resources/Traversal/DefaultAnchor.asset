@@ -1,0 +1,13 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19f7afbf01ad4c248bd7846ad18dc23b, type: 3}
+  m_Name: DefaultAnchor
+  radius: 0.38
+  movingAmplitude: 1
+  movingPeriod: 3.5
+  movingAxis: {x: 1, y: 0}
+  orbit: 0
+  color: {r: 0.25, g: 0.85, b: 1, a: 1}
