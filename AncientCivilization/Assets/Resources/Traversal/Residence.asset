@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70c849dae6cd4e419cbdb0c58ed315ad, type: 3}
+  m_Name: Residence
+  floor: 3
+  structureColor: {r: 0.32, g: 0.36, b: 0.27, a: 1}
+  hazardColor: {r: 0.85, g: 0.25, b: 0.2, a: 1}
+  scanPeriod: 4
+  scanWidth: 1.4
+  scanHold: 0.7
+  gatePeriod: 3
+  gateOpen: 1.4
+  gateWarning: 0.35
+  ventLift: 12
+  socketPeriod: 3.6
+  socketOpen: 2.4
