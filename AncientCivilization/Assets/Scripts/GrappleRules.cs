@@ -1,0 +1,16 @@
+using System;
+namespace Plugin.PlayerCore
+{
+    // 타일=유닛인 저작 데이터와 돌진 계산이 함께 사용하는 순수 수학 규칙이다.
+    public static class GrappleRules
+    {
+        public static float Step(float remaining,float speed,float dt)
+        {if(!Finite(remaining)||!Finite(speed)||!Finite(dt)||remaining<=0||speed<=0||dt<=0)return 0;return Math.Min(remaining,speed*dt);}
+        public static bool Reachable(float dx,float dy,float range,float margin=0)
+        {return Finite(dx)&&Finite(dy)&&Finite(range)&&Finite(margin)&&range>margin&&margin>=0&&dx*dx+dy*dy<=(range-margin)*(range-margin);}
+        public static float StrikeMultiplier(float distance,float speed)
+        {return Finite(distance)&&Finite(speed)?Math.Min(2.5f,1+Math.Max(0,distance)*.035f+Math.Max(0,speed)*.004f):1;}
+        public static float JumpHeight(float launch,float gravity){return launch>0&&gravity>0?launch*launch/(2*gravity):0;}
+        public static bool Finite(float n){return !float.IsNaN(n)&&!float.IsInfinity(n);}
+    }
+}

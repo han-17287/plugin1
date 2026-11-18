@@ -1,0 +1,63 @@
+v0.32.0 Record Enforcer
+
+The main Administration route starts the three-phase encounter after the four cases.
+The Unity Editor preview menu uses a temporary save and enters by the same route.
+The sky-blue rectangular particles, orbiting objects, record hall, intro camera,
+formal-coat sprites, blade and wire interrupts, and light layers are shipping code.
+
+PORTABLE VERIFICATION
+Source and asset checks and 32 .NET suites passed. The Enforcer suite exercises
+health gates, sequence repetition and the specified attack counts and timer values.
+
+BeamChecks.csproj   PASS: 11591 thick-laser geometry, charge and presentation checks
+BladeChecks.csproj   PASS: 4600 blade timing, scheduled contact, facing, laser readiness and measured feedback placement checks
+BossReadabilityChecks.csproj   PASS: 1748 boss lane, per-activation damage and clock-pattern checks
+ChapterRouteChecks.csproj   PASS: 26693 continuous chapter layout, arena and save-boundary checks
+ChapterVisibilityChecks.csproj   PASS: 13813 continuous-chapter scenery, bridge, gimmick visibility and bounded nearest-anchor halo checks
+DistrictRouteChecks.csproj   PASS: 277271 authored district route range, capsule corridor, restart pocket, ceiling and topology checks. Native Unity physics not run.
+EnforcerChecks.csproj   PASS: 64 enforcer phase boundary, repeat order and fixed pattern rules. Unity combat not simulated.
+FieldExpansionChecks.csproj   PASS: 67578 expanded-field layout checks
+FloorMechanismChecks.csproj   PASS: 22 shipping floor-mechanism checks with service doubles; native illumination/collision/vent motion not simulated
+FloorTraversalChecks.csproj   PASS: 104299 five-floor link/capsule/camera,25-stage rhythm and mechanism timing rules; native physics not measured
+GrappleControllerChecks.csproj   PASS: 645 shipping grapple/anchor controller checks with a narrow wall and movement-owner double; native physics/input not simulated
+GrappleLayoutChecks.csproj   PASS: 10976 grapple stepping, motion-envelope, room clearance, provisional M1 and five-stage rhythm checks; native traversal unmeasured
+LivingChecks.csproj   PASS: 4327 living trail, boss HP transitions, barrier, branching and hit geometry checks
+LivingControllerChecks.csproj   PASS: 471 shipping living-controller scheduling/damage-state checks with service doubles; native Unity physics/rendering/input not simulated
+LowerControllerChecks.csproj   PASS: 1309 shipping lower-route/resident/throw/playtime lifecycle, all72 stops, collisions, rewards, focus/pause and save checks with service doubles; native traversal/physics/input not simulated
+LowerRouteChecks.csproj   PASS: 345733 lower-route content, migration, gate and geometry checks
+MovementChecks.csproj   Movement checks passed: 9400
+PlayerCoreChecks.csproj   PASS: 688 player input buffer and wheel cadence checks; Unity movement/input/physics not executed
+PlaytimeChecks.csproj   PASS: 52 active playtime, pause, retry and persistence checks
+ProductionHazardChecks.csproj   PASS: 767 production road-hazard sweep, bomb landing/fuse, rider timing and jump-clearance checks
+ProductionLayoutChecks.csproj   PASS: 522159 production tutorial, safe landing, wire reach and chase separation checks
+ProductionMotionChecks.csproj   PASS: 48172 production cinematic continuity, intentional takeoff impulse, roof/camera clearance, cargo/laser separation and motorcycle derivative checks
+ProductionSequenceChecks.csproj   PASS: 193072 production chase, boarding, health-gate, third-mount finale and active-clock checks
+ProjectileOrderingChecks.csproj   PASS: 7024 projectile ordering, terrain occlusion and frame-pacing checks
+PulseChecks.csproj   PASS: 137 pulse lifetime, locked release, bounded hit-ledger and frame-independence checks
+RouteRadioChecks.csproj   PASS: 106 live-radio queue, typewriter, paging and active-clock checks
+RulesChecks.csproj   PASS: 3824 combat and quest rule checks
+SniperChecks.csproj   PASS: 76 sniper rule checks
+SpeechLayoutChecks.csproj   PASS: 3997 speech-bubble geometry checks; standalone .NET rules only
+SwingChecks.csproj   PASS: 596 swing presentation rule checks
+ThreatChecks.csproj   PASS: 359 combat threat visibility and stagger safety checks
+ZipChecks.csproj   PASS: 60408 straight-wire movement, planned-step arrival, simultaneous moving-support trace and collision-budget checks
+
+SUPPLEMENTAL COMPILATION
+139 runtime scripts and 12 Editor scripts compile with warnings as errors using
+Unity 2021.3 reference assemblies and narrow Editor stubs. Temporary copies substitute
+the older Rigidbody2D.velocity name for linearVelocity. The shipping source targets
+6000.6.7f1. The runtime also compiles with the official Input System 1.11.2 source
+reference and ENABLE_INPUT_SYSTEM. Unity 6 native-only paths require the Unity Editor.
+
+The drawn enforcer poses were rasterized directly from the production sprite code and
+inspected as pixel art. Native Unity 6000.6.7f1 import, Play, physics, shader output, FPS
+and end-to-end play time still require Editor or build verification. The preview menu
+provides direct access to those checks. See ENFORCER_BOSS_KO.md for the procedure.
+
+SOURCE FINGERPRINT
+151 C# files, sorted repository paths and their SHA-256 values:
+888c880d05b0ce3156d66422ddd0f0a32cbdb2f0ff19e9b8807e63f84552283b
+
+DOWNLOAD
+The v0.32.0-download tag contains the Unity project and retained ArtReferences.
+The archive contains source files for opening in Unity 6000.6.7f1.
