@@ -12,6 +12,8 @@ Main 메인 화면에서 **새 지역 맵 둘러보기**를 선택합니다. 생
 
 기존 [60개 기믹 설계](AncientCivilization/TraversalPreview.html)와 [P2 구성](AncientCivilization/P2_TRAVERSAL_KO.md)은 기초 방/후속 무기 기믹 자료로 유지합니다. 그 단순 도면과 현재 실행되는 건축형 지역 지도는 구분합니다. 고대 문명 지역은2회차 범위로 남겨 둡니다.
 
+**후속 전투 기획:** [기록 집행관의 입자 조형3페이즈](AncientCivilization/ENFORCER_BOSS_KO.md)를 정리했습니다. 현재 다운로드의 기존 행정구 보스 AI를 바꾼 것은 아닙니다.
+
 P1 이동 연습도 포함합니다. **새 이동을 확인하려면 `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play**하세요. 신 Input System, 모드별 입력 연결, 상태 패턴, 가변 점프·벽 점프·대시·발판 하강과 디버그 표시를 포함합니다. [설정·스크립트 구성·튜닝 값·테스트·흔한 버그](AncientCivilization/P1_MOVEMENT_KO.md). 기존 `Main.unity`는 아직 기존 조작을 사용합니다. 추가 앵커와 무기·입자·레이저는 후속 단계에서 순서대로 연결합니다.
 
 Input System 1.11.2를 추가하고 입력 설정을 Both로 변경했습니다. Unity가 요청하면 재시작하세요. 실제 Unity 임포트·Play·물리·FPS는 이 환경에서 실행하지 못했습니다.
