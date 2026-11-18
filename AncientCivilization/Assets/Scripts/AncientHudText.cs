@@ -45,12 +45,18 @@ namespace Plugin.AncientCivilization
             {capture=hero.CaptureStage;lastCaptureEnergy=e;Capture=e>=100?"완충 · 최대 출력 · 100%":"축적 "+capture+" / 3단계 · "+e+"%";}
             if(performance!=game.Performance.Summary||quality!=AncientVisuals.HighQuality||Performance.Length==0)
             {performance=game.Performance.Summary;quality=AncientVisuals.HighQuality;Performance=(quality?"F6 고품질":"F6 가볍게")+" · "+performance;}
-            if(boss!=game.boss||(game.boss&&enraged!=game.boss.Enraged)||(game.Sniper&&lastSniperPhase!=game.Sniper.Phase))
-            {boss=game.boss;enraged=boss&&boss.Enraged;lastSniperPhase=game.Sniper?game.Sniper.Phase:-1;Boss=boss?boss.Role+(game.Sniper?" / "+lastSniperPhase+"페이즈":enraged?" / 2단계":""):"";}
+            int bossPhase=game.Enforcer?game.Enforcer.Phase:game.Sniper?game.Sniper.Phase:-1;
+            int chargeRemaining=game.Enforcer?game.Enforcer.ChargeRemaining:0;
+            if(boss!=game.boss||(game.boss&&enraged!=game.boss.Enraged)||lastBossPhase!=bossPhase||lastBossCharge!=chargeRemaining)
+            {
+                boss=game.boss;enraged=boss&&boss.Enraged;lastBossPhase=bossPhase;lastBossCharge=chargeRemaining;
+                Boss=boss?boss.Role+(bossPhase>0?" / "+bossPhase+"페이즈":enraged?" / 2단계":""):"";
+                if(chargeRemaining>0)Boss+=" · 충전 "+chargeRemaining+"초";
+            }
             int velocity=Mathf.RoundToInt(Mathf.Abs(hero.HorizontalSpeed)*3.6f);
             if(velocity!=speed){speed=velocity;Speed=velocity+" km/h";}
         }
-        int lastCaptureEnergy=-1,lastSniperPhase=-1;
+        int lastCaptureEnergy=-1,lastBossPhase=-1,lastBossCharge;
         public void Distance(AncientPickup item,float value)
         {
             int current=Mathf.CeilToInt(value);

@@ -37,6 +37,7 @@ namespace Plugin.AncientCivilization
             beamGlow=game.Line("Continuous laser sheath",new Color(.1f,.6f,1,.45f),AncientBeamRules.SheathWidth(0),22);
             beamProfile=new AncientBeamVisuals(beamGlow,true);
             beamCore=game.Line("White hot laser core",new Color(1,1,.95f),AncientBeamRules.CoreWidth(0),24);
+            beamProfile.StyleBody(beam, beamCore);
             beam.numCapVertices=beamGlow.numCapVertices=beamCore.numCapVertices=0;
             slashTrail.enabled=slashGlow.enabled=aim.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=false;
             motes=new AncientEnergyMote[48];
@@ -125,6 +126,8 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             if(!hero)return;
+            if (game.Enforcer && CanCollect)
+                game.Enforcer.Collect(Origin, 7f, Time.deltaTime);
             if(PulseInterrupted)CancelLaser();
             if(!ControlsReady){CancelInput();CancelBlade();return;}
             if(!hero.AttackMode){CancelInput();CancelBlade();return;}
@@ -144,6 +147,8 @@ namespace Plugin.AncientCivilization
         void ResolveBladeHit()
         {
             Vector2 origin=BladeOrigin;bool rebound=(game.LowerRoute&&game.LowerRoute.TryBlade(origin,bladeDirection))||(game.Living&&game.Living.TryBlade(origin,bladeDirection))||(game.Sniper&&game.Sniper.TryBlade(origin,bladeDirection))||(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
+            // 프레임 사이에 베기 활성 구간을 건너뛰어도 낙하물을 벨 수 있다.
+            rebound |= BreakEnforcerObjects(origin);
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
                 var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
@@ -154,9 +159,17 @@ namespace Plugin.AncientCivilization
             // objects and interactive targets provide their own contact feedback.
         }
         void ReboundOnce(){if(bladeRebounded||hero.bike||hero.IsOnGround)return;bladeRebounded=true;hero.BladeRebound();}
+        bool BreakEnforcerObjects(Vector2 origin)
+        {
+            if (!game.Enforcer || !game.Enforcer.TryBlade(origin, bladeDirection, 3.1f, .45f))
+                return false;
+            BrokenObjects++;
+            return true;
+        }
         void ResolvePhysicalBreaks()
         {
             Vector2 origin=BladeOrigin;bool rebound=(game.Sniper&&game.Sniper.TryBreakObjects(origin,bladeDirection))||(game.City&&game.City.TryBreakObjects(origin,bladeDirection));
+            rebound |= BreakEnforcerObjects(origin);
             for(int i=game.shots.Count-1;i>=0;i--)
             {
                 var shot=game.shots[i];if(!shot||!shot.Breakable)continue;
@@ -283,9 +296,7 @@ namespace Plugin.AncientCivilization
                 beamGlow.SetPosition(0,beamStart);beamGlow.SetPosition(1,beamEnd);
                 beamCore.SetPosition(0,beamStart);beamCore.SetPosition(1,beamEnd);
                 float fade=AncientBeamRules.Opacity(laserUntil-Time.time);
-                beam.startColor=beam.endColor=new Color(.35f,.85f,1,.96f*fade);
-                beamGlow.startColor=beamGlow.endColor=new Color(.12f,.6f,1,.5f*fade);
-                beamCore.startColor=beamCore.endColor=new Color(1,1,1,fade);
+                beamProfile.UpdateBody(beam, beamGlow, beamCore, fade, Time.time);
             }
             beamProfile.ShowEndpoints(beamStart,beamEnd,beamWidth,AncientBeamRules.Opacity(laserUntil-Time.time),firing);
         }
@@ -312,8 +323,19 @@ namespace Plugin.AncientCivilization
             life-=Time.deltaTime;if(life<=0||g.won){gameObject.SetActive(false);return;}
             Vector2 delta=(Vector2)hero.transform.position-(Vector2)transform.position;
             bool collecting=combat.CanCollect&&delta.sqrMagnitude<49&&!Physics2D.Linecast(transform.position,hero.transform.position,1<<8);
+            Vector2 enforcerCore;
             if(collecting)
             {velocity=delta.normalized*AncientCombatRules.CollectionSpeed;if(delta.sqrMagnitude<AncientCombatRules.CollectionRadiusSquared){combat.Receive(energy);gameObject.SetActive(false);return;}}
+            else if (g.Enforcer && g.Enforcer.TryAbsorbMote(transform.position, out enforcerCore))
+            {
+                Vector2 toCore = enforcerCore - (Vector2)transform.position;
+                if (toCore.sqrMagnitude < .75f)
+                {
+                    gameObject.SetActive(false);
+                    return;
+                }
+                velocity = toCore.normalized * 12f;
+            }
             else if(g.Living&&g.Living.Sucking)
             {Vector2 core=g.Living.Boss.Core-(Vector2)transform.position;velocity=core.normalized*7;if(core.sqrMagnitude<.8f){g.Living.Boss.Collect(energy);gameObject.SetActive(false);return;}}
             else velocity=Vector2.Lerp(velocity,Vector2.zero,Time.deltaTime*3);

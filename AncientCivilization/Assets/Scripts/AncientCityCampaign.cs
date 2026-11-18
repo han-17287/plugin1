@@ -73,6 +73,7 @@ namespace Plugin.AncientCivilization
                 game.StaticBox("Sealed chairman office",new Vector2(right-2,2),new Vector2(2,4),new Color(.23f,.13f,.18f),1);
             }
             if(floor==1)game.BuildLiftTerminal(AncientChapterLayout.LivingApproachLift);
+            if(floor==2)BuildRecordsHall();
             var gate=BuildExitGate("District arena exit",AncientCityLayout.ArenaRight(floor)+.45f);
             exitGates[floor]=gate.GetComponent<SpriteRenderer>();exitSolids[floor]=gate.GetComponent<BoxCollider2D>();
             var entry=BuildExitGate("District arena entrance",AncientCityLayout.ArenaLeft(floor)-.45f);
@@ -85,6 +86,34 @@ namespace Plugin.AncientCivilization
                 officeEntrance=officeEntry.GetComponent<SpriteRenderer>();officeEntranceSolid=officeEntry.GetComponent<BoxCollider2D>();
             }
             if(floor==3)game.StaticBox("Illegal maintenance hatch",new Vector2(right-8,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
+        }
+        void BuildRecordsHall()
+        {
+            float left=AncientCityLayout.ArenaLeft(2),right=AncientCityLayout.ArenaRight(2);
+            float middle=(left+right)*.5f;
+            var shadow=new Color(.048f,.077f,.108f);
+            var panel=new Color(.09f,.145f,.19f);
+            var trim=new Color(.18f,.29f,.34f);
+            var lamp=new Color(.31f,.7f,.84f);
+            game.StaticBox("감사 기록실 후벽",new Vector2(middle,5),new Vector2(33,10),shadow,-5);
+            game.StaticBox("기록실 천장 설비",new Vector2(middle,9.35f),new Vector2(32,.95f),panel,-4);
+            game.StaticBox("상부 조명",new Vector2(middle,8.86f),new Vector2(28,.06f),lamp,-3);
+            game.StaticBox("단말 배선 통로",new Vector2(middle,1.02f),new Vector2(32,.24f),trim,-4);
+            for(int i=0;i<6;i++)
+            {
+                float x=left+3.5f+i*5;
+                game.StaticBox("증거 보관 캐비닛",new Vector2(x,3.86f),new Vector2(3.8f,6.2f),panel,-4);
+                game.StaticBox("캐비닛 상단 프레임",new Vector2(x,6.94f),new Vector2(3.8f,.14f),trim,-3);
+                for(int slot=0;slot<5;slot++)
+                {
+                    float y=1.57f+slot*.98f;
+                    game.StaticBox("기록 서랍",new Vector2(x,y),new Vector2(3.45f,.7f),shadow,-3);
+                    game.StaticBox("서랍 손잡이",new Vector2(x,y+.04f),new Vector2(.5f,.1f),trim,-2);
+                    game.StaticBox("원본 봉인 표시",new Vector2(x+1.26f,y+.16f),new Vector2(.13f,.08f),slot==i%5?lamp:trim,-2);
+                }
+            }
+            game.StaticBox("좌측 대피 경계",new Vector2(left+1.5f,.034f),new Vector2(3,.07f),lamp,3);
+            game.StaticBox("우측 대피 경계",new Vector2(right-1.5f,.034f),new Vector2(3,.07f),lamp,3);
         }
         GameObject BuildExitGate(string name,float x)
         {
@@ -107,6 +136,7 @@ namespace Plugin.AncientCivilization
         public void OnEnterFloor()
         {
             ClearDialogueActors();
+            if(game.Enforcer)game.Enforcer.StopBattle();
             if(game.Living)game.Living.ResetForTravel();
             if(game.Traversal)game.Traversal.ResetForTravel();
             foreach(var enemy in game.enemies.ToArray())

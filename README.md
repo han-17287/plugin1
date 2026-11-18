@@ -1,8 +1,10 @@
 # PLUGIN · Ancient Civilization
 
-**v0.31.0 — 건물과 시설을 따라가는 다섯 지역 맵**
+**v0.32.0 — 기록 집행관 3페이즈 전투**
 
-[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.31.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+[다운로드 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.32.0-download.zip) · [개발 브랜치](https://github.com/han-17287/plugin1/tree/ancient-civilization-prototype) · [실행·조작](AncientCivilization/README_KO.md)
+
+중층 행정구에 기록 집행관의 등장 컷신과 3페이즈를 추가했습니다. 하늘색 직사각형 입자의 조형, 생활구 로봇 복제, 반격과 15초 폭발 저지가 포함됩니다. `Main.unity`를 열고 **PLUGIN → 검사 → 기록 집행관 바로 플레이**로 확인할 수 있습니다. [조작과 확인 순서](AncientCivilization/ENFORCER_BOSS_KO.md)
 
 Main 메인 화면에서 **새 지역 맵 둘러보기**를 선택합니다. 생산구 하역장, 생활부 주거 골목, 행정구 보안 기록동, 거주구 온실 테라스, 최상층 정비 외벽을 서로 다른 실제 지형으로 만들었습니다. 각 지도는112~120타일이며 지상 길·건물 위 정비로·중앙 난관·착지 체크포인트3곳을 연결합니다. 연속 천장, 하역·주거 원화, 구조 지지대·창문·간판을 추가했고, 임시 사각형 주인공은 기존 백 경위 원화로 교체했습니다.
 
@@ -11,8 +13,6 @@ Main 메인 화면에서 **새 지역 맵 둘러보기**를 선택합니다. 생
 새 이동 컨트롤러의 지역 맵을 구현한 버전입니다. **기존 Main 순찰의 모든 현장·무기·보스를 새 좌표로 이전하지는 않았습니다.** 기존 스토리와 저장은 메인 순찰에서 계속 사용합니다. 새 지도에서는 오른쪽 위 도움말로 층·장치 난도·안전 바닥을 선택하며, 설정을 연 동안 이동·장치가 멈춥니다. 지도끼리의 연결문은 시험용 선택이며 스토리 승진/엘리베이터를 대체하지 않습니다. Unity6000.6.7f1 실기 임포트·Play·체감·FPS는 이 환경에서 확인하지 못했습니다.
 
 기존 [60개 기믹 설계](AncientCivilization/TraversalPreview.html)와 [P2 구성](AncientCivilization/P2_TRAVERSAL_KO.md)은 기초 방/후속 무기 기믹 자료로 유지합니다. 그 단순 도면과 현재 실행되는 건축형 지역 지도는 구분합니다. 고대 문명 지역은2회차 범위로 남겨 둡니다.
-
-**후속 전투 기획:** [기록 집행관의 입자 조형3페이즈](AncientCivilization/ENFORCER_BOSS_KO.md)를 정리했습니다. 현재 다운로드의 기존 행정구 보스 AI를 바꾼 것은 아닙니다.
 
 P1 이동 연습도 포함합니다. **새 이동을 확인하려면 `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play**하세요. 신 Input System, 모드별 입력 연결, 상태 패턴, 가변 점프·벽 점프·대시·발판 하강과 디버그 표시를 포함합니다. [설정·스크립트 구성·튜닝 값·테스트·흔한 버그](AncientCivilization/P1_MOVEMENT_KO.md). 기존 `Main.unity`는 아직 기존 조작을 사용합니다. 추가 앵커와 무기·입자·레이저는 후속 단계에서 순서대로 연결합니다.
 

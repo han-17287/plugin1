@@ -27,6 +27,8 @@ namespace Plugin.AncientCivilization
         public AncientCampaign Campaign {get;private set;}
         public AncientSniperEncounter Sniper {get;internal set;}
         public AncientLivingDistrict Living {get;private set;}
+        public AncientEnforcerEncounter Enforcer {get;internal set;}
+        internal bool EnforcerIntroSeen {get;set;}
         public AncientLowerRoute LowerRoute {get;private set;}
         public AncientPlaytime Playtime {get;private set;}
         public AncientProjectilePool Projectiles {get;private set;}
@@ -37,7 +39,7 @@ namespace Plugin.AncientCivilization
         public bool MainMenu {get;private set;}
         public bool HasSession {get;private set;}
         public bool HasSavedProgress {get{return Saved("questStage")!=0||Saved("started")!=0||Saved("checkpoint")!=0||Saved("cores")!=0||Saved("credits")!=0||Saved("kills")!=0||Saved("score")!=0||Saved("bike")!=0||Saved("jump")!=0||Saved("capacity")!=0||Saved("armor")!=0||Saved("boss")!=0;}}
-        public bool Paused {get {return MainMenu||skills||HasSession&&!Application.isFocused||(Story&&(Story.DialogueOpen||Story.LiftBusy))||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic)||(Production&&Production.Cinematic);}}
+        public bool Paused {get {return MainMenu||skills||HasSession&&!Application.isFocused||(Story&&(Story.DialogueOpen||Story.LiftBusy))||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic)||(Production&&Production.Cinematic)||(Enforcer&&Enforcer.InputLocked);}}
         public bool GameplayInputReady {get{return Time.frameCount>inputReadyFrame;}}
         static bool startAfterReload;int inputReadyFrame;
         public int coreMask, credits, kills, score;
@@ -324,6 +326,7 @@ namespace Plugin.AncientCivilization
         public void HeroDied()
         {
             if(Playtime)Playtime.Retry();
+            if(Enforcer)Enforcer.StopBattle();
             // Optional encounters can still be active after a case is finished.
             // Clear their live guards before travel destroys enemies, so a death
             // cannot be mistaken for defeating the remaining ambush.
@@ -407,6 +410,8 @@ namespace Plugin.AncientCivilization
             Vector2 productionFocus;float productionZoom;
             if(Production&&Production.TryCamera(out productionFocus,out productionZoom))
             {target=new Vector3(productionFocus.x,productionFocus.y,-10);if(!dialogue)zoom=productionZoom;}
+            if(Enforcer&&Enforcer.TryCamera(out Vector2 enforcerFocus,out float enforcerZoom))
+            {target=new Vector3(enforcerFocus.x,enforcerFocus.y,-10);zoom=enforcerZoom;}
             if(dialogue)target=new Vector3(dialogueFocus.x,dialogueFocus.y,-10);
             // A fast ceiling zip can separate the officer from the moving deck faster
             // than a zoom-out lerp. Expand immediately; ease back into the close fight.
@@ -457,7 +462,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!hero||MainMenu||(Story&&(Story.DialogueOpen||Story.LiftBusy))||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic)||(Production&&Production.Cinematic&&!skills))return;
+            if(!hero||MainMenu||(Story&&(Story.DialogueOpen||Story.LiftBusy))||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic)||(Production&&Production.Cinematic&&!skills)||(Enforcer&&Enforcer.InputLocked&&!skills))return;
             if(!skills&&!won&&Event.current.type!=EventType.Repaint)return;
             GUIStyle oldButton=GUI.skin.button;Matrix4x4 oldMatrix=GUI.matrix;Color oldColor=GUI.color;int oldDepth=GUI.depth;bool oldEnabled=GUI.enabled;
             try
@@ -898,6 +903,15 @@ namespace Plugin.AncientCivilization
         public void CancelBladePose(){actionUntil=0;}
         public void AddCapturedEnergy(float amount){CaptureEnergy=Mathf.Min(100,CaptureEnergy+amount*(reservoir?1.25f:1));var g=AncientGame.Instance;if(g.Sniper)g.Sniper.EnergyChanged();}
         public float SpendCapturedEnergy(){float value=CaptureEnergy;CaptureEnergy=0;return value;}
+        public float DrainEnforcerParticles(float amount)
+        {
+            if (!(amount > 0) || float.IsInfinity(amount)) return 0;
+            float stored = particles;
+            float charge = CaptureEnergy;
+            particles = Mathf.Max(0, stored - amount);
+            CaptureEnergy = Mathf.Max(0, charge - amount);
+            return Mathf.Max(stored - particles, charge - CaptureEnergy);
+        }
         public void TravelTo(Vector2 point)
         {
             HoldForEncounter(false);ResetSwingPresentation();
@@ -1153,6 +1167,9 @@ namespace Plugin.AncientCivilization
             if(Time.time<wireReady)return;
             Vector2 selected,normal=Vector2.zero;var g=AncientGame.Instance;AncientEnemy target=null;
             bool productionBoarding=g.Production&&g.Production.Active&&!g.Production.DeckCombat;
+            if (!productionBoarding && ZipMode && g.Enforcer && g.View &&
+                g.Enforcer.TryThrow(g.View.ScreenToWorldPoint(Input.mousePosition), body.position))
+                return;
             if(!productionBoarding&&ZipMode&&g.Living&&g.Living.TryThrow(g.View.ScreenToWorldPoint(Input.mousePosition)))return;
             if(productionBoarding&&(!bike||!ZipMode))return;
             bool picked=ZipMode?PickZipTarget(out selected,out target,out normal):PickAnchor(out selected);
@@ -1299,7 +1316,10 @@ namespace Plugin.AncientCivilization
             if(!AttackMode&&!g.Paused&&!g.won&&!(g.Living&&g.Living.InputLocked))
             {
                 Vector2 normal;
-                if(ZipMode&&g.Living&&g.Living.TryWireTarget(out target))hasTarget=true;
+                if (ZipMode && g.Enforcer && g.View &&
+                    g.Enforcer.TryWireTarget(g.View.ScreenToWorldPoint(Input.mousePosition), body.position, out target))
+                    hasTarget = true;
+                else if(ZipMode&&g.Living&&g.Living.TryWireTarget(out target))hasTarget=true;
                 else if(ZipMode)hasTarget=PickZipTarget(out target,out enemyTarget,out normal);
                 else hasTarget=PickAnchor(out target);
                 if(g.Production&&g.Production.Active&&!g.Production.DeckCombat)
@@ -1327,7 +1347,18 @@ namespace Plugin.AncientCivilization
         }
         public void Hurt(float damage)
         {
-            var g=AncientGame.Instance;if(Time.time<invulnerableUntil||g.won||(g.Sniper&&g.Sniper.Clashing)||(g.Production&&g.Production.Cinematic))return;
+            ApplyDamage(damage, false);
+        }
+        public void HurtEnforcerExplosion(float damage)
+        {
+            // 충전 폭발은 위치와 일반 피격 무적에 관계없이 피해를 준다.
+            ApplyDamage(damage, true);
+        }
+        void ApplyDamage(float damage, bool ignoresHitInvulnerability)
+        {
+            var g=AncientGame.Instance;
+            if ((!ignoresHitInvulnerability && Time.time < invulnerableUntil) || g.won ||
+                (g.Sniper && g.Sniper.Clashing) || (g.Production && g.Production.Cinematic)) return;
             invulnerableUntil=Time.time+.65f;g.Shake(.14f);
             if(bike)
             {
@@ -1450,23 +1481,25 @@ namespace Plugin.AncientCivilization
         public void ConfigureSniperClone(AncientSniperEncounter encounter,int slot){sniperEncounter=encounter;cloneSlot=slot;maxHP=hp=60;}
         public bool IsSecretary {get;private set;}
         public bool IsLivingBoss {get{return IsDistrictBoss&&DistrictFloor==1;}}
+        public bool IsEnforcer {get{return IsDistrictBoss&&DistrictFloor==2;}}
+        AncientEnforcerEncounter enforcer;
         AncientLivingBoss livingBoss;
         public void BindLivingBoss(AncientLivingBoss value){livingBoss=value;}
         public void ConfigureSecretary(){IsSecretary=true;maxHP=hp=480;}
         public bool IsBoss {get{return kind==3||IsDistrictBoss;}}
         public void ConfigureDistrict(int floor,bool boss)
-        {DistrictFloor=floor;IsDistrictBoss=boss;if(boss)maxHP=hp=floor==1?960:floor==4?520:220+floor*50;}
+        {DistrictFloor=floor;IsDistrictBoss=boss;if(boss)maxHP=hp=floor==1?960:floor==2?AncientEnforcerRules.MaxHealth:floor==4?520:220+floor*50;}
         float hp=60,maxHP=60,nextAttack,resolveAt=-1,flashUntil,walkPhase,faceLockUntil,guardBrokenUntil,staggerUntil;
         int pattern,attackIndex,volleyRemaining;bool dead;
         float volleyAt,volleyInterval=.14f,volleySpeed=12,windupStartedAt,attackPoseUntil,recoveryStarts,recoveryUntil,recoveryDuration;bool enragedAnnounced;
         AncientBossController bossBrain;
-        public bool IsTelegraphing {get{return productionEncounter?productionEncounter.CommanderWindup>0:bossBrain?bossBrain.Telegraphing:resolveAt>=0;}}
-        public bool Recovering {get{return productionEncounter?productionEncounter.CommanderRecovering:bossBrain?bossBrain.Recovering:IsBoss&&Time.time>=recoveryStarts&&Time.time<recoveryUntil;}}
+        public bool IsTelegraphing {get{return enforcer?enforcer.Telegraphing:productionEncounter?productionEncounter.CommanderWindup>0:bossBrain?bossBrain.Telegraphing:resolveAt>=0;}}
+        public bool Recovering {get{return enforcer?enforcer.Recovering:productionEncounter?productionEncounter.CommanderRecovering:bossBrain?bossBrain.Recovering:IsBoss&&Time.time>=recoveryStarts&&Time.time<recoveryUntil;}}
         public bool Staggered {get{return !IsBoss&&Time.time<staggerUntil;}}
-        public float RecoveryRemaining {get{return productionEncounter?productionEncounter.CommanderRecoveryRemaining:bossBrain?bossBrain.RecoveryRemaining:Recovering?Mathf.Clamp01((recoveryUntil-Time.time)/Mathf.Max(.1f,recoveryDuration)):0;}}
-        public string TelegraphHint {get{return livingBoss?livingBoss.TelegraphHint:AttackIsPhysical?"회피":"파괴 / 회피";}}
+        public float RecoveryRemaining {get{return enforcer?enforcer.RecoveryRemaining:productionEncounter?productionEncounter.CommanderRecoveryRemaining:bossBrain?bossBrain.RecoveryRemaining:Recovering?Mathf.Clamp01((recoveryUntil-Time.time)/Mathf.Max(.1f,recoveryDuration)):0;}}
+        public string TelegraphHint {get{return enforcer?enforcer.Hint:livingBoss?livingBoss.TelegraphHint:AttackIsPhysical?"회피":"파괴 / 회피";}}
         public bool AttackIsPhysical {get{return productionEncounter?productionEncounter.CommanderAttackIsPhysical:bossBrain?bossBrain.Physical:pattern==0;}}
-        public float WindupProgress {get{return productionEncounter?productionEncounter.CommanderWindup:bossBrain?bossBrain.WindupProgress:resolveAt<0?0:Mathf.Clamp01((Time.time-windupStartedAt)/Mathf.Max(.01f,resolveAt-windupStartedAt));}}
+        public float WindupProgress {get{return enforcer?enforcer.WindupProgress:productionEncounter?productionEncounter.CommanderWindup:bossBrain?bossBrain.WindupProgress:resolveAt<0?0:Mathf.Clamp01((Time.time-windupStartedAt)/Mathf.Max(.01f,resolveAt-windupStartedAt));}}
         SpriteRenderer art;LineRenderer warning;AncientFinalTruck carrier;
         Vector2 home,lockedAim;float facing=1;
         public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(IsLivingBoss?2.7f:productionEncounter?1.3f:IsSniperClone||IsDistrictBoss&&DistrictFloor==4&&!IsSecretary?1.5f:kind==3?1.65f:kind==4?.65f:.95f);}}
@@ -1484,7 +1517,13 @@ namespace Plugin.AncientCivilization
         void Start()
         {
             var g=AncientGame.Instance;home=transform.position;carrier=GetComponentInParent<AncientFinalTruck>();
-            art=AncientArt.Display(Role,productionEncounter?AncientArt.ProductionCaptain(0):IsSniperClone?AncientArt.Boss(4,cloneSlot>=2?1:0):AncientArt.Enemy(kind),Vector2.zero,8,transform);art.flipX=facing<0;
+            art=AncientArt.Display(Role,IsEnforcer?AncientEnforcerVisuals.PoseSprite(0):productionEncounter?AncientArt.ProductionCaptain(0):IsSniperClone?AncientArt.Boss(4,cloneSlot>=2?1:0):AncientArt.Enemy(kind),Vector2.zero,8,transform);art.flipX=facing<0;
+            if(IsEnforcer)
+            {
+                enforcer=gameObject.AddComponent<AncientEnforcerEncounter>();
+                enforcer.Initialize(g,this);
+                return;
+            }
             if(IsSniperClone){art.sharedMaterial=sniperEncounter.CloneMaterial;art.color=AncientGame.Cyan;}
             if(AncientVisuals.Instance)
             {
@@ -1518,6 +1557,7 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;if(dead||!g.hero||g.won||g.Paused)return;
             if(DistrictFloor>0&&g.Story.CurrentFloor!=DistrictFloor)return;
+            if(enforcer){enforcer.Tick();return;}
             if(Mathf.Abs(wirePushRemaining)>.001f)
             {
                 float step=Mathf.MoveTowards(0,wirePushRemaining,4*Time.deltaTime);
@@ -1673,14 +1713,14 @@ namespace Plugin.AncientCivilization
         public void WireImpact(float direction)
         {
             if(dead)return;
-            if(IsLivingBoss){Hit(AncientRules.WireImpactDamage(true));return;}
+            if(IsLivingBoss||IsEnforcer){Hit(AncientRules.WireImpactDamage(true));return;}
             wirePushRemaining=direction*AncientRules.WirePushDistance(IsBoss);
             // Boss windups continue; a wire cannot repeatedly stun-lock a boss.
             Hit(AncientRules.WireImpactDamage(IsBoss),!IsBoss&&kind!=5);
         }
         public void Hit(float damage,bool breakGuard=false)
         {
-            if(dead)return;var g=AncientGame.Instance;
+            if(dead||IsEnforcer&&!enforcer)return;var g=AncientGame.Instance;
             if(kind==5&&Time.time>=guardBrokenUntil&&((Vector2)g.hero.transform.position-AimPoint).x*facing>0)
             {
                 if(!breakGuard){damage*=.15f;g.Burst(AimPoint+Vector2.right*facing*.6f,AncientGame.Cyan,8);g.Notice("방패 / 뒤로 돌아가거나 강한 공격으로 방어를 무너뜨리세요.",1.2f);}
@@ -1691,11 +1731,22 @@ namespace Plugin.AncientCivilization
             if(sniperEncounter&&!IsSniperClone)damage=sniperEncounter.FilterDamage(damage,hp,maxHP);
             if(productionEncounter)damage=productionEncounter.FilterCommanderDamage(damage,hp,maxHP);
             if(livingBoss)damage=livingBoss.FilterDamage(damage,hp,maxHP);
+            if(enforcer)damage=enforcer.FilterDamage(damage,hp,maxHP);
             if(damage<=0)return;
             hp-=damage;flashUntil=Time.time+.1f;if(livingBoss)livingBoss.DamageFlash();if(g.Feel)g.Feel.Damage(AimPoint,damage,punish);
             g.Sound(6);g.HitEmphasis(breakGuard);g.Impact(AimPoint,breakGuard?AncientGame.Orange:AncientGame.Cyan,breakGuard);
             g.Burst(AimPoint,AncientGame.Cyan,7);g.Shake(.045f);g.score+=Mathf.RoundToInt(damage);
             if(productionEncounter){productionEncounter.CommanderDamaged(this,damage);return;}
+            if(enforcer)
+            {
+                if(hp>0){enforcer.OnHit(HealthRatio);return;}
+                dead=true;
+                g.enemies.Remove(this);
+                enforcer.Retreat();
+                g.Burst(AimPoint,new Color(.45f,.83f,1),18);
+                g.City.BossDefeated(DistrictFloor);
+                return;
+            }
             if(hp>0)return;
             if(IsSniperClone)
             {dead=true;g.enemies.Remove(this);if(sniperEncounter)sniperEncounter.CloneDown(cloneSlot,AimPoint);Destroy(gameObject);return;}
@@ -1721,6 +1772,16 @@ namespace Plugin.AncientCivilization
             if(IsDistrictBoss){if(livingBoss)livingBoss.LeaveWreck();g.City.BossDefeated(DistrictFloor);}
             else if(kind==3){g.bossDefeated=true;g.boss=null;g.ClearBattleProjectiles();g.Save();g.Notice("화물 수호 장치 제압\n동쪽 통로가 열렸습니다.",7);}
             Destroy(gameObject);
+        }
+        internal void SetEnforcerPose(int pose,float direction,float scale,float opacity)
+        {
+            if(!art)return;
+            facing=direction;
+            art.flipX=direction<0;
+            art.sprite=AncientEnforcerVisuals.PoseSprite(pose);
+            art.transform.localScale=Vector3.one*scale;
+            art.sortingOrder=scale<.8f?4:8;
+            art.color=Time.time<flashUntil?new Color(.67f,.93f,1f,opacity):new Color(1,1,1,opacity);
         }
         public void CompleteSniperDuel()
         {

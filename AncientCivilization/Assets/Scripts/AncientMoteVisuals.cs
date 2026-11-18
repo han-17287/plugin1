@@ -2,13 +2,13 @@ using UnityEngine;
 
 namespace Plugin.AncientCivilization
 {
-    // One pair of tiny pixel sprites is shared by the complete mote pool.
-    // The halo uses the default sprite material, so collection creates no materials or textures.
+    // 전체 입자 풀이 픽셀 스프라이트 두 장과 발광 머티리얼 하나를 공유한다.
     public sealed class AncientMoteVisuals : System.IDisposable
     {
         public static readonly Color Blue=new Color(.12f,.55f,1);
         readonly Texture2D coreTexture,haloTexture;
         readonly Sprite coreSprite,haloSprite;
+        readonly Material haloMaterial;
         bool disposed;
 
         public AncientMoteVisuals()
@@ -18,6 +18,9 @@ namespace Plugin.AncientCivilization
             coreSprite=Sprite.Create(coreTexture,new Rect(0,0,16,16),Vector2.one*.5f,16,0,SpriteMeshType.FullRect);
             haloSprite=Sprite.Create(haloTexture,new Rect(0,0,32,32),Vector2.one*.5f,32,0,SpriteMeshType.FullRect);
             coreSprite.name="Blue particle crystal";haloSprite.name="Blue particle pixel halo";
+            Shader shader = Resources.Load<Shader>("Shaders/ParticleGlow");
+            if (shader && shader.isSupported)
+                haloMaterial = new Material(shader) { name = "Shared collectible particle light", mainTexture = haloTexture };
         }
 
         static Texture2D BuildTexture(string label,int size,bool halo)
@@ -32,10 +35,11 @@ namespace Plugin.AncientCivilization
                 if(halo)
                 {
                     // Discrete diamond bands keep the glow consistent with the pixel character art.
-                    if(distance<=6)color=new Color32(40,142,255,48);
-                    else if(distance<=9)color=new Color32(28,118,255,28);
-                    else if(distance<=12)color=new Color32(22,94,255,13);
-                    else if(distance<=14)color=new Color32(15,75,255,6);
+                    if(distance<=5)color=new Color32(99,209,255,105);
+                    else if(distance<=8)color=new Color32(55,171,255,70);
+                    else if(distance<=11)color=new Color32(36,133,255,36);
+                    else if(distance<=14)color=new Color32(17,91,255,14);
+                    else if(distance<=16)color=new Color32(10,63,255,6);
                 }
                 else if(distance<=1.5f)color=new Color32(214,249,255,255);
                 else if(distance<=4)color=new Color32(77,190,255,255);
@@ -51,6 +55,7 @@ namespace Plugin.AncientCivilization
             var child=new GameObject("Pooled blue particle halo");child.transform.SetParent(core.transform,false);
             child.transform.localScale=Vector3.one*2;
             var halo=child.AddComponent<SpriteRenderer>();halo.sprite=haloSprite;
+            if (haloMaterial) halo.sharedMaterial = haloMaterial;
             halo.sortingLayerID=core.sortingLayerID;halo.sortingOrder=core.sortingOrder-1;halo.color=Color.white;
             return new Mote(core,halo,variant);
         }
@@ -60,6 +65,7 @@ namespace Plugin.AncientCivilization
             if(disposed)return;disposed=true;
             if(coreSprite)Object.Destroy(coreSprite);if(haloSprite)Object.Destroy(haloSprite);
             if(coreTexture)Object.Destroy(coreTexture);if(haloTexture)Object.Destroy(haloTexture);
+            if (haloMaterial) Object.Destroy(haloMaterial);
         }
 
         public sealed class Mote
@@ -81,7 +87,7 @@ namespace Plugin.AncientCivilization
                 core.color=new Color(1,1,1,fade);
                 halo.color=new Color(1,1,1,fade*(collecting?1:pulse));
                 core.transform.localScale=Vector3.one*(collecting?.15f:.14f);
-                halo.transform.localScale=Vector3.one*(2+pulse*.15f);
+                halo.transform.localScale=Vector3.one*((collecting ? 2.65f : 2.15f) + pulse*.2f);
             }
         }
     }
