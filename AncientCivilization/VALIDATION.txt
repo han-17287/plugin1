@@ -1,3 +1,17 @@
+v0.36.2 Band timbre and room mix
+
+All 50 Unity Ogg files differ from v0.36.1. Each matches its final stereo
+44.1 kHz Vorbis render and the corresponding album master byte for byte.
+The project retains all 50 original Unity importer files, including their
+GUIDs. Bars, BPM, decoded frame count and loop classification agree with the
+previous release for every cue. There are 41 loops, nine one-shots and exactly
+2,646,000 frames in the 60-second operation countdown.
+
+The shipping score director passed 390 simulated frames for asynchronous
+loads, single-voice playback, loops, pause/resume, stinger priority, countdown
+seeking and eviction. Native Unity 6000.6.7f1 audio playback through a physical
+device still needs verification.
+
 v0.36.1 Overdrive campaign score
 
 All 50 packaged Ogg files match the final album masters byte for byte. All 50
