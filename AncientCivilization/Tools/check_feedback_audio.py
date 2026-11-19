@@ -53,8 +53,15 @@ def check_city_score(assets):
         guids.add(guid)
         meta = Path(str(clip) + '.meta').read_text(encoding='utf-8')
         assert 'AudioImporter:' in meta and 'forceToMono: 0' in meta and 'sampleRateSetting: 0' in meta, clip
+        # The finale seeks by elapsed wall-clock seconds when the notebook is
+        # reopened or the game resumes. A shortened master silently loses its ending.
+        if clip.stem == 'sixty-to-recovery':
+            assert frames == 60 * 44100, 'finale cue must cover the full in-game countdown'
         if catalog is not None:
-            assert frames == catalog[clip.stem]['frames'], f'wrong score duration: {clip.name}'
+            cue = catalog[clip.stem]
+            assert frames == cue['frames'], f'wrong score duration: {clip.name}'
+            score_frames = round(44100 * cue['bars'] * 240 / cue['bpm'])
+            assert abs(frames - score_frames) <= 1, f'bar and master lengths disagree: {clip.name}'
             assert clip.read_bytes() == (sources / 'Mixes' / clip.name).read_bytes(), f'mixed master differs: {clip.name}'
     print(f'PASS: {len(clips)} stereo Vorbis cues, loop lengths and unique Unity music imports'
           + ('; exact match to released masters' if catalog is not None else '; project-only source archive'))
