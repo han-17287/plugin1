@@ -1,42 +1,42 @@
 #EXTM3U
 #PLAYLIST:PLUGIN · 도시의 악보
-#EXTINF:74.286,봉인된 하늘 너머
+#EXTINF:61.176,봉인된 하늘 너머
 Mixes/main-theme.ogg
 #EXTINF:90.353,점등
 Mixes/ignition-title.ogg
-#EXTINF:48.000,장부를 펴는 아침
+#EXTINF:45.714,장부를 펴는 아침
 Mixes/morning-inventory.ogg
-#EXTINF:65.829,교대 전류
+#EXTINF:52.364,교대 전류
 Mixes/shift-current.ogg
-#EXTINF:33.488,열기 위의 정비로
+#EXTINF:26.667,열기 위의 정비로
 Mixes/heat-riser.ogg
-#EXTINF:46.080,굴절 회로
+#EXTINF:43.636,굴절 회로
 Mixes/prism-circuit.ogg
-#EXTINF:51.200,필라멘트
+#EXTINF:48.608,필라멘트
 Mixes/filament.ogg
-#EXTINF:18.947,벽 너머의 시동
+#EXTINF:14.118,벽 너머의 시동
 Mixes/breach-alarm.ogg
-#EXTINF:45.714,화물 차선을 비워
+#EXTINF:35.229,화물 차선을 비워
 Mixes/truck-pursuit.ogg
-#EXTINF:37.403,짐칸 위의 결투
+#EXTINF:27.170,짐칸 위의 결투
 Mixes/roof-captain.ogg
-#EXTINF:41.739,두 번째 점화
+#EXTINF:32.542,두 번째 점화
 Mixes/redline-remount.ogg
-#EXTINF:26.667,검거 신호
+#EXTINF:19.394,검거 신호
 Mixes/cargo-verdict.ogg
-#EXTINF:45.714,빨랫줄 너머
+#EXTINF:42.353,빨랫줄 너머
 Mixes/alley-trail.ogg
-#EXTINF:50.526,폐차장 공전
+#EXTINF:41.739,폐차장 공전
 Mixes/salvage-orbit.ogg
-#EXTINF:39.724,불빛이 지나는 자리
+#EXTINF:37.403,불빛이 지나는 자리
 Mixes/spotlight-grid.ogg
-#EXTINF:36.456,철문 두 번
+#EXTINF:27.692,철문 두 번
 Mixes/warehouse-crew.ogg
-#EXTINF:48.000,리벳의 맥박 I · 기동
+#EXTINF:36.923,리벳의 맥박 I · 기동
 Mixes/iron-suit-1.ogg
-#EXTINF:44.651,리벳의 맥박 II · 압력실
+#EXTINF:33.684,리벳의 맥박 II · 압력실
 Mixes/iron-suit-2.ogg
-#EXTINF:41.290,리벳의 맥박 III · 푸른 균열
+#EXTINF:30.720,리벳의 맥박 III · 푸른 균열
 Mixes/iron-suit-3.ogg
 #EXTINF:49.231,교대실의 등
 Mixes/service-lantern.ogg
@@ -48,55 +48,55 @@ Mixes/death.ogg
 Mixes/rank-access.ogg
 #EXTINF:61.538,층과 층 사이
 Mixes/lift-between.ogg
-#EXTINF:58.182,창마다 다른 번호
+#EXTINF:54.857,창마다 다른 번호
 Mixes/numbered-facades.ogg
-#EXTINF:39.452,셔터 사이의 색인
+#EXTINF:35.556,셔터 사이의 색인
 Mixes/shutter-index.ogg
 #EXTINF:44.138,장부의 눌린 자국
 Mixes/ledger-imprint.ogg
-#EXTINF:42.044,검문소 사이
+#EXTINF:37.895,검문소 사이
 Mixes/witness-crossing.ogg
 #EXTINF:33.882,봉쇄선
 Mixes/sealed-gate.ogg
-#EXTINF:48.000,집행 개시 Ⅰ
+#EXTINF:35.888,집행 개시 Ⅰ
 Mixes/enforcer-1.ogg
-#EXTINF:43.886,집행 개시 Ⅱ
+#EXTINF:33.103,집행 개시 Ⅱ
 Mixes/enforcer-2.ogg
-#EXTINF:40.421,집행 개시 Ⅲ
+#EXTINF:30.476,집행 개시 Ⅲ
 Mixes/enforcer-3.ogg
 #EXTINF:5.333,철수
 Mixes/retreat.ogg
-#EXTINF:71.111,온실 너머의 오후
+#EXTINF:69.818,온실 너머의 오후
 Mixes/glass-terrace.ogg
-#EXTINF:37.403,유리 아래의 상승류
+#EXTINF:33.488,유리 아래의 상승류
 Mixes/greenhouse-fault.ogg
-#EXTINF:38.400,진열장 속 심장 Ⅰ · 계측
+#EXTINF:27.429,진열장 속 심장 Ⅰ · 계측
 Mixes/residence-warden-1.ogg
-#EXTINF:46.829,진열장 속 심장 Ⅱ · 굴절
+#EXTINF:33.391,진열장 속 심장 Ⅱ · 굴절
 Mixes/residence-warden-2.ogg
-#EXTINF:43.146,진열장 속 심장 Ⅲ · 파쇄
+#EXTINF:30.720,진열장 속 심장 Ⅲ · 파쇄
 Mixes/residence-warden-3.ogg
-#EXTINF:47.324,도시의 뒷면
+#EXTINF:36.522,도시의 뒷면
 Mixes/summit-trespass.ogg
-#EXTINF:45.714,숨을 세는 눈
+#EXTINF:32.941,숨을 세는 눈
 Mixes/joker-sightline.ogg
-#EXTINF:49.231,유리 속의 둘
+#EXTINF:34.595,유리 속의 둘
 Mixes/joker-double.ogg
-#EXTINF:45.714,바닥 아래의 포좌
+#EXTINF:32.269,바닥 아래의 포좌
 Mixes/joker-turrets.ogg
-#EXTINF:32.000,두 빛의 접점
+#EXTINF:22.326,두 빛의 접점
 Mixes/joker-beam.ogg
 #EXTINF:52.174,초침이 닿기 전
 Mixes/clock-ante.ogg
-#EXTINF:44.651,영점 결재
+#EXTINF:32.821,영점 결재
 Mixes/clock-secretary.ogg
 #EXTINF:69.398,결재자 부재
 Mixes/vacant-office.ogg
 #EXTINF:60.000,회수 명령까지 60초
 Mixes/sixty-to-recovery.ogg
-#EXTINF:46.957,아래로 달리는 불빛
+#EXTINF:34.839,아래로 달리는 불빛
 Mixes/descent-convoy.ogg
-#EXTINF:30.000,단 한 발의 공명
+#EXTINF:27.692,단 한 발의 공명
 Mixes/core-ignition.ogg
 #EXTINF:88.163,하늘 아래의 하늘
 Mixes/first-ending.ogg
