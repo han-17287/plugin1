@@ -1,0 +1,1270 @@
+{
+  "shift-current": {
+    "title": "교대 전류",
+    "scene": "생산구 직선 돌진",
+    "key": "E단조 → G장조 → A장조",
+    "bpm": 175,
+    "bars": 48,
+    "loop": true,
+    "frames": 2903040,
+    "gugak": [
+      "gayageum",
+      "janggu"
+    ],
+    "instruments": [
+      "piano",
+      "gayageum",
+      "pickbass",
+      "drums",
+      "janggu",
+      "coil",
+      "cleanguitar",
+      "cello",
+      "glass",
+      "leadguitar",
+      "strings",
+      "rhythmguitar",
+      "brass"
+    ],
+    "stems": false
+  },
+  "filament": {
+    "title": "필라멘트",
+    "scene": "정밀 앵커 구간",
+    "key": "C♯단조와 낮은 2도",
+    "bpm": 150,
+    "bars": 32,
+    "loop": true,
+    "frames": 2257920,
+    "gugak": [
+      "gayageum",
+      "haegeum",
+      "buk"
+    ],
+    "instruments": [
+      "gayageum",
+      "haegeum",
+      "synth",
+      "glass",
+      "drums",
+      "buk",
+      "coil",
+      "piano",
+      "bass"
+    ],
+    "stems": false
+  },
+  "ignition-title": {
+    "title": "점등",
+    "scene": "타이틀 화면",
+    "key": "E단조와 G장조",
+    "bpm": 85,
+    "bars": 32,
+    "loop": true,
+    "frames": 3984565,
+    "gugak": [
+      "daegeum",
+      "gayageum",
+      "haegeum"
+    ],
+    "instruments": [
+      "daegeum",
+      "piano2",
+      "gayageum",
+      "piano",
+      "haegeum",
+      "coil",
+      "strings",
+      "cello",
+      "bass",
+      "cleanguitar",
+      "drums",
+      "pad",
+      "glass"
+    ],
+    "stems": false
+  },
+  "sealed-gate": {
+    "title": "봉쇄선",
+    "scene": "보스 직전 대기",
+    "key": "E단조 · B 페달",
+    "bpm": 85,
+    "bars": 12,
+    "loop": true,
+    "frames": 1494212,
+    "gugak": [
+      "gayageum",
+      "ajaeng",
+      "daegeum"
+    ],
+    "instruments": [
+      "cello",
+      "pad",
+      "gayageum",
+      "coil",
+      "ajaeng",
+      "strings",
+      "drums",
+      "daegeum",
+      "piano",
+      "glass"
+    ],
+    "stems": false
+  },
+  "death": {
+    "title": "소등",
+    "scene": "사망과 즉시 재도전",
+    "key": "E단조",
+    "bpm": 90,
+    "bars": 1.5,
+    "loop": false,
+    "frames": 176400,
+    "gugak": [
+      "ajaeng"
+    ],
+    "instruments": [
+      "piano2",
+      "drums",
+      "strings",
+      "ajaeng",
+      "glass",
+      "piano"
+    ],
+    "stems": false
+  },
+  "checkpoint": {
+    "title": "저장등",
+    "scene": "체크포인트 점등",
+    "key": "G장조 / E단조",
+    "bpm": 112.5,
+    "bars": 1.5,
+    "loop": false,
+    "frames": 141120,
+    "gugak": [
+      "gayageum"
+    ],
+    "instruments": [
+      "glass",
+      "piano",
+      "harp",
+      "strings",
+      "gayageum"
+    ],
+    "stems": false
+  },
+  "retreat": {
+    "title": "철수",
+    "scene": "제압 후 생존 퇴장",
+    "key": "G장조 → Em(add9)",
+    "bpm": 90,
+    "bars": 2,
+    "loop": false,
+    "frames": 235200,
+    "gugak": [
+      "daegeum"
+    ],
+    "instruments": [
+      "piano2",
+      "timpani",
+      "drums",
+      "glass",
+      "leadguitar",
+      "strings",
+      "cello",
+      "daegeum"
+    ],
+    "stems": false
+  },
+  "enforcer-1": {
+    "title": "집행 개시 Ⅰ",
+    "scene": "중층 행정구 · 기록 집행관",
+    "key": "D단조",
+    "bpm": 160,
+    "bars": 32,
+    "loop": true,
+    "frames": 2116800,
+    "gugak": [
+      "piri",
+      "geomungo",
+      "janggu"
+    ],
+    "instruments": [
+      "piri",
+      "geomungo",
+      "janggu",
+      "piano",
+      "bass",
+      "drums",
+      "glass",
+      "piano2",
+      "timpani"
+    ],
+    "stems": true
+  },
+  "enforcer-2": {
+    "title": "집행 개시 Ⅱ",
+    "scene": "중층 행정구 · 기록 집행관",
+    "key": "D단조",
+    "bpm": 175,
+    "bars": 32,
+    "loop": true,
+    "frames": 1935360,
+    "gugak": [
+      "geomungo",
+      "janggu",
+      "haegeum"
+    ],
+    "instruments": [
+      "leadguitar",
+      "geomungo",
+      "janggu",
+      "piano",
+      "pickbass",
+      "rhythmguitar",
+      "strings",
+      "drums",
+      "haegeum",
+      "glass",
+      "cleanguitar",
+      "piano2",
+      "cello"
+    ],
+    "stems": true
+  },
+  "enforcer-3": {
+    "title": "집행 개시 Ⅲ",
+    "scene": "중층 행정구 · 기록 집행관",
+    "key": "E단조",
+    "bpm": 190,
+    "bars": 32,
+    "loop": true,
+    "frames": 1782568,
+    "gugak": [
+      "taepyeongso",
+      "buk",
+      "kkwaenggwari"
+    ],
+    "instruments": [
+      "taepyeongso",
+      "buk",
+      "piano",
+      "pickbass",
+      "rhythmguitar",
+      "drums",
+      "glass",
+      "leadguitar",
+      "strings",
+      "synth",
+      "brass",
+      "kkwaenggwari",
+      "piano2",
+      "cello",
+      "cleanguitar"
+    ],
+    "stems": true
+  },
+  "main-theme": {
+    "title": "봉인된 하늘 너머",
+    "scene": "백 경위의 메인 테마",
+    "key": "B단조 · D장조",
+    "bpm": 168,
+    "bars": 52,
+    "loop": true,
+    "frames": 3276000,
+    "gugak": [
+      "gayageum",
+      "janggu",
+      "daegeum"
+    ],
+    "instruments": [
+      "piano",
+      "piano2",
+      "gayageum",
+      "drums",
+      "leadguitar",
+      "bass",
+      "rhythmguitar",
+      "janggu",
+      "cleanguitar",
+      "daegeum",
+      "cello",
+      "strings"
+    ],
+    "stems": false
+  },
+  "lift-between": {
+    "title": "층과 층 사이",
+    "scene": "승강기 이동",
+    "key": "D장조 · B단조",
+    "bpm": 78,
+    "bars": 20,
+    "loop": true,
+    "frames": 2713846,
+    "gugak": [
+      "daegeum"
+    ],
+    "instruments": [
+      "cleanguitar",
+      "cello",
+      "pad",
+      "piano",
+      "glass",
+      "daegeum"
+    ],
+    "stems": false
+  },
+  "rank-access": {
+    "title": "출입 승인",
+    "scene": "승진과 새 층 출입 권한",
+    "key": "D장조",
+    "bpm": 108,
+    "bars": 4.5,
+    "loop": false,
+    "frames": 441000,
+    "gugak": [
+      "gayageum",
+      "buk"
+    ],
+    "instruments": [
+      "piano2",
+      "strings",
+      "piano",
+      "gayageum",
+      "buk",
+      "glass"
+    ],
+    "stems": false
+  },
+  "vacant-office": {
+    "title": "결재자 부재",
+    "scene": "빈 회장실의 노트와 회수 계획",
+    "key": "F단조 · 프리지안 색채",
+    "bpm": 83,
+    "bars": 24,
+    "loop": true,
+    "frames": 3060434,
+    "gugak": [
+      "haegeum",
+      "geomungo"
+    ],
+    "instruments": [
+      "piano2",
+      "strings",
+      "piano",
+      "cleanguitar",
+      "haegeum",
+      "glass",
+      "geomungo",
+      "drums"
+    ],
+    "stems": false
+  },
+  "descent-convoy": {
+    "title": "아래로 달리는 불빛",
+    "scene": "최상층에서 최하층까지 마지막 트럭 추격",
+    "key": "C♯단조",
+    "bpm": 184,
+    "bars": 36,
+    "loop": true,
+    "frames": 2070783,
+    "gugak": [
+      "kkwaenggwari",
+      "janggu",
+      "haegeum"
+    ],
+    "instruments": [
+      "piano",
+      "drums",
+      "pickbass",
+      "rhythmguitar",
+      "kkwaenggwari",
+      "janggu",
+      "leadguitar",
+      "cello",
+      "haegeum",
+      "strings"
+    ],
+    "stems": false
+  },
+  "core-ignition": {
+    "title": "단 한 발의 공명",
+    "scene": "저격수가 경위를 구하고 코어가 폭발해 추락한다",
+    "key": "C♯단조 · 반음계",
+    "bpm": 96,
+    "bars": 12,
+    "loop": false,
+    "frames": 1323000,
+    "gugak": [
+      "geomungo",
+      "buk"
+    ],
+    "instruments": [
+      "cleanguitar",
+      "cello",
+      "geomungo",
+      "piano",
+      "glass",
+      "coil",
+      "strings",
+      "piano2",
+      "buk",
+      "timpani",
+      "drums"
+    ],
+    "stems": false
+  },
+  "first-ending": {
+    "title": "하늘 아래의 하늘",
+    "scene": "최하층 아래로 떨어진 뒤 이어지는 1회차 크레디트",
+    "key": "D장조 · B단조",
+    "bpm": 98,
+    "bars": 36,
+    "loop": false,
+    "frames": 3888000,
+    "gugak": [
+      "gayageum",
+      "haegeum"
+    ],
+    "instruments": [
+      "piano",
+      "piano2",
+      "harp",
+      "gayageum",
+      "strings",
+      "glass",
+      "cleanguitar",
+      "bass",
+      "drums",
+      "haegeum"
+    ],
+    "stems": false
+  },
+  "morning-inventory": {
+    "title": "장부를 펴는 아침",
+    "scene": "생산구 출근길과 코어 재고 확인",
+    "key": "D장조 · 리디아 색채",
+    "bpm": 120,
+    "bars": 24,
+    "loop": true,
+    "frames": 2116800,
+    "gugak": [
+      "gayageum",
+      "daegeum"
+    ],
+    "instruments": [
+      "piano",
+      "cleanguitar",
+      "gayageum",
+      "glass",
+      "bass",
+      "drums",
+      "daegeum",
+      "strings"
+    ],
+    "stems": false
+  },
+  "breach-alarm": {
+    "title": "벽 너머의 시동",
+    "scene": "재고 보고 도중 벽이 뚫리고 트럭이 출발하는 컷신",
+    "key": "C♯ 프리지안",
+    "bpm": 152,
+    "bars": 12,
+    "loop": false,
+    "frames": 835579,
+    "gugak": [
+      "buk",
+      "piri"
+    ],
+    "instruments": [
+      "coil",
+      "piano",
+      "strings",
+      "drums",
+      "buk",
+      "brass",
+      "synth",
+      "piri",
+      "rhythmguitar",
+      "bass"
+    ],
+    "stems": false
+  },
+  "truck-pursuit": {
+    "title": "화물 차선을 비워",
+    "scene": "생산구 첫 오토바이 추격과 트럭 접근",
+    "key": "D 도리안",
+    "bpm": 168,
+    "bars": 32,
+    "loop": true,
+    "frames": 2016000,
+    "gugak": [
+      "janggu",
+      "taepyeongso"
+    ],
+    "instruments": [
+      "piano",
+      "pickbass",
+      "rhythmguitar",
+      "drums",
+      "janggu",
+      "leadguitar",
+      "taepyeongso",
+      "strings"
+    ],
+    "stems": false
+  },
+  "roof-captain": {
+    "title": "짐칸 위의 결투",
+    "scene": "트럭 지붕 위에서 대장과 맞붙는 전투",
+    "key": "F♯단조",
+    "bpm": 154,
+    "bars": 24,
+    "loop": true,
+    "frames": 1649455,
+    "gugak": [
+      "geomungo",
+      "haegeum"
+    ],
+    "instruments": [
+      "rhythmguitar",
+      "bass",
+      "geomungo",
+      "drums",
+      "leadguitar",
+      "glass",
+      "haegeum",
+      "piano",
+      "brass"
+    ],
+    "stems": true
+  },
+  "redline-remount": {
+    "title": "두 번째 점화",
+    "scene": "다시 오토바이에 올라 트럭을 쫓는 구간",
+    "key": "A단조",
+    "bpm": 184,
+    "bars": 32,
+    "loop": true,
+    "frames": 1840696,
+    "gugak": [
+      "gayageum",
+      "kkwaenggwari"
+    ],
+    "instruments": [
+      "synth",
+      "pickbass",
+      "piano",
+      "rhythmguitar",
+      "drums",
+      "gayageum",
+      "kkwaenggwari",
+      "leadguitar",
+      "strings"
+    ],
+    "stems": false
+  },
+  "cargo-verdict": {
+    "title": "검거 신호",
+    "scene": "짐칸 절단, 공중 레이저, 트럭 폭파와 생존 검거",
+    "key": "D단조 → D장조",
+    "bpm": 144,
+    "bars": 16,
+    "loop": false,
+    "frames": 1176000,
+    "gugak": [
+      "janggu",
+      "daegeum"
+    ],
+    "instruments": [
+      "bass",
+      "drums",
+      "strings",
+      "leadguitar",
+      "piano",
+      "janggu",
+      "daegeum",
+      "harp",
+      "coil",
+      "brass",
+      "glass"
+    ],
+    "stems": false
+  },
+  "alley-trail": {
+    "title": "빨랫줄 너머",
+    "scene": "하층 생활구 골목, 도둑의 행적을 듣고 다음 표식을 찾아가는 길",
+    "key": "E Dorian / E minor",
+    "bpm": 126,
+    "bars": 24,
+    "loop": true,
+    "frames": 2016000,
+    "gugak": [
+      "gayageum",
+      "daegeum"
+    ],
+    "instruments": [
+      "cleanguitar",
+      "piano",
+      "bass",
+      "gayageum",
+      "drums",
+      "glass",
+      "daegeum"
+    ],
+    "stems": false
+  },
+  "spotlight-grid": {
+    "title": "불빛이 지나는 자리",
+    "scene": "보안 외벽, 탐조등이 지나간 뒤 골목 사이를 이동하는 구간",
+    "key": "C minor / Phrygian inflection",
+    "bpm": 145,
+    "bars": 24,
+    "loop": true,
+    "frames": 1751834,
+    "gugak": [
+      "geomungo",
+      "haegeum"
+    ],
+    "instruments": [
+      "piano",
+      "geomungo",
+      "spiccato",
+      "bass",
+      "drums",
+      "coil",
+      "haegeum",
+      "pad"
+    ],
+    "stems": false
+  },
+  "warehouse-crew": {
+    "title": "철문 두 번",
+    "scene": "범죄 조직의 창고, 거대 슈트 투입 전 조직원전",
+    "key": "A minor / Dorian lift",
+    "bpm": 158,
+    "bars": 24,
+    "loop": true,
+    "frames": 1607696,
+    "gugak": [
+      "janggu",
+      "piri"
+    ],
+    "instruments": [
+      "leadguitar",
+      "cleanguitar",
+      "pickbass",
+      "drums",
+      "janggu",
+      "piri"
+    ],
+    "stems": false
+  },
+  "iron-suit-1": {
+    "title": "리벳의 맥박 I · 기동",
+    "scene": "거대 슈트 1페이즈, 총격과 유도 로켓 주먹",
+    "key": "G minor",
+    "bpm": 160,
+    "bars": 32,
+    "loop": true,
+    "frames": 2116800,
+    "gugak": [
+      "geomungo",
+      "piri"
+    ],
+    "instruments": [
+      "leadguitar",
+      "geomungo",
+      "pickbass",
+      "rhythmguitar",
+      "piano",
+      "drums",
+      "glass",
+      "piri",
+      "strings"
+    ],
+    "stems": true
+  },
+  "iron-suit-2": {
+    "title": "리벳의 맥박 II · 압력실",
+    "scene": "거대 슈트 2페이즈, 배리어 접근과 후방 포격",
+    "key": "G minor",
+    "bpm": 172,
+    "bars": 32,
+    "loop": true,
+    "frames": 1969116,
+    "gugak": [
+      "buk",
+      "kkwaenggwari",
+      "ajaeng"
+    ],
+    "instruments": [
+      "piano",
+      "pickbass",
+      "rhythmguitar",
+      "strings",
+      "drums",
+      "buk",
+      "piano2",
+      "glass",
+      "kkwaenggwari",
+      "ajaeng",
+      "leadguitar"
+    ],
+    "stems": true
+  },
+  "iron-suit-3": {
+    "title": "리벳의 맥박 III · 푸른 균열",
+    "scene": "거대 슈트 3페이즈, 불완전한 코어와 X 블래스트",
+    "key": "A minor",
+    "bpm": 186,
+    "bars": 32,
+    "loop": true,
+    "frames": 1820903,
+    "gugak": [
+      "buk",
+      "gayageum",
+      "taepyeongso"
+    ],
+    "instruments": [
+      "leadguitar",
+      "pickbass",
+      "rhythmguitar",
+      "piano",
+      "strings",
+      "brass",
+      "drums",
+      "buk",
+      "gayageum",
+      "glass",
+      "taepyeongso"
+    ],
+    "stems": true
+  },
+  "numbered-facades": {
+    "title": "창마다 다른 번호",
+    "scene": "중층 행정구 · 민원 통로와 기록동",
+    "key": "A minor / C major",
+    "bpm": 132,
+    "bars": 32,
+    "loop": true,
+    "frames": 2565818,
+    "gugak": [
+      "geomungo",
+      "piri"
+    ],
+    "instruments": [
+      "piano",
+      "bass",
+      "geomungo",
+      "drums",
+      "glass",
+      "piri",
+      "strings",
+      "piano2",
+      "cleanguitar"
+    ],
+    "stems": false
+  },
+  "shutter-index": {
+    "title": "셔터 사이의 색인",
+    "scene": "중층 행정구 · 보안 셔터 난관",
+    "key": "C♯ minor",
+    "bpm": 146,
+    "bars": 24,
+    "loop": true,
+    "frames": 1739836,
+    "gugak": [
+      "geomungo",
+      "janggu"
+    ],
+    "instruments": [
+      "piano2",
+      "geomungo",
+      "synth",
+      "janggu",
+      "coil",
+      "drums",
+      "spiccato",
+      "strings",
+      "glass",
+      "cleanguitar"
+    ],
+    "stems": false
+  },
+  "glass-terrace": {
+    "title": "온실 너머의 오후",
+    "scene": "상층 거주구 · 유리 테라스와 주민 구역",
+    "key": "D major / Lydian colour",
+    "bpm": 108,
+    "bars": 32,
+    "loop": true,
+    "frames": 3136000,
+    "gugak": [
+      "daegeum",
+      "gayageum",
+      "haegeum"
+    ],
+    "instruments": [
+      "daegeum",
+      "bass",
+      "pad",
+      "gayageum",
+      "glass",
+      "cleanguitar",
+      "strings",
+      "harp",
+      "drums",
+      "haegeum",
+      "piano"
+    ],
+    "stems": false
+  },
+  "greenhouse-fault": {
+    "title": "유리 아래의 상승류",
+    "scene": "상층 거주구 · 환기 상승류와 부유체 난관",
+    "key": "B Dorian",
+    "bpm": 154,
+    "bars": 24,
+    "loop": true,
+    "frames": 1649455,
+    "gugak": [
+      "gayageum",
+      "janggu",
+      "daegeum"
+    ],
+    "instruments": [
+      "spiccato",
+      "gayageum",
+      "pickbass",
+      "drums",
+      "janggu",
+      "strings",
+      "daegeum",
+      "piano",
+      "cleanguitar",
+      "glass"
+    ],
+    "stems": false
+  },
+  "residence-warden-1": {
+    "title": "진열장 속 심장 Ⅰ · 계측",
+    "scene": "상층 거주구 · 코어 보안 병기 전투 편곡 Ⅰ",
+    "key": "B minor",
+    "bpm": 150,
+    "bars": 24,
+    "loop": true,
+    "frames": 1693440,
+    "gugak": [
+      "geomungo",
+      "haegeum"
+    ],
+    "instruments": [
+      "piano",
+      "bass",
+      "geomungo",
+      "strings",
+      "drums",
+      "spiccato",
+      "haegeum"
+    ],
+    "stems": true
+  },
+  "residence-warden-2": {
+    "title": "진열장 속 심장 Ⅱ · 굴절",
+    "scene": "상층 거주구 · 코어 보안 병기 전투 편곡 Ⅱ",
+    "key": "B minor / D major",
+    "bpm": 164,
+    "bars": 32,
+    "loop": true,
+    "frames": 2065171,
+    "gugak": [
+      "haegeum",
+      "geomungo",
+      "janggu"
+    ],
+    "instruments": [
+      "haegeum",
+      "glass",
+      "pickbass",
+      "geomungo",
+      "rhythmguitar",
+      "strings",
+      "drums",
+      "janggu",
+      "piano2",
+      "cleanguitar",
+      "piano"
+    ],
+    "stems": true
+  },
+  "residence-warden-3": {
+    "title": "진열장 속 심장 Ⅲ · 파쇄",
+    "scene": "상층 거주구 · 코어 보안 병기 전투 편곡 Ⅲ",
+    "key": "C♯ minor / E major",
+    "bpm": 178,
+    "bars": 32,
+    "loop": true,
+    "frames": 1902742,
+    "gugak": [
+      "geomungo",
+      "janggu",
+      "haegeum"
+    ],
+    "instruments": [
+      "leadguitar",
+      "glass",
+      "pickbass",
+      "geomungo",
+      "rhythmguitar",
+      "strings",
+      "piano2",
+      "brass",
+      "timpani",
+      "drums",
+      "janggu",
+      "haegeum"
+    ],
+    "stems": true
+  },
+  "summit-trespass": {
+    "title": "도시의 뒷면",
+    "scene": "최상층 정비 외벽과 우회 통로",
+    "key": "D Dorian",
+    "bpm": 142,
+    "bars": 28,
+    "loop": true,
+    "frames": 2086986,
+    "gugak": [
+      "geomungo",
+      "daegeum"
+    ],
+    "instruments": [
+      "pad",
+      "strings",
+      "geomungo",
+      "bass",
+      "cleanguitar",
+      "daegeum",
+      "drums",
+      "piano",
+      "glass"
+    ],
+    "stems": false
+  },
+  "joker-sightline": {
+    "title": "숨을 세는 눈",
+    "scene": "저격수 · 본체의 조준과 장전",
+    "key": "F♯ minor",
+    "bpm": 147,
+    "bars": 28,
+    "loop": true,
+    "frames": 2016000,
+    "gugak": [
+      "ajaeng"
+    ],
+    "instruments": [
+      "bass",
+      "piano2",
+      "cleanguitar",
+      "drums",
+      "ajaeng",
+      "coil",
+      "piano"
+    ],
+    "stems": true
+  },
+  "joker-double": {
+    "title": "유리 속의 둘",
+    "scene": "저격수 · 한 명의 분신과 교차 사격",
+    "key": "F♯ minor / Dorian colour",
+    "bpm": 156,
+    "bars": 32,
+    "loop": true,
+    "frames": 2171077,
+    "gugak": [
+      "haegeum",
+      "janggu"
+    ],
+    "instruments": [
+      "cleanguitar",
+      "synth",
+      "pickbass",
+      "drums",
+      "rhythmguitar",
+      "haegeum",
+      "piano",
+      "janggu"
+    ],
+    "stems": true
+  },
+  "joker-turrets": {
+    "title": "바닥 아래의 포좌",
+    "scene": "저격수 · 분신과 포탑 탈취",
+    "key": "F♯ minor",
+    "bpm": 168,
+    "bars": 32,
+    "loop": true,
+    "frames": 2016000,
+    "gugak": [
+      "janggu",
+      "geomungo"
+    ],
+    "instruments": [
+      "rhythmguitar",
+      "pickbass",
+      "leadguitar",
+      "spiccato",
+      "drums",
+      "janggu",
+      "piano",
+      "brass",
+      "geomungo",
+      "synth"
+    ],
+    "stems": true
+  },
+  "joker-beam": {
+    "title": "두 빛의 접점",
+    "scene": "저격수 · 충전과 최후의 광선 대결",
+    "key": "G♯ minor",
+    "bpm": 180,
+    "bars": 24,
+    "loop": true,
+    "frames": 1411200,
+    "gugak": [
+      "geomungo",
+      "buk",
+      "taepyeongso"
+    ],
+    "instruments": [
+      "piano",
+      "pad",
+      "geomungo",
+      "bass",
+      "drums",
+      "synth",
+      "rhythmguitar",
+      "buk",
+      "strings",
+      "leadguitar",
+      "taepyeongso",
+      "glass"
+    ],
+    "stems": true
+  },
+  "clock-ante": {
+    "title": "초침이 닿기 전",
+    "scene": "비서실장 집무실 문 앞",
+    "key": "C minor / chromatic",
+    "bpm": 92,
+    "bars": 20,
+    "loop": true,
+    "frames": 2300870,
+    "gugak": [
+      "daegeum"
+    ],
+    "instruments": [
+      "piano2",
+      "pad",
+      "cleanguitar",
+      "piano",
+      "daegeum",
+      "coil",
+      "strings",
+      "glass"
+    ],
+    "stems": false
+  },
+  "clock-secretary": {
+    "title": "영점 결재",
+    "scene": "비서실장의 시계 · 1페이즈",
+    "key": "C minor / octatonic colour",
+    "bpm": 172,
+    "bars": 32,
+    "loop": true,
+    "frames": 1969116,
+    "gugak": [
+      "piri",
+      "ajaeng"
+    ],
+    "instruments": [
+      "spiccato",
+      "piano",
+      "bass",
+      "organ",
+      "drums",
+      "glass",
+      "cleanguitar",
+      "piri",
+      "ajaeng",
+      "piano2",
+      "brass"
+    ],
+    "stems": true
+  },
+  "heat-riser": {
+    "title": "열기 위의 정비로",
+    "scene": "생산구 상부 선택 와이어 경로",
+    "key": "E 도리안",
+    "bpm": 172,
+    "bars": 24,
+    "loop": true,
+    "frames": 1476837,
+    "gugak": [
+      "janggu",
+      "daegeum"
+    ],
+    "instruments": [
+      "piano",
+      "cleanguitar",
+      "pickbass",
+      "drums",
+      "leadguitar",
+      "janggu",
+      "daegeum",
+      "strings"
+    ],
+    "stems": false
+  },
+  "salvage-orbit": {
+    "title": "폐차장 공전",
+    "scene": "생활구 폐차장에서 와이어로 물체를 돌려 던지기",
+    "key": "F♯단조 · 펑크",
+    "bpm": 114,
+    "bars": 24,
+    "loop": true,
+    "frames": 2228211,
+    "gugak": [
+      "geomungo"
+    ],
+    "instruments": [
+      "bass",
+      "cleanguitar",
+      "geomungo",
+      "drums",
+      "synth",
+      "organ",
+      "brass"
+    ],
+    "stems": false
+  },
+  "service-lantern": {
+    "title": "교대실의 등",
+    "scene": "작은 휴게실에서 저장과 정비",
+    "key": "A장조 · 6/9화음",
+    "bpm": 78,
+    "bars": 16,
+    "loop": true,
+    "frames": 2171077,
+    "gugak": [
+      "gayageum",
+      "daegeum"
+    ],
+    "instruments": [
+      "piano",
+      "gayageum",
+      "cleanguitar",
+      "glass",
+      "daegeum",
+      "pad",
+      "cello"
+    ],
+    "stems": false
+  },
+  "prism-circuit": {
+    "title": "굴절 회로",
+    "scene": "수광부와 반사 장치를 정렬해 전력 복구",
+    "key": "B장조 · 리디아 색채",
+    "bpm": 125,
+    "bars": 24,
+    "loop": true,
+    "frames": 2032128,
+    "gugak": [
+      "gayageum"
+    ],
+    "instruments": [
+      "piano",
+      "harp",
+      "gayageum",
+      "glass",
+      "bass",
+      "drums",
+      "coil",
+      "cleanguitar",
+      "synth"
+    ],
+    "stems": false
+  },
+  "ledger-imprint": {
+    "title": "장부의 눌린 자국",
+    "scene": "행정구에서 두 기록의 원본 대조",
+    "key": "B♭단조",
+    "bpm": 87,
+    "bars": 16,
+    "loop": true,
+    "frames": 1946483,
+    "gugak": [
+      "haegeum"
+    ],
+    "instruments": [
+      "bass",
+      "piano",
+      "cleanguitar",
+      "coil",
+      "drums",
+      "haegeum"
+    ],
+    "stems": false
+  },
+  "witness-crossing": {
+    "title": "검문소 사이",
+    "scene": "주안과 함께 무전을 들으며 통제선을 통과",
+    "key": "G단조",
+    "bpm": 137,
+    "bars": 24,
+    "loop": true,
+    "frames": 1854131,
+    "gugak": [
+      "daegeum",
+      "janggu"
+    ],
+    "instruments": [
+      "cello",
+      "bass",
+      "cleanguitar",
+      "spiccato",
+      "drums",
+      "piano",
+      "daegeum",
+      "strings",
+      "janggu"
+    ],
+    "stems": false
+  },
+  "sixty-to-recovery": {
+    "title": "회수 명령까지 60초",
+    "scene": "회장의 노트를 펼친 뒤 코어 회수 작전이 시작되기까지",
+    "key": "E단조 · 반음계 긴장",
+    "bpm": 120,
+    "bars": 30,
+    "loop": false,
+    "frames": 2646000,
+    "gugak": [
+      "ajaeng",
+      "buk"
+    ],
+    "instruments": [
+      "coil",
+      "piano",
+      "glass",
+      "bass",
+      "ajaeng",
+      "synth",
+      "drums",
+      "strings",
+      "brass",
+      "buk"
+    ],
+    "stems": false
+  }
+}
