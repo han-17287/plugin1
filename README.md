@@ -1,10 +1,10 @@
 # PLUGIN · Ancient Civilization
 
-**v0.36.1 · 상층 화물 검사대와 전투 음악**
+**v0.36.2 · 밴드 합주 음원과 궤도 봉쇄기**
 
-[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.36.1-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.36.2-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
 
-**사운드트랙 50곡 · 고속 밴드 편곡** · [보스 하이라이트 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-overdrive/Soundtrack/City-Score-Preview.mp3) · [보스곡 이전판과 비교](https://raw.githubusercontent.com/han-17287/plugin1/city-score-overdrive/Soundtrack/Before-After.mp3) · [메인 테마 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-overdrive/Soundtrack/Main-Theme.mp3) · [음악 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/city-score-overdrive.zip) · [전곡 목록](https://github.com/han-17287/plugin1/blob/city-score-overdrive/Soundtrack/README_KO.md)
+**사운드트랙 50곡 · 밴드 합주 믹스** · [보스 하이라이트 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-bandroom/Soundtrack/City-Score-Preview.mp3) · [보스곡 이전판과 비교](https://raw.githubusercontent.com/han-17287/plugin1/city-score-bandroom/Soundtrack/Before-After.mp3) · [메인 테마 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-bandroom/Soundtrack/Main-Theme.mp3) · [음악 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/city-score-bandroom.zip) · [전곡 목록](https://github.com/han-17287/plugin1/blob/city-score-bandroom/Soundtrack/README_KO.md)
 
 상층 거주구 두 번째 조사 뒤 화물 검사대에서 궤도 봉쇄기와 처음 마주칩니다. 병기는 후퇴했다가 상층 끝 외벽 통제선에서 다시 나타납니다. 1차전만 바로 플레이하려면 Unity에서 `Assets/Scenes/Main.unity`를 연 뒤 **PLUGIN → 검사 → 궤도 봉쇄기 1차전 바로 플레이**를 선택하세요. [전조와 조작](AncientCivilization/FLOOR_DESIGN_KO.md#상층-화물-검사대)
 
