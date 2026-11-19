@@ -122,4 +122,4 @@
 
 국악 파트는 악보의 음마다 농현, 술대의 짧은 타격, 갈대 리드와 대금의 숨, 활 마찰, 장구 두 면의 어택을 합성해 연주했다. 실연 녹음은 포함하지 않았다. 서양 악기 파트에는 FluidR3 GM 사운드폰트를 사용했고 전구와 코일 음색은 별도로 합성했다. 표준 MIDI에서는 재생하는 기기의 악기에 따라 음색이 달라진다. [FluidR3 크레딧](FluidR3-Credits.txt)
 
-이 배포판의 음원은 Unity로 가져와 사용할 수 있다. 본편 `Main`의 음악 재생 코드는 별도다. 이전 열 곡 판의 믹스와 미리듣기는 [첫 사운드트랙 릴리스](https://github.com/han-17287/plugin1/tree/field-score-gugak-1/Soundtrack)에 있다.
+Unity 프로젝트 v0.35.0부터 이 50곡을 본편과 연습 씬에서 재생한다. 처음 게임을 열면 메인 테마가 시작되고, 생산구 추격에서 갑판전으로 넘어갈 때와 각 보스의 페이즈가 바뀔 때 곡이 전환된다. [음악을 포함한 Unity 프로젝트](https://github.com/han-17287/plugin1/archive/refs/tags/v0.35.0-download.zip) 이전 열 곡 판의 믹스와 미리듣기는 [첫 사운드트랙 릴리스](https://github.com/han-17287/plugin1/tree/field-score-gugak-1/Soundtrack)에 있다.

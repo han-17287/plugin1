@@ -8,6 +8,7 @@ namespace Plugin.PlayerCore
     {
         public PlayerMovementData movementData;
         PlayerStateMachine player;PlayerInputReader input;Camera view;Sprite square;Texture2D texture;Tile tile;GUIStyle style;
+        PracticeMusic music;
         Vector2 spawn=new Vector2(-17,2);string actionNote="P1: 이동을 연습하세요. 전투 기능은 후속 단계에서 연결됩니다.";bool ownedData;
         void Awake()
         {
@@ -16,6 +17,7 @@ namespace Plugin.PlayerCore
             texture=new Texture2D(1,1){filterMode=FilterMode.Point};texture.SetPixel(0,0,Color.white);texture.Apply();square=Sprite.Create(texture,new Rect(0,0,1,1),Vector2.one*.5f,1);
             view=Camera.main;if(!view)view=new GameObject("Practice Camera",typeof(Camera)).GetComponent<Camera>();
             view.orthographic=true;view.orthographicSize=8;view.backgroundColor=new Color(.025f,.05f,.08f);view.transform.position=new Vector3(0,4,-10);view.tag="MainCamera";
+            music = new PracticeMusic(transform, view);
             BuildTileFloor();Solid("Wall jump shaft left",new Vector2(17,4),new Vector2(1,8));Solid("Wall jump shaft right",new Vector2(22,5.5f),new Vector2(1,11));
             Solid("Low jump step",new Vector2(-10,.4f),new Vector2(2,.8f));Solid("High jump step",new Vector2(-5,1),new Vector2(2,2));
             Solid("Coyote landing",new Vector2(3,1),new Vector2(4,2));Solid("Buffer landing",new Vector2(10,2.5f),new Vector2(3,1));
@@ -58,7 +60,12 @@ namespace Plugin.PlayerCore
         void LateUpdate()
         {
             if(!player)return;
-            if(player.transform.position.y<-7)player.Respawn(spawn);
+            music.Tick(0, false, input.Paused);
+            if(!input.Paused&&player.transform.position.y<-7)
+            {
+                music.Retry();
+                player.Respawn(spawn);
+            }
             Vector3 target=new Vector3(player.transform.position.x+player.Facing*2,Mathf.Max(3,player.transform.position.y+1.5f),-10);
             view.transform.position=Vector3.Lerp(view.transform.position,target,1-Mathf.Exp(-6*Time.unscaledDeltaTime));
         }
@@ -68,6 +75,8 @@ namespace Plugin.PlayerCore
             GUI.Label(new Rect(18,155,Mathf.Min(Screen.width-36,900),110),"P1 이동 연습 / A·D 이동 · Space 점프 · Shift 대시 · S+Space 하강\nQ·휠 모드 · Esc 일시정지 · 아래 버튼으로 처음부터\n"+actionNote,style);
             if(GUI.Button(new Rect(18,270,180,32),"시작점으로 재배치"))player.Respawn(spawn);
         }
-        void OnDestroy(){if(square)Destroy(square);if(texture)Destroy(texture);if(tile)Destroy(tile);if(ownedData&&movementData)Destroy(movementData);}
+        void OnApplicationFocus(bool focused) { if (!focused) music?.Suspend(); }
+        void OnDisable() { music?.Suspend(); }
+        void OnDestroy(){music?.Dispose();if(square)Destroy(square);if(texture)Destroy(texture);if(tile)Destroy(tile);if(ownedData&&movementData)Destroy(movementData);}
     }
 }

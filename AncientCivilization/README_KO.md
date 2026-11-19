@@ -1,4 +1,6 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.34.0
+# PLUGIN — ANCIENT CIVILIZATION v0.35.0
+
+Unity 6000.6.7f1에서 `Assets/Scenes/Main.unity`를 열고 Play를 누르면 로고가 끝난 뒤 메인 테마 〈봉인된 하늘 너머〉가 시작됩니다. 수정판 50곡이 프로젝트 안에 들어 있습니다. 생산구 추격에서 트럭에 오르면 갑판 전투곡으로, 저격수전 마지막 레이저 대결에 들어가면 〈두 빛의 접점〉으로 바뀝니다. 대화와 공격 예고 중에는 음악이 낮아집니다. F7은 음소거를 전환합니다.
 
 중층 행정구 집행관은 단안 렌즈와 기계장갑, 비행 장비를 갖춘 젊은 현장 요원입니다. `Main.unity`를 열고 **PLUGIN → 검사 → 기록 집행관 바로 플레이**를 선택하세요. 임시 저장으로 진입합니다. **기록 집행관 패턴 검사** 창에서는 12가지 페이즈별 패턴과 체력을 조절할 수 있습니다. [여섯 자세](../ArtReferences/Record_Enforcer_Poses.png) · [전투·퇴장 확인 순서](ENFORCER_BOSS_KO.md)
 

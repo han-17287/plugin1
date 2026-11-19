@@ -584,7 +584,7 @@ namespace Plugin.AncientCivilization
             var m=AncientCampaignData.Missions[active];float left=AncientCampaignRules.Left(active);Vector2 hero=game.hero.transform.position;
             RecordDefeats();
             for(int sector=0;sector<=checkpoint;sector++)if(Mathf.Abs(hero.x-left-AncientFieldExpansion.EntranceOf(active,sector))<2.5f&&Mathf.Abs(hero.y-1.3f)<1.5f)
-            {Persist();game.Notice("안전 거점 / 확보한 기록과 수사 진행을 저장했습니다.",2);return true;}
+            {Persist();game.PlayScoreEvent("checkpoint");game.Notice("안전 거점 / 확보한 기록과 수사 진행을 저장했습니다.",2);return true;}
             if(m.Floor==1)return false;
             if(hero.x>left+AncientChapterLayout.Width(active)-10)
             {
@@ -683,7 +683,7 @@ namespace Plugin.AncientCivilization
                 Refresh();Persist();
                 string recovery=gained>0?" · 체력 +"+gained.ToString("0.#",System.Globalization.CultureInfo.InvariantCulture):"";
                 game.Notice("안전 거점 저장 / "+AncientFieldExpansion.Names[active][sector]+recovery,2);
-                game.Sound(2);if(gained>0)game.Impact(game.hero.transform.position,new Color(.45f,1,.75f),false);
+                game.PlayScoreEvent("checkpoint");if(gained>0)game.Impact(game.hero.transform.position,new Color(.45f,1,.75f),false);
             }
             ActivateSector(sector);
             if(AncientCampaignData.Missions[active].Floor==0&&game.hero.IsOnGround)
