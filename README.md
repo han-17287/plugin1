@@ -4,6 +4,8 @@
 
 [Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.34.0-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
 
+**국악 퓨전 사운드트랙** · [72초 미리듣기](https://raw.githubusercontent.com/han-17287/plugin1/field-score-gugak-1/Soundtrack/Field-Score-Preview.mp3) · [음악 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/field-score-gugak-1.zip) · [전곡과 Unity 사용법](Soundtrack/README_KO.md)
+
 행정구 기록 집행관은 짧은 흑발과 단안 렌즈, 분절 견갑, 입자 조형 장갑, 등 추진기를 착용한다. 입장 컷신에서 백 경위가 떨어지는 쇳덩이를 보고 뒷걸음으로 피한다. 전투 뒤 집행관은 원본에 관한 말을 남기고 추진기로 빠져나가며 2회차에 다시 등장한다. Unity에서 `Assets/Scenes/Main.unity`를 열고 **PLUGIN → 검사 → 기록 집행관 바로 플레이**를 선택하면 곧바로 확인할 수 있다. [전투와 퇴장](AncientCivilization/ENFORCER_BOSS_KO.md)
 
 | 첨부 지시 | 문서 |
