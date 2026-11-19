@@ -1,10 +1,12 @@
 # PLUGIN · Ancient Civilization
 
-**v0.35.0 · 캠페인 사운드트랙**
+**v0.36.0 · 상층 화물 검사대와 궤도 봉쇄기**
 
-[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.35.0-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.36.0-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
 
 **국악 퓨전 사운드트랙 50곡 · 수정판** · [메인 테마 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-50-revised/Soundtrack/Main-Theme.mp3) · [46초 수정 전후 비교](https://raw.githubusercontent.com/han-17287/plugin1/city-score-50-revised/Soundtrack/Before-After.mp3) · [하이라이트 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-50-revised/Soundtrack/City-Score-Preview.mp3) · [음악 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/city-score-50-revised.zip) · [전곡과 Unity 사용법](https://github.com/han-17287/plugin1/blob/city-score-50-revised/Soundtrack/README_KO.md)
+
+상층 거주구 두 번째 조사 뒤 화물 검사대에서 궤도 봉쇄기와 처음 마주칩니다. 병기는 후퇴했다가 상층 끝 외벽 통제선에서 다시 나타납니다. 1차전만 바로 플레이하려면 Unity에서 `Assets/Scenes/Main.unity`를 연 뒤 **PLUGIN → 검사 → 궤도 봉쇄기 1차전 바로 플레이**를 선택하세요. [전조와 조작](AncientCivilization/FLOOR_DESIGN_KO.md#상층-화물-검사대)
 
 메인 화면의 〈봉인된 하늘 너머〉부터 추격전, 보스전, 엔딩까지 50곡이 게임 진행에 따라 재생됩니다. 지역 이동 연습에서도 설정한 층과 난관에 맞춰 음악이 바뀝니다. F7로 음악과 효과음을 함께 끄고 켤 수 있습니다.
 

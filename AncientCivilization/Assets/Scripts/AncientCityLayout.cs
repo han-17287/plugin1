@@ -15,6 +15,9 @@ namespace Plugin.AncientCivilization
         public static float Left(int floor){return floor<=0?-5:AncientChapterLayout.FloorStart(floor);}
         public static float Right(int floor){return AncientChapterLayout.FloorEnd(floor);}
         public static float Entry(int floor){return AncientChapterLayout.FloorStart(floor)+4;}
+        // 두 번째 조사가 끝나는 다리 위의 화물 검사대. 기존 바닥·천장을 함께 사용한다.
+        public static float OrbitalLeft => AncientChapterLayout.CaseRight(13) + 12;
+        public static float OrbitalRight => AncientChapterLayout.CaseRight(13) + 44;
         public static float ArenaLeft(int floor){return floor>=LastFloor?AncientChapterLayout.SniperLeft:AncientChapterLayout.CaseEnd(floor)+16;}
         public static float ArenaRight(int floor){return floor>=LastFloor?AncientChapterLayout.SniperRight:AncientChapterLayout.CaseEnd(floor)+48;}
         public static float BossArenaLeft(int floor,bool secretary)

@@ -3,6 +3,7 @@
   <ItemGroup>
     <Compile Include="LivingControllerChecks.cs"/>
     <Compile Include="ControllerFixtures/LivingRuntimeDoubles.cs"/>
+    <Compile Include="ControllerFixtures/EncounterUnityDoubles.cs"/>
     <Compile Include="../Assets/Scripts/AncientLivingBoss.cs"/>
     <Compile Include="../Assets/Scripts/AncientLivingRules.cs"/>
     <Compile Include="../Assets/Scripts/AncientClockRules.cs"/>

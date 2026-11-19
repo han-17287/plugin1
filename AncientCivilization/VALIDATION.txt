@@ -1,3 +1,20 @@
+v0.36.0 Orbital Interdictor
+
+The upper residential freight checkpoint and outer-wall rematch use separate
+progression gates. The first encounter shares the rematch chassis and retreats
+alive. Editor preview commands enter the normal campaign using temporary saves.
+
+Portable checks exercise six HP gates, 18 committed attack tells, previous-two
+exclusion, fire direction, per-pass damage on the returning saw, bounded chains,
+blade recovery, the cargo-lock opening and campaign save migration.
+Tools/run_checks.py passed the asset checks and 37 rule suites using the
+extracted project. The scheduler ran 11,033 ticks with 58 committed tells and
+25 chains ending in 25 openings. The arena passed 40 anchor, freight and
+blade-retrieval checks, and the hazard suite passed 298 checks.
+The full C# source also compiled against compatibility references. Native
+Unity 6000.6.7f1 import, Play Mode, controller feel and frame rate still need
+verification in the editor.
+
 v0.35.0 Campaign soundtrack
 
 The project-only download includes all 50 revised stereo Vorbis masters.

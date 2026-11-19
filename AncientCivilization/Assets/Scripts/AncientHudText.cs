@@ -45,7 +45,7 @@ namespace Plugin.AncientCivilization
             {capture=hero.CaptureStage;lastCaptureEnergy=e;Capture=e>=100?"완충 · 최대 출력 · 100%":"축적 "+capture+" / 3단계 · "+e+"%";}
             if(performance!=game.Performance.Summary||quality!=AncientVisuals.HighQuality||Performance.Length==0)
             {performance=game.Performance.Summary;quality=AncientVisuals.HighQuality;Performance=(quality?"F6 고품질":"F6 가볍게")+" · "+performance;}
-            int bossPhase=game.Enforcer?game.Enforcer.Phase:game.Sniper?game.Sniper.Phase:-1;
+            int bossPhase=game.Orbital?game.Orbital.Phase:game.Enforcer?game.Enforcer.Phase:game.Sniper?game.Sniper.Phase:-1;
             int chargeRemaining=game.Enforcer?game.Enforcer.ChargeRemaining:0;
             if(boss!=game.boss||(game.boss&&enraged!=game.boss.Enraged)||lastBossPhase!=bossPhase||lastBossCharge!=chargeRemaining)
             {
