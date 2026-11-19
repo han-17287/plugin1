@@ -180,10 +180,12 @@ namespace Plugin.AncientCivilization
         static AudioClip CreateIndustrialLayer(bool driving)
         {
             const int seconds=16;var data=new float[SampleRate*seconds];var random=new System.Random(driving?1728702:1728701);
+            // 기계 박자의 첫 킥은 30ms 안에 대부분 감쇠한다. 경계의 클릭만 다듬어 첫 박을 살린다.
+            float edgeFadeSeconds = driving ? .002f : .12f;
             float phase=0,air=0,metal=0;
             for(int i=0;i<data.Length;i++)
             {
-                float t=i/(float)SampleRate,edge=Mathf.Clamp01(Mathf.Min(t,seconds-t)/.12f);
+                float t=i/(float)SampleRate,edge=Mathf.Clamp01(Mathf.Min(t,seconds-t)/edgeFadeSeconds);
                 float noise=(float)random.NextDouble()*2-1;air=Mathf.Lerp(air,noise,.018f);metal=Mathf.Lerp(metal,noise,.28f);
                 float sample;
                 if(driving)
