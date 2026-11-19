@@ -1,13 +1,12 @@
-v0.33.0 Record Enforcer art and intro
+v0.34.0 Record Enforcer field equipment and living retreat
 
-The main Administration route starts the three-phase encounter after the four cases.
-The Unity Editor preview menu uses a temporary save and enters by the same route.
-The intro uses an 8.65-second authored camera sequence, replacement pose atlas,
-archive panorama, and dedicated pooled light, condensation, fall and impact effects.
+Main / Administration features a new six-pose RGBA atlas, a directed backstep,
+a hold-to-skip intro, an equipment sound mix, telegraphed X beam and an exit
+after the dialogue. The active encounter ends at one remaining HP. The next
+appearance is planned for the second run.
 
 PORTABLE VERIFICATION
-Source and asset checks and 32 .NET suites passed. The Enforcer suite exercises
-health gates, sequence repetition and the specified attack counts and timer values.
+Project assets, movement/traversal contracts, audio data and 32 .NET rule suites passed.
 
 BeamChecks.csproj   PASS: 11591 thick-laser geometry, charge and presentation checks
 BladeChecks.csproj   PASS: 4600 blade timing, scheduled contact, facing, laser readiness and measured feedback placement checks
@@ -15,7 +14,7 @@ BossReadabilityChecks.csproj   PASS: 1748 boss lane, per-activation damage and c
 ChapterRouteChecks.csproj   PASS: 26693 continuous chapter layout, arena and save-boundary checks
 ChapterVisibilityChecks.csproj   PASS: 13813 continuous-chapter scenery, bridge, gimmick visibility and bounded nearest-anchor halo checks
 DistrictRouteChecks.csproj   PASS: 277271 authored district route range, capsule corridor, restart pocket, ceiling and topology checks. Native Unity physics not run.
-EnforcerChecks.csproj   PASS: 64 enforcer phase boundary, repeat order and fixed pattern rules. Unity combat not simulated.
+EnforcerChecks.csproj   PASS: 162 enforcer phase boundary, repeat order, fixed pattern and cinematic skip rules. Unity combat not simulated.
 FieldExpansionChecks.csproj   PASS: 67578 expanded-field layout checks
 FloorMechanismChecks.csproj   PASS: 22 shipping floor-mechanism checks with service doubles; native illumination/collision/vent motion not simulated
 FloorTraversalChecks.csproj   PASS: 104299 five-floor link/capsule/camera,25-stage rhythm and mechanism timing rules; native physics not measured
@@ -34,7 +33,7 @@ ProductionMotionChecks.csproj   PASS: 48172 production cinematic continuity, int
 ProductionSequenceChecks.csproj   PASS: 193072 production chase, boarding, health-gate, third-mount finale and active-clock checks
 ProjectileOrderingChecks.csproj   PASS: 7024 projectile ordering, terrain occlusion and frame-pacing checks
 PulseChecks.csproj   PASS: 137 pulse lifetime, locked release, bounded hit-ledger and frame-independence checks
-RouteRadioChecks.csproj   PASS: 106 live-radio queue, typewriter, paging and active-clock checks
+RouteRadioChecks.csproj   PASS: 110 live-radio queue, typewriter, paging and active-clock checks
 RulesChecks.csproj   PASS: 3824 combat and quest rule checks
 SniperChecks.csproj   PASS: 76 sniper rule checks
 SpeechLayoutChecks.csproj   PASS: 3997 speech-bubble geometry checks; standalone .NET rules only
@@ -42,25 +41,24 @@ SwingChecks.csproj   PASS: 596 swing presentation rule checks
 ThreatChecks.csproj   PASS: 359 combat threat visibility and stagger safety checks
 ZipChecks.csproj   PASS: 60408 straight-wire movement, planned-step arrival, simultaneous moving-support trace and collision-budget checks
 
-SUPPLEMENTAL COMPILATION
-141 runtime scripts and 12 Editor scripts compile with warnings as errors using
-Unity 2021.3 reference assemblies and narrow Editor stubs. Temporary copies substitute
-the older Rigidbody2D.velocity name for linearVelocity. The shipping source targets
-6000.6.7f1. The runtime also compiles with the official Input System 1.11.2 source
-reference and ENABLE_INPUT_SYSTEM. Unity 6 native-only paths require the Unity Editor.
+SUPPLEMENTAL CHECKS
+145 runtime C# scripts and 12 Editor scripts compile with warnings as errors using
+Unity 2021.3 reference assemblies and narrow Editor stubs. Temporary copies
+use the older Rigidbody2D.velocity member. The runtime also compiles with
+the official Input System 1.11.2 reference and ENABLE_INPUT_SYSTEM.
+The shipping source targets Unity 6000.6.7f1.
 
-The generated source atlas and background were visually inspected. Inspection of the
-actual atlas rectangles confirmed six non-overlapping RGBA frames, the unchanged
-standing world scale, measured foot pivots, and the background floor cut and import
-limits. Key shot margins were checked at 4:3, 16:9 and 21:9. The intro FX component's
-service-double sample exercised 600 updates and cleanup without spawning renderers
-per frame. Native Unity 6000.6.7f1 import, Play, physics, shader output, FPS and complete
-cutscene playback still require the Editor. See ENFORCER_BOSS_KO.md for direct access.
+The six runtime sprite rectangles have transparent margins and their measured
+feet are one source pixel from their pivots. The standing pose is 3.43 world
+units tall. Measured key camera margins were checked at 4:3, 16:9 and 21:9.
+The 11 effect clips and two music stems passed PCM format, headroom, edge
+and mixer reference checks.
+
+NATIVE VERIFICATION
+Unity Editor import, Play Mode, actual shader and audio mixer output, FPS,
+input latency, return after save/reload, and end-to-end playtime were not
+measured in this environment. Use PLUGIN > 검사 > 기록 집행관 바로 플레이 in Main.
 
 SOURCE FINGERPRINT
-153 C# files, sorted repository paths and their SHA-256 values:
-bf3dc7c660d242cb862aa599506f6ba7e7127e641f494f31962982be1fc19fc8
-
-DOWNLOAD
-The v0.33.0-download tag contains the Unity project and retained ArtReferences.
-The archive contains source files for opening in Unity 6000.6.7f1.
+157 C# files, sorted repository paths and their SHA-256 values:
+e75ccab1686f67b63cb08e0ea0632b858f902cc56ad9bb27f41dabd7ceb9e788

@@ -22,6 +22,7 @@ def main():
     subprocess.run([sys.executable, str(root / 'Tools/check_player_core_contract.py')], cwd=root, check=True)
     subprocess.run([sys.executable, str(root / 'Tools/check_traversal_assets.py')], cwd=root, check=True)
     subprocess.run([sys.executable, str(root / 'Tools/check_traversal_design.py')], cwd=root, check=True)
+    subprocess.run([sys.executable, str(root / 'Tools/check_feedback_audio.py')], cwd=root, check=True)
     projects = sorted((root / 'Tools').glob('*Checks.csproj'))
     if not projects:
         raise RuntimeError('No rule check projects found in Tools.')

@@ -29,7 +29,8 @@ namespace Plugin.AncientCivilization
         {
             public GameObject root;
             public SpriteRenderer body, halo;
-            public LineRenderer warning, beamCore, beamBody, beamHalo;
+            public LineRenderer warning;
+            public uint activationTick;
             public SpriteRenderer[] pieces;
             public bool active, interrupt, container, resolved, hit, reverse, locked;
             public Motion motion;
@@ -50,6 +51,23 @@ namespace Plugin.AncientCivilization
         readonly Transform container;
         readonly List<Hazard> pool = new List<Hazard>(Capacity);
         readonly float left, right;
+        // 한 틱에 생성된 파편은 풀의 어느 슬롯에 배정되든 다음 틱부터 움직인다.
+        uint simulationTick;
+        const int RingSegments = 24;
+        static readonly Vector2[] RingDirections = CreateRingDirections();
+        readonly Vector3[] ringPositions = new Vector3[RingSegments];
+
+        static Vector2[] CreateRingDirections()
+        {
+            var directions = new Vector2[RingSegments];
+            for (int i = 0; i < directions.Length; i++)
+            {
+                float angle = i * (2f * Mathf.PI / RingSegments);
+                directions[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+            }
+            return directions;
+        }
+
         Hazard held;
         int nextBlock;
         bool disposed;
@@ -57,6 +75,9 @@ namespace Plugin.AncientCivilization
         Sprite pixel, glow, chargeMetal;
         readonly List<Sprite> ownedSprites = new List<Sprite>(3);
         readonly List<Texture2D> ownedTextures = new List<Texture2D>(3);
+
+        public int AllocatedSlots => pool.Count;
+        public int DeniedSpawns { get; private set; }
 
         public Action Interrupt;
         public Action<float> AwardEnergy;
@@ -189,7 +210,7 @@ namespace Plugin.AncientCivilization
             item.duration = Mathf.Max(.06f, duration);
             item.damage = damage;
             item.value = Mathf.Max(.05f, width);
-            DrawBeam(item);
+            // 같은 선분의 5겹 광선은 집행관 시각 효과가 재생한다.
         }
 
         public bool TryWireTarget(Vector2 cursor, Vector2 hero, out Vector2 point)
@@ -205,6 +226,7 @@ namespace Plugin.AncientCivilization
             var item = PickWireObject(cursor, hero);
             if (item == null) return false;
             held = item;
+            HidePieces(item);
             item.motion = Motion.Orbit;
             item.origin = item.position;
             item.bossTarget = bossCenter;
@@ -310,11 +332,12 @@ namespace Plugin.AncientCivilization
             container.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             Vector2 hero = game.hero.transform.position;
             // 충돌로 물체가 추가되어도 새 물체가 같은 틱에 피해를 주지 않는다.
+            simulationTick++;
             int count = pool.Count;
             for (int i = 0; i < count; i++)
             {
                 var item = pool[i];
-                if (!item.active) continue;
+                if (!item.active || item.activationTick == simulationTick) continue;
                 // 플레이어가 다른 쪽으로 이동하면 그 주변에 다음 저지 물체를 공급할 수 있다.
                 if (item.interrupt && item.motion != Motion.Orbit && item.motion != Motion.Return &&
                     Mathf.Abs(item.position.x - hero.x) > 10f)
@@ -367,12 +390,10 @@ namespace Plugin.AncientCivilization
                         TickBlast(item, hero);
                         break;
                     case Motion.Beam:
-                        if (item.age >= item.duration) item.Retire();
-                        else
-                        {
-                            DrawBeam(item);
+                        // 긴 프레임이 빔의 전체 수명을 지나도 첫 판정은 수행한다.
+                        if (item.age - dt < item.duration)
                             TryAreaDamage(item, ContainsSegment(item.origin, item.end, hero, item.value * .5f + .3f));
-                        }
+                        if (item.active && item.age >= item.duration) item.Retire();
                         break;
                     case Motion.Orbit:
                         TickOrbit(item, hero);
@@ -714,14 +735,22 @@ namespace Plugin.AncientCivilization
                 // 전조와 필수 저지 물체가 탄막 상한 때문에 생략되지 않게 한다.
                 if (pool.Count == Capacity)
                 {
-                    if (motion == Motion.Shot) return null;
+                    if (motion == Motion.Shot)
+                    {
+                        DeniedSpawns++;
+                        return null;
+                    }
                     foreach (var candidate in pool)
                         if (candidate.motion == Motion.Shot && candidate.shot == AncientEnforcerShot.Bullet)
                         {
                             item = candidate;
                             break;
                         }
-                    if (item == null) return null;
+                    if (item == null)
+                    {
+                        DeniedSpawns++;
+                        return null;
+                    }
                     item.Retire();
                 }
                 else
@@ -731,6 +760,7 @@ namespace Plugin.AncientCivilization
                 }
             }
             item.motion = motion;
+            item.activationTick = simulationTick;
             item.active = true;
             item.interrupt = item.container = item.resolved = item.hit = item.reverse = item.locked = false;
             item.age = item.damage = item.value = item.collectionProgress = item.timeSincePull = item.angle = item.floor = 0f;
@@ -742,9 +772,6 @@ namespace Plugin.AncientCivilization
             item.halo.enabled = false;
             HideTell(item);
             HidePieces(item);
-            if (item.beamCore) item.beamCore.enabled = false;
-            if (item.beamBody) item.beamBody.enabled = false;
-            if (item.beamHalo) item.beamHalo.enabled = false;
             item.root.SetActive(true);
             return item;
         }
@@ -809,12 +836,31 @@ namespace Plugin.AncientCivilization
             float pulse = .83f + .17f * Mathf.Sin(item.age * 24f);
             Place(item.body, item.position, item.size, degrees, color);
             Place(item.halo, item.position, item.size + new Vector2(.78f, .65f), degrees, Tint(Sky, pulse * opacity * .46f));
+            if (item.interrupt && IsCuttableCrate(item))
+                DrawReleaseClamps(item, opacity);
             if (item.warning && item.motion == Motion.Resting && item.container && item.age < .25f)
             {
                 float t = Mathf.Clamp01(item.age / .25f);
                 RadiusOutline(item, new Vector2(item.position.x, item.floor + .17f), Mathf.Lerp(.85f, 3.25f, t), .45f, Sky, .14f * (1f - t));
             }
             else if (item.motion == Motion.Resting) HideTell(item);
+        }
+
+        // 네 개의 열린 모서리는 충전 저지용 물체가 실제로 베기·견인 가능한 동안만 표시한다.
+        static void DrawReleaseClamps(Hazard item, float opacity)
+        {
+            float gap = .08f + .05f * Mathf.Cos(item.age * 6f);
+            Vector2 half = item.size * .5f + Vector2.one * gap;
+            const float notch = .24f;
+            Color color = Tint(WhiteBlue, .95f * opacity);
+            for (int i = 0; i < 4; i++)
+            {
+                float x = (i & 1) == 0 ? -1f : 1f;
+                float y = i < 2 ? -1f : 1f;
+                Vector2 corner = item.position + new Vector2(x * half.x, y * half.y);
+                Place(item.pieces[i * 2], corner - new Vector2(x * notch * .5f, 0f), new Vector2(notch, .055f), 0f, color);
+                Place(item.pieces[i * 2 + 1], corner - new Vector2(0f, y * notch * .5f), new Vector2(.055f, notch), 0f, color);
+            }
         }
 
         void DrawForm(Hazard item)
@@ -890,32 +936,6 @@ namespace Plugin.AncientCivilization
                 Place(item.halo, item.position, Vector2.one * item.value * 2.45f, 0f, Tint(Sky, .75f * (1f - progress)));
         }
 
-        void DrawBeam(Hazard item)
-        {
-            if (!item.beamCore)
-            {
-                item.beamCore = game.Line("레이저 백색 코어", WhiteBlue, .1f, 17);
-                item.beamCore.transform.SetParent(item.root.transform, true);
-                item.beamCore.numCapVertices = 5;
-                item.beamBody = game.Line("레이저 하늘색 광선", Sky, .1f, 16);
-                item.beamBody.transform.SetParent(item.root.transform, true);
-                item.beamBody.numCapVertices = 5;
-                item.beamHalo = game.Line("레이저 하늘색 번짐", Sky, .1f, 15);
-                item.beamHalo.transform.SetParent(item.root.transform, true);
-                item.beamHalo.numCapVertices = 5;
-                if (glowMaterial)
-                {
-                    item.beamBody.sharedMaterial = glowMaterial;
-                    item.beamHalo.sharedMaterial = glowMaterial;
-                }
-            }
-            float pulse = .88f + .12f * Mathf.Cos(item.age * 54f);
-            SetLine(item.beamHalo, item.origin, item.end, Tint(Sky, .21f), item.value * 1.7f);
-            SetLine(item.beamBody, item.origin, item.end, Tint(Sky, .69f), item.value * pulse);
-            SetLine(item.beamCore, item.origin, item.end, WhiteBlue, item.value * .43f * pulse);
-            Place(item.halo, item.origin, Vector2.one * item.value * 2.1f, 0f, Tint(Sky, .85f));
-        }
-
         void Segment(Hazard item, Vector2 start, Vector2 end, Color color, float width)
         {
             SetLine(Tell(item, 2, false), start, end, color, width);
@@ -932,14 +952,15 @@ namespace Plugin.AncientCivilization
 
         void RadiusOutline(Hazard item, Vector2 at, float radius, float heightRatio, Color color, float width)
         {
-            var ring = Tell(item, 24, true);
+            var ring = Tell(item, RingSegments, true);
             ring.startColor = ring.endColor = color;
             ring.startWidth = ring.endWidth = Mathf.Max(.01f, width);
-            for (int i = 0; i < 24; i++)
+            for (int i = 0; i < RingSegments; i++)
             {
-                float a = i * 2f * Mathf.PI / 24f;
-                ring.SetPosition(i, at + new Vector2(Mathf.Cos(a) * radius, Mathf.Sin(a) * radius * heightRatio));
+                Vector2 axis = RingDirections[i];
+                ringPositions[i] = new Vector3(at.x + axis.x * radius, at.y + axis.y * radius * heightRatio, 0f);
             }
+            ring.SetPositions(ringPositions);
         }
 
         LineRenderer Tell(Hazard item, int points, bool loop)
@@ -950,8 +971,8 @@ namespace Plugin.AncientCivilization
                 item.warning.transform.SetParent(item.root.transform, true);
             }
             item.warning.enabled = true;
-            item.warning.loop = loop;
-            item.warning.positionCount = points;
+            if (item.warning.loop != loop) item.warning.loop = loop;
+            if (item.warning.positionCount != points) item.warning.positionCount = points;
             return item.warning;
         }
 

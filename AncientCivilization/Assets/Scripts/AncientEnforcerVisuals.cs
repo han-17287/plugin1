@@ -56,6 +56,7 @@ namespace Plugin.AncientCivilization
             beamBody = Line(game, "집행관 레이저 하늘색 본체", 19);
             beamCore = Line(game, "집행관 레이저 백색 중심", 20);
             beamProfile = new AncientBeamVisuals(beamAura, true);
+            beamProfile.StyleBody(beamBody, beamCore);
         }
 
         SpriteRenderer LightSprite(string name, int order)
@@ -266,7 +267,7 @@ namespace Plugin.AncientCivilization
             line.SetPosition(0, from);
             line.SetPosition(1, to);
             line.startColor = line.endColor = color;
-            line.widthMultiplier = width;
+            line.startWidth = line.endWidth = width;
             line.enabled = true;
         }
 
@@ -289,16 +290,16 @@ namespace Plugin.AncientCivilization
             Object.Destroy(additive);
         }
 
-        // 투명 원화의 실제 발 위치에 피벗을 두어 넓은 코트와 팔 동작에도 몸의 중심을 유지한다.
+        // 도감 원화의 왼쪽 위를 기준으로 자른다. 장비와 건틀릿이 벌어져도 두 발 사이의 피벗을 유지한다.
         static readonly Rect[] PoseCells = {
-            new Rect(168, 3, 185, 459), new Rect(619, 7, 238, 455), new Rect(1027, 13, 414, 450),
-            new Rect(83, 570, 306, 434), new Rect(571, 480, 300, 504), new Rect(1024, 691, 405, 315)
+            new Rect(141, 0, 194, 467), new Rect(625, 0, 222, 466), new Rect(1096, 3, 352, 463),
+            new Rect(89, 561, 281, 444), new Rect(594, 486, 266, 503), new Rect(1066, 679, 369, 331)
         };
         static readonly Vector2[] PoseFeet = {
-            new Vector2(256, 456), new Vector2(761, 456), new Vector2(1247, 457),
-            new Vector2(254, 997), new Vector2(768, 977), new Vector2(1300, 1001)
+            new Vector2(243, 460), new Vector2(754, 459), new Vector2(1249, 459),
+            new Vector2(225, 998), new Vector2(751, 982), new Vector2(1265, 1003)
         };
-        static readonly float[] PosePixelsPerUnit = { 131, 130, 129, 137, 145, 131 };
+        static readonly float[] PosePixelsPerUnit = { 133, 132, 132, 137, 145, 135 };
         static readonly Sprite[] Poses = new Sprite[6];
         static readonly Sprite[] Objects = new Sprite[5];
         static readonly Color32 Ink = new Color32(11, 19, 29, 255);

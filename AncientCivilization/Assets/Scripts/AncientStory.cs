@@ -426,6 +426,11 @@ namespace Plugin.AncientCivilization
             else if(floor==3)
                 Talk(done,new Line("통신관","구역은 확보했다. 하지만 네 포인트 심사가 보류됐다. 최상층은 승진 대상도 아니야. 특별 승인 없이는 엘리베이터가 열리지 않아.",1),
                     new Line("백명","동쪽 외벽에 정비 통로가 있습니다. 기록을 보려면 돌아서 가야겠군요.",0));
+            else if(floor==2)Talk(done,
+                new Line("기록 집행관","기록실, 집행 중지. 장갑 연결을 끊는다.",3),
+                new Line("백 경위","C-00. 그 승인선 끝에 누가 있지?",0),
+                new Line("기록 집행관","내 렌즈에도 발신처는 안 떠. 그 원본, 다음에 만날 때까지 간수해.",3),
+                new Line("사령관","주안은 통로를 빠져나왔다. 백 경위, 원본을 가지고 동쪽 엘리베이터에서 거주구로 올라가라.",1));
             else if(floor==1)Talk(done,
                 new Line("백 경위","기계는 멈췄다. 코어에서 손 떼고 내려와. 더 다칠 사람은 없어야 한다.",0),
                 new Line("두목","승인 도장이 찍힌 코어야. 정상 출력이라고 했는데 왜 이렇게 된 거지?",-3),
@@ -509,7 +514,7 @@ namespace Plugin.AncientCivilization
             if(!found)found=game.Campaign&&game.Campaign.TryDialogueActor(speaker,out actor,out offset);
             if(found&&actor)
             {
-                if(Vector2.Distance(player,actor.position)<26){feet=actor.position;head=feet+Vector2.up*offset;width=offset>2.2f?1.2f:.9f;return;}
+                if(speaker=="기록 집행관"||Vector2.Distance(player,actor.position)<26){feet=actor.position;head=feet+Vector2.up*offset;width=offset>2.2f?1.2f:.9f;return;}
                 kind=1;return;
             }
             if(speaker=="용의자"||speaker=="운송대장")

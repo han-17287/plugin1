@@ -16,7 +16,12 @@ namespace Plugin.AncientCivilization
             get{return game&&game.HasSession&&game.hero&&game.View&&!game.MainMenu&&!game.Paused&&!game.won&&
                 !(game.Journal&&game.Journal.Open)&&!(game.Finale&&game.Finale.Cinematic)&&!(game.Story&&game.Story.DialogueOpen);}
         }
-        void Update(){playback.Tick(Time.unscaledDeltaTime,CanRun);}
+        void Update()
+        {
+            bool visible=CanRun;
+            if(visible && game.GameplayInputReady && Input.GetKeyDown(KeyCode.Backspace)) playback.Advance();
+            playback.Tick(Time.unscaledDeltaTime,visible);
+        }
         void OnGUI()
         {
             if(!CanRun||!playback.Active||Event.current.type!=EventType.Repaint)return;

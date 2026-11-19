@@ -14,8 +14,11 @@ namespace Plugin.AncientCivilization
         const float CameraToLens = 5.68f;
         const float CameraToArena = 7.1f;
 
+        [SerializeField, Min(.2f)] float introSkipHold = .6f;
+        readonly AncientEncounterCutscene cinematic = new AncientEncounterCutscene();
         AncientEnforcerCinematicFx introFx;
         Sprite introMetal;
+        AncientRadioCue openingRadio;
         Vector2 introStart, introDrop, introReveal, heroRest;
         float introTime;
         bool dropped, forgeSound, revealSound;
@@ -24,7 +27,7 @@ namespace Plugin.AncientCivilization
         {
             intro = true;
             game.ClearBattleProjectiles();
-            game.hero.HoldForEncounter(true);
+            cinematic.Enter(game.hero);
             float startX = Mathf.Clamp(game.hero.transform.position.x, left + 1.5f, right - 11f);
             introStart = new Vector2(startX, 1.3f);
             introDrop = introStart + Vector2.right * 2.55f;
@@ -32,6 +35,7 @@ namespace Plugin.AncientCivilization
             introReveal = new Vector2(introDrop.x + 4.72f, .18f);
             introFx = new AncientEnforcerCinematicFx(game, transform);
             introMetal = AncientArt.Scrap();
+            openingRadio = Resources.Load<AncientRadioCue>("Radio/EnforcerEntry");
             game.hero.CinematicMove(introStart);
             transform.position = introReveal;
             owner.SetEnforcerPose(0, -1, 1, 0);
@@ -41,19 +45,19 @@ namespace Plugin.AncientCivilization
         {
             if (retreatTime >= 0)
             {
-                if (!game || game.MainMenu || game.Story.CurrentFloor != 2) { Destroy(gameObject); return; }
-                if (game.skills || !Application.isFocused) return;
-                retreatTime += Time.unscaledDeltaTime;
-                float fade = Ease((retreatTime - .32f) / .64f);
-                transform.position = retreatStart + new Vector2(1.8f * fade, .9f * fade);
-                owner.SetEnforcerPose(5, -1, Mathf.Lerp(1, .8f, fade), 1 - fade);
-                if (retreatTime >= .98f) Destroy(gameObject);
+                UpdateRetreat();
                 return;
             }
-            if (!InputLocked || game.MainMenu || game.skills || !Application.isFocused ||
-                (game.Story && (game.Story.DialogueOpen || game.Story.LiftBusy)) || (game.Journal && game.Journal.Open)) return;
+            if (!InputLocked) return;
+            if (!IntroVisible)
+            {
+                cinematic.SuspendSkip();
+                return;
+            }
             introTime += Time.unscaledDeltaTime;
-            if (introTime >= IntroDuration || introTime > .5f && game.GameplayInputReady && Input.GetKeyDown(KeyCode.Space))
+            bool canSkip = introTime > .5f && game.GameplayInputReady;
+            if (!canSkip) cinematic.SuspendSkip();
+            if (introTime >= IntroDuration || canSkip && cinematic.PollSkip(Time.unscaledDeltaTime, introSkipHold))
             {
                 EndIntro();
                 return;
@@ -66,21 +70,61 @@ namespace Plugin.AncientCivilization
             introFx.Atmosphere(new Vector2(introDrop.x + 1.8f, 9.52f), 0f, introTime, light);
         }
 
+        void UpdateRetreat()
+        {
+            if (!game || !game.Story || game.Story.CurrentFloor != 2)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            if (game.Paused) return;
+
+            // 마지막 대사를 듣고 나면 추진기를 켜고 출구 너머까지 직접 비행한다.
+            const float turnSeconds = .23f;
+            const float accelerationSeconds = .8f;
+            const float flightSpeed = 23f;
+            retreatTime += Time.deltaTime;
+            float flight = Mathf.Max(0, retreatTime - turnSeconds);
+            float accelerating = Mathf.Min(flight, accelerationSeconds);
+            float distance = flightSpeed * (.5f * accelerating * accelerating / accelerationSeconds
+                + Mathf.Max(0, flight - accelerationSeconds));
+            float rise = Ease(flight / .7f);
+            transform.position = new Vector2(retreatStart.x + distance,
+                Mathf.Lerp(retreatStart.y, 3.45f, rise));
+            owner.SetEnforcerPose(flight > .1f ? 4 : 5, 1, 1, 1);
+
+            // 울트라와이드나 빠르게 따라온 플레이어에게도 퇴장 중인 인물이 끊겨 보이지 않게 한다.
+            Camera view = game.View;
+            float visibleRight = view ? view.transform.position.x + view.orthographicSize * view.aspect : right;
+            if (transform.position.x > Mathf.Max(right, visibleRight) + 3.5f) Destroy(gameObject);
+        }
+
         void AnimateOfficer()
         {
-            // 백 경위는 멈춘 다음 뒤로 짧게 몸을 던지고 발을 디뎌 제동한다.
-            Vector2 point = Vector2.Lerp(introStart, introDrop, Ease(introTime / .88f));
-            const float dodgeAt = 2.96f;
-            float dodge = Ease((introTime - dodgeAt) / .31f);
-            point = Vector2.Lerp(point, heroRest, dodge) + Vector2.up * (Mathf.Sin(dodge * Mathf.PI) * .38f);
+            // 발이 닿을 때까지 이동을 이어가고, 준비·도약·착지 압축은 시각 자식에만 적용한다.
+            const float runEnd = .88f, braceAt = 2.72f, jumpAt = 2.96f, landAt = 3.38f;
+            float approach = Ease(introTime / runEnd);
+            float dodge = Mathf.InverseLerp(jumpAt, landAt, introTime);
+            float brake = Mathf.InverseLerp(landAt, landAt + .22f, introTime);
+            Vector2 nearMiss = heroRest + Vector2.right * .24f;
+            Vector2 run = Vector2.Lerp(introStart, introDrop, approach);
+            Vector2 point = Vector2.Lerp(run, nearMiss, Ease(dodge));
+            point += (heroRest - nearMiss) * (1 - (1 - brake) * (1 - brake));
+            point.y += .52f * 4 * dodge * (1 - dodge);
             game.hero.CinematicMove(point);
-            if (introTime < .88f) game.hero.ProductionCinematicRun(introTime, 1);
-            else if (introTime >= dodgeAt && introTime < ImpactAt + .48f)
+            if (introTime < runEnd)
             {
-                game.hero.CinematicPose(true, 1);
-                game.hero.ProductionCinematicRoll(Mathf.Sin(dodge * Mathf.PI) * 14f);
+                float walked = approach * Vector2.Distance(introStart, introDrop);
+                game.hero.ProductionCinematicRun(walked / 7f, 1);
+                game.hero.CinematicPosture(-3f * Mathf.Sin(Mathf.PI * approach), 0);
+                return;
             }
-            else game.hero.CinematicPose(false, 1);
+            float brace = Ease((introTime - braceAt) / (jumpAt - braceAt)) * (1 - Ease(dodge * 3));
+            float extension = Mathf.Sin(Mathf.PI * dodge);
+            float landing = Mathf.Sin(Mathf.PI * brake) * (1 - brake);
+            game.hero.CinematicPose(brace > .1f || extension > .08f || landing > .10f, 1);
+            game.hero.CinematicPosture(-5 * brace + 12 * extension - 6 * landing,
+                .12f * brace - .055f * extension + .22f * landing);
         }
 
         void AnimateFallingMetal()
@@ -97,7 +141,7 @@ namespace Plugin.AncientCivilization
                 if (!forgeSound && progress >= .14f)
                 {
                     forgeSound = true;
-                    game.Sound(2);
+                    game.Sound(AncientEquipmentCue.Forge);
                 }
             }
             else introFx.ClearCondensation();
@@ -119,7 +163,7 @@ namespace Plugin.AncientCivilization
             {
                 dropped = true;
                 game.Shake(.38f);
-                game.Sound(8);
+                game.Sound(AncientEquipmentCue.MetalFall);
             }
             introFx.Impact(new Vector2(introDrop.x, .12f), introTime - ImpactAt);
         }
@@ -136,7 +180,7 @@ namespace Plugin.AncientCivilization
             if (!revealSound && introTime >= CameraToLens)
             {
                 revealSound = true;
-                game.Sound(5);
+                game.Sound(AncientEquipmentCue.Lens);
             }
         }
 
@@ -148,13 +192,13 @@ namespace Plugin.AncientCivilization
             owner.SetEnforcerPose(0, -1, 1, 1);
             game.hero.CinematicMove(heroRest);
             game.hero.CinematicPose(false, 1);
-            game.hero.HoldForEncounter(false);
+            cinematic.Exit();
             game.BlockGameplayInput();
             game.CutCamera(new Vector2(middle, 4.6f), ArenaZoom());
             ClearPresentation();
             ClearIntroEffects();
             BeginRecovery(1.15f);
-            game.Notice("기록 집행관 / 입자가 모이는 곳을 피하세요.", 2.8f);
+            if (openingRadio) openingRadio.Play(game.Story);
         }
 
         public bool TryCamera(out Vector2 focus, out float zoom)
@@ -200,10 +244,21 @@ namespace Plugin.AncientCivilization
 
         float ArenaZoom() => Mathf.Max(5.8f, (right - left + 3) / (2 * Mathf.Max(.5f, game.View.aspect)));
 
+        internal bool PlayingIntro => InputLocked && IntroVisible;
+
+        bool IntroVisible => game && !game.MainMenu && !game.skills && Application.isFocused &&
+            !(game.Story && (game.Story.DialogueOpen || game.Story.LiftBusy)) && !(game.Journal && game.Journal.Open);
+
+        void OnApplicationFocus(bool focused)
+        {
+            if (!focused) cinematic.SuspendSkip();
+        }
+
         void OnGUI()
         {
-            if (!InputLocked || !game || game.MainMenu || game.skills || Event.current.type != EventType.Repaint) return;
+            if (!InputLocked || !IntroVisible || Event.current.type != EventType.Repaint) return;
             visuals.DrawIntroOverlay(introTime, IntroDuration);
+            if (introTime > .5f && game.GameplayInputReady) cinematic.DrawSkip(introSkipHold);
         }
 
         void ClearIntroEffects()

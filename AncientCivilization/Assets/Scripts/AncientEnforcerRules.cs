@@ -33,6 +33,7 @@ namespace Plugin.AncientCivilization
             return Math.Max(0, Math.Min(damage, health - maxHealth * gate));
         }
 
+        public static int MoveCount(int phase) => Moves[phase - 1].Length;
         public static AncientEnforcerMove Move(int phase, int index) => Moves[phase - 1][index % Moves[phase - 1].Length];
         public static bool Counter(float roll) => roll >= 0 && roll < CounterChance;
     }

@@ -15,6 +15,10 @@ namespace Plugin.AncientCivilization
         readonly float[] sampleX=new float[240],sampleY=new float[240],sampleSpeed=new float[240],sampleEnergy=new float[240];
         readonly int[] sampleMode=new int[240],sampleWire=new int[240],sampleLaser=new int[240];
         readonly int[] sampleProductionPhase=new int[240],sampleProductionRound=new int[240],sampleProductionMounts=new int[240],sampleStoryStage=new int[240];
+        readonly int[] enforcerPhase = new int[240], enforcerMove = new int[240], enforcerIntro = new int[240];
+        readonly int[] enforcerSlots = new int[240], enforcerDenied = new int[240];
+        readonly long[] gcBytes = new long[240];
+        long LatestAllocation => allocations.Valid && allocations.Count != 0 ? allocations.LastValue : -1;
         AncientGame game;int cursor,count,targetIndex;float updateAt;bool details;
         float mean,p95,peak;string summary="",diagnostics="";GUIStyle style;
         ProfilerRecorder allocations;
@@ -42,8 +46,18 @@ namespace Plugin.AncientCivilization
                 Refresh();
             }
             if(details&&Input.GetKeyDown(KeyCode.F10))Export();
-            if(!game.HasSession||game.Paused||!Application.isFocused)return;
+            if (!game.HasSession || !Application.isFocused) return;
+            var enforcer = game.Enforcer;
+            bool sampleIntro = details && enforcer && enforcer.PlayingIntro;
+            if (game.Paused && !sampleIntro) return;
             float dt=Time.unscaledDeltaTime;if(!AncientFrameRules.ValidSample(dt))return;
+            // 레코더가 꺼져 있거나 이 기기에서 사용할 수 없는 표본은 -1로 보존한다.
+            gcBytes[cursor] = details ? LatestAllocation : -1;
+            enforcerIntro[cursor] = sampleIntro ? 1 : 0;
+            enforcerPhase[cursor] = enforcer ? enforcer.Phase : 0;
+            enforcerMove[cursor] = enforcer ? enforcer.PatternId : -1;
+            enforcerSlots[cursor] = enforcer ? enforcer.HazardPoolSize : 0;
+            enforcerDenied[cursor] = enforcer ? enforcer.DeniedHazardSpawns : 0;
             samples[cursor]=dt*1000;sampleFloor[cursor]=game.Story.CurrentFloor;sampleTarget[cursor]=Target;
             sampleQuality[cursor]=AncientVisuals.HighQuality?1:0;samplePhase[cursor]=game.Finale?game.Finale.Phase:0;sampleRoom[cursor]=game.Campaign?game.Campaign.CurrentRoom:-1;sampleSniper[cursor]=game.Sniper?game.Sniper.Phase:0;sampleSniperObjects[cursor]=game.Sniper?game.Sniper.LiveObjects:0;
             Vector2 position=game.hero.transform.position;sampleX[cursor]=position.x;sampleY[cursor]=position.y;sampleSpeed[cursor]=game.hero.HorizontalSpeed;
@@ -61,16 +75,19 @@ namespace Plugin.AncientCivilization
             mean=count>0?total/count:0;Array.Sort(sorted,0,count);p95=count>0?sorted[AncientFrameRules.P95Index(count)]:0;
             summary="목표 "+TargetLabel+" / "+(mean>0?(1000/mean).ToString("F0"):"—")+" FPS";
             if(!details)return;
-            long bytes=allocations.Valid?allocations.LastValue:-1;
+            long bytes=LatestAllocation;
+            var enforcer = game.Enforcer;
+            string encounter = enforcer ? "\n집행관 " + enforcer.Phase + "페이즈 / 위험물 풀 " +
+                enforcer.HazardPoolSize + "칸 · 누락 " + enforcer.DeniedHazardSpawns : "";
             diagnostics="프레임 평균 "+mean.ToString("F2")+"ms · P95 "+p95.ToString("F2")+"ms\n최대 "+peak.ToString("F2")+"ms / 최근 GC "+(bytes>=0?(bytes/1024f).ToString("F1")+"KB":"미지원")+
-                "\n정적 장식 "+game.WorldBatch.QuadCount+"개 ▶ 묶음 "+game.WorldBatch.RendererCount+"개 / 현재 "+game.WorldBatch.ActiveRendererCount+"개\n활성 적 "+game.enemies.Count+" / 투척물 "+game.shots.Count+" / 풀 "+game.Projectiles.Capacity+" (누락 "+game.Projectiles.DroppedSpawns+")"+(game.Sniper?"\n저격수 물체 "+game.Sniper.LiveObjects+" / 풀 "+game.Sniper.ObjectCapacity+" · 누락 "+game.Sniper.DroppedSpawns:"")+"\nF8 프레임 목표 · F9 닫기 · F10 CSV 저장";
+                "\n정적 장식 "+game.WorldBatch.QuadCount+"개 ▶ 묶음 "+game.WorldBatch.RendererCount+"개 / 현재 "+game.WorldBatch.ActiveRendererCount+"개\n활성 적 "+game.enemies.Count+" / 투척물 "+game.shots.Count+" / 풀 "+game.Projectiles.Capacity+" (누락 "+game.Projectiles.DroppedSpawns+")"+(game.Sniper?"\n저격수 물체 "+game.Sniper.LiveObjects+" / 풀 "+game.Sniper.ObjectCapacity+" · 누락 "+game.Sniper.DroppedSpawns:"")+encounter+"\nF8 프레임 목표 · F9 닫기 · F10 CSV 저장";
         }
         void Export()
         {
             if(count==0){game.Notice("플레이 중 프레임을 수집한 뒤 F10으로 저장하세요.",3);return;}
             try
             {
-                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room,sniper_phase,sniper_objects,hero_x,hero_y,horizontal_speed,capture_energy,attack_mode,wired,laser_active,production_phase,production_round,production_mounts,story_stage\n");
+                var text=new StringBuilder("sample,frame_ms,floor,target_fps,enhanced,finale_phase,campaign_room,sniper_phase,sniper_objects,hero_x,hero_y,horizontal_speed,capture_energy,attack_mode,wired,laser_active,production_phase,production_round,production_mounts,story_stage,enforcer_phase,enforcer_move,enforcer_hazard_slots,enforcer_denied_spawns,last_gc_bytes,enforcer_intro\n");
                 for(int i=0;i<count;i++)
                 {
                     int at=count==samples.Length?(cursor+i)%samples.Length:i;
@@ -79,7 +96,9 @@ namespace Plugin.AncientCivilization
                         .Append(sampleX[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',').Append(sampleY[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',')
                         .Append(sampleSpeed[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',').Append(sampleEnergy[at].ToString("F3",CultureInfo.InvariantCulture)).Append(',')
                         .Append(sampleMode[at]).Append(',').Append(sampleWire[at]).Append(',').Append(sampleLaser[at]).Append(',')
-                        .Append(sampleProductionPhase[at]).Append(',').Append(sampleProductionRound[at]).Append(',').Append(sampleProductionMounts[at]).Append(',').Append(sampleStoryStage[at]).Append('\n');
+                        .Append(sampleProductionPhase[at]).Append(',').Append(sampleProductionRound[at]).Append(',').Append(sampleProductionMounts[at]).Append(',').Append(sampleStoryStage[at]).Append(',')
+                        .Append(enforcerPhase[at]).Append(',').Append(enforcerMove[at]).Append(',')
+                        .Append(enforcerSlots[at]).Append(',').Append(enforcerDenied[at]).Append(',').Append(gcBytes[at]).Append(',').Append(enforcerIntro[at]).Append('\n');
                 }
                 string path=Path.Combine(Application.persistentDataPath,"performance-"+DateTime.Now.ToString("yyyyMMdd-HHmmss")+".csv");
                 File.WriteAllText(path,text.ToString());game.Notice("성능 기록 저장: "+path,6);

@@ -24,6 +24,13 @@ class RouteRadioChecks
         const string line="문 앞의 경비를 확인해라.\n파란 입자를 수집하고 😃 다음 통로로 이동해라!";
         for(int chunk=1;chunk<=17;chunk++)
         {var p=new AncientRouteRadioPlayback();p.Show("통신관",line);Check(p.Speaker=="사령관 · 무전","Commander uses a radio identity");Check(Drain(p,chunk)==line,"Automatic pages preserve the complete Korean message, whitespace and emoji");}
+        var manual=new AncientRouteRadioPlayback();
+        manual.Show("사령관","가나다라");manual.Show("백 경위","응답");
+        manual.Advance();Check(!manual.PageReady,"An unread layout cannot skip a message");
+        manual.SetPageEnd(2);manual.Advance();Check(manual.VisibleText=="가나","First press reveals the current page");
+        manual.Advance();Check(manual.PageStart==2&&!manual.PageReady,"Second press advances one page");
+        manual.SetPageEnd(4);manual.Advance();manual.Advance();
+        Check(manual.Active&&manual.Text=="응답","Skipping a radio preserves the next queued voice");
         var paused=new AncientRouteRadioPlayback();paused.Show("통신관","가나다라마바사");paused.SetPageEnd(paused.Text.Length);paused.Tick(.12f,true);
         string before=paused.VisibleText;paused.Tick(200,false);Check(paused.VisibleText==before,"Hidden or paused time does not reveal text");
         paused.Tick(.04f,true);Check(paused.VisibleText.Length<=before.Length+2,"Resuming keeps the remaining letter delay instead of flooding the page");

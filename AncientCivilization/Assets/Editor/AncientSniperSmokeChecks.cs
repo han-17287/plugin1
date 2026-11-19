@@ -16,7 +16,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         const string Menu="PLUGIN/검사/저격수 4페이즈";
         const string Root="PLUGIN.QA.SniperSmoke.",ProfileKey="PLUGIN.QA.ActiveProfile",NormalPrefix="PLUGIN.Ancient.v2.",QAPrefix="PLUGIN.Ancient.QA.";
         const double TimeoutSeconds=60;
-        static readonly string[] optionKeys={"muted","graphics","frameTarget"};
+        static readonly string[] optionKeys=AncientGame.OptionSaveKeys;
         static AncientSniperEncounter retiredEncounter;
         [Serializable] sealed class PrefSnapshot {public string[] keys;public bool[] present;public int[] values;}
 

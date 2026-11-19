@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace Plugin.AncientCivilization
 {
@@ -9,22 +10,63 @@ namespace Plugin.AncientCivilization
         const int PublicCueCount=12,RoadDebrisCue=12,RoadBombCue=13,CaptainTellCue=14,ParticleLaserCue=15,SampleRate=22050;
         readonly AudioClip[] clips=new AudioClip[16];
         readonly float[] nextVoice=new float[PublicCueCount];
-        AncientGame game;AudioSource source,warnings,ambient,rhythm;AudioClip ambience,drivePulse;
-        bool muted,voicesPaused,lastMenu,focused=true;float duckUntil;
-        public bool Muted {get{return muted;}}
+        readonly AudioClip[] equipment = new AudioClip[(int)AncientEquipmentCue.UI + 1];
+        readonly float[] nextEquipment = new float[(int)AncientEquipmentCue.UI + 1];
+        // 일반 효과가 공격 전조나 UI 음성을 빼앗지 않도록 재생 자리를 분리한다.
+        readonly AudioSource[] effects = new AudioSource[6], warnings = new AudioSource[3];
+        readonly float[] warningStarted = new float[3];
+        readonly int[] warningRank = new int[3];
+        AncientGame game;
+        AncientFeedbackProfile profile;
+        AudioSource ambient, rhythm, phaseTwo, phaseThree, ui;
+        readonly AudioLowPassFilter[] scoreFilters = new AudioLowPassFilter[4];
+        float musicCutoff = 22000f;
+        AudioClip ambience, drivePulse;
+        bool muted, voicesPaused, lastMenu, focused=true;
+        float duckUntil, nextHeart, lastPickup = -1f, pickupPitch = 1;
+        int effectCursor;
+        uint variation = 8191;
+        public bool Muted => muted;
+
         void Awake()
         {
-            game=GetComponent<AncientGame>();
-            source=CreateSource(96,false);warnings=CreateSource(32,false);
-            ambient=CreateSource(192,true);rhythm=CreateSource(160,true);
-            source.volume=.22f;warnings.volume=.27f;ambient.volume=rhythm.volume=0;
-            focused=Application.isFocused;muted=AncientGame.Saved("muted")!=0;ApplyMute();
+            game = GetComponent<AncientGame>();
+            profile = game.Feedback;
+            for (int i = 0; i < effects.Length; i++) effects[i] = CreateSource(gameObject, 96, false, profile.effects);
+            for (int i = 0; i < warnings.Length; i++) warnings[i] = CreateSource(gameObject, 32, false, profile.effects);
+            ui = CreateSource(gameObject, 48, false, profile.ui);
+            ambient = CreateScoreTrack("공장 환기", 0, 192);
+            rhythm = CreateScoreTrack("기계 박자", 1, 160);
+            phaseTwo = CreateScoreTrack("기록실 저음", 2, 160);
+            phaseThree = CreateScoreTrack("기록실 유리", 3, 160);
+            ambient.volume = rhythm.volume = phaseTwo.volume = phaseThree.volume = 0;
+            focused = Application.isFocused;
+            muted = AncientGame.Saved("muted") != 0;
+            ApplyMute();
         }
-        AudioSource CreateSource(int priority,bool loop)
+
+        AudioSource CreateScoreTrack(string label, int index, int priority)
         {
-            var audioSource=gameObject.AddComponent<AudioSource>();audioSource.spatialBlend=0;
-            audioSource.playOnAwake=false;audioSource.loop=loop;audioSource.priority=priority;
-            audioSource.dopplerLevel=0;return audioSource;
+            var track = new GameObject(label);
+            track.transform.SetParent(transform, false);
+            var voice = CreateSource(track, priority, true, profile.music);
+            var filter = track.AddComponent<AudioLowPassFilter>();
+            filter.cutoffFrequency = musicCutoff;
+            filter.enabled = false;
+            scoreFilters[index] = filter;
+            return voice;
+        }
+
+        static AudioSource CreateSource(GameObject host, int priority, bool loop, AudioMixerGroup group)
+        {
+            var voice = host.AddComponent<AudioSource>();
+            voice.outputAudioMixerGroup = group;
+            voice.spatialBlend = 0;
+            voice.playOnAwake = false;
+            voice.loop = loop;
+            voice.priority = priority;
+            voice.dopplerLevel = 0;
+            return voice;
         }
         void Start()
         {
@@ -32,21 +74,33 @@ namespace Plugin.AncientCivilization
             // the first swing, particle pickup, or warning in the road encounter.
             for(int cue=0;cue<clips.Length;cue++)clips[cue]=CreateTone(cue);
             ambience=CreateIndustrialLayer(false);drivePulse=CreateIndustrialLayer(true);
-            ambient.clip=ambience;rhythm.clip=drivePulse;ambient.Play();rhythm.Play();
+            ambient.clip = ambience;
+            rhythm.clip = drivePulse;
+            phaseTwo.clip = Resources.Load<AudioClip>("Audio/ArchiveBass");
+            phaseThree.clip = Resources.Load<AudioClip>("Audio/ArchiveGlass");
+            for (int i = 0; i < equipment.Length; i++)
+                equipment[i] = Resources.Load<AudioClip>("Audio/" + ((AncientEquipmentCue)i).ToString());
+            // 같은 DSP 시각에 시작해 페이즈가 바뀌어도 네 루프의 박자가 포개진다.
+            double downbeat = AudioSettings.dspTime + .10;
+            ambient.PlayScheduled(downbeat);
+            rhythm.PlayScheduled(downbeat);
+            if (phaseTwo.clip) phaseTwo.PlayScheduled(downbeat);
+            if (phaseThree.clip) phaseThree.PlayScheduled(downbeat);
         }
         void ApplyMute()
         {
             bool silence=muted||!focused;
-            if(source)source.mute=silence;if(warnings)warnings.mute=silence;
-            if(ambient)ambient.mute=silence;if(rhythm)rhythm.mute=silence;
+            foreach (var voice in effects) voice.mute = silence;
+            foreach (var voice in warnings) voice.mute = silence;
+            ui.mute = ambient.mute = rhythm.mute = phaseTwo.mute = phaseThree.mute = silence;
         }
         void OnApplicationFocus(bool value)
         {focused=value;ApplyMute();if(!focused)PauseVoices(true);}
         void PauseVoices(bool pause)
         {
             if(voicesPaused==pause)return;voicesPaused=pause;
-            if(pause){source.Pause();warnings.Pause();}
-            else{source.UnPause();warnings.UnPause();}
+            foreach (var voice in effects) { if (pause) voice.Pause(); else voice.UnPause(); }
+            foreach (var voice in warnings) { if (pause) voice.Pause(); else voice.UnPause(); }
         }
         bool Speech {get{return game&&game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy);}}
         bool Panel {get{return game&&(game.skills||(game.Journal&&game.Journal.Open));}}
@@ -58,9 +112,15 @@ namespace Plugin.AncientCivilization
                 if(game)game.Notice(muted?"소리 / 음소거":"소리 / 켜짐");
             }
             bool menu=game&&game.MainMenu;
-            if(menu&&!lastMenu){source.Stop();warnings.Stop();duckUntil=0;}
+            if (menu && !lastMenu)
+            {
+                foreach (var voice in effects) voice.Stop();
+                foreach (var voice in warnings) voice.Stop();
+                duckUntil = 0;
+            }
             lastMenu=menu;PauseVoices(!focused||menu||Panel||Speech||AncientBootIntro.Active);
             float bed=.038f,pulse=0;
+            int enforcerPhase = !menu && game && game.Enforcer && !game.Enforcer.InputLocked ? game.Enforcer.Phase : 0;
             if(menu)bed=.019f;
             else if(game&&game.Production&&game.Production.Active)
             {
@@ -76,6 +136,11 @@ namespace Plugin.AncientCivilization
                         bed=.029f;pulse=game.Production.Sequence.Elapsed<7.65f?.058f:.008f;break;
                 }
             }
+            else if (enforcerPhase > 0)
+            {
+                bed = .032f;
+                pulse = game.Enforcer.Recovering ? .021f : .061f;
+            }
             else if(game&&game.Story&&game.Story.Stage<5&&game.hero)
             {
                 // The production road changes from distant machinery to an active
@@ -85,10 +150,32 @@ namespace Plugin.AncientCivilization
             }
             if(Speech){bed*=.45f;pulse*=.16f;}
             if(Panel){bed*=.25f;pulse=0;}
-            if(Time.unscaledTime<duckUntil){bed*=.42f;pulse*=.32f;}
+            float duck = Time.unscaledTime < duckUntil ? profile.duckMusicTo : 1f;
+            bed *= duck;
+            pulse *= duck;
             if(!focused||AncientBootIntro.Active){bed=0;pulse=0;}
             float fade=1-Mathf.Exp(-4*Mathf.Min(Time.unscaledDeltaTime,.1f));
             ambient.volume=Mathf.Lerp(ambient.volume,bed,fade);rhythm.volume=Mathf.Lerp(rhythm.volume,pulse,fade);
+            float layers = !focused || Speech || Panel || AncientBootIntro.Active ? 0 : duck;
+            phaseTwo.volume = Mathf.Lerp(phaseTwo.volume, enforcerPhase >= 2 ? profile.phaseTwoVolume * layers : 0, fade);
+            phaseThree.volume = Mathf.Lerp(phaseThree.volume, enforcerPhase >= 3 ? profile.phaseThreeVolume * layers : 0, fade);
+            bool low = game && game.LowHealth && !game.Paused;
+            float targetCutoff = low ? 1800 : 22000;
+            if (musicCutoff != targetCutoff)
+            {
+                musicCutoff = Mathf.Lerp(musicCutoff, targetCutoff, fade);
+                if (Mathf.Abs(musicCutoff - targetCutoff) < 10) musicCutoff = targetCutoff;
+                foreach (var filter in scoreFilters)
+                {
+                    filter.enabled = musicCutoff < 22000;
+                    filter.cutoffFrequency = musicCutoff;
+                }
+            }
+            if (low && Time.unscaledTime >= nextHeart)
+            {
+                PlayEquipment(AncientEquipmentCue.Heartbeat);
+                nextHeart = Time.unscaledTime + profile.heartbeatInterval;
+            }
         }
         static AudioClip CreateIndustrialLayer(bool driving)
         {
@@ -161,17 +248,105 @@ namespace Plugin.AncientCivilization
             }
             var clip=AudioClip.Create("Ancient cue "+cue,samples.Length,1,SampleRate,false);clip.SetData(samples,0);return clip;
         }
+        bool Blocked => muted || !focused || (game && game.MainMenu) || Panel || Speech || AncientBootIntro.Active;
+
+        void StartVoice(AudioClip clip, int rank, float volume, float pitch = 1, float pan = 0)
+        {
+            if (!clip) return;
+            AudioSource voice;
+            if (rank > 0)
+            {
+                int slot = 0;
+                for (int i = 0; i < warnings.Length; i++)
+                {
+                    if (!warnings[i].isPlaying) { slot = i; break; }
+                    if (warningRank[i] < warningRank[slot] ||
+                        warningRank[i] == warningRank[slot] && warningStarted[i] < warningStarted[slot]) slot = i;
+                }
+                if (warnings[slot].isPlaying && warningRank[slot] > rank) return;
+                voice = warnings[slot];
+                warningRank[slot] = rank;
+                warningStarted[slot] = Time.unscaledTime;
+            }
+            else
+            {
+                for (int i = 0; i < effects.Length; i++)
+                {
+                    if (!effects[(effectCursor + i) % effects.Length].isPlaying)
+                    { effectCursor = (effectCursor + i) % effects.Length; break; }
+                }
+                voice = effects[effectCursor];
+                effectCursor = (effectCursor + 1) % effects.Length;
+            }
+            voice.clip = clip;
+            voice.pitch = pitch;
+            voice.volume = volume;
+            voice.panStereo = pan;
+            voice.Play();
+        }
+
+        // 음정 변화가 보스 패턴용 UnityEngine.Random 상태를 바꾸지 않게 분리한다.
+        float VaryPitch()
+        {
+            variation = unchecked(variation * 1664525u + 1013904223u);
+            return 1f + ((variation >> 16) / 32767.5f - 1f) * profile.pitchVariation;
+        }
+
+        public void PlayEquipment(AncientEquipmentCue cue, float pan = 0)
+        {
+            int index = (int)cue;
+            if (index < 0 || index >= equipment.Length || !equipment[index] || Time.unscaledTime < nextEquipment[index]) return;
+            if (cue == AncientEquipmentCue.UI)
+            {
+                if (muted || !focused || AncientBootIntro.Active) return;
+                nextEquipment[index] = Time.unscaledTime + .06f;
+                ui.clip = equipment[index];
+                ui.volume = profile.uiVolume;
+                ui.Play();
+                return;
+            }
+            if (Blocked) return;
+            bool contact = cue == AncientEquipmentCue.Contact || cue == AncientEquipmentCue.Shatter;
+            int rank = cue == AncientEquipmentCue.Counter || cue == AncientEquipmentCue.Overload ? 2 :
+                cue == AncientEquipmentCue.Forge || cue == AncientEquipmentCue.Sweep || cue == AncientEquipmentCue.Lens ? 1 : 0;
+            nextEquipment[index] = Time.unscaledTime + (contact ? .065f : .10f);
+            if (rank > 0 || cue == AncientEquipmentCue.Shatter || cue == AncientEquipmentCue.MetalFall)
+                duckUntil = Mathf.Max(duckUntil, Time.unscaledTime + profile.duckSeconds);
+            StartVoice(equipment[index], rank, rank > 0 ? profile.warningVolume : profile.effectsVolume,
+                contact ? VaryPitch() : 1, Mathf.Clamp(pan, -1, 1));
+        }
+
+        public void PlayPickup()
+        {
+            if (Blocked || !clips[2] || Time.unscaledTime < nextVoice[2]) return;
+            float now = Time.unscaledTime;
+            pickupPitch = now - lastPickup <= profile.pickupChainTimeout ? Mathf.Min(1.55f, pickupPitch + .075f) : 1f;
+            lastPickup = now;
+            nextVoice[2] = now + profile.pickupInterval;
+            StartVoice(clips[2], 0, profile.effectsVolume, pickupPitch);
+        }
+
+        public void PlayLaser(float power)
+        {
+            if (Blocked) return;
+            StartVoice(clips[ParticleLaserCue], 0, profile.effectsVolume * Mathf.Lerp(.82f, 1.2f, power),
+                Mathf.Lerp(1.26f, .76f, power));
+            if (power > .7f) PlayEquipment(AncientEquipmentCue.Shatter);
+        }
+
         public void Play(int cue)
         {
             cue=Mathf.Clamp(cue,0,PublicCueCount-1);
-            if(!source||muted||!focused||(game&&game.MainMenu)||Panel||Speech||AncientBootIntro.Active||Time.unscaledTime<nextVoice[cue])return;
-            bool road=game&&game.Production&&game.Production.Sequence.Phase==AncientProductionPhase.Chase;
-            int sound=road&&cue==0?RoadDebrisCue:road&&cue==8?RoadBombCue:game&&game.Production&&game.Production.DeckCombat&&cue==8?CaptainTellCue:cue==4&&game&&game.hero&&game.hero.Combat&&game.hero.Combat.Firing?ParticleLaserCue:cue;
-            if(!clips[sound])return;
-            bool warning=cue==8||sound==RoadDebrisCue;
-            nextVoice[cue]=Time.unscaledTime+(warning?.12f:cue==2?.05f:.03f);
-            if(warning){duckUntil=Time.unscaledTime+(sound==CaptainTellCue?.6f:.4f);warnings.PlayOneShot(clips[sound]);}
-            else source.PlayOneShot(clips[sound],cue==7?.5f:1);
+            if (Blocked || Time.unscaledTime < nextVoice[cue]) return;
+            bool road = game && game.Production && game.Production.Sequence.Phase == AncientProductionPhase.Chase;
+            int sound = road && cue == 0 ? RoadDebrisCue : road && cue == 8 ? RoadBombCue :
+                game && game.Production && game.Production.DeckCombat && cue == 8 ? CaptainTellCue : cue;
+            if (!clips[sound]) return;
+            bool warning = cue == 8 || sound == RoadDebrisCue;
+            nextVoice[cue] = Time.unscaledTime + (warning ? .12f : cue == 2 ? .05f : .03f);
+            if (warning) duckUntil = Mathf.Max(duckUntil, Time.unscaledTime + (sound == CaptainTellCue ? .6f : .4f));
+            StartVoice(clips[sound], warning ? 1 : 0, warning ? profile.warningVolume :
+                profile.effectsVolume * (cue == 7 ? .5f : 1f), cue >= 9 || cue == 7 ? VaryPitch() : 1);
         }
         void OnDestroy()
         {foreach(var clip in clips)if(clip)Destroy(clip);if(ambience)Destroy(ambience);if(drivePulse)Destroy(drivePulse);}

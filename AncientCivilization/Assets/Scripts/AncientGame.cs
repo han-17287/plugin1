@@ -51,6 +51,7 @@ namespace Plugin.AncientCivilization
         const string SaveRoot="PLUGIN.Ancient.v2.";
         static string SaveKey=SaveRoot;
         public static readonly string[] ProgressSaveKeys=BuildProgressSaveKeys();
+        public static readonly string[] OptionSaveKeys = { "muted", "graphics", "frameTarget", "reducedFeedback" };
         static string[] BuildProgressSaveKeys()
         {
             string[] standard={"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","secretaryCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks","campaignCheckpoint","campaignRestMission","campaignRestSlot","campaignDefeated","campaignChapterStarted","productionRound","productionVersion","livingGuardsCleared","livingThrowTaught"};
@@ -74,6 +75,11 @@ namespace Plugin.AncientCivilization
         string message; float messageUntil, shake, runTime;
         int checkpointStage;
         Material lineMaterial; AncientAudio audioCues;
+        public AncientFeedbackProfile Feedback { get; private set; }
+        bool reducedFeedback;
+        float zoomPulseUntil;
+        public float HealthWarning => LowHealth && !Paused ? (reducedFeedback ? .35f : 1f) : 0f;
+        public bool LowHealth => hero && !hero.bike && hero.hp > 0 && hero.hp <= hero.MaxHP * Feedback.lowHealthRatio;
         readonly List<AncientFragment> fragmentPool=new List<AncientFragment>();
         readonly List<AncientAfterimage> ghostPool=new List<AncientAfterimage>();
         readonly AncientImpactRing[] impactPool=new AncientImpactRing[24];
@@ -104,7 +110,10 @@ namespace Plugin.AncientCivilization
         {
             QualitySettings.vSyncCount=0;Application.targetFrameRate=144;
             Time.fixedDeltaTime=1f/60;
-            Instance=this;bool quickStart=startAfterReload||IsQAProfile;MainMenu=!quickStart;HasSession=quickStart;startAfterReload=false; audioCues=gameObject.AddComponent<AncientAudio>(); Time.timeScale=1; Physics2D.gravity=new Vector2(0,-32);
+            Instance=this;
+            Feedback = Resources.Load<AncientFeedbackProfile>("Audio/FieldFeedback");
+            reducedFeedback = Saved("reducedFeedback") != 0;
+            bool quickStart=startAfterReload||IsQAProfile;MainMenu=!quickStart;HasSession=quickStart;startAfterReload=false; audioCues=gameObject.AddComponent<AncientAudio>(); Time.timeScale=1; Physics2D.gravity=new Vector2(0,-32);
             coreMask=Saved("storyCores"); credits=Saved("credits"); checkpointStage=Saved("storyCheckpoint");
             bossDefeated=Saved("storyBoss")!=0; kills=Saved("kills");score=Saved("score");
             if(checkpointStage==1)checkpoint=new Vector2(46,2.3f);
@@ -286,13 +295,20 @@ namespace Plugin.AncientCivilization
         public void Afterimage(SpriteRenderer source)
         {if(AncientVisuals.HighQuality)ghostPool[ghostCursor++%ghostPool.Count].Play(source);}
         public void HitEmphasis(bool heavy)
-        {hitPauseUntil=Mathf.Max(hitPauseUntil,Time.unscaledTime+(heavy?.045f:.022f));}
+        {
+            hitPauseUntil = Mathf.Max(hitPauseUntil, Time.unscaledTime + (heavy ? Feedback.heavySlowSeconds : Feedback.contactSlowSeconds));
+            if (heavy && !reducedFeedback) zoomPulseUntil = Time.unscaledTime + Feedback.zoomRelease;
+        }
         public void DamageEmphasis()
-        {damageFlash=.65f;HitEmphasis(true);}
+        {damageFlash=Feedback.damageFlash*(reducedFeedback?Feedback.reducedFlash:1f);HitEmphasis(true);}
         public void Impact(Vector2 pos,Color color,bool heavy)
         {impactPool[impactCursor++%impactPool.Length].Play(pos,color,heavy);}
         public void Notice(string text,float seconds=3){message=text;messageUntil=Time.unscaledTime+seconds;}
-        public void Shake(float amount){shake=Mathf.Max(shake,amount);}
+        public void Shake(float amount){shake=Mathf.Max(shake,amount*Feedback.shakeScale*(reducedFeedback?Feedback.reducedShake:1f));}
+        public void Sound(AncientEquipmentCue cue, float pan=0){if(audioCues)audioCues.PlayEquipment(cue,pan);}
+        public void PickupSound(){if(audioCues)audioCues.PlayPickup();}
+        public void LaserSound(float power){if(audioCues)audioCues.PlayLaser(power);}
+
         public void Sound(int cue){if(audioCues)audioCues.Play(cue);}
         public void Save()
         {
@@ -375,13 +391,21 @@ namespace Plugin.AncientCivilization
             if(guardian!=patrolArenaClosed)
             {patrolArenaClosed=guardian;for(int side=0;side<2;side++)if(patrolArenaSeals[side])patrolArenaSeals[side].enabled=patrolArenaSolids[side].enabled=guardian;}
             if(productionCordon&&Story&&productionCordon.activeSelf!=(Story.Stage>=8))productionCordon.SetActive(Story.Stage>=8);
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                reducedFeedback = !reducedFeedback;
+                SetSaved("reducedFeedback", reducedFeedback ? 1 : 0);
+                PlayerPrefs.Save();
+                if (reducedFeedback) { shake = 0; damageFlash = 0; }
+                Notice(reducedFeedback ? "화면 흔들림·피격 섬광 줄임" : "화면 흔들림·피격 섬광 기본");
+            }
             if(MainMenu){Time.timeScale=0;return;}
             if(Story&&Story.Stage<5)checkpoint=new Vector2(AncientProductionLayout.TutorialCheckpointX(Story.Stage),AncientProductionLayout.TutorialCheckpointY(Story.Stage));
             if(Production&&Production.Cinematic&&GameplayInputReady&&!(Story&&Story.DialogueOpen)&&(Input.GetKeyDown(KeyCode.K)||Input.GetKeyDown(KeyCode.Escape))){ToggleSkills();BlockGameplayInput();}
             if(Story&&(Story.DialogueOpen||Story.LiftBusy)||(Journal&&Journal.Open)||(Finale&&Finale.Cinematic)||(Production&&(Production.Cinematic||Production.Active&&!Application.isFocused))){Time.timeScale=0;return;}
             if(GameplayInputReady&&(Input.GetKeyDown(KeyCode.K)||Input.GetKeyDown(KeyCode.Escape)))ToggleSkills();
             if(Input.GetKeyDown(KeyCode.H))showHelp=!showHelp;
-            Time.timeScale=Paused?0:Time.unscaledTime<hitPauseUntil?.12f:1;
+            Time.timeScale=Paused?0:Time.unscaledTime<hitPauseUntil?Feedback.contactTimeScale:1;
             if(Paused)return;
             damageFlash=Mathf.MoveTowards(damageFlash,0,Time.unscaledDeltaTime*2.8f);
             if(hero)
@@ -424,6 +448,9 @@ namespace Plugin.AncientCivilization
             if(dialogue)target=new Vector3(dialogueFocus.x,dialogueFocus.y,-10);
             // A fast ceiling zip can separate the officer from the moving deck faster
             // than a zoom-out lerp. Expand immediately; ease back into the close fight.
+            // 확보한 아레나 가장자리와 컷신의 구도를 보존한다. 일반 필드에만 짧게 적용한다.
+            if (!arena && !Paused && !reducedFeedback && Time.unscaledTime < zoomPulseUntil)
+                zoom *= 1f - Feedback.impactZoom * Mathf.Clamp01((zoomPulseUntil - Time.unscaledTime) / Feedback.zoomRelease);
             view.orthographicSize=enforcerShot||Production&&Production.DeckCombat&&zoom>view.orthographicSize?zoom:
                 Mathf.Lerp(view.orthographicSize,zoom,1-Mathf.Exp(-3*Time.unscaledDeltaTime));
             cameraFollow=enforcerShot?target:Vector3.Lerp(cameraFollow,target,1-Mathf.Exp(-7*Time.unscaledDeltaTime));
@@ -864,6 +891,13 @@ namespace Plugin.AncientCivilization
             if(!art||bladeFrames==null)return;ResetSwingPresentation();step=AncientBladeRules.NormalizeStep(step);
             int frame=Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(progress)*(AncientBladeRules.FramesPerStep-1)),0,AncientBladeRules.FramesPerStep-1);
             art.sprite=bladeFrames[(step-1)*AncientBladeRules.FramesPerStep+frame];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
+        }
+        public void CinematicPosture(float tilt, float compression)
+        {
+            if(!art)return;
+            // 발 피벗은 바닥에 고정하고 머리와 몸통만 기울이거나 압축한다.
+            art.transform.localRotation=Quaternion.Euler(0,0,tilt);
+            art.transform.localScale=new Vector3(1+compression*.55f,1-compression,1);
         }
         public void ProductionCinematicRoll(float degrees)
         {
@@ -1491,6 +1525,13 @@ namespace Plugin.AncientCivilization
         public bool IsSecretary {get;private set;}
         public bool IsLivingBoss {get{return IsDistrictBoss&&DistrictFloor==1;}}
         public bool IsEnforcer {get{return IsDistrictBoss&&DistrictFloor==2;}}
+#if UNITY_EDITOR
+        internal void SetEnforcerPreviewHealth(float ratio)
+        {
+            if(IsEnforcer && IsAlive && AncientGame.IsQAProfile)
+                hp=maxHP*Mathf.Clamp(ratio,.01f,1f);
+        }
+#endif
         AncientEnforcerEncounter enforcer;
         AncientLivingBoss livingBoss;
         public void BindLivingBoss(AncientLivingBoss value){livingBoss=value;}
@@ -1743,16 +1784,16 @@ namespace Plugin.AncientCivilization
             if(enforcer)damage=enforcer.FilterDamage(damage,hp,maxHP);
             if(damage<=0)return;
             hp-=damage;flashUntil=Time.time+.1f;if(livingBoss)livingBoss.DamageFlash();if(g.Feel)g.Feel.Damage(AimPoint,damage,punish);
-            g.Sound(6);g.HitEmphasis(breakGuard);g.Impact(AimPoint,breakGuard?AncientGame.Orange:AncientGame.Cyan,breakGuard);
+            g.Sound(breakGuard ? AncientEquipmentCue.Shatter : AncientEquipmentCue.Contact);g.HitEmphasis(breakGuard);g.Impact(AimPoint,breakGuard?AncientGame.Orange:AncientGame.Cyan,breakGuard);
             g.Burst(AimPoint,AncientGame.Cyan,7);g.Shake(.045f);g.score+=Mathf.RoundToInt(damage);
             if(productionEncounter){productionEncounter.CommanderDamaged(this,damage);return;}
             if(enforcer)
             {
                 if(hp>0){enforcer.OnHit(HealthRatio);return;}
-                dead=true;
+                // 전투 대상에서 제외해도 집행관은 생존한 채로 대화하고 퇴각한다.
+                dead=true;hp=1;flashUntil=Time.time;
                 g.enemies.Remove(this);
                 enforcer.Retreat();
-                g.Burst(AimPoint,new Color(.45f,.83f,1),18);
                 g.City.BossDefeated(DistrictFloor);
                 return;
             }

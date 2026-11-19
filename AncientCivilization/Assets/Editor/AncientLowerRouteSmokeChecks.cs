@@ -17,7 +17,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         const string Menu="PLUGIN/검사/하층 확장 사건과 저장";
         const string Root="PLUGIN.QA.LowerRouteSmoke.",ProfileKey="PLUGIN.QA.ActiveProfile",NormalPrefix="PLUGIN.Ancient.v2.",QAPrefix="PLUGIN.Ancient.QA.";
         const BindingFlags PrivateInstance=BindingFlags.Instance|BindingFlags.NonPublic;
-        static readonly string[] optionKeys={"muted","graphics","frameTarget"};
+        static readonly string[] optionKeys=AncientGame.OptionSaveKeys;
         [Serializable] sealed class PrefSnapshot {public string[] keys;public bool[] present;public int[] values;}
 
         static AncientLowerRouteSmokeChecks()

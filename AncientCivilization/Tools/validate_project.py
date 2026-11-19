@@ -18,6 +18,30 @@ def check(condition, description):
     results.append('PASS: ' + description)
 
 
+def validate_enforcer_poses(image):
+    source = (ROOT / 'Assets/Scripts/AncientEnforcerVisuals.cs').read_text()
+    def array(name):
+        return re.search(r'\b' + name + r'\s*=\s*\{([^}]+)\}', source).group(1)
+
+    cells = [tuple(map(int, re.findall(r'\d+', rect))) for rect in re.findall(r'Rect\(([^)]+)\)', array('PoseCells'))]
+    feet = [tuple(map(int, re.findall(r'\d+', point))) for point in re.findall(r'Vector2\(([^)]+)\)', array('PoseFeet'))]
+    scales = list(map(int, re.findall(r'\d+', array('PosePixelsPerUnit'))))
+    check(image.mode == 'RGBA' and len(cells) == len(feet) == len(scales) == 6, 'six RGBA enforcer poses with pivots and individual import scale')
+    alpha = image.getchannel('A').point(lambda v: 255 if v >= 16 else 0)
+    boxes = []
+    for index, ((x, y, w, h), (px, py), scale) in enumerate(zip(cells, feet, scales)):
+        check(0 <= x < px < x+w <= image.width and 0 <= y < py < y+h <= image.height, f'enforcer pose {index} source bounds and pivot')
+        check(all(x+w <= a or b <= x or y+h <= c or d <= y for a, b, c, d in boxes), f'enforcer pose {index} slice independence')
+        boxes.append((x, x+w, y, y+h))
+        bounds = alpha.crop((x, y, x+w, y+h)).getbbox()
+        check(bounds is not None, f'enforcer pose {index} has visible artwork')
+        left, top, right, bottom = bounds
+        check(1 < left < right < w-1 and 1 < top < bottom < h-1, f'enforcer pose {index} equipment has transparent margins')
+        check(abs(y + bottom - py) <= 3, f'enforcer pose {index} boots meet the foot pivot')
+        height = (bottom - top) / scale
+        check((3.30 if index == 0 else 2.20) < height < 3.5, f'enforcer pose {index} fits the in-game silhouette')
+
+
 def validate_ui_font(parser):
     """Inspect cmap coverage only; this does not run Unity's font renderer."""
     try:
@@ -434,6 +458,8 @@ def main():
               'shader resource and program delimiters ' + name)
     try:
         from PIL import Image
+        with Image.open(ROOT / 'Assets/Resources/Art/RecordEnforcer.png') as enforcer:
+            validate_enforcer_poses(enforcer)
         validate_production_props(Image)
         validate_production_captain(Image)
         validate_production_workers(Image)

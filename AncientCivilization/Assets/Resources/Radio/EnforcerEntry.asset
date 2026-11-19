@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b6b1c13fe03414382139987f4f81ca7, type: 3}
+  m_Name: EnforcerEntry
+  m_EditorClassIdentifier:
+  speaker: 사령관
+  words: 백 경위, 위를 봐. 입자가 모이는 자리에 쇳덩이가 떨어진다.

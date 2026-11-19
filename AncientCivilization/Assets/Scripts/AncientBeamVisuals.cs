@@ -11,7 +11,7 @@ namespace Plugin.AncientCivilization
         Texture2D bodyProfile;
         Material bodyMaterial;
         bool endpointsVisible;
-        public AncientBeamVisuals(LineRenderer line,bool cannon=false)
+        public AncientBeamVisuals(LineRenderer line,bool cannon=false,bool createEndpoints=true)
         {
             const int height=64;var colors=new Color32[height*2];
             for(int y=0;y<height;y++)
@@ -28,7 +28,7 @@ namespace Plugin.AncientCivilization
             if(!shader||!shader.isSupported)shader=Shader.Find("Sprites/Default");
             material=new Material(shader);material.name="Continuous laser light profile";material.mainTexture=profile;
             line.sharedMaterial=material;line.textureMode=LineTextureMode.Stretch;
-            if(!cannon)return;
+            if(!cannon||!createEndpoints)return;
             const int size=64;var glow=new Color32[size*size];
             for(int y=0;y<size;y++)for(int x=0;x<size;x++)
             {

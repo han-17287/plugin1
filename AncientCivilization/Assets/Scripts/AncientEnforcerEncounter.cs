@@ -1,4 +1,5 @@
 using UnityEngine;
+using Unity.Profiling;
 
 namespace Plugin.AncientCivilization
 {
@@ -29,7 +30,14 @@ namespace Plugin.AncientCivilization
         bool intro, activeMove, barrier, stopped, inBack;
 
         public bool InputLocked => intro && !stopped;
+        static readonly ProfilerMarker HazardTick = new ProfilerMarker("PLUGIN.Enforcer.Hazards");
+        static readonly ProfilerMarker EchoTick = new ProfilerMarker("PLUGIN.Enforcer.Echoes");
+        static readonly ProfilerMarker ForgeTick = new ProfilerMarker("PLUGIN.Enforcer.Forge");
+
         public int Phase => phase;
+        internal int PatternId => activeMove ? (int)move : -1;
+        internal int HazardPoolSize => hazards?.AllocatedSlots ?? 0;
+        internal int DeniedHazardSpawns => hazards?.DeniedSpawns ?? 0;
         public int ChargeRemaining => barrier ? Mathf.CeilToInt(AncientEnforcerRules.ChargeSeconds - stageTime) : 0;
         public bool Recovering => !intro && rest > 0;
         public bool Telegraphing => counterTime > 0 || activeMove &&
@@ -55,7 +63,7 @@ namespace Plugin.AncientCivilization
             hazards.Interrupt = InterruptCharge;
             hazards.ThrowTarget = () => owner.AimPoint;
             hazards.ThrowHit = damage => { if (!stopped && owner.IsAlive) owner.Hit(damage, true); };
-            hazards.AwardEnergy = amount => game.hero.AddCapturedEnergy(amount);
+            hazards.AwardEnergy = amount => { game.hero.AddCapturedEnergy(amount); game.PickupSound(); };
             counterMark = game.Line("집행관 반격 조준선", new Color(1, .62f, .28f, .86f), .04f, 21);
             counterMark.transform.SetParent(transform, true);
             counterMark.enabled = false;
@@ -89,9 +97,9 @@ namespace Plugin.AncientCivilization
             counterCooldown = Mathf.Max(0, counterCooldown - dt);
             TickExplosion(dt);
             TickCounter(dt);
-            hazards.Tick(dt);
+            using (HazardTick.Auto()) hazards.Tick(dt);
             if (stopped) return;
-            echoes.Tick(dt);
+            using (EchoTick.Auto()) echoes.Tick(dt);
             if (stopped) return;
             if (rest > 0)
             {
@@ -106,7 +114,7 @@ namespace Plugin.AncientCivilization
                 if (!echoes.Active) EndMove(1.65f);
                 return;
             }
-            UpdateSculpture();
+            using (ForgeTick.Auto()) UpdateSculpture();
             if (stageTime >= nextEvent) AdvanceMove();
         }
 
@@ -136,7 +144,7 @@ namespace Plugin.AncientCivilization
             targetX = ClampX(game.hero.transform.position.x, 1.1f);
             switch (move)
             {
-                case AncientEnforcerMove.Drop: nextEvent = .98f; break;
+                case AncientEnforcerMove.Drop: nextEvent = .98f; game.Sound(AncientEquipmentCue.Forge); break;
                 case AncientEnforcerMove.Gun:
                     targetX = game.hero.transform.position.x < middle ? right - 4f : left + 4f;
                     nextEvent = 1.55f;
@@ -146,7 +154,11 @@ namespace Plugin.AncientCivilization
                 case AncientEnforcerMove.Blocks:
                     inBack = true;
                     nextEvent = 1.15f;
-                    if (move == AncientEnforcerMove.Waves) game.Notice("왼쪽 파도 / 오른쪽 끝으로", 2.6f);
+                    if (move == AncientEnforcerMove.Waves)
+                    {
+                        game.Sound(AncientEquipmentCue.Sweep, -.68f);
+                        game.Notice("왼쪽 파도 / 오른쪽 끝으로", 2.6f);
+                    }
                     break;
                 case AncientEnforcerMove.Echoes:
                     inBack = true;
@@ -163,7 +175,7 @@ namespace Plugin.AncientCivilization
                     visuals.ClearBeam();
                     transform.position = new Vector2(middle, .45f);
                     game.Notice("입자 흡수 / 15초 안에 낙하물을 베거나 집행관에게 던지세요.", 4.3f);
-                    game.Sound(8);
+                    game.Sound(AncientEquipmentCue.Overload);
                     break;
             }
         }
@@ -291,6 +303,7 @@ namespace Plugin.AncientCivilization
                     nextEvent += WaveCrossingSeconds + .1f;
                     break;
                 case 1:
+                    game.Sound(AncientEquipmentCue.Sweep, .68f);
                     game.Notice("곧 오른쪽 파도 / 지금 왼쪽 끝으로", 4.7f);
                     nextEvent += 4.7f;
                     break;
@@ -344,7 +357,7 @@ namespace Plugin.AncientCivilization
             visuals.ClearBarrier();
             game.Impact(owner.AimPoint, Light, true);
             game.Shake(.18f);
-            game.Sound(6);
+            game.Sound(AncientEquipmentCue.ShortCircuit);
             game.Notice("흡수 중단 / 집행관 스턴", StunSeconds);
             EndMove(StunSeconds);
         }
@@ -360,14 +373,7 @@ namespace Plugin.AncientCivilization
             int newPhase = AncientEnforcerRules.Phase(healthRatio);
             if (newPhase != phase)
             {
-                phase = newPhase;
-                moveIndex = 0;
-                activeMove = barrier = inBack = false;
-                counterTime = counterLight = 0;
-                counterCooldown = .45f;
-                hazards.Clear();
-                echoes.Clear();
-                ClearPresentation();
+                ResetPattern(newPhase, 0);
                 BeginRecovery(1.05f);
                 game.Sound(8);
                 game.Impact(owner.AimPoint, Light, true);
@@ -376,10 +382,51 @@ namespace Plugin.AncientCivilization
             }
             if (phase != 3 || rest > 0 || barrier || counterCooldown > 0 || counterTime > 0 ||
                 !AncientEnforcerRules.Counter(Random.value)) return;
+            game.Sound(AncientEquipmentCue.Counter);
             counterTime = .53f;
             counterCooldown = 2.15f;
             counterTarget = game.hero.transform.position;
         }
+
+        // 페이즈 경계와 에디터 재현 모두 남아 있는 공격을 같은 순서로 회수한다.
+        void ResetPattern(int nextPhase, int firstMove)
+        {
+            phase = nextPhase;
+            moveIndex = firstMove;
+            activeMove = barrier = inBack = false;
+            counterTime = counterLight = 0;
+            counterCooldown = .45f;
+            hazards.Clear();
+            echoes.Clear();
+            ClearPresentation();
+        }
+
+#if UNITY_EDITOR
+        public bool PreviewReady => game && game.Enforcer == this && AncientGame.IsQAProfile &&
+            !game.MainMenu && !stopped && !intro && owner && owner.IsAlive;
+
+        public void PreviewPattern(int nextPhase, int index)
+        {
+            if (!PreviewReady || nextPhase < 1 || nextPhase > 3 ||
+                index < 0 || index >= AncientEnforcerRules.MoveCount(nextPhase)) return;
+            if (AncientEnforcerRules.Phase(owner.HealthRatio) != nextPhase)
+                owner.SetEnforcerPreviewHealth(nextPhase == 1 ? 1f : nextPhase == 2 ?
+                    AncientEnforcerRules.SecondPhase : AncientEnforcerRules.ThirdPhase);
+            ResetPattern(nextPhase, index);
+            BeginRecovery(0);
+            BeginMove();
+        }
+
+        public void PreviewHealth(float ratio)
+        {
+            if (!PreviewReady) return;
+            owner.SetEnforcerPreviewHealth(ratio);
+            int nextPhase = AncientEnforcerRules.Phase(owner.HealthRatio);
+            if (nextPhase == phase) return;
+            ResetPattern(nextPhase, 0);
+            BeginRecovery(1.05f);
+        }
+#endif
 
         void TickCounter(float dt)
         {
@@ -514,7 +561,7 @@ namespace Plugin.AncientCivilization
         public void StopBattle()
         {
             if (stopped) return;
-            if (intro && game && game.hero) game.hero.HoldForEncounter(false);
+            if (intro) cinematic.Exit();
             stopped = true;
             activeMove = intro = barrier = false;
             hazards?.Clear();
@@ -529,6 +576,7 @@ namespace Plugin.AncientCivilization
             StopBattle();
             retreatStart = transform.position;
             retreatTime = 0;
+            owner.SetEnforcerPose(0, game.hero.transform.position.x < retreatStart.x ? -1 : 1, 1, 1);
         }
 
         void OnDestroy()

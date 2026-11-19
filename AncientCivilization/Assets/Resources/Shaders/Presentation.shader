@@ -1,6 +1,6 @@
 Shader "Hidden/PLUGIN/Presentation"
 {
-    Properties { _MainTex ("Source",2D)="white" {} _BloomStrength ("Glow",Float)=0.25 _DamageAmount ("Damage",Float)=0 }
+    Properties { _MainTex ("Source",2D)="white" {} _BloomStrength ("Glow",Float)=0.25 _DamageAmount ("Damage",Float)=0 _LowHealth ("Low health",Float)=0 }
     SubShader
     {
         Cull Off ZWrite Off ZTest Always
@@ -10,7 +10,7 @@ Shader "Hidden/PLUGIN/Presentation"
             #pragma vertex vert_img
             #pragma fragment frag
             #include "UnityCG.cginc"
-            sampler2D _MainTex;float4 _MainTex_TexelSize;float _BloomStrength;float _DamageAmount;
+            sampler2D _MainTex;float4 _MainTex_TexelSize;float _BloomStrength;float _DamageAmount;float _LowHealth;
             fixed4 frag(v2f_img i):SV_Target
             {
                 fixed4 c=tex2D(_MainTex,i.uv);float2 d=_MainTex_TexelSize.xy*2;
@@ -27,6 +27,8 @@ Shader "Hidden/PLUGIN/Presentation"
                 grade*=float3(.985,1.01,1.025);
                 float3 finalColor=saturate((grade+light*_BloomStrength*.25)*vignette);
                 finalColor=lerp(finalColor,float3(.7,.15,.04),saturate(dot(p,p)*.6)*_DamageAmount*.32);
+                float edge=smoothstep(.4,1.6,dot(p,p))*_LowHealth;
+                finalColor=lerp(finalColor,dot(finalColor,float3(.21,.72,.07)).xxx,edge*.24)*(1-edge*.18);
                 return fixed4(finalColor,c.a);
             }
             ENDCG

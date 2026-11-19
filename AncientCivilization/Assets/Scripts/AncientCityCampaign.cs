@@ -5,7 +5,7 @@ namespace Plugin.AncientCivilization
 {
     public sealed class AncientCityCampaign : MonoBehaviour
     {
-        AncientGame game;int activeFloor=-1;AncientEnemy activeBoss,retiringSniper,retiringSecretary;GUIStyle label;Vector2 safeRecovery;
+        AncientGame game;int activeFloor=-1;AncientEnemy activeBoss,retiringSniper,retiringSecretary,retiringEnforcer;GUIStyle label;Vector2 safeRecovery;
         readonly List<AncientAirTarget> targets=new List<AncientAirTarget>();
         readonly SpriteRenderer[] exitGates=new SpriteRenderer[5];readonly BoxCollider2D[] exitSolids=new BoxCollider2D[5];
         readonly SpriteRenderer[] entranceGates=new SpriteRenderer[5];readonly BoxCollider2D[] entranceSolids=new BoxCollider2D[5];
@@ -16,7 +16,13 @@ namespace Plugin.AncientCivilization
         public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
         {
             actor=null;headOffset=2.3f;
-            if(!game||!game.Story||game.Story.CurrentFloor!=4)return false;
+            if(!game||!game.Story)return false;
+            if(game.Story.CurrentFloor==2&&speaker=="기록 집행관"&&retiringEnforcer)
+            {
+                actor=retiringEnforcer.transform;headOffset=3.3f;
+                return true;
+            }
+            if(game.Story.CurrentFloor!=4)return false;
             AncientEnemy candidate=null;
             if(speaker=="저격수")candidate=retiringSniper?retiringSniper:activeBoss&&!activeBoss.IsSecretary?activeBoss:null;
             else if(speaker=="비서실장"||speaker=="중앙행정정보처리기관 비서실장")candidate=retiringSecretary?retiringSecretary:activeBoss&&activeBoss.IsSecretary?activeBoss:null;
@@ -26,7 +32,8 @@ namespace Plugin.AncientCivilization
         void ClearDialogueActors()
         {
             if(retiringSniper)Destroy(retiringSniper.gameObject);if(retiringSecretary)Destroy(retiringSecretary.gameObject);
-            retiringSniper=retiringSecretary=null;
+            if(retiringEnforcer)Destroy(retiringEnforcer.gameObject);
+            retiringSniper=retiringSecretary=retiringEnforcer=null;
         }
         void FinishRetirement(AncientEnemy actor,bool secretary)
         {
@@ -190,7 +197,11 @@ namespace Plugin.AncientCivilization
                 retiringSniper=speaker;if(speaker&&game.hero)speaker.FaceToward(game.hero.transform.position.x);
                 game.Story.OnDistrictCleared(floor,()=>FinishRetirement(speaker,false));
             }
-            else game.Story.OnDistrictCleared(floor);
+            else
+            {
+                if(floor==2)retiringEnforcer=speaker;
+                game.Story.OnDistrictCleared(floor);
+            }
             game.Save();
         }
         public void SecretaryRetreated(AncientEnemy secretary)

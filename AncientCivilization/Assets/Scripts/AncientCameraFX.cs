@@ -6,7 +6,7 @@ namespace Plugin.AncientCivilization
     public sealed class AncientCameraFX : MonoBehaviour
     {
         Material grade;
-        static readonly int BloomStrength=Shader.PropertyToID("_BloomStrength"),DamageAmount=Shader.PropertyToID("_DamageAmount");
+        static readonly int BloomStrength=Shader.PropertyToID("_BloomStrength"),DamageAmount=Shader.PropertyToID("_DamageAmount"),LowHealth=Shader.PropertyToID("_LowHealth");
         void Start()
         {
             var shader=Resources.Load<Shader>("Shaders/Presentation");
@@ -14,9 +14,11 @@ namespace Plugin.AncientCivilization
         }
         void OnRenderImage(RenderTexture source,RenderTexture destination)
         {
-            if(!grade||(!AncientVisuals.HighQuality&&(!AncientGame.Instance||AncientGame.Instance.DamageFlash<.001f))){Graphics.Blit(source,destination);return;}
+            var game=AncientGame.Instance;
+            if(!grade||(!AncientVisuals.HighQuality&&(!game||(game.DamageFlash<.001f&&game.HealthWarning<=0)))){Graphics.Blit(source,destination);return;}
             grade.SetFloat(BloomStrength,AncientVisuals.HighQuality ? 0.25f : 0f);
-            grade.SetFloat(DamageAmount,AncientGame.Instance?AncientGame.Instance.DamageFlash:0);
+            grade.SetFloat(DamageAmount,game?game.DamageFlash:0);
+            grade.SetFloat(LowHealth,game?game.HealthWarning:0);
             Graphics.Blit(source,destination,grade);
         }
         void OnDestroy(){if(grade)Destroy(grade);}

@@ -71,6 +71,23 @@ namespace Plugin.AncientCivilization
             if(revealed<pageEnd)return;
             if(completedAt<0)completedAt=clock;
             if(clock-completedAt<1.5f)return;
+            NextPage();
+        }
+        // 무전만 넘긴다. 이동·점프·사격 입력에는 손대지 않는다.
+        public void Advance()
+        {
+            if(!Active||!pageReady)return;
+            if(!Complete)
+            {
+                revealed=pageEnd;
+                visibleText=text.Substring(pageStart,pageEnd-pageStart);
+                completedAt=clock;
+                return;
+            }
+            NextPage();
+        }
+        void NextPage()
+        {
             if(pageEnd<text.Length){pageStart=revealed=pageEnd;BeginPage();return;}
             text=speaker=null;visibleText="";pageReady=false;
             if(count>0)

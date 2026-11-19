@@ -17,7 +17,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         const string Menu="PLUGIN/검사/생활부 와이어와 거대 로봇";
         const string Root="PLUGIN.QA.LivingSmoke.",ProfileKey="PLUGIN.QA.ActiveProfile",NormalPrefix="PLUGIN.Ancient.v2.",QAPrefix="PLUGIN.Ancient.QA.";
         const BindingFlags PrivateInstance=BindingFlags.Instance|BindingFlags.NonPublic;
-        static readonly string[] optionKeys={"muted","graphics","frameTarget"};
+        static readonly string[] optionKeys=AncientGame.OptionSaveKeys;
         [Serializable] sealed class PrefSnapshot {public string[] keys;public bool[] present;public int[] values;}
 
         static AncientLivingSmokeChecks()

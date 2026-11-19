@@ -205,7 +205,7 @@ namespace Plugin.AncientCivilization
         public void Receive(float energy)
         {
             float before=hero.CaptureEnergy;int stage=hero.CaptureStage;
-            hero.AddCapturedEnergy(energy);CollectedParticles++;game.Story.OnTraining(6);game.Sound(2);
+            hero.AddCapturedEnergy(energy);CollectedParticles++;game.Story.OnTraining(6);game.PickupSound();
             if(game.Sniper&&game.Sniper.InputLocked)return;
             if(before<100&&hero.CaptureEnergy>=100)
             {game.Feel.Signal("입자 완충 · 최대 출력 레이저",AncientMoteVisuals.Blue,1.1f);game.Impact(Origin,AncientMoteVisuals.Blue,true);game.Sound(5);}
@@ -237,7 +237,7 @@ namespace Plugin.AncientCivilization
             laserUntil=laserPulse.Until;beamWidth=AncientBeamRules.BodyWidth(energy);beam.startWidth=beam.endWidth=beamWidth;
             beamCore.startWidth=beamCore.endWidth=AncientBeamRules.CoreWidth(energy);
             beamGlow.startWidth=beamGlow.endWidth=AncientBeamRules.SheathWidth(energy);
-            LaserShots++;game.Sound(4);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
+            LaserShots++;game.LaserSound(power);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
             ResolveLaserHits();
             if(PulseInterrupted)CancelLaser();
         }

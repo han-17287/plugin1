@@ -13,6 +13,7 @@ namespace Plugin.AncientCivilization
         const float XWidth = 1.8f;
         const float XStart = 2.15f;
         const float XEnd = 2.9f;
+        const int FilamentPoints = 25;
         const float FallWarningStart = 3.25f;
         const float FallStart = 4.45f;
         const float FallImpact = 4.89f;
@@ -58,6 +59,9 @@ namespace Plugin.AncientCivilization
         readonly Echo[] echoes = new Echo[2];
         readonly Shot[] shots = new Shot[32];
         readonly LineRenderer[,] xLines = new LineRenderer[2, 3];
+        readonly AncientBeamVisuals crossProfile;
+        readonly SpriteRenderer[] crossContacts = new SpriteRenderer[4];
+        readonly SpriteRenderer crossSource;
         readonly LineRenderer[] fallMarks = new LineRenderer[3];
         readonly LineRenderer[] firingGuides = new LineRenderer[2];
         readonly SpriteRenderer[] impactPixels = new SpriteRenderer[28];
@@ -66,7 +70,7 @@ namespace Plugin.AncientCivilization
         Sequence sequence;
         float age, burstDirection;
         int rounds, shells, missiles;
-        bool rocketLaunched, xResolved, fallResolved, disposed;
+        bool rocketLaunched, xResolved, fallResolved, disposed, crossVisible;
 
         public bool Active { get { return sequence != Sequence.None && root && root.gameObject.activeInHierarchy; } }
         public bool Telegraphing
@@ -101,6 +105,21 @@ namespace Plugin.AncientCivilization
             {
                 firingGuides[i] = Line("Shooting direction", 17);
                 for (int layer = 0; layer < 3; layer++) xLines[i, layer] = Line("Cross beam", 16 + layer);
+            }
+            // 두 대각선은 같은 광도 단면과 재질을 쓴다. 교차점과 네 접점은 기존 복제체의 광원을 공유한다.
+            crossProfile = new AncientBeamVisuals(xLines[0, 0], true, false);
+            xLines[1, 0].sharedMaterial = xLines[0, 0].sharedMaterial;
+            for (int i = 0; i < 2; i++)
+            {
+                crossProfile.StyleBody(xLines[i, 1], xLines[i, 2]);
+                xLines[i, 2].positionCount = FilamentPoints;
+            }
+            crossSource = Light("X 발사 결절", root, 19);
+            crossSource.enabled = false;
+            for (int i = 0; i < crossContacts.Length; i++)
+            {
+                crossContacts[i] = Light("X 착탄 섬광", root, 19);
+                crossContacts[i].enabled = false;
             }
             for (int i = 0; i < fallMarks.Length; i++) fallMarks[i] = Line("Center impact boundary", 16 + i);
             for (int i = 0; i < impactPixels.Length; i++) impactPixels[i] = Rectangle("Impact fragment", root, 22);
@@ -213,7 +232,11 @@ namespace Plugin.AncientCivilization
             Vector2 feet = new Vector2(center, floor + Mathf.Lerp(5.4f, .08f, fall * fall));
             Pose(echoes[0], feet, 5, Mathf.Lerp(.73f, 1.07f, fall), Fade(end) * (1f - Mathf.InverseLerp(FallImpact, FallImpact + .28f, age)), 0f, false);
             if (age < XEnd) ShowCrossBeam(player);
-            else if (age < FallImpact) foreach (SpriteRenderer pixel in impactPixels) pixel.enabled = false;
+            else
+            {
+                HideCrossBeam();
+                if (age < FallImpact) foreach (SpriteRenderer pixel in impactPixels) pixel.enabled = false;
+            }
             if (!Active) return;
             if (age >= FallWarningStart && age < FallImpact) ShowFallWarning();
             if (age >= FallImpact && !fallResolved)
@@ -399,6 +422,7 @@ namespace Plugin.AncientCivilization
 
         void ShowCrossBeam(Vector2 player)
         {
+            crossVisible = true;
             bool firing = age >= XStart;
             if (firing && !xResolved)
             {
@@ -406,21 +430,45 @@ namespace Plugin.AncientCivilization
                 game.Sound(3);
                 game.Shake(.17f);
             }
+            float charge = Mathf.Clamp01(age / XStart);
+            float flare = firing ? Mathf.Exp(-(age - XStart) * 11f) : 0;
+            Vector2 junction = (xOrigins[0] + xEnds[0]) * .5f;
+            Color sourceColor = firing ? Ice : Warning;
+            ShowBeamLight(crossSource, junction,
+                firing ? 2.9f + 1.8f * flare : .8f + 1.1f * charge, sourceColor, firing ? .8f : .3f + .38f * charge);
             bool hit = false;
             for (int i = 0; i < 2; i++)
             {
                 Vector2 a = xOrigins[i], b = xEnds[i];
+                Vector2 direction = (b - a).normalized;
+                Vector2 normal = new Vector2(-direction.y, direction.x);
                 if (!firing)
                 {
-                    float opacity = .12f + .08f * Mathf.Sin(age * 10);
+                    float opacity = .29f + .15f * charge;
                     Segment(xLines[i, 0], a, b, XWidth, new Color(1f, .53f, .25f, opacity));
-                    Segment(xLines[i, 2], a, b, .07f, new Color(1f, .67f, .34f, .89f));
+                    Vector2 edge = normal * (XWidth * .5f);
+                    Segment(firingGuides[i], a - edge, b - edge, .075f, Warning);
+                    Segment(xLines[i, 1], a + edge, b + edge, .075f, Warning);
                     continue;
                 }
-                float pulse = .75f + .25f * Mathf.Sin(age * 31);
-                Segment(xLines[i, 0], a, b, XWidth * 1.54f, new Color(.18f, .61f, 1, .20f * pulse));
-                Segment(xLines[i, 1], a, b, XWidth, new Color(.30f, .77f, 1, .65f));
-                Segment(xLines[i, 2], a, b, .31f + pulse * .08f, Ice);
+                var aura = xLines[i, 0];
+                var body = xLines[i, 1];
+                var core = xLines[i, 2];
+                // 실체가 있는 청색 띠만 판정 폭을 채우고 가장자리 밖으로는 희미한 빛만 퍼진다.
+                SegmentGeometry(aura, a, b, XWidth * 1.58f);
+                SegmentGeometry(body, a, b, XWidth);
+                core.startWidth = core.endWidth = XWidth * (.21f + .07f * flare);
+                core.enabled = true;
+                for (int k = 0; k < FilamentPoints; k++)
+                {
+                    float t = k / (float)(FilamentPoints - 1);
+                    float offset = Mathf.Sin(t * 32f + age * 21f + i) * Mathf.Sin(t * Mathf.PI) * .094f;
+                    core.SetPosition(k, Vector2.Lerp(a, b, t) + normal * offset);
+                }
+                crossProfile.UpdateBody(body, aura, core, .91f, age);
+                float impactSize = XWidth * (1.42f + .44f * flare);
+                ShowBeamLight(crossContacts[i * 2], a, impactSize, Ice, .76f);
+                ShowBeamLight(crossContacts[i * 2 + 1], b, impactSize, Ice, .76f);
                 ScatterBeamPixels(i, a, b);
                 hit |= AncientLivingRules.BeamHit(a.x, a.y, b.x, b.y, player.x, player.y, XWidth * .5f + .36f);
             }
@@ -433,6 +481,15 @@ namespace Plugin.AncientCivilization
         }
 
         bool beamCanHit;
+
+        static void ShowBeamLight(SpriteRenderer light, Vector2 position, float size, Color tint, float opacity)
+        {
+            light.transform.position = position;
+            light.transform.localScale = Vector3.one * size;
+            tint.a = opacity;
+            light.color = tint;
+            light.enabled = true;
+        }
 
         void ScatterBeamPixels(int beam, Vector2 start, Vector2 end)
         {
@@ -590,18 +647,32 @@ namespace Plugin.AncientCivilization
 
         static void Segment(LineRenderer line, Vector2 a, Vector2 b, float width, Color color)
         {
+            SegmentGeometry(line, a, b, width);
+            line.startColor = line.endColor = color;
+        }
+
+        static void SegmentGeometry(LineRenderer line, Vector2 a, Vector2 b, float width)
+        {
             line.SetPosition(0, a);
             line.SetPosition(1, b);
             line.startWidth = line.endWidth = width;
-            line.startColor = line.endColor = color;
             line.enabled = true;
         }
 
         void HideMarks()
         {
-            foreach (LineRenderer line in xLines) line.enabled = false;
             foreach (LineRenderer line in fallMarks) line.enabled = false;
             foreach (LineRenderer line in firingGuides) line.enabled = false;
+        }
+
+        void HideCrossBeam()
+        {
+            if (!crossVisible) return;
+            crossVisible = false;
+            for (int ray = 0; ray < 2; ray++)
+                for (int layer = 0; layer < 3; layer++) xLines[ray, layer].enabled = false;
+            crossSource.enabled = false;
+            foreach (var contact in crossContacts) contact.enabled = false;
         }
 
         static Sprite EchoSprite(int id)
@@ -649,6 +720,7 @@ namespace Plugin.AncientCivilization
             foreach (Echo echo in echoes) echo.root.gameObject.SetActive(false);
             foreach (SpriteRenderer pixel in impactPixels) pixel.enabled = false;
             HideMarks();
+            HideCrossBeam();
             root.gameObject.SetActive(false);
         }
 
@@ -657,6 +729,7 @@ namespace Plugin.AncientCivilization
             if (disposed) return;
             disposed = true;
             Clear();
+            crossProfile.Dispose();
             if (root) UnityEngine.Object.Destroy(root.gameObject);
             if (glowMaterial) UnityEngine.Object.Destroy(glowMaterial);
         }
