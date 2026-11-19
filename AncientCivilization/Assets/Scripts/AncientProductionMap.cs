@@ -22,6 +22,7 @@ namespace Plugin.AncientCivilization
         readonly SpriteRenderer[] beltTreads=new SpriteRenderer[10];readonly PressMotion[] presses=new PressMotion[3];
         Transform trainingGate;BoxCollider2D trainingGateSolid;SpriteRenderer trainingReceiver;float trainingGateOpen;
         public bool BreachOpen {get;private set;}
+        public bool UpperInspectionRoute {get;private set;}
         readonly Sign[] signs={
             new Sign(-229,4.2f,"교대 통로\nA/D 이동 · Ctrl 달리기 전환"),
             new Sign(-201,5.4f,"교대 공고\n거주 포인트 재산정 대기",200),
@@ -423,6 +424,11 @@ namespace Plugin.AncientCivilization
             float activeDelta=externalPause||game.Paused?0:Time.deltaTime;
             TickIndustry(activeDelta);
             float heroX=game.hero.transform.position.x;
+            // 처음 위쪽 고리에 올라선 뒤에는 발판 사이를 건널 때마다 음악이 다시 시작되지 않는다.
+            if (game.Story.CurrentFloor != 0 || AncientProductionLayout.SectionAt(heroX) != 2)
+                UpperInspectionRoute = false;
+            else if (game.hero.transform.position.y >= AncientProductionLayout.WireShortcut[0].Top + .5f)
+                UpperInspectionRoute = true;
             bool visibleInspection=!game.MainMenu&&!game.hero.bike&&heroX>-145&&heroX<-35&&game.Story.CurrentFloor==0;
             if(inspectionCarrier.gameObject.activeSelf!=visibleInspection)inspectionCarrier.gameObject.SetActive(visibleInspection);
             if(stockWarning)stockWarning.enabled=!game.MainMenu&&heroX>54&&heroX<107&&game.Story.CurrentFloor==0;

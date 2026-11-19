@@ -17,6 +17,7 @@ namespace Plugin.AncientCivilization
         public bool Cinematic {get{return phase>=3;}}
         public bool Finished {get{return phase==5;}}
         public int Phase {get{return phase;}}
+        public float CountdownRemaining => countdown;
         // The finale pauses ordinary simulation itself, so its own cinematic clock
         // must distinguish that hold from a menu, another conversation or lost focus.
         bool ExternalPaused

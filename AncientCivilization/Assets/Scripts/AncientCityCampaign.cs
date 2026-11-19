@@ -192,6 +192,7 @@ namespace Plugin.AncientCivilization
             activeBoss=null;game.boss=null;
             if((Cleared&(1<<floor))!=0)return;
             Cleared|=1<<floor;AncientGame.SetSaved("cityCleared",Cleared);
+            game.PlayScoreEvent("retreat");
             if(floor==4)
             {
                 retiringSniper=speaker;if(speaker&&game.hero)speaker.FaceToward(game.hero.transform.position.x);
@@ -206,6 +207,8 @@ namespace Plugin.AncientCivilization
         }
         public void SecretaryRetreated(AncientEnemy secretary)
         {
+            if (SecretaryCleared) return;
+            game.PlayScoreEvent("retreat");
             game.ClearBattleProjectiles();
             retiringSecretary=secretary;if(secretary&&game.hero)secretary.FaceToward(game.hero.transform.position.x);
             activeBoss=null;game.boss=null;SecretaryCleared=true;AncientGame.SetSaved("secretaryCleared",1);game.Save();

@@ -24,8 +24,8 @@ namespace Plugin.AncientCivilization
         [Range(0, 1)] public float effectsVolume = .22f;
         [Range(0, 1)] public float warningVolume = .33f;
         [Range(0, 1)] public float uiVolume = .16f;
-        [Range(0, 1)] public float phaseTwoVolume = .09f;
-        [Range(0, 1)] public float phaseThreeVolume = .07f;
+        [Range(0, 1)] public float scoreVolume = .42f;
+        [Range(0, 1)] public float dialogueScoreVolume = .19f;
         [Range(.2f, 3)] public float heartbeatInterval = 1.05f;
         [Range(0, .15f)] public float pitchVariation = .035f;
         [Range(0, 1)] public float duckMusicTo = .43f;

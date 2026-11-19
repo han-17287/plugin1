@@ -28,7 +28,18 @@ namespace Plugin.AncientCivilization
         public AncientTruck Truck {get;private set;}
         public int ResidencePoints {get;private set;}
         AncientGame game;int flags,lineIndex;float nextTrainingShot,nextLetterAt;int revealedChars;bool showFull;Action afterDialogue;string shownText="";int visibleChars=-1;
-        struct Line {public string speaker,text;public int portrait;public Line(string who,string words,int face){speaker=who;text=words.Replace("백명 경위","백 경위").Replace("백명","백 경위");portrait=face;}}
+        struct Line
+        {
+            public string speaker, text, scoreCue;
+            public int portrait;
+            public Line(string who, string words, int face, string scoreCue = null)
+            {
+                speaker = who;
+                text = words.Replace("백명 경위","백 경위").Replace("백명","백 경위");
+                portrait = face;
+                this.scoreCue = scoreCue;
+            }
+        }
         readonly List<Line> lines=new List<Line>();GUIStyle body,nameStyle,small,nextButton;bool inspectionReadyPrompted,reportPending;
         int coachedStep=-1;float nextTrainingHint;AncientProjectile trainingObject;
         const float TrainingLaunchClearance=2.2f;
@@ -114,7 +125,11 @@ namespace Plugin.AncientCivilization
             if(game.hero&&!game.hero.bike&&game.hero.IsOnGround)game.hero.CinematicPose(false,game.hero.Facing);
         }
         void ResetTyping()
-        {revealedChars=pageStart=pageEnd=0;pageReady=false;pageWidth=pageHeight=0;nextLetterAt=Time.unscaledTime+.08f;showFull=false;visibleChars=-1;shownText="";bubbleNameLine=-1;}
+        {
+            revealedChars=pageStart=pageEnd=0;pageReady=false;pageWidth=pageHeight=0;nextLetterAt=Time.unscaledTime+.08f;showFull=false;visibleChars=-1;shownText="";bubbleNameLine=-1;
+            if (lineIndex < lines.Count && lines[lineIndex].scoreCue != null)
+                game.PlayScoreEvent(lines[lineIndex].scoreCue);
+        }
         void TickTyping()
         {
             if(choiceOpen||showFull||!DialogueOpen||!pageReady||Time.unscaledTime<nextLetterAt)return;
@@ -188,7 +203,7 @@ namespace Plugin.AncientCivilization
                 new Line("백명","코어는 확보했다. 당신을 에너지 코어 절도 혐의로 체포한다.",0),
                 new Line("백명","상층 주민이 왜 아래층 코어를 훔쳤지? 위에서 살 포인트도 있었을 텐데.",0),
                 new Line("운송대장","그 코어, 여기서 쓸 물건이라고 들었지? 운송장 마지막 칸까지 봤어?",2),
-                new Line("통신관","검거 확인. 시민 포인트 "+ResidencePoints+"점. 한 단계 위 도시의 거주·통행 자격이 승인됐다.",1),
+                new Line("통신관","검거 확인. 시민 포인트 "+ResidencePoints+"점. 한 단계 위 도시의 거주·통행 자격이 승인됐다.",1,"rank-access"),
                 new Line("백명","잠깐, 수령처부터 확인하겠습니다. 용의자도 아직 할 말이 있는 것 같습니다.",0),
                 new Line("통신관","회수품과 용의자는 별도 이송 명령이다. 승인 코드 C-00… 원본은 내 권한으로도 열리지 않아.",1),
                 new Line("백명","점검에서도 빠지고, 수령처도 못 본다… 운송장 사본부터 남겨 주세요.",0),
@@ -430,7 +445,7 @@ namespace Plugin.AncientCivilization
                 new Line("기록 집행관","기록실, 집행 중지. 장갑 연결을 끊는다.",3),
                 new Line("백 경위","C-00. 그 승인선 끝에 누가 있지?",0),
                 new Line("기록 집행관","내 렌즈에도 발신처는 안 떠. 그 원본, 다음에 만날 때까지 간수해.",3),
-                new Line("사령관","주안은 통로를 빠져나왔다. 백 경위, 원본을 가지고 동쪽 엘리베이터에서 거주구로 올라가라.",1));
+                new Line("사령관","주안은 통로를 빠져나왔다. 백 경위, 원본을 가지고 동쪽 엘리베이터에서 거주구로 올라가라.",1,"rank-access"));
             else if(floor==1)Talk(done,
                 new Line("백 경위","기계는 멈췄다. 코어에서 손 떼고 내려와. 더 다칠 사람은 없어야 한다.",0),
                 new Line("두목","승인 도장이 찍힌 코어야. 정상 출력이라고 했는데 왜 이렇게 된 거지?",-3),
@@ -441,7 +456,7 @@ namespace Plugin.AncientCivilization
                 new Line("백 경위","사령관님, 코어와 원장을 확보했습니다. 조직이 훔친 물량을 합쳐도 미수령량과 맞지 않습니다.",0),
                 new Line("사령관","현장 인계반을 보내겠다. 회수한 코어는 필요한 주민에게 먼저 돌리고, 원본은 네가 보관해라.",1),
                 new Line("백 경위","도둑을 잡는 것만으로는 끝나지 않는군요. 수령처를 고친 사람을 확인하겠습니다.",0),
-                new Line("사령관","수정 기록은 행정구로 이어진다. 출입 권한은 열렸다. 동쪽 엘리베이터에서 올라가라.",1));
+                new Line("사령관","수정 기록은 행정구로 이어진다. 출입 권한은 열렸다. 동쪽 엘리베이터에서 올라가라.",1,"rank-access"));
             else Talk(done,new Line("통신관","구역 사건 해결 확인. 다음 층 출입 권한이 열렸다. 동쪽 이동 엘리베이터에서 목적지를 선택해라.",1));
         }
         public void TravelBySidePassage(int destination)

@@ -18,8 +18,8 @@ MonoBehaviour:
   effectsVolume: 0.22
   warningVolume: 0.33
   uiVolume: 0.16
-  phaseTwoVolume: 0.09
-  phaseThreeVolume: 0.07
+  scoreVolume: 0.42
+  dialogueScoreVolume: 0.19
   heartbeatInterval: 1.05
   pitchVariation: 0.035
   duckMusicTo: 0.43

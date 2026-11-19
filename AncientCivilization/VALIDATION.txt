@@ -1,3 +1,16 @@
+v0.35.0 Campaign soundtrack
+
+The project-only download includes all 50 revised stereo Vorbis masters.
+Their Ogg bytes match the authored mixes. Main and both practice scenes use
+the BGM mixer and a shared playback controller.
+
+A fresh extraction passed Tools/run_checks.py (33 .NET rule suites and the
+asset checks). The score regression ran the real playback controller for
+390 simulated frames with audio-service doubles. It checked delayed loads,
+rapid route changes, one audible cue, pause/resume, event priority, one-shot
+completion, countdown seeking and cache eviction. Native Unity 6000.6.7f1
+audio-device playback and player build have not been verified here.
+
 v0.34.0 Record Enforcer field equipment and living retreat
 
 Main / Administration features a new six-pose RGBA atlas, a directed backstep,

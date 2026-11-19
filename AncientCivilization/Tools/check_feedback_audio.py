@@ -1,6 +1,8 @@
 """Verify the field mixer references and the shipped score/cue PCM without Unity."""
 from array import array
 from pathlib import Path
+import json
+import struct
 import re
 import sys
 import wave
@@ -11,8 +13,56 @@ def meta_guid(asset):
     return re.search(r'^guid: ([0-9a-f]{32})$', data, re.MULTILINE)[1]
 
 
+def music_stream_info(path):
+    # Read the Vorbis identification packet and the final Ogg granule without a decoder.
+    data = path.read_bytes()
+    offset = 0
+    frames = None
+    while offset < len(data):
+        assert data[offset:offset + 5] == b'OggS\x00', path
+        flags = data[offset + 5]
+        segments = data[offset + 26]
+        start = offset + 27 + segments
+        end = start + sum(data[offset + 27:start])
+        assert end <= len(data) and end > offset, path
+        if offset == 0:
+            assert flags & 2 and data[start:start + 7] == b'\x01vorbis', path
+            channels, frequency = struct.unpack_from('<BI', data, start + 11)
+            assert (channels, frequency) == (2, 44100), path
+        if flags & 4:
+            assert end == len(data), path
+            frames = struct.unpack_from('<Q', data, offset + 6)[0]
+        offset = end
+    assert frames is not None and frames > 0, path
+    return frames
+
+
+def check_city_score(assets):
+    music = assets / 'Resources/Music/CityScore'
+    sources = assets.parent.parent / 'Soundtrack'
+    catalog = json.loads((sources / 'catalog.json').read_text(encoding='utf-8')) if sources.is_dir() else None
+    clips = sorted(music.glob('*.ogg'))
+    assert len(clips) == 50, f'{music}: expected 50 campaign cues, found {len(clips)}'
+    if catalog is not None:
+        assert {clip.stem for clip in clips} == set(catalog), 'campaign source and packaged clip IDs differ'
+    guids = set()
+    for clip in clips:
+        frames = music_stream_info(clip)
+        guid = meta_guid(clip)
+        assert guid not in guids, f'duplicate music asset ID: {clip.name}'
+        guids.add(guid)
+        meta = Path(str(clip) + '.meta').read_text(encoding='utf-8')
+        assert 'AudioImporter:' in meta and 'forceToMono: 0' in meta and 'sampleRateSetting: 0' in meta, clip
+        if catalog is not None:
+            assert frames == catalog[clip.stem]['frames'], f'wrong score duration: {clip.name}'
+            assert clip.read_bytes() == (sources / 'Mixes' / clip.name).read_bytes(), f'mixed master differs: {clip.name}'
+    print(f'PASS: {len(clips)} stereo Vorbis cues, loop lengths and unique Unity music imports'
+          + ('; exact match to released masters' if catalog is not None else '; project-only source archive'))
+
+
 def main():
     assets = Path(__file__).resolve().parents[1] / 'Assets'
+    check_city_score(assets)
     directory = assets / 'Resources/Audio'
     mixer_file = directory / 'FieldMix.mixer'
     mixer = mixer_file.read_text(encoding='utf-8')

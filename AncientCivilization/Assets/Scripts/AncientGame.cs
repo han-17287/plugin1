@@ -310,6 +310,10 @@ namespace Plugin.AncientCivilization
         public void LaserSound(float power){if(audioCues)audioCues.PlayLaser(power);}
 
         public void Sound(int cue){if(audioCues)audioCues.Play(cue);}
+        public void PlayScoreEvent(string cue)
+        {
+            if (audioCues) audioCues.PlayScoreEvent(cue);
+        }
         public void Save()
         {
             SetSaved("storyCores",coreMask);SetSaved("credits",credits);SetSaved("storyCheckpoint",checkpointStage);
@@ -321,6 +325,7 @@ namespace Plugin.AncientCivilization
             if(stage<=checkpointStage)return;
             checkpointStage=stage;checkpoint=stage==1?new Vector2(46,2.3f):stage==2?new Vector2(86,1.3f):new Vector2(132,1.3f);
             hero.hp=hero.MaxHP;hero.particles=Mathf.Max(hero.particles,60);Save();
+            PlayScoreEvent("checkpoint");
             Burst(checkpoint,Cyan,28);Notice("체크포인트 / 체력을 회복하고 진행을 저장했습니다.",4);
         }
         public void SetLiftCheckpoint(int floor,Vector2? arrival=null)
@@ -341,6 +346,7 @@ namespace Plugin.AncientCivilization
         }
         public void HeroDied()
         {
+            PlayScoreEvent("death");
             if(Playtime)Playtime.Retry();
             if(Enforcer)Enforcer.StopBattle();
             // Optional encounters can still be active after a case is finished.
