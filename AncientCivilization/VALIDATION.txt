@@ -1,3 +1,17 @@
+v0.36.1 Overdrive campaign score
+
+All 50 packaged Ogg files match the final album masters byte for byte. All 50
+Unity importer files retain their existing GUIDs and audio settings. The asset
+check reads the stereo 44.1 kHz Vorbis identification and final PCM granule in
+each file and compares the sample count to the new arrangement's bars and BPM.
+The 41 loop cues and nine one-shots retain their existing playback routes. The
+finale countdown contains 2,646,000 frames, exactly one minute.
+
+ScorePlaybackChecks passed 390 simulated director frames using the shipping
+playback code. It covered delayed loads, route supersession, a single audible
+voice, loop rollover, stinger priorities, pause/resume, countdown seeking and
+cache eviction. Native Unity audio-device playback was not tested here.
+
 v0.36.0 Orbital Interdictor
 
 The upper residential freight checkpoint and outer-wall rematch use separate
