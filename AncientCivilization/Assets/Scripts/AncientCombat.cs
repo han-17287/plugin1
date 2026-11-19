@@ -55,7 +55,7 @@ namespace Plugin.AncientCivilization
             if(!game.View)return Origin+Vector2.right*hero.Facing*10;
             return game.View.ScreenToWorldPoint(Input.mousePosition);
         }
-        bool ControlsReady {get{return hero&&game&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted&&!(game.Living&&game.Living.InputLocked);}}
+        bool ControlsReady {get{return hero&&game&&!(game.Orbital&&game.Orbital.Arena!=null&&game.Orbital.Arena.BladeAway)&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted&&!(game.Living&&game.Living.InputLocked);}}
         bool PulseInterrupted {get{return !hero||!game||(game.Living&&game.Living.InputLocked)||!hero.AttackMode||hero.Wired||hero.MeleeInterrupted||game.won||(game.Sniper&&game.Sniper.InputLocked)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic);}}
         public void CancelInput(){heldAt=-1;readySignal=false;bladeBufferedUntil=0;if(aim)aim.enabled=false;}
         public void CancelAttacks()
@@ -149,6 +149,7 @@ namespace Plugin.AncientCivilization
             Vector2 origin=BladeOrigin;bool rebound=(game.LowerRoute&&game.LowerRoute.TryBlade(origin,bladeDirection))||(game.Living&&game.Living.TryBlade(origin,bladeDirection))||(game.Sniper&&game.Sniper.TryBlade(origin,bladeDirection))||(game.Campaign&&game.Campaign.TryBladeTarget(origin,bladeDirection))||(game.Cases&&game.Cases.TryBladeRelay(origin,bladeDirection))||(game.Traversal&&game.Traversal.TryBladeTarget(origin,bladeDirection))||(game.City&&game.City.TryBladeTarget(origin,bladeDirection));
             // 프레임 사이에 베기 활성 구간을 건너뛰어도 낙하물을 벨 수 있다.
             rebound |= BreakEnforcerObjects(origin);
+            if (game.Orbital && game.Orbital.Arena != null) game.Orbital.Arena.CutSupply(origin, bladeDirection);
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
                 var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
@@ -170,6 +171,7 @@ namespace Plugin.AncientCivilization
         {
             Vector2 origin=BladeOrigin;bool rebound=(game.Sniper&&game.Sniper.TryBreakObjects(origin,bladeDirection))||(game.City&&game.City.TryBreakObjects(origin,bladeDirection));
             rebound |= BreakEnforcerObjects(origin);
+            if (game.Orbital && game.Orbital.Arena != null) game.Orbital.Arena.CutSupply(origin, bladeDirection);
             for(int i=game.shots.Count-1;i>=0;i--)
             {
                 var shot=game.shots[i];if(!shot||!shot.Breakable)continue;

@@ -305,6 +305,7 @@ namespace Plugin.AncientCivilization
             return false;
         }
         public bool ReadyForBoss(int floor){return legacy||AncientCampaignRules.ReadyForBoss(completed,floor);}
+        public bool OrbitalBridgeReady => legacy || AncientCampaignRules.Complete(completed,13);
         public bool ReadyForLift(int destination){return legacy||destination!=1||AncientCampaignRules.FloorCount(completed,0)==4;}
         public bool ReadyForFinale {get{return legacy||AncientCampaignRules.FloorCount(completed,4)==4;}}
         public void WriteSave()
@@ -385,6 +386,7 @@ namespace Plugin.AncientCivilization
         {ActivateCase(id,true);}
         void ActivateCase(int id,bool relocate)
         {
+            if (AncientCampaignRules.OrbitalBlocksCase(id, game.City.OrbitalMidWon)) return;
             if(!AncientCampaignRules.CanStart(completed,id,game.Story.CurrentFloor,game.Story.Stage,game.City.Cleared))return;
             if(Active){RecordDefeats();StoreProgress();}ClearFoes();if(game.LowerRoute)game.LowerRoute.ResetEncounter();
             active=id;escortCycle=0;escortFrame=-1;escort.sprite=AncientCitizenArt.ForCitizen(AncientCampaignRules.Witness(id));
@@ -421,6 +423,12 @@ namespace Plugin.AncientCivilization
             if(game.Story.CurrentFloor==4&&ChapterStarted(4)&&AncientCampaignRules.Next(completed,4)==19)
                 ActivateCase(19,false);
         }
+        public void ContinueAfterOrbital()
+        {
+            if (game.Story.CurrentFloor == 3 && !Active && ChapterStarted(3) &&
+                AncientCampaignRules.Next(completed, 3) == 14)
+                ActivateCase(14, false);
+        }
         public void LeaveFloor()
         {
             if(Active){RecordDefeats();StoreProgress();Persist();}
@@ -441,12 +449,14 @@ namespace Plugin.AncientCivilization
             completed=AncientCampaignRules.Claim(completed,id);game.credits+=5;
             ClearFoes();active=-1;following=false;escort.enabled=false;taskMission=-1;tasks=checkpoint=defeated=0;
             int next=AncientCampaignRules.ForwardCase(completed,id,game.Story.Stage,game.City.Cleared);
+            bool orbitalAhead = AncientCampaignRules.OrbitalBlocksCase(next, game.City.OrbitalMidWon);
+            if (orbitalAhead) next = -1;
             if(next>=0)ActivateCase(next,false);else{Refresh();Persist();}
             game.CombatCheckpoint(mission.Floor,new Vector2(game.hero.transform.position.x,1.3f));
             game.Story.RadioBark("백 경위",mission.Result);
             game.Story.RadioBark(mission.Speaker,AncientCampaignData.Reactions[id]);
             game.Story.RadioBark("통신관",mission.Clue);
-            game.Feel.Signal(next>=0?"기록 전송 · 동쪽으로 계속 이동":id==18?"관제실 전방 · 미등록 사격 신호":"목적지 도착 · 동쪽 통로로",new Color(.55f,1,.85f),1.6f);
+            game.Feel.Signal(orbitalAhead?"화물 검사대 · 궤도 봉쇄 신호":next>=0?"기록 전송 · 동쪽으로 계속 이동":id==18?"관제실 전방 · 미등록 사격 신호":"목적지 도착 · 동쪽 통로로",new Color(.55f,1,.85f),1.6f);
         }
         static string ChapterTitle(int floor)
         {return floor==0?"회수 운송로의 끝":floor==1?"도둑이 지나간 길":floor==2?"지워진 승인":floor==3?"보류된 승진":"중앙 관제의 침묵";}

@@ -3,6 +3,7 @@
   <ItemGroup>
     <Compile Include="ChapterRouteChecks.cs" />
     <Compile Include="../Assets/Scripts/AncientChapterLayout.cs" />
+    <Compile Include="../Assets/Scripts/AncientCampaignRules.cs" />
     <Compile Include="../Assets/Scripts/AncientCityLayout.cs" />
     <Compile Include="../Assets/Scripts/AncientFinaleRules.cs" />
     <Compile Include="../Assets/Scripts/AncientFieldExpansion.cs" />

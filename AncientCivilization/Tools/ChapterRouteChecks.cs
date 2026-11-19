@@ -6,8 +6,50 @@ class ChapterRouteChecks
     static int checks;
     static void Check(bool value,string message){if(!value)throw new Exception(message);checks++;}
     static bool Near(float a,float b){return Math.Abs(a-b)<.0001f;}
+    static void CheckOrbitalRoute()
+    {
+        const int floor = 3;
+        int throughFirstHalf = (1 << 14) - 1;
+        int throughLastCase = (1 << 16) - 1;
+        int clearedBelow = (1 << 1) | (1 << 2);
+        float left = AncientCityLayout.OrbitalLeft, right = AncientCityLayout.OrbitalRight;
+        Check(AncientChapterLayout.CaseRight(13) < left && left < right && right < AncientChapterLayout.CaseLeft(14),
+            "First orbital encounter fits on the fixed bridge between the second and third residence cases");
+        Check(AncientCampaignRules.RoomAt(left) == -1 && AncientCampaignRules.RoomAt(right) == -1 &&
+            AncientCityLayout.BossArenaLeft(floor,false) > AncientChapterLayout.CaseRight(15),
+            "The mid-boss and the end-of-floor rematch occupy different arenas");
+        Check(AncientCityLayout.SafeResume(floor,left + 2,1.3f) &&
+            AncientCityLayout.SafeResume(floor,AncientCityLayout.ArenaLeft(floor) + 2,1.3f),
+            "Both QA and normal checkpoints are valid saved locations on floor 3");
+        int next = AncientCampaignRules.ForwardCase(throughFirstHalf,13,9,clearedBelow);
+        Check(next == 14 && AncientCampaignRules.OrbitalBlocksCase(next,false) &&
+            !AncientCampaignRules.OrbitalBlocksCase(next,true), "Only withdrawal unlocks the next residence case");
+        for (int room = 0; room < 20; room++)
+            Check(AncientCampaignRules.OrbitalBlocksCase(room,false) == (room == 14 || room == 15) &&
+                !AncientCampaignRules.OrbitalBlocksCase(room,true), "Orbital gate applies only to the latter half of its floor");
+        Check(!AncientCampaignRules.RestoreOrbitalWithdrawal(-1,clearedBelow,throughFirstHalf,-1,-1),
+            "A pre-upgrade save at the bridge still plays the encounter");
+        Check(AncientCampaignRules.RestoreOrbitalWithdrawal(1,clearedBelow,throughFirstHalf,-1,-1),
+            "New mid-boss victory survives a reload");
+        for (int room = 14; room <= 15; room++)
+        {
+            Check(AncientCampaignRules.RestoreOrbitalWithdrawal(-1,clearedBelow,throughFirstHalf,room,-1) &&
+                AncientCampaignRules.RestoreOrbitalWithdrawal(-1,clearedBelow,throughFirstHalf,-1,room) &&
+                AncientCampaignRules.RestoreOrbitalWithdrawal(-1,clearedBelow,throughFirstHalf | (1 << room),-1,-1),
+                "Existing post-bridge saves keep active cases, task progress and cleared cases");
+        }
+        Check(!AncientCampaignRules.RestoreOrbitalWithdrawal(0,clearedBelow,throughFirstHalf,-1,-1) &&
+            AncientCampaignRules.RestoreOrbitalWithdrawal(0,clearedBelow | (1 << floor),throughLastCase,-1,-1),
+            "First encounter's explicit save and preexisting floor-clear flag agree on reload");
+        Check(!AncientCampaignRules.ReadyForBoss(throughFirstHalf,floor) &&
+            AncientCampaignRules.ReadyForBoss(throughLastCase,floor), "Only four completed cases open the end-of-floor fight");
+        Check(!AncientCityLayout.CanInfiltrate(clearedBelow,floor) &&
+            AncientCityLayout.CanInfiltrate(clearedBelow | (1 << floor),floor),
+            "The summit side path opens only after the end-of-floor boss");
+    }
     static void Main()
     {
+        CheckOrbitalRoute();
         Check(AncientChapterLayout.CaseCount==20&&AncientChapterLayout.CasesPerFloor==4,"The existing twenty cases form four sections of each of five chapters");
         Check(AncientChapterLayout.CaseWidth==AncientFieldExpansion.Width,"Chapter geometry preserves the authored field section width");
         Check(AncientChapterLayout.CaseStride==AncientFieldExpansion.Stride,"Campaign placement and chapter bridge stride agree");

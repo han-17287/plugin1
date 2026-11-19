@@ -16,6 +16,18 @@ namespace Plugin.AncientCivilization
         {return ResidentRescued(citizen,completed,caseTasks)?Left(ResidentEscortMission(citizen))+AncientChapterLayout.Width(ResidentEscortMission(citizen))-16:authoredX;}
         public static int SanitizeMask(int mask){return mask&((1<<MissionCount)-1);}
         public static bool Complete(int mask,int id){return id>=0&&id<MissionCount&&(mask&(1<<id))!=0;}
+        public static bool OrbitalBlocksCase(int id, bool withdrawn)
+        {
+            return !withdrawn && (id == 14 || id == 15);
+        }
+        public static bool RestoreOrbitalWithdrawal(int saved, int clearedFloors, int completed, int active, int taskMission)
+        {
+            if ((clearedFloors & (1 << 3)) != 0) return true;
+            if (saved >= 0) return saved != 0;
+            // 구버전에서 이미 검사대를 지난 플레이어의 진행은 유지한다.
+            return Complete(completed, 14) || Complete(completed, 15) ||
+                   active == 14 || active == 15 || taskMission == 14 || taskMission == 15;
+        }
         public static int RestoreChapters(int saved,int completed,int previousActive)
         {
             int result=saved&31;

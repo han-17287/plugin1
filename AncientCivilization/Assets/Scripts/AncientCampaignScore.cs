@@ -40,6 +40,11 @@ namespace Plugin.AncientCivilization
                 }
                 if (floor == 3)
                 {
+                    if (boss.IsOrbitalFirst && game.Orbital)
+                    {
+                        int phase = game.Orbital.Phase;
+                        return phase < 3 ? "residence-warden-1" : phase < 5 ? "residence-warden-2" : "residence-warden-3";
+                    }
                     // 보안 병기의 분노 진입과 마지막 체력 구간에서 편곡만 전환한다.
                     if (boss.HealthRatio <= .25f) return "residence-warden-3";
                     return boss.Enraged ? "residence-warden-2" : "residence-warden-1";

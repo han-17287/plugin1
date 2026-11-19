@@ -10,7 +10,11 @@ namespace Plugin.AncientCivilization
         readonly SpriteRenderer[] exitGates=new SpriteRenderer[5];readonly BoxCollider2D[] exitSolids=new BoxCollider2D[5];
         readonly SpriteRenderer[] entranceGates=new SpriteRenderer[5];readonly BoxCollider2D[] entranceSolids=new BoxCollider2D[5];
         SpriteRenderer officeGate,officeEntrance;BoxCollider2D officeSolid,officeEntranceSolid;
+        SpriteRenderer orbitalEntrance, orbitalExit;
+        BoxCollider2D orbitalEntranceSolid, orbitalExitSolid;
+        AncientEnemy retiringOrbital;
         public int Cleared {get;private set;}
+        public bool OrbitalMidWon {get;private set;}
         public bool SecretaryCleared {get;private set;}
         public bool ArenaActive {get{return activeBoss&&activeBoss.IsAlive;}}
         public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
@@ -31,6 +35,8 @@ namespace Plugin.AncientCivilization
         }
         void ClearDialogueActors()
         {
+            if (retiringOrbital) Destroy(retiringOrbital.gameObject);
+            retiringOrbital = null;
             if(retiringSniper)Destroy(retiringSniper.gameObject);if(retiringSecretary)Destroy(retiringSecretary.gameObject);
             if(retiringEnforcer)Destroy(retiringEnforcer.gameObject);
             retiringSniper=retiringSecretary=retiringEnforcer=null;
@@ -48,6 +54,10 @@ namespace Plugin.AncientCivilization
         public void Initialize(AncientGame owner)
         {
             game=owner;Cleared=AncientGame.Saved("cityCleared");SecretaryCleared=AncientGame.Saved("secretaryCleared")!=0||AncientGame.Saved("finalePhase")>0;
+            OrbitalMidWon = AncientCampaignRules.RestoreOrbitalWithdrawal(AncientGame.Saved("orbitalMidWon", -1),
+                Cleared, AncientGame.Saved("campaignComplete"), AncientGame.Saved("campaignActive", -1),
+                AncientGame.Saved("campaignTaskMission", -1));
+            AncientGame.SetSaved("orbitalMidWon", OrbitalMidWon ? 1 : 0);
             for(int floor=1;floor<=4;floor++)BuildFloor(floor);
         }
         void BuildFloor(int floor)
@@ -92,7 +102,18 @@ namespace Plugin.AncientCivilization
                 var officeEntry=BuildExitGate("Secretary arena entrance",AncientCityLayout.BossArenaLeft(4,true)-.45f);
                 officeEntrance=officeEntry.GetComponent<SpriteRenderer>();officeEntranceSolid=officeEntry.GetComponent<BoxCollider2D>();
             }
-            if(floor==3)game.StaticBox("Illegal maintenance hatch",new Vector2(right-8,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
+            if(floor==3)
+            {
+                var midEntry = BuildExitGate("화물 검사대 서쪽 차단기", AncientCityLayout.OrbitalLeft - .45f);
+                orbitalEntrance = midEntry.GetComponent<SpriteRenderer>();
+                orbitalEntranceSolid = midEntry.GetComponent<BoxCollider2D>();
+                orbitalEntrance.enabled = orbitalEntranceSolid.enabled = false;
+                var midExit = BuildExitGate("화물 검사대 동쪽 차단기", AncientCityLayout.OrbitalRight + .45f);
+                orbitalExit = midExit.GetComponent<SpriteRenderer>();
+                orbitalExitSolid = midExit.GetComponent<BoxCollider2D>();
+                orbitalExit.enabled = orbitalExitSolid.enabled = !OrbitalMidWon;
+                game.StaticBox("Illegal maintenance hatch",new Vector2(right-8,1.5f),new Vector2(2.6f,3),new Color(.12f,.08f,.16f),1);
+            }
         }
         void BuildRecordsHall()
         {
@@ -123,17 +144,27 @@ namespace Plugin.AncientCivilization
             {
                 bool closed=(Cleared&(1<<floor))==0;
                 exitSolids[floor].enabled=closed;exitGates[floor].enabled=closed&&game.Story.CurrentFloor==floor;
-                bool fighting=(activeBoss&&activeBoss.IsAlive&&!activeBoss.IsSecretary&&activeBoss.DistrictFloor==floor)||(floor==1&&game.Living&&game.Living.WaveActive);
+                bool fighting=(activeBoss&&activeBoss.IsAlive&&!activeBoss.IsSecretary&&!activeBoss.IsOrbitalFirst&&activeBoss.DistrictFloor==floor)||(floor==1&&game.Living&&game.Living.WaveActive);
                 entranceSolids[floor].enabled=fighting;entranceGates[floor].enabled=fighting&&game.Story.CurrentFloor==floor;
             }
             officeSolid.enabled=!SecretaryCleared;officeGate.enabled=!SecretaryCleared&&game.Story.CurrentFloor==4;
             bool secretaryFight=activeBoss&&activeBoss.IsAlive&&activeBoss.IsSecretary;
             officeEntranceSolid.enabled=secretaryFight;officeEntrance.enabled=secretaryFight&&game.Story.CurrentFloor==4;
+            bool orbitalFight = activeBoss && activeBoss.IsOrbitalFirst && activeBoss.IsAlive;
+            orbitalEntranceSolid.enabled = orbitalFight;
+            orbitalEntrance.enabled = orbitalFight && game.Story.CurrentFloor == 3;
+            orbitalExitSolid.enabled = !OrbitalMidWon;
+            orbitalExit.enabled = !OrbitalMidWon && game.Story.CurrentFloor == 3;
         }
         public void OnEnterFloor()
         {
             ClearDialogueActors();
             if(game.Enforcer)game.Enforcer.StopBattle();
+            if (activeBoss && activeBoss.IsOrbitalFirst)
+            {
+                var orbital = activeBoss.GetComponent<AncientOrbitalEncounter>();
+                if (orbital) orbital.StopBattle();
+            }
             if(game.Living)game.Living.ResetForTravel();
             if(game.Traversal)game.Traversal.ResetForTravel();
             foreach(var enemy in game.enemies.ToArray())
@@ -163,12 +194,30 @@ namespace Plugin.AncientCivilization
             {
                 activeFloor=floor;safeRecovery=new Vector2(AncientCityLayout.Entry(floor),1.3f);
             }
+            if (floor == 3 && !activeBoss && !OrbitalMidWon && game.Campaign.OrbitalBridgeReady &&
+                p.x >= AncientCityLayout.OrbitalLeft + 1)
+            {
+                float left = AncientCityLayout.OrbitalLeft, right = AncientCityLayout.OrbitalRight;
+                if (p.x > right)
+                {
+                    game.hero.TravelTo(new Vector2(left + 1.5f, 1.3f));
+                    game.SnapCameraToHero();
+                }
+                game.CombatCheckpoint(3, new Vector2(left - 2, 1.3f));
+                var weapon = Spawn(right - 6, 0, 3, 3, true);
+                weapon.ConfigureOrbitalFirst(game, left, right);
+                game.Story.RadioBark("통신관", "백 경위, 공용 화물선이 닫혔다. 앵커 등부터 확인해.");
+                game.Notice("코어 보안 병기 · 궤도 봉쇄기 / 화물 검사대", 3);
+                return;
+            }
             if(!activeBoss&&game.Campaign.ReadyForBoss(floor)&&(Cleared&(1<<floor))==0&&p.x>=AncientCityLayout.ArenaLeft(floor)+1&&p.y<4)
             {
+                if (floor == 3 && !OrbitalMidWon) return;
                 if(floor==1&&game.Living&&!game.Living.PrepareBoss())return;
                 game.CombatCheckpoint(floor,new Vector2(AncientCityLayout.ArenaLeft(floor)+1.5f,1.3f));
                 Spawn(AncientCityLayout.ArenaRight(floor)-(floor==1?6:4),0,floor==4?1:3,floor,true);
-                game.Notice(floor==4?"저격수 / 조준 전조를 보고 엄폐·접근하세요.":"구역 보스 / 전조를 피하고 공격 후 빈틈을 노리세요.",3);
+                if (floor == 3) game.Story.RadioBark("백 경위", "검사대에서 본 그 병기다. 외벽으로 가는 길을 지키고 있어.");
+                game.Notice(floor==4?"저격수 / 조준 전조를 보고 엄폐·접근하세요.":floor==3?"코어 보안 병기 재교전 / 상층 외벽 통제선":"구역 보스 / 전조를 피하고 공격 후 빈틈을 노리세요.",3);
             }
             if(floor==4&&!activeBoss&&(Cleared&(1<<4))!=0&&!SecretaryCleared&&game.Campaign.ReadyForFinale&&p.x>=AncientCityLayout.BossArenaLeft(4,true)+1&&p.y<4)
             {
@@ -181,9 +230,27 @@ namespace Plugin.AncientCivilization
             if(p.y<-2.5f)
             {
                 if(game.Sniper)game.Sniper.PrepareSafeRecovery();
-                game.hero.TravelTo(ArenaActive?new Vector2(AncientCityLayout.BossArenaLeft(floor,activeBoss.IsSecretary)+1,1.3f):safeRecovery);game.SnapCameraToHero();
+                float arenaStart = activeBoss && activeBoss.IsOrbitalFirst ? AncientCityLayout.OrbitalLeft :
+                    AncientCityLayout.BossArenaLeft(floor,activeBoss && activeBoss.IsSecretary);
+                game.hero.TravelTo(ArenaActive?new Vector2(arenaStart+1,1.3f):safeRecovery);game.SnapCameraToHero();
                 game.Notice("안전 회수 / 마지막 안전 발판에서 다시 시작합니다.",2);
             }
+        }
+        public void OrbitalRetreated(AncientEnemy weapon)
+        {
+            if (OrbitalMidWon || !weapon || weapon != activeBoss || !weapon.IsOrbitalFirst) return;
+            OrbitalMidWon = true;
+            AncientGame.SetSaved("orbitalMidWon", 1);
+            retiringOrbital = weapon;
+            activeBoss = null;
+            game.boss = null;
+            game.ClearBattleProjectiles();
+            RefreshExitGates();
+            game.CombatCheckpoint(3, new Vector2(AncientCityLayout.OrbitalRight + 1, 1.3f));
+            game.Campaign.ContinueAfterOrbital();
+            game.PlayScoreEvent("retreat");
+            game.Story.RadioBark("통신관", "동쪽 차단기가 열렸다. 코어 신호는 살아 있어. 외벽 쪽으로 빠진다.");
+            game.Notice("궤도 봉쇄기 후퇴 / 동쪽 조사로 개방", 3);
         }
         public void BossDefeated(int floor)
         {
