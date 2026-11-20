@@ -2,7 +2,7 @@
 
 **v0.38.1 · 도시의 악보**
 
-[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.38.1-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.38.1-unity-project.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
 
 메인 화면에서 **도시 자유 순찰 · 5개 층**을 고르면 보스 없이 50개 방을 걸어서 왕복할 수 있습니다. 한 번 완주한 길에서는 **T**로 직전 주행 잔상과 달립니다. [탐험방 50곳과 이동 장치 50개](AncientCivilization/PATROL_KO.md)
 
