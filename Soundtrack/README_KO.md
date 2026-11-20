@@ -1,22 +1,22 @@
 # 도시의 악보 · PLUGIN 1회차 사운드트랙
 
-[보스전 합주 미리듣기](City-Score-Preview.mp3) · [메인 테마 한 곡 듣기](Main-Theme.mp3) · [이동·추격 구간 듣기](Field-Score-Preview.mp3) · [Unity v0.36.2 프로젝트](https://github.com/han-17287/plugin1/archive/refs/tags/v0.36.2-download.zip)
+[보스 하이라이트](City-Score-Preview.mp3) · [메인 테마](Main-Theme.mp3) · [이동·추격 하이라이트](Field-Score-Preview.mp3) · [Unity 프로젝트](https://github.com/han-17287/plugin1/archive/refs/tags/v0.38.1-download.zip)
 
-집행관 3페이즈의 23–24마디에서 피아노가 던진 짧은 음형을 일렉기타가 이어받는다. 이번 밴드룸 믹스에서는 좌우의 다른 피크 어택 뒤로 앰프의 낮은 울림이 이어진다. 25마디 첫 박에 합주가 돌아오면 킥이 짧게 치고 베이스 음이 그 뒤까지 남는다. 집행관의 절정은 252 BPM, 조커의 마지막 광선 대결은 258 BPM이다.
+집행관 3페이즈의 8마디 끝에서 리듬 파트가 함께 끊긴다. 짧은 스네어가 다음 마디를 당기면 킥, 베이스, 기타가 한 번에 들어온다. 이 합주 위에서 피아노와 리드 기타가 선율을 주고받는다. 집행관의 세 페이즈는 214 → 232 → 252 BPM, 조커의 마지막 광선 대결은 258 BPM이다.
 
-50곡을 한 번씩 들으면 **31:45**다. 완성 믹스는 44.1kHz 스테레오 Ogg이고, 41곡은 반복, 9곡은 단발이다. ZIP을 풀고 `Soundtrack/City-Score.m3u8`을 열면 아래 순서로 들을 수 있다. [밴드룸 사운드트랙 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/city-score-bandroom.zip) · [전체 플레이리스트](City-Score.m3u8)
+50곡을 한 번씩 들으면 **31분 45초**다. 완성 믹스는 44.1 kHz 스테레오 Ogg이며, 41곡은 반복, 9곡은 단발이다. ZIP에서 `Soundtrack/City-Score.m3u8`을 열면 게임 순서대로 재생할 수 있다. [전체 음원 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/city-score-downbeat.zip) · [플레이리스트](City-Score.m3u8)
 
 ## 같은 마디 비교하기
 
-같은 마디를 v0.36.1의 오버드라이브 믹스와 v0.36.2의 밴드룸 믹스 순서로 듣는다. 두 버전의 청취 음량을 맞췄다. [27초 비교 MP3](Before-After.mp3) · [v0.36.1 음원 보관본](https://github.com/han-17287/plugin1/tree/city-score-overdrive/Soundtrack)
+한 곡씩 같은 구절의 이전판과 수정판을 이어 붙이고 청취 음량을 맞췄다. [34초 비교 MP3](Before-After.mp3) · [이전판](https://github.com/han-17287/plugin1/tree/city-score-bandroom/Soundtrack)
 
-| 구절 | 오버드라이브 | 밴드룸 | 들어볼 소리 |
+| 구절 | 이전판 시작 | 수정판 시작 | 들어볼 소리 |
 |---|---:|---:|---|
-| 집행 개시 Ⅲ · 23–26마디 | 0.00초 | 4.09초 | 피아노에 답하는 기타의 끝음과, 두 마디 뒤 전원이 들어올 때의 스네어 |
-| 교대 전류 · 17–20마디 | 8.45초 | 13.09초 | 킥과 베이스가 함께 치는 첫음, 그 위에서 짧게 끊는 기타 |
-| 온실 너머의 오후 · 9–10마디 | 18.01초 | 22.65초 | 길게 남는 활 소리와 그 옆에서 맺히는 가야금의 짧은 음 |
+| 집행 개시 Ⅲ | 0.00초 | 5.03초 | 8마디 끝의 쉼, 9마디 첫 박을 함께 때리는 리듬 파트 |
+| 교대 전류 | 10.31초 | 16.04초 | 17–21마디에서 킥의 엇박을 함께 찍는 베이스와 짧은 기타 코드 |
+| 봉인된 하늘 너머 | 22.01초 | 28.17초 | 주선율 아래에서 드럼·베이스·기타가 함께 쉬었다가 다시 들어오는 순간 |
 
-곡별 편성·악보 음역·영어 스타일 프롬프트, 전투 진행에 따른 선곡, 분리된 스템의 사용법도 담았다. [곡별 큐시트](CUE_SHEET_KO.md) · [게임 음악 연동](ADAPTIVE_KO.md)
+[곡별 편성·음역·프롬프트](CUE_SHEET_KO.md) · [전투 진행과 음악 연동](ADAPTIVE_KO.md)
 
 ## 메인 테마와 타이틀
 

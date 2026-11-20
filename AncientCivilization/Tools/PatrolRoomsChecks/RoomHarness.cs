@@ -70,7 +70,8 @@ namespace Plugin.PlayerCore
                 Elapsed+=dt;
                 Time.unscaledDeltaTime=dt;
                 foreach(var callback in callbacks) callback(dt);
-                LateUpdate();
+                WantsRoomMusic();
+                TickSpeaker(expedition.Paused, false, true);
                 arrivalTarget=beamTarget=null;
             }
         }

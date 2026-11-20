@@ -290,10 +290,7 @@ namespace Plugin.PlayerCore
             for(int i=0;i<xs.Length;i++)Hook("방송 파형 고리 "+(i+1),xs[i],ys[i]);
             Box("송신 주파수 눈금",29.4f,5.9f,4,.5f,SummitIron,false,0);
             var needle=Box("조율 바늘",27.9f,6,.12f,.72f,SummitSun,false,1);
-            var radio=new GameObject("방송실 수신기").AddComponent<AudioSource>();radio.transform.SetParent(transform,false);
-            radio.playOnAwake=false;radio.loop=false;radio.spatialBlend=0;radio.volume=.28f;
-            var audioProfile=Resources.Load<AncientFeedbackProfile>("Audio/FieldFeedback");
-            if(audioProfile)radio.outputAudioMixerGroup=audioProfile.effects;
+            CreateSpeaker("방송실 수신기", 29.4f, 5.4f, 12, .28f);
             var clips=new[]{LivingReedTune(),Resources.Load<AudioClip>("Audio/MetalFall"),Resources.Load<AudioClip>("Audio/ArchiveGlass")};
             string[] discoveries={"living.marketLaundry","prod.tools.cache","admin.repository"};
             string[] hints={"물 흐르는 소리 틈으로 손풍금이 샌다. 열린 세탁소 창을 찾아봐.","공구 회전대의 뒤쪽을 지날 때만 빈 철통이 울린다.","잠긴 서고에선 유리 울림이 짧고, 바람 새는 빈 방에선 길어."};
@@ -306,13 +303,11 @@ namespace Plugin.PlayerCore
                     if(!unheard||!Flag(discoveries[channel]))break;
                 }
                 Place(needle,27.9f+1.4f*channel,6);Say(hints[channel]);
-                radio.Stop();radio.clip=clips[channel];if(radio.clip && AncientGame.Saved("muted")==0)radio.Play();
+                TuneRadio(clips[channel], channel == 0);
             },2.25f);
             Box("무착지 결승 수신선",46,8.8f,.12f,3.7f,SummitBeacon,false,2);
             bool launched=false,completed=false;
             Step(dt=>{
-                if(radio.isPlaying)
-                    radio.volume=AncientGame.Saved("muted")!=0?0:.28f*Mathf.Clamp01(1-Vector2.Distance(Hero,new Vector2(29.4f,5.4f))/12f);
                 if(!TrialActive){launched=completed=false;return;}
                 if(completed)return;
                 if(!launched)

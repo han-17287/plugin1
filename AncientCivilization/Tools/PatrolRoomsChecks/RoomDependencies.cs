@@ -72,7 +72,7 @@ namespace UnityEngine
 
 namespace Plugin.AncientCivilization
 {
-    public sealed class AncientFeedbackProfile : UnityEngine.Object { public object effects=new object(); }
+    public sealed class AncientFeedbackProfile : UnityEngine.Object { public object music=new object(),effects=new object(); }
     public static class AncientGame { public static int Saved(string key) => 0; }
     public static class AncientCityLayout { public static string Name(int floor) => "층 "+floor; }
     public static class AncientLivingWallArt {public static Sprite Get(int style,int variation) => new Sprite();}

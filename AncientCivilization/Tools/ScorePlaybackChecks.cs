@@ -17,12 +17,12 @@ static class ScorePlaybackChecks
         if (!ok) throw new InvalidOperationException(message);
     }
 
-    static void Step(int count = 1, bool suspend = false, bool cancel = false, float entry = 0)
+    static void Step(int count = 1, bool suspend = false, bool cancel = false, float entry = 0, bool roomMusic = false)
     {
         for (int i = 0; i < count; i++)
         {
             Time.unscaledDeltaTime = Frame;
-            player.Tick(route, suspend, cancel, .22f, false, entry);
+            player.Tick(route, suspend, cancel, .22f, false, entry, roomMusic);
             Check(AudioSource.All.Count(voice => voice.isPlaying) <= 1, "Two pieces playing after update "+frames);
             foreach (var voice in AudioSource.All) voice.Advance(Frame);
             frames++;
@@ -122,6 +122,23 @@ static class ScorePlaybackChecks
         player.PlayEvent("checkpoint");
         Step(1, cancel:true);
         Check(Attacks("checkpoint") == 0, "A discarded accent leaked into a new screen");
+        var region = Live;
+        Step(roomMusic:true);
+        Check(region.isPlaying && !player.AllowsRoomMusic && region.volume < .22f, "Room music overlapped the region fade");
+        Step(5, roomMusic:true);
+        int regionPosition = region.timeSamples;
+        Step(5, roomMusic:true);
+        Check(player.AllowsRoomMusic && !region.isPlaying && region.timeSamples == regionPosition,
+            "A local melody failed to hold the score transport");
+        player.PlayEvent("death");
+        Step(roomMusic:true);
+        Resources.Finish("death").samples = 100;
+        Step(roomMusic:true);
+        Check(!player.AllowsRoomMusic && Live.clip.name == "death", "A local melody masked a retry sting");
+        Step(7, roomMusic:true);
+        Check(player.AllowsRoomMusic && region.timeSamples == regionPosition, "Score resumed before the local melody ended");
+        Step();
+        Check(region.isPlaying && region.timeSamples > regionPosition && Attacks(route) == 1, "Leaving the speaker restarted the region");
         player.Dispose();
         Check(!AudioSource.All.Any(voice => voice.isPlaying), "Scene teardown left a music voice running");
         Console.WriteLine($"PASS: {frames} director frames; async supersession, load readiness, single active music voice, loop, pause/mute, prioritized stings, resume, one-shots, countdown seek and clip eviction.");

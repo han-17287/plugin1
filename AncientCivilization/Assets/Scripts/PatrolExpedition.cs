@@ -239,7 +239,9 @@ namespace Plugin.PlayerCore
         void LateUpdate()
         {
             if (!room || !Player) return;
-            music.Tick((roomId - 1) / 10, TrialActive, Paused);
+            bool wantsRoomMusic = room.WantsRoomMusic();
+            music.Tick((roomId - 1) / 10, TrialActive, Paused, wantsRoomMusic);
+            room.TickSpeaker(Paused, music.Muted, music.AllowsRoomMusic);
             if (Paused || Time.frameCount == arrivalFrame) return;
             Vector2 pos = Player.transform.position;
             if (justFinished > 0 && pos.x > 9) justFinished = 0;
@@ -306,7 +308,12 @@ namespace Plugin.PlayerCore
 
         void OnApplicationFocus(bool focused)
         {
-            if (!focused) { music?.Suspend(); Flush(); }
+            if (!focused)
+            {
+                music?.Suspend();
+                if (room) room.TickSpeaker(true, false, false);
+                Flush();
+            }
             Time.timeScale = focused && !leaving && panel == Panel.None ? 1 : 0;
         }
         void OnApplicationPause(bool paused) { if (paused) Flush(); }

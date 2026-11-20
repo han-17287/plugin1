@@ -31,6 +31,7 @@ namespace Plugin.AncientCivilization
         long use;
 
         public string CurrentScore => playingEvent ?? playing;
+        public bool AllowsRoomMusic => !music.isPlaying && playingEvent == null && queuedEvent == null;
 
         public AncientScorePlayer(Transform parent, AudioMixerGroup musicGroup)
         {
@@ -203,7 +204,7 @@ namespace Plugin.AncientCivilization
             musicGain = 1;
         }
 
-        public void Tick(string route, bool suspended, bool cancelEvents, float volume, bool lowHealth, float elapsedOnEntry = 0)
+        public void Tick(string route, bool suspended, bool cancelEvents, float volume, bool lowHealth, float elapsedOnEntry = 0, bool roomMusic = false)
         {
             float dt = Mathf.Min(Time.unscaledDeltaTime, .1f);
             volume = Mathf.Clamp01(volume);
@@ -251,6 +252,16 @@ namespace Plugin.AncientCivilization
                 return;
             }
 
+            // 방 안에서 실제로 들려오는 선율에 자리를 내주고, 사건 음악에는 우선권을 준다.
+            if (roomMusic)
+            {
+                if (Released(music, ref musicGain, volume, dt) && music.isPlaying)
+                {
+                    music.Pause();
+                    heldMusic = true;
+                }
+                return;
+            }
             if (playing != route && playing != null)
             {
                 // 다음 파일의 첫 버퍼가 준비될 때까지 현재 연주는 계속한다.

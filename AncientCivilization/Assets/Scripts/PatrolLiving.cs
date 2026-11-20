@@ -7,10 +7,12 @@ namespace Plugin.PlayerCore
     public sealed partial class PatrolRoom : MonoBehaviour
     {
         static AudioClip livingReeds;
-        AudioSource livingSpeaker;
-        Vector2 livingSoundPoint;
-        Func<bool> livingSoundOpen;
-        bool livingAudioPaused;
+        AudioSource roomSpeaker;
+        AncientFeedbackProfile speakerProfile;
+        Vector2 speakerPoint;
+        Func<bool> speakerOpen;
+        float speakerRange, speakerGain, speakerTarget;
+        bool speakerNear, speakerMusical, speakerQueued, speakerPaused;
 
 
         void BuildLiving(int id)
@@ -73,44 +75,87 @@ namespace Plugin.PlayerCore
 
         void LivingSpeaker(float x, float y, Func<bool> play)
         {
-            var speaker = new GameObject("골목 손풍금");
-            speaker.transform.SetParent(transform,false);
-            speaker.transform.localPosition = new Vector3(x,y,0);
-            var voice = speaker.AddComponent<AudioSource>();
-            var profile = Resources.Load<AncientFeedbackProfile>("Audio/FieldFeedback");
-            if (profile) voice.outputAudioMixerGroup = profile.effects;
-            voice.playOnAwake = false; voice.loop = true; voice.spatialBlend = 0;
-            voice.dopplerLevel = 0; voice.priority = 105;
-            voice.volume = 0;
-            livingSpeaker = voice;
-            livingSoundPoint = new Vector2(x,y);
-            livingSoundOpen = play;
+            CreateSpeaker("골목 손풍금", x, y, 10, .34f);
+            speakerOpen = play;
+            speakerMusical = true;
+            roomSpeaker.loop = true;
+            if (speakerProfile) roomSpeaker.outputAudioMixerGroup = speakerProfile.music;
         }
 
-        // 일시정지 때 FixedUpdate가 멎더라도 방 안의 음원도 같은 박에서 멈춘다.
-        void LateUpdate()
+        void CreateSpeaker(string label, float x, float y, float range, float gain)
         {
-            if (!livingSpeaker || !expedition) return;
-            if (expedition.Paused)
+            var owner = new GameObject(label);
+            owner.transform.SetParent(transform, false);
+            owner.transform.localPosition = new Vector3(x, y, 0);
+            roomSpeaker = owner.AddComponent<AudioSource>();
+            roomSpeaker.playOnAwake = false;
+            roomSpeaker.spatialBlend = 0;
+            roomSpeaker.dopplerLevel = 0;
+            roomSpeaker.priority = 105;
+            roomSpeaker.volume = 0;
+            speakerPoint = new Vector2(x, y);
+            speakerRange = range;
+            speakerGain = gain;
+            speakerProfile = Resources.Load<AncientFeedbackProfile>("Audio/FieldFeedback");
+        }
+
+        void TuneRadio(AudioClip clip, bool musical)
+        {
+            roomSpeaker.Stop();
+            roomSpeaker.volume = 0;
+            roomSpeaker.clip = clip;
+            roomSpeaker.loop = false;
+            speakerMusical = musical;
+            speakerPaused = false;
+            speakerQueued = clip && AncientGame.Saved("muted") == 0;
+            if (speakerProfile)
+                roomSpeaker.outputAudioMixerGroup = musical ? speakerProfile.music : speakerProfile.effects;
+        }
+
+        public bool WantsRoomMusic()
+        {
+            if (!roomSpeaker) return false;
+            float strength = Mathf.Clamp01(1 - Vector2.Distance(Hero, speakerPoint) / speakerRange);
+            // 경계선을 오가더라도 같은 음원이 매 프레임 멈췄다 켜지지 않게 한다.
+            speakerNear = strength > (speakerNear ? .10f : .18f) && (speakerOpen == null || speakerOpen());
+            speakerTarget = speakerNear ? strength * speakerGain : 0;
+            bool active = roomSpeaker.loop || speakerQueued || speakerPaused || roomSpeaker.isPlaying;
+            return speakerMusical && active && (speakerNear || (roomSpeaker.isPlaying && roomSpeaker.volume > 0));
+        }
+
+        public void TickSpeaker(bool paused, bool muted, bool allowsMusic)
+        {
+            if (!roomSpeaker) return;
+            if (!paused && !speakerNear && !roomSpeaker.isPlaying)
             {
-                if (livingSpeaker.isPlaying) { livingSpeaker.Pause(); livingAudioPaused=true; }
+                if (speakerPaused) roomSpeaker.Stop();
+                speakerQueued = speakerPaused = false;
+                roomSpeaker.volume = 0;
                 return;
             }
-            bool hear = AncientGame.Saved("muted")==0 && (livingSoundOpen==null || livingSoundOpen()) &&
-                Near(livingSoundPoint.x,livingSoundPoint.y,10);
-            if (livingAudioPaused)
+            if (paused || muted || (speakerMusical && !allowsMusic))
             {
-                if (hear) livingSpeaker.UnPause();
-                livingAudioPaused=false;
+                if (roomSpeaker.isPlaying)
+                {
+                    roomSpeaker.Pause();
+                    speakerPaused = true;
+                }
+                return;
             }
-            float target = hear ? .34f*Mathf.Clamp01(1-Vector2.Distance(Hero,livingSoundPoint)/10f) : 0;
-            livingSpeaker.volume = Mathf.MoveTowards(livingSpeaker.volume,target,Time.unscaledDeltaTime*.60f);
-            if (hear && !livingSpeaker.isPlaying)
+            if (speakerPaused)
             {
-                if (!livingSpeaker.clip) livingSpeaker.clip=LivingReedTune();
-                livingSpeaker.volume=0; livingSpeaker.Play();
+                roomSpeaker.UnPause();
+                speakerPaused = false;
             }
-            else if (!hear && livingSpeaker.volume<.001f && livingSpeaker.isPlaying) livingSpeaker.Stop();
+            else if (speakerNear && !roomSpeaker.isPlaying && (roomSpeaker.loop || speakerQueued))
+            {
+                if (!roomSpeaker.clip) roomSpeaker.clip = LivingReedTune();
+                roomSpeaker.Play();
+                speakerQueued = false;
+            }
+            roomSpeaker.volume = Mathf.MoveTowards(roomSpeaker.volume, speakerTarget, Time.unscaledDeltaTime * 1.5f);
+            if (!speakerNear && roomSpeaker.volume <= 0 && roomSpeaker.isPlaying)
+                roomSpeaker.Stop();
         }
 
         // 열린 골목으로 장사꾼도 옮긴다. 마지막에 연 문이 현재 정류장이 된다.

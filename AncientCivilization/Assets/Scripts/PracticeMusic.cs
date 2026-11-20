@@ -29,7 +29,10 @@ namespace Plugin.PlayerCore
             player.SetMuted(muted);
         }
 
-        public void Tick(int floor, bool challenge, bool paused)
+        public bool Muted => muted;
+        public bool AllowsRoomMusic => player.AllowsRoomMusic;
+
+        public void Tick(int floor, bool challenge, bool paused, bool roomMusic = false)
         {
             if (Application.isFocused && MutePressed())
             {
@@ -39,7 +42,7 @@ namespace Plugin.PlayerCore
                 PlayerPrefs.Save();
             }
             player.Tick(challenge ? Challenge[floor] : Flow[floor], paused || !Application.isFocused,
-                changedRoom, profile ? profile.scoreVolume : .42f, false);
+                changedRoom, profile ? profile.scoreVolume : .42f, false, roomMusic: roomMusic && !muted);
             changedRoom = false;
         }
 
