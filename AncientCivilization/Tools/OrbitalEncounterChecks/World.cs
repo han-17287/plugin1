@@ -29,7 +29,7 @@ namespace Plugin.AncientCivilization
     {
         public AncientOrbitalEncounter Orbital;
         public readonly TestHero hero = new TestHero();
-        public bool Paused, MainMenu, skills;
+        public bool Paused, MainMenu, skills, DeveloperMenuOpen;
         public TestJournal Journal { get; } = new TestJournal();
         public static Color Cyan => Color.white;
         public void Sound(AncientEquipmentCue cue) {}

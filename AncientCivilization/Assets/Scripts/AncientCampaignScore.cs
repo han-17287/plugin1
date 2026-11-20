@@ -54,7 +54,9 @@ namespace Plugin.AncientCivilization
                     int phase = game.Sniper && game.Sniper.Owner == boss ? game.Sniper.Phase : 1;
                     switch (phase)
                     {
-                        case 4: return "joker-beam";
+                        case 6: return "joker-beam";
+                        case 5: return "joker-turrets";
+                        case 4: return "joker-double";
                         case 3: return "joker-turrets";
                         case 2: return "joker-double";
                         default: return "joker-sightline";

@@ -418,7 +418,7 @@ namespace Plugin.AncientCivilization
         {BreachOpen=false;breachAge=-1;if(breach)breach.SetActive(true);foreach(var shard in shards)if(shard.Transform)shard.Transform.gameObject.SetActive(false);}
         void Update()
         {
-            if(!game||!game.hero||!game.Story)return;
+            if(!game||!game.hero||!game.Story||game.DeveloperMenuOpen)return;
             bool externalPause=game.MainMenu||game.skills||game.Story.DialogueOpen||game.Story.LiftBusy||
                 (game.Journal&&game.Journal.Open)||!Application.isFocused;
             float activeDelta=externalPause||game.Paused?0:Time.deltaTime;

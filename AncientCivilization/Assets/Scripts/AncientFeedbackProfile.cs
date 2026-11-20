@@ -4,7 +4,7 @@ using UnityEngine.Audio;
 namespace Plugin.AncientCivilization
 {
     // 장비의 판정이나 입력 창과 독립적으로 청각·화면 피드백을 조절한다.
-    public enum AncientEquipmentCue { Forge, MetalFall, Lens, Sweep, Counter, Overload, ShortCircuit, Contact, Shatter, Heartbeat, UI }
+    public enum AncientEquipmentCue { Forge, MetalFall, Lens, Sweep, Counter, Overload, ShortCircuit, Contact, Shatter, Heartbeat, UI, JokerCharge }
 
     [CreateAssetMenu(menuName = "PLUGIN/전투 피드백")]
     public sealed class AncientFeedbackProfile : ScriptableObject

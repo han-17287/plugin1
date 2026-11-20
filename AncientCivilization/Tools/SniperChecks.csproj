@@ -6,6 +6,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="SniperChecks.cs" />
+    <Compile Include="ControllerFixtures/EncounterUnityDoubles.cs" />
+    <Compile Include="ControllerFixtures/SniperChoreographyChecks.cs" />
     <Compile Include="../Assets/Scripts/AncientSniperRules.cs" />
+    <Compile Include="../Assets/Scripts/AncientSniperChoreography.cs" />
   </ItemGroup>
 </Project>

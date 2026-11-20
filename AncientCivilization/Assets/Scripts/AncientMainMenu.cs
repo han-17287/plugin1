@@ -46,7 +46,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!game.MainMenu||AncientBootIntro.Active)return;
+            if(!game.MainMenu||AncientBootIntro.Active||game.DeveloperMenu&&game.DeveloperMenu.Capturing)return;
             if(Input.GetKeyDown(KeyCode.Escape)){controls=false;confirmNew=false;}
         }
         static Texture2D Surface(string name,Color tint)
@@ -154,7 +154,7 @@ namespace Plugin.AncientCivilization
         }
         void OnGUI()
         {
-            if(!game||!game.MainMenu||AncientBootIntro.Active)return;
+            if(!game||!game.MainMenu||AncientBootIntro.Active||game.DeveloperMenu&&game.DeveloperMenu.Capturing)return;
             EnsureBackground();Styles();
             var oldMatrix=GUI.matrix;var oldColor=GUI.color;int oldDepth=GUI.depth;bool oldEnabled=GUI.enabled;var oldButton=GUI.skin.button;
             try

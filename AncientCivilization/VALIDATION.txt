@@ -1,3 +1,18 @@
+v0.37.0 Joker rooftops and developer travel
+
+The portable project and asset checks and 41 .NET suites passed. SniperChecks
+exercised the six HP gates, independent clash inputs, exchanges, rooftop
+returns and 70 Full House openings. JokerAttackChecks compared telegraphed
+segments with damage contacts. JokerArenaChecks covered physical deck motion,
+refuges, ring lifetime and cleanup with Unity-service doubles.
+
+DeveloperTravelChecks verified 43 unique campaign destinations, gate setup and
+isolated save/return behavior in 122 assertions. DeveloperAccessChecks tried
+all 100,000 five-digit inputs. The original 50 music cues remain packaged.
+Runtime and editor C# compiled with warnings treated as errors against local
+compatibility references. Native Unity 6000.6.7f1 import, Play Mode, observed
+difficulty, device audio, player build and frame rate remain unverified.
+
 v0.36.2 Band timbre and room mix
 
 All 50 Unity Ogg files differ from v0.36.1. Each matches its final stereo

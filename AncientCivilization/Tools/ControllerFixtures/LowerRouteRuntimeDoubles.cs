@@ -95,7 +95,7 @@ namespace Plugin.AncientCivilization
         public static readonly Dictionary<string,int> Prefs=new Dictionary<string,int>();public static readonly Color Cyan=new Color(.2f,.8f,1);
         public static int Saved(string key,int fallback=0)=>Prefs.TryGetValue(key,out int value)?value:fallback;public static void SetSaved(string key,int value){Prefs[key]=value;}
         public AncientHero hero=new AncientHero();public RouteStoryFixture Story=new RouteStoryFixture();public RouteCampaignFixture Campaign=new RouteCampaignFixture();public AncientLivingDistrict Living=new AncientLivingDistrict();public AncientLowerRoute LowerRoute;
-        public Camera View=new Camera();public bool HasSession=true,MainMenu,GameplayInputReady=true,skills,ArenaActive;public static bool IsQAProfile;public bool Paused=>Story.DialogueOpen||MainMenu;
+        public Camera View=new Camera();public bool HasSession=true,MainMenu,DeveloperMenuOpen,GameplayInputReady=true,skills,ArenaActive;public static bool IsQAProfile;public bool Paused=>Story.DialogueOpen||MainMenu||DeveloperMenuOpen;
         public RouteCityFixture City=new RouteCityFixture();public RouteJournalFixture Journal=new RouteJournalFixture();public RouteProductionFixture Production=new RouteProductionFixture();
         public int credits,SaveCount,CameraSnaps;public readonly List<AncientEnemy> enemies=new List<AncientEnemy>();
         public GameObject Box(string name,Vector2 p,Vector2 size,Color color,int order){var o=new GameObject(name);o.transform.position=p;o.AddComponent<SpriteRenderer>();return o;}

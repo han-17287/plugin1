@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="JokerArenaChecks.cs" />
+    <Compile Include="ControllerFixtures/EncounterUnityDoubles.cs" />
+    <Compile Include="../Assets/Scripts/AncientJokerArena.cs" />
+  </ItemGroup>
+</Project>

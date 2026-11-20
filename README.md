@@ -1,8 +1,10 @@
 # PLUGIN · Ancient Civilization
 
-**v0.36.2 · 밴드 합주 음원과 궤도 봉쇄기**
+**v0.37.0 · 조커의 옥상 결투와 개발자 이동**
 
-[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.36.2-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.37.0-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+
+게임에서 숫자 **0**을 누르고 **17287**을 입력하면 층과 구역, 보스전을 골라 이동할 수 있습니다. 보스 목록에서 최상층 저격수를 골라 여섯 페이즈를 플레이하세요. [조커 대치 공략](AncientCivilization/SNIPER_BOSS_KO.md)
 
 **사운드트랙 50곡 · 밴드 합주 믹스** · [보스 하이라이트 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-bandroom/Soundtrack/City-Score-Preview.mp3) · [보스곡 이전판과 비교](https://raw.githubusercontent.com/han-17287/plugin1/city-score-bandroom/Soundtrack/Before-After.mp3) · [메인 테마 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-bandroom/Soundtrack/Main-Theme.mp3) · [음악 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/city-score-bandroom.zip) · [전곡 목록](https://github.com/han-17287/plugin1/blob/city-score-bandroom/Soundtrack/README_KO.md)
 
