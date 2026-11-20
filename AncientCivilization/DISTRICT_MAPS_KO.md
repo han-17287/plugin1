@@ -64,5 +64,5 @@
 
 - 예전 맵이 뜨면 다운로드 태그와 프로젝트 폴더를 확인합니다. 새 배치는 메인 메뉴의 별도 지역 맵 버튼에 있습니다.
 - 분홍색/누락 원화는 Unity 임포트와 `Resources/Art`를 먼저 확인합니다. 현재 환경에서는 URP 2D 실기 호환성을 검증하지 못했습니다.
-- 입력이 안 되면 Input System 1.20.1 설치, Active Input Handling Both, Game 뷰 포커스를 확인합니다.
+- 입력이 안 되면 Package Manager에서 내장 Input System 1.20.1, Active Input Handling Both, Game 뷰 포커스를 확인합니다.
 - 일회용 앵커가 회색으로 남거나 셔터가 끼면 현재 지점 재시도를 사용하고 해당 위치를 기록합니다. 자동 검사는 실제 충돌 솔버·키 입력·카메라 지연까지 증명하지 않습니다.

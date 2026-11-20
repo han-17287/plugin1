@@ -4,7 +4,7 @@ Unity 6000.6.7f1용이다. `Assets/Scenes/PlayerMovementPractice.unity`를 열�
 
 ## 실행과 설정
 
-Unity 6000.6.7f1에서 프로젝트를 열면 Package Manager가 `com.unity.inputsystem` 1.20.1을 설치한다. Input System 어셈블리의 UI 참조를 위해 Unity 6용 `com.unity.ugui` 2.0.0도 선언했다. 연습 화면은 IMGUI를 사용한다. Input System과 기존 게임을 함께 실행하기 위해 Active Input Handling은 **Both**다. Unity가 재시작을 요청하면 재시작한다. 새 `PlayerInputReader`는 신 Input System만 사용한다. 입력 패키지가 없으면 명시적인 설정 오류를 내고 새 플레이어 이동을 멈춘다.
+Unity 6000.6.7f1에서 프로젝트를 열면 Package Manager가 내장된 `com.unity.inputsystem` 1.20.1을 읽는다. Input System 어셈블리의 UI 참조를 위해 Unity 6용 `com.unity.ugui` 2.0.0도 선언했다. 연습 화면은 IMGUI를 사용한다. Input System과 기존 게임을 함께 실행하기 위해 Active Input Handling은 **Both**다. Unity가 재시작을 요청하면 재시작한다. 새 `PlayerInputReader`는 신 Input System만 사용한다. 입력 패키지가 없으면 명시적인 설정 오류를 내고 새 플레이어 이동을 멈춘다.
 
 렌더 파이프라인은 이번 P1에서 전환하지 않았다. 연습 씬은 기본 SpriteRenderer로 동작한다. URP 2D·Light2D·Bloom 전환은 레이저 비주얼 단계에서 머티리얼과 함께 처리한다. 현재 전구 표시는 색 표시용 스프라이트다.
 

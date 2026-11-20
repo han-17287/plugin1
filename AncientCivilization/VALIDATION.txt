@@ -1,3 +1,11 @@
+v0.38.3 Embedded Input System
+
+Packages/com.unity.inputsystem contains the runtime and editor sources and
+asset metadata from Unity's 1.20.1 tag (a934411756c8862cb0f54da514a9b7cc1c000a2b).
+The package does not need a registry resolution. Upstream test and
+documentation directories are omitted. The published source, license and
+third-party notice were checked byte for byte. Native Unity import is pending.
+
 v0.38.2 Input System editor compatibility
 
 The reported InputEventTreeView and InputStateWindow lines match Input System

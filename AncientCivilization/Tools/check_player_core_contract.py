@@ -19,12 +19,19 @@ def main():
     assert paths['Drop']==['OneModifier','<Keyboard>/s','<Keyboard>/space']
     assert len(paths['Move'])==10
     for binding in action_map['bindings']:assert binding['action'] in actions
-    manifest=json.loads((ROOT/'Packages/manifest.json').read_text())
-    assert manifest['dependencies']['com.unity.inputsystem']=='1.20.1'
+    packages=ROOT/'Packages'
+    manifest=json.loads((packages/'manifest.json').read_text())
+    input_package=packages/'com.unity.inputsystem'
+    input_manifest=json.loads((input_package/'package.json').read_text())
+    assert input_manifest['name']=='com.unity.inputsystem' and input_manifest['version']=='1.20.1'
+    assert 'com.unity.inputsystem' not in manifest['dependencies']
+    assert (input_package/'InputSystem/Unity.InputSystem.asmdef').is_file()
     assert 'com.unity.modules.tilemap' in manifest['dependencies']
     assert 'activeInputHandler: 2' in (ROOT/'ProjectSettings/ProjectSettings.asset').read_text()
     importer=(ROOT/'Assets/Resources/PlayerCore/P1Player.inputactions.meta').read_text()
-    assert '8404be70184654265930450def6a9037' in importer and 'ScriptedImporter:' in importer
+    input_importer=(input_package/'InputSystem/Editor/AssetImporter/InputActionImporter.cs.meta').read_text()
+    importer_guid=re.search(r'^guid: (\w+)',input_importer,re.M)[1]
+    assert importer_guid in importer and 'ScriptedImporter:' in importer
     # Test-scene script and movement-data references must resolve before any editor generation.
     scene=(ROOT/'Assets/Scenes/PlayerMovementPractice.unity').read_text()
     for path in ['Assets/Scripts/PlayerMovementPractice.cs.meta','Assets/Resources/PlayerCore/DefaultMovement.asset.meta']:
