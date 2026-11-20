@@ -31,6 +31,8 @@ Unity 6000.6.7f1에서 `Assets/Scenes/Main.unity`를 열고 Play를 누르면 �
 
 ### Unity WebGL 내보내기
 
+Windows에서는 프로젝트의 `Build-WebGL.cmd`를 두 번 클릭하면 설치된 Unity로 빌드하고 `PLUGIN-WebGL-upload.zip`을 만듭니다. 완료되면 탐색기에서 ZIP을 선택해 줍니다. 빌드 중 오류가 나면 같은 폴더에 생성된 `Unity-WebGL.log`를 확인할 수 있습니다.
+
 Unity Hub에서 6000.6.7f1의 **Web Build Support**를 설치합니다. 프로젝트의 **PLUGIN → 빌드 → WebGL 플레이어 내보내기**에서 저장 위치를 선택합니다. 빌드를 마치면 `PLUGIN-v0.38.3-WebGL` 폴더 전체를 ZIP으로 묶어 배포에 사용합니다. `index.html`과 `Build`, `TemplateData` 등 Unity가 생성한 파일을 함께 담습니다.
 
 배치 빌드에서는 Unity 실행 파일에 다음 인자를 전달합니다. `-projectPath`에는 이 프로젝트의 실제 경로를 사용합니다.
