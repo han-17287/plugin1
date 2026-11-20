@@ -1,5 +1,9 @@
 # 변경 내역
 
+## v0.38.3 · Unity 6 입력 패키지 내장
+
+- Input System 1.20.1의 런타임과 에디터 소스를 프로젝트에 포함했다. Unity는 `Packages/com.unity.inputsystem`에서 직접 읽는다. [Unity 공식 릴리스](https://github.com/Unity-Technologies/InputSystem/tree/1.20.1/Packages/com.unity.inputsystem)
+
 ## v0.38.2 · Unity 6 입력 패키지 호환성
 
 - Input System을 1.20.1로 올렸다. Unity 6.6에서 입력 디버거가 사용하는 `TreeView<int>`와 `TreeViewState<int>`를 지원하는 버전이다.

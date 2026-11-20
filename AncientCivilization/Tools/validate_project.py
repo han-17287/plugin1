@@ -368,7 +368,7 @@ def main():
     manifest = json.loads((ROOT / 'Packages/manifest.json').read_text(encoding='utf-8-sig'))
     check(set(manifest['dependencies']) == {
         'com.unity.modules.physics2d', 'com.unity.modules.imgui', 'com.unity.modules.audio',
-        'com.unity.modules.tilemap', 'com.unity.inputsystem', 'com.unity.ugui'
+        'com.unity.modules.tilemap', 'com.unity.ugui'
     }, 'required builtin Unity modules declared')
     check('6000.6.7f1' in (ROOT / 'ProjectSettings/ProjectVersion.txt').read_text(encoding='utf-8-sig'), 'Unity version 6000.6.7f1')
     guids = []
