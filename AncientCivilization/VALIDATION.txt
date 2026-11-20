@@ -1,3 +1,19 @@
+v0.38.0 Five-floor patrol expedition
+
+The exploration scene enters from Main, floor entrance kiosks or the developer
+map. The catalog, build settings and room guide cover fifty named sites and a
+one-to-one mapping to fifty traversal devices. The portable room harness
+exercises all fifty production room builders and selected real device callbacks
+with service doubles. Recording checks cover the previous trajectory, facing,
+body frame, samples, best time and persistence. The grapple controller exercises
+straight intercepts and successive physical contacts on the room 47 hook paths.
+The developer travel suite includes a direct patrol-to-Joker handoff and safe
+return to the original campaign profile.
+
+The runtime and Editor C# compiled against the local managed compatibility
+references. Native Unity 6000.6.7f1 Play Mode, a standalone build, controller
+feel, physical audio output and frame rate still need a device playtest.
+
 v0.37.0 Joker rooftops and developer travel
 
 The portable project and asset checks and 41 .NET suites passed. SniperChecks

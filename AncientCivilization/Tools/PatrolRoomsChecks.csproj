@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="ControllerFixtures/EncounterUnityDoubles.cs" />
+    <Compile Include="PatrolRoomsChecks/*.cs" />
+    <Compile Include="../Assets/Scripts/PatrolProduction.cs" />
+    <Compile Include="../Assets/Scripts/PatrolLiving.cs" />
+    <Compile Include="../Assets/Scripts/PatrolAdministration.cs" />
+    <Compile Include="../Assets/Scripts/PatrolResidence.cs" />
+    <Compile Include="../Assets/Scripts/PatrolSummit.cs" />
+  </ItemGroup>
+</Project>

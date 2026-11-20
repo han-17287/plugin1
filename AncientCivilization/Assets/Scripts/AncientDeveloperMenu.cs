@@ -1,4 +1,5 @@
 using UnityEngine;
+using Plugin.PlayerCore;
 
 namespace Plugin.AncientCivilization
 {
@@ -10,7 +11,7 @@ namespace Plugin.AncientCivilization
         static readonly Color Paper = new Color(.045f, .072f, .095f);
         static readonly Color Accent = new Color(.3f, .88f, 1f);
         static readonly Color Muted = new Color(.67f, .78f, .82f);
-        static readonly string[] Tabs = { "전체", "층", "구역", "보스" };
+        static readonly string[] Tabs = { "전체", "층", "구역", "보스", "순찰" };
         readonly AncientDeveloperAccess access = new AncientDeveloperAccess();
         AncientGame game;
         GUIStyle title, body, small, tab, row, field, code;
@@ -168,7 +169,7 @@ namespace Plugin.AncientCivilization
             if (next != query) { query = next; scroll = Vector2.zero; }
             for (int i = 0; i < Tabs.Length; i++)
             {
-                var r = new Rect(x + 26 + i * 180, y + 117, 174, 34);
+                var r = new Rect(x + 26 + i * 144, y + 117, 139, 34);
                 if (GUI.Button(r, Tabs[i], tab)) { selectedTab = i; scroll = Vector2.zero; }
                 if (selectedTab == i) AncientHUD.Panel(new Rect(r.x, r.yMax, r.width, 2), Accent);
             }
@@ -176,6 +177,7 @@ namespace Plugin.AncientCivilization
             var entries = AncientDeveloperTravel.Destinations;
             int count = 0;
             for (int i = 0; i < entries.Count; i++) if (Visible(entries[i])) count++;
+            for(int id=1; id<=PatrolCatalog.Count; id++) if(VisiblePatrol(id)) count++;
             var viewport = new Rect(x + 26, y + 174, 717, 346);
             scroll = GUI.BeginScrollView(viewport, scroll, new Rect(0, 0, 693, Mathf.Max(viewport.height, count * RowHeight)));
             AncientDeveloperDestination chosen = default;
@@ -192,9 +194,23 @@ namespace Plugin.AncientCivilization
                 { chosen = entry; hasChoice = true; }
                 shown++;
             }
+            int patrolId=0;
+            for(int id=1; id<=PatrolCatalog.Count; id++)
+            {
+                if(!VisiblePatrol(id))continue;
+                string text=AncientCityLayout.Name((id-1)/10)+"   /   "+PatrolCatalog.Name(id);
+                if(GUI.Button(new Rect(0,shown*RowHeight,689,RowHeight-4),text,row))patrolId=id;
+                shown++;
+            }
             if (count == 0) GUI.Label(new Rect(12, 8, 660, 32), "검색 결과가 없습니다.", small);
             GUI.EndScrollView();
             if (hasChoice) { Travel(chosen); return; }
+            if(patrolId!=0)
+            {
+                if(PatrolEntry.Request(patrolId,true))FinishTravel();
+                else travelError="순찰 구역을 불러올 수 없습니다.";
+                return;
+            }
             GUI.Label(new Rect(x + 26, y + 539, 510, 34), travelError.Length > 0 ? travelError : count + "개 목적지", small);
             if (AncientDeveloperTravel.IsVisiting &&
                 GUI.Button(new Rect(x + 547, y + 535, 195, 37), "원래 플레이로 복귀", tab))
@@ -202,6 +218,12 @@ namespace Plugin.AncientCivilization
                 if (AncientDeveloperTravel.Return(game)) FinishTravel();
                 else travelError = "원래 플레이로 복귀할 수 없습니다.";
             }
+        }
+
+        bool VisiblePatrol(int id)
+        {
+            return (selectedTab==0 || selectedTab==4) &&
+                AncientDeveloperAccess.Matches(query,PatrolCatalog.Name(id),AncientCityLayout.Name((id-1)/10),"순찰 "+PatrolCatalog.Device(id));
         }
 
         bool Visible(AncientDeveloperDestination entry)

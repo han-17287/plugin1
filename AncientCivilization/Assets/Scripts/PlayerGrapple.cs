@@ -8,12 +8,16 @@ namespace Plugin.PlayerCore
         PlayerStateMachine player;PlayerInputReader input;PlayerModeController mode;Rigidbody2D body;CapsuleCollider2D shape;Camera view;
         ContactFilter2D filter;readonly RaycastHit2D[] hits=new RaycastHit2D[24];
         GrappleAnchor candidate,leased;Vector2 target,direction,start;float delay,age,attackLeft,lastDistance;
+        Vector2 previousBody,previousSocket;
+        bool movingShot,hasTravelStep;
         bool active,finishing,anchored;LineRenderer rangeLine,core,helixA,helixB;Material material;
         public bool HazardInvulnerable=>active&&player.State==PlayerStateId.GrappleDash;
         public bool Active=>active;
         public bool ZipStrikeReady=>attackLeft>0;
         public float ZipStrikeMultiplier=>ZipStrikeReady?GrappleRules.StrikeMultiplier(lastDistance,data.speed):1;
         public GrappleAnchor Candidate=>candidate;
+        public GrappleAnchor LastArrival {get;private set;}
+        public int ArrivalSequence {get;private set;}
         public bool TryConsumeZipStrike(out float multiplier)
         {multiplier=ZipStrikeMultiplier;if(!ZipStrikeReady)return false;attackLeft=0;return true;}
         void Awake()
@@ -58,6 +62,12 @@ namespace Plugin.PlayerCore
                 {float radius=item.data?item.data.radius:.38f;if((item.Point-mouse).sqrMagnitude<=radius*radius)closedSocketUnderCursor=true;}
                 if(!item||!item.Available||!GrappleRules.Reachable(item.Point.x-body.position.x,item.Point.y-body.position.y,data.range))continue;
                 float score=(item.Point-mouse).sqrMagnitude;if(score>best||Physics2D.Linecast(body.position,item.Point,data.solids))continue;
+                if (item.PatrolDriven && !LeadPoint(item,out _))
+                {
+                    float radius=item.data?item.data.radius:.38f;
+                    if(score<=radius*radius)closedSocketUnderCursor=true;
+                    continue;
+                }
                 best=score;anchor=item;
             }
             if(anchor){point=anchor.Point;return (point-body.position).sqrMagnitude>.25f;}
@@ -81,41 +91,88 @@ namespace Plugin.PlayerCore
         // 자동 시험/보스 서비스도 같은 검증 경로로 들어온다.
         public bool TryStartAt(GrappleAnchor anchor)
         {return anchor&&anchor.Available&&Begin(anchor.Point,anchor);}
+        bool LeadPoint(GrappleAnchor anchor,out Vector2 endpoint)
+        {
+            endpoint=anchor.Point;
+            Vector2 velocity=anchor.PatrolVelocity;
+            if(velocity.sqrMagnitude<.000001f)return true;
+            Vector2 offset=endpoint-body.position;
+            float dt=Mathf.Max(.0001f,Time.fixedDeltaTime);
+            float wait=(float)System.Math.Ceiling(System.Math.Max(0,data.launchDelay/dt-.000001f))*dt;
+            if(!GrappleRules.TryIntercept(offset.x,offset.y,velocity.x,velocity.y,wait,data.speed,out float flight))return false;
+            endpoint+=velocity*(wait+flight);
+            offset=endpoint-body.position;
+            return offset.sqrMagnitude>.25f && GrappleRules.Reachable(offset.x,offset.y,data.range) &&
+                !Physics2D.Linecast(body.position,endpoint,data.solids);
+        }
+
         bool Begin(Vector2 endpoint,GrappleAnchor anchor)
         {
             if(active||!data||!input.Ready||input.Paused||mode.Mode!=PlayerMode.Hook||player.State>PlayerStateId.Dash||!GrappleRules.Reachable(endpoint.x-body.position.x,endpoint.y-body.position.y,data.range))return false;
             if((endpoint-body.position).sqrMagnitude<.25f||Physics2D.Linecast(body.position,endpoint,data.solids))return false;
+            if(anchor && anchor.PatrolDriven && !LeadPoint(anchor,out endpoint))return false;
             if(anchor&&!anchor.TryAcquire())return false;
             if(!player.BeginExternal(PlayerStateId.GrappleAim)){if(anchor)anchor.Release(false);return false;}
             leased=anchor;anchored=anchor;start=body.position;target=endpoint;direction=(target-start).normalized;lastDistance=Vector2.Distance(start,target);
+            movingShot=anchor && anchor.PatrolDriven;hasTravelStep=false;
             delay=data.launchDelay;age=0;attackLeft=0;active=true;player.SetExternalVelocity(Vector2.zero);ShowWire(true);DrawWire();return true;
         }
         void Step(float dt)
         {
             if(!active)return;
             if(player.State!=PlayerStateId.GrappleAim&&player.State!=PlayerStateId.GrappleDash){Cancel(false);return;}
-            if(anchored&&(!leased||!leased.isActiveAndEnabled)){Cancel(true);return;}
+            if(anchored&&(!leased||!leased.isActiveAndEnabled||!leased.Leased)){Cancel(true);return;}
+            // 입장 첫 물리 틱에 초기화된 이동 고리도 옛 좌표만으로 도착을 인정하지 않는다.
+            if(anchored && leased.PatrolDriven && !movingShot)
+            {
+                movingShot=true;previousBody=body.position;previousSocket=leased.Point;hasTravelStep=true;
+            }
             if(data.allowDashCancel&&input.Buffer.Has(PlayerCommand.Dash,Time.timeAsDouble)&&player.TryExternalDash())
             {input.Buffer.Take(PlayerCommand.Dash,Time.timeAsDouble);return;}
             age+=dt;if(age>data.range/Mathf.Max(1,data.speed)+1){Cancel(true);return;}
             if(delay>0){delay-=dt;player.SetExternalVelocity(Vector2.zero);return;}
             if(player.State==PlayerStateId.GrappleAim)player.BeginExternal(PlayerStateId.GrappleDash);
             float remaining=Vector2.Dot(target-body.position,direction);
-            if(remaining<=data.arrivalTolerance){Arrive();return;}
+            if(movingShot && hasTravelStep && TouchedSocket(dt)){Arrive();return;}
+            if(remaining<=data.arrivalTolerance)
+            {
+                if(movingShot)Cancel(true);else Arrive();
+                return;
+            }
             float travel=GrappleRules.Step(remaining,data.speed,dt),allowed=travel;
             filter.SetLayerMask(data.solids);
             int count=Physics2D.CircleCast(body.position,data.circleRadius,direction,filter,hits,travel+data.skin);
             if(count>=hits.Length){Cancel(true);return;}allowed=Allowed(count,allowed);
             count=body.Cast(direction,filter,hits,travel+data.skin);if(count>=hits.Length){Cancel(true);return;}allowed=Allowed(count,allowed);
             if(allowed<travel-.001f){Cancel(true);return;}
+            if(movingShot){previousBody=body.position;previousSocket=leased.Point;hasTravelStep=true;}
             player.SetExternalVelocity(direction*(travel/dt));
         }
+        bool TouchedSocket(float dt)
+        {
+            Vector2 socket=leased.Point;
+            float radius=data.circleRadius+(leased.data?leased.data.radius:.38f);
+            Vector2 delta=socket-previousSocket;
+            // 재배치로 건너뛴 구간을 실제 접촉으로 오인하지 않는다.
+            float t=1;
+            if(delta.sqrMagnitude<=(data.speed*dt+radius)*(data.speed*dt+radius))
+            {
+                Vector2 offset=previousBody-previousSocket;
+                Vector2 travel=(body.position-previousBody)-delta;
+                if(travel.sqrMagnitude>.000001f)
+                    t=Mathf.Clamp01(-Vector2.Dot(offset,travel)/travel.sqrMagnitude);
+            }
+            Vector2 heroAt=Vector2.Lerp(previousBody,body.position,t);
+            Vector2 hookAt=Vector2.Lerp(previousSocket,socket,t);
+            return (heroAt-hookAt).sqrMagnitude<=radius*radius && !Physics2D.Linecast(heroAt,hookAt,data.solids);
+        }
+
         float Allowed(int count,float maximum)
         {for(int i=0;i<count;i++)if(hits[i].collider&&Vector2.Dot(hits[i].normal,direction)<-.001f)maximum=Mathf.Min(maximum,Mathf.Max(0,hits[i].distance-data.skin));return maximum;}
         public void ResetForRetry(){Cancel(false);attackLeft=0;SetCandidate(null);ShowWire(false);}
         void Arrive()
         {
-            active=false;if(leased)leased.Release(true);leased=null;anchored=false;attackLeft=data.arrivalAttackWindow;ShowWire(false);
+            active=false;LastArrival=leased;ArrivalSequence++;if(leased)leased.Release(true);leased=null;anchored=false;attackLeft=data.arrivalAttackWindow;ShowWire(false);
             finishing=true;player.FinishExternal(direction*data.speed*data.retainedVelocity,true);finishing=false;
         }
         void Cancel(bool finish)
@@ -130,10 +187,10 @@ namespace Plugin.PlayerCore
         void ShowWire(bool shown){if(core)core.enabled=shown;if(helixA)helixA.enabled=shown;if(helixB)helixB.enabled=shown;}
         void DrawWire()
         {
-            Vector2 hand=body.position+Vector2.up*.3f;core.SetPosition(0,hand);core.SetPosition(1,target);
-            Vector2 normal=new Vector2(-(target-hand).y,(target-hand).x).normalized;
+            Vector2 hand=body.position+Vector2.up*.3f, end=movingShot && leased?leased.Point:target;core.SetPosition(0,hand);core.SetPosition(1,end);
+            Vector2 normal=new Vector2(-(end-hand).y,(end-hand).x).normalized;
             for(int i=0;i<32;i++)
-            {float t=i/31f,twist=Mathf.Sin(t*40-Time.time*12)*data.helixRadius*Mathf.Sin(Mathf.PI*t);Vector2 mid=Vector2.Lerp(hand,target,t);helixA.SetPosition(i,mid+normal*twist);helixB.SetPosition(i,mid-normal*twist);}
+            {float t=i/31f,twist=Mathf.Sin(t*40-Time.time*12)*data.helixRadius*Mathf.Sin(Mathf.PI*t);Vector2 mid=Vector2.Lerp(hand,end,t);helixA.SetPosition(i,mid+normal*twist);helixB.SetPosition(i,mid-normal*twist);}
         }
     }
 }

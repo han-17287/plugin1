@@ -84,7 +84,7 @@ namespace Plugin.AncientCivilization
             }
             shadow = Art("진짜 모자 그림자",Prop.Shadow,Vector2.zero,9);
             ring = Art("공중 낚아채기 · 와이어 고리",Prop.Ring,Vector2.zero,14);
-            ring.gameObject.SetActive(false);
+            if (ring) ring.gameObject.SetActive(false);
             shadow.enabled = false;
             SetPhase(1);
         }
@@ -175,9 +175,9 @@ namespace Plugin.AncientCivilization
         public void ClearReturn()
         {
             if (disposed) return;
-            if (markedSide >= 0) shutters[markedSide].sprite = GetSprite(Prop.Shutter);
+            if (markedSide >= 0 && shutters[markedSide]) shutters[markedSide].sprite = GetSprite(Prop.Shutter);
             markedSide = -1;
-            shadow.enabled = false;
+            if (shadow) shadow.enabled = false;
             CloseRing();
         }
 
@@ -187,11 +187,11 @@ namespace Plugin.AncientCivilization
             // 같은 프레임에 새 보스가 생성되어도 이전 보스가 새 소켓을 지우지 않는다.
             if (game && (!game.Sniper || game.Sniper.Arena == null || ReferenceEquals(game.Sniper.Arena,this)))
             {
-                if (game.hero) game.hero.ReleaseWireAt(ring.transform.position);
+                if (game.hero && ring) game.hero.ReleaseWireAt(ring.transform.position);
                 game.anchors[ringSlot] = Unavailable;
             }
             ringLive = false;
-            ring.gameObject.SetActive(false);
+            if (ring) ring.gameObject.SetActive(false);
         }
 
         bool Occupied(Deck deck)

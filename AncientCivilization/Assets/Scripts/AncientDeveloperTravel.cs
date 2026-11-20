@@ -134,6 +134,25 @@ namespace Plugin.AncientCivilization
         public static bool Go(AncientGame game, AncientDeveloperDestination destination)
         {
             if (!game || destination == null || loading || !CanReloadMain()) return false;
+            if (!IsVisiting)
+            {
+                returnToSession = game.HasSession && !game.MainMenu;
+                // 일반 플레이에서 마지막 체크포인트 이후 획득한 보상과 플레이 시간을 기록한다.
+                if (returnToSession && game.hero && game.hero.Combat) game.Save();
+            }
+            return Reload(PracticeProfile(destination), destination);
+        }
+
+        public static bool GoFromPatrol(AncientDeveloperDestination destination,bool resumeOrdinaryGame)
+        {
+            if(destination==null || loading || SceneManager.GetActiveScene().name!="PatrolExpedition" ||
+                !Application.CanStreamedLevelBeLoaded("Main")) return false;
+            if(!IsVisiting) returnToSession=resumeOrdinaryGame;
+            return Reload(PracticeProfile(destination),destination);
+        }
+
+        static Dictionary<string,int> PracticeProfile(AncientDeveloperDestination destination)
+        {
             var data = destination.BuildProfile();
             // 옵션의 미설정 값도 보존해야 각 하위 시스템이 고유한 기본값을 선택한다.
             foreach (var key in AncientGame.OptionSaveKeys)
@@ -141,13 +160,7 @@ namespace Plugin.AncientCivilization
                 int option = AncientGame.Saved(key, int.MinValue);
                 if (option != int.MinValue) data[key] = option;
             }
-            if (!IsVisiting)
-            {
-                returnToSession = game.HasSession && !game.MainMenu;
-                // 일반 플레이에서 마지막 체크포인트 이후 획득한 보상과 플레이 시간을 기록한다.
-                if (returnToSession && game.hero && game.hero.Combat) game.Save();
-            }
-            return Reload(data, destination);
+            return data;
         }
 
         public static bool Return(AncientGame game) => game && IsVisiting && !loading && CanReloadMain() && Reload(null, null);
