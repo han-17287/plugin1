@@ -29,6 +29,16 @@ Unity 6000.6.7f1에서 `Assets/Scenes/Main.unity`를 열고 Play를 누르면 �
 
 이 ZIP은 소스 프로젝트입니다. 실행 EXE나 WebGL 플레이어 빌드는 포함하지 않습니다. 현재 환경에는 Unity Editor가 없어 네이티브 임포트·Play·빌드를 실행하지 못했습니다.
 
+### Unity WebGL 내보내기
+
+Unity Hub에서 6000.6.7f1의 **Web Build Support**를 설치합니다. 프로젝트의 **PLUGIN → 빌드 → WebGL 플레이어 내보내기**에서 저장 위치를 선택합니다. 빌드를 마치면 `PLUGIN-v0.38.1-WebGL` 폴더 전체를 ZIP으로 묶어 배포에 사용합니다. `index.html`과 `Build`, `TemplateData` 등 Unity가 생성한 파일을 함께 담습니다.
+
+배치 빌드에서는 Unity 실행 파일에 다음 인자를 전달합니다. `-projectPath`에는 이 프로젝트의 실제 경로를 사용합니다.
+
+```text
+-batchmode -quit -buildTarget WebGL -projectPath "/path/to/AncientCivilization" -executeMethod Plugin.AncientCivilization.EditorChecks.AncientWebPlayerBuild.BuildFromCommandLine -pluginWebOutput "/path/to/PLUGIN-WebGL" -logFile -
+```
+
 ## 두 구역의 진행
 
 **생산구:** 기본 조작 훈련 → 코어 재고 120기/117기 불일치 보고 → 벽을 뚫고 도주하는 코어 운송 트럭 → 자동주행 오토바이와 트럭 갑판 전투 두 차례 → 세 번째 탑승의 짐칸 분리·백덤블링·레이저 컷신 → 운송대장 생존 검거. 코어는 트럭 폭파 전에 확보합니다. 검거 뒤에는 이미 받은 무전 지시로 동쪽 수사로가 열립니다.
