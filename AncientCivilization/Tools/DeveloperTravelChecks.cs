@@ -149,6 +149,14 @@ class DeveloperTravelChecks
         Check(AncientDeveloperTravel.Return(game), "튜토리얼에서 복귀");
         AncientDeveloperTravel.EnterScene();
         Check(AncientGame.Saved("firstRunCleared") == 1, "일반 1회차 완료 보존");
+        SceneManager.Current="PatrolExpedition";
+        Check(AncientDeveloperTravel.GoFromPatrol(At("joker"),true),"순찰옥상에서 조커 직행");
+        Check(!AncientDeveloperTravel.GoFromPatrol(At("enforcer"),true),"순찰 메뉴 중복 이동 방지");
+        SceneManager.Current="Main"; AncientDeveloperTravel.EnterScene();
+        Check(AncientDeveloperTravel.IsVisiting && AncientGame.Saved("cityFloor")==4 && AncientGame.Saved("secretaryCleared")==0,"조커 연습 구역의 전투 조건");
+        Check(AncientDeveloperTravel.Return(game),"조커 연습 종료");
+        AncientDeveloperTravel.EnterScene();
+        Check(AncientDeveloperTravel.ConsumeQuickStart() && AncientGame.Saved("firstRunCleared")==1,"순찰에서 진입한 원래 캠페인 보존");
         Console.WriteLine(destinations.Count + " destinations, " + passed + " developer travel checks passed.");
     }
 }

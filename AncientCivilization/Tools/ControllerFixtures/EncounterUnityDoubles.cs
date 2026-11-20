@@ -22,7 +22,7 @@ namespace UnityEngine
         }
         public T GetComponent<T>() where T:Component => parts.TryGetValue(typeof(T),out var part)?(T)part:null;
     }
-    public class Transform : Object
+    public partial class Transform : Object
     {
         public GameObject gameObject;Transform parent;Vector3 local;
         public Vector3 localPosition {get{return local;}set{local=value;}}
@@ -52,14 +52,14 @@ namespace UnityEngine
         public static Vector3 operator-(Vector3 a,Vector3 b)=>new Vector3(a.x-b.x,a.y-b.y,a.z-b.z);
         public static Vector3 operator*(Vector3 a,float b)=>new Vector3(a.x*b,a.y*b,a.z*b);
     }
-    public struct Quaternion {public static Quaternion identity=>new Quaternion(); public static Quaternion Euler(float x,float y,float z)=>new Quaternion();}
+    public partial struct Quaternion {public static Quaternion identity=>new Quaternion(); public float ZDegrees; public static Quaternion Euler(float x,float y,float z)=>new Quaternion{ZDegrees=z};}
     public struct Color
     {
         public float r,g,b,a;public Color(float r,float g,float b,float a=1){this.r=r;this.g=g;this.b=b;this.a=a;}
         public static Color white=>new Color(1,1,1);
         public static Color Lerp(Color a,Color b,float t)=>new Color(Mathf.Lerp(a.r,b.r,t),Mathf.Lerp(a.g,b.g,t),Mathf.Lerp(a.b,b.b,t),Mathf.Lerp(a.a,b.a,t));
     }
-    public static class Mathf
+    public static partial class Mathf
     {
         public const float PI=(float)Math.PI,Deg2Rad=PI/180,Rad2Deg=180/PI;
         public static float Atan2(float y,float x)=>(float)Math.Atan2(y,x);
@@ -90,9 +90,9 @@ namespace UnityEngine
         public static RaycastHit2D Linecast(Vector2 a,Vector2 b,int mask)=>new RaycastHit2D{blocked=Blocked,point=HitPoint};
     }
     public class BoxCollider2D:Component {public bool usedByEffector;public bool enabled=true;public Vector2 size;}
-    public enum RigidbodyType2D {Kinematic}
+    public enum RigidbodyType2D {Kinematic,Dynamic}
     public enum RigidbodyInterpolation2D {Interpolate}
-    public class Rigidbody2D:Component
+    public partial class Rigidbody2D:Component
     {
         public RigidbodyType2D bodyType;public RigidbodyInterpolation2D interpolation;
         public Vector2 linearVelocity;public Vector2 position {get=>transform.position;set=>transform.position=value;}
@@ -100,8 +100,8 @@ namespace UnityEngine
     }
     public enum KeyCode {R}
     public static class Input {public static bool Recall;public static bool GetKeyDown(KeyCode key)=>Recall;}
-    public class Sprite : Object {}
-    public class SpriteRenderer : Component {public Sprite sprite;public bool flipX;public bool enabled=true;public Color color=Color.white;}
+    public partial class Sprite : Object {}
+    public partial class SpriteRenderer : Component {public Sprite sprite;public bool flipX;public bool enabled=true;public Color color=Color.white;}
     public enum LineAlignment { View }
     public enum LineTextureMode { Stretch }
     public class LineRenderer : Component

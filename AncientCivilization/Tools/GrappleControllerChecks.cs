@@ -13,6 +13,108 @@ class GrappleControllerChecks
         public Fixture(){typeof(GrappleAnchor).GetMethod("ClearRegistry",BindingFlags.Static|BindingFlags.NonPublic).Invoke(null,null);Physics2D.WallX=float.NaN;Application.isFocused=true;Time.time=0;body=root.AddComponent<Rigidbody2D>();root.AddComponent<CapsuleCollider2D>();mode=root.AddComponent<PlayerModeController>();input=root.AddComponent<PlayerInputReader>();player=root.AddComponent<PlayerStateMachine>();grapple=root.AddComponent<PlayerGrapple>();grapple.data=new GrappleData();Call(grapple,"Awake");Call(grapple,"OnEnable");}
         public T Anchor<T>(Vector2 point)where T:GrappleAnchor,new(){var go=new GameObject("Anchor");go.transform.position=point;var a=go.AddComponent<T>();a.data=new GrappleAnchorData();a.clockOwner=input;Call(a,"OnEnable");return a;}
     }
+    static void PatrolInterceptions()
+    {
+        foreach(int hz in new[]{30,50,120})
+        {
+            float dt=1f/hz;Time.fixedDeltaTime=dt;
+            var f=new Fixture();f.grapple.data.launchDelay=.046f;
+            Vector2 motion=new Vector2(-3,14),point=new Vector2(10,2);
+            var hook=f.Anchor<FixedGrappleAnchor>(point);
+            hook.MovePatrolSocket(point-motion*dt,dt);
+            hook.MovePatrolSocket(point,dt);
+            f.input.Pointer=point;
+            Check(f.player.Primary()&&hook.Leased,"Mouse selects moving patrol socket using its current visible position");
+            Vector2 firstVelocity=Vector2.zero;
+            for(int i=0;i<60&&f.grapple.Active;i++)
+            {
+                f.player.Tick(dt);
+                if(firstVelocity.sqrMagnitude<1 && f.player.Velocity.sqrMagnitude>1)firstVelocity=f.player.Velocity;
+                var p=f.body.position;
+                Check(Math.Abs(firstVelocity.x*p.y-firstVelocity.y*p.x)<.003f,"Moving target never steers the straight dash");
+                point+=motion*dt;hook.MovePatrolSocket(point,dt);
+            }
+            Check(firstVelocity.y/firstVelocity.x>.38f,"Delayed projectile anticipates a crossing socket");
+            Check(f.grapple.LastArrival==hook && f.grapple.ArrivalSequence==1 && f.grapple.ZipStrikeReady && !hook.Leased,
+                "Live moving socket contact triggers one genuine arrival and an attack opening");
+        }
+        Time.fixedDeltaTime=.02f;
+        {
+            var f=new Fixture();var hook=f.Anchor<FixedGrappleAnchor>(new Vector2(12.5f,0));
+            hook.MovePatrolSocket(new Vector2(12.5f,0),.02f);hook.MovePatrolSocket(new Vector2(12.7f,0),.02f);
+            Check(!f.grapple.TryStartAt(hook)&&!hook.Leased,"Cannot zip to an intercept beyond physical range");
+            hook.MovePatrolSocket(new Vector2(12.5f,0),.02f);
+            Check(f.grapple.TryStartAt(hook),"The same ring is catchable when it comes back");
+            f.grapple.ResetForRetry();
+        }
+        {
+            var f=new Fixture();var hook=f.Anchor<OneUseGrappleAnchor>(new Vector2(11.1f,0));
+            hook.MovePatrolSocket(new Vector2(11.1f,0),.02f);hook.MovePatrolSocket(new Vector2(11.3f,0),.02f);
+            Physics2D.WallX=12;
+            Check(!f.grapple.TryStartAt(hook)&&!hook.Leased&&!hook.Spent,"Visible ring with a blocked intercept is not reserved");
+            f.input.Pointer=hook.Point;
+            Check(!f.player.Primary(),"Click on an unreachable moving socket does not silently zip to the wall behind it");
+        }
+        {
+            var f=new Fixture();var hook=f.Anchor<OneUseGrappleAnchor>(new Vector2(10,0));
+            hook.MovePatrolSocket(hook.Point,.02f);
+            Check(f.grapple.TryStartAt(hook),"Moving socket with zero sampled speed can be targeted");
+            for(int i=0;i<30&&f.grapple.Active;i++)
+            {
+                if(i==3)hook.MovePatrolSocket(new Vector2(10,3.1f),.02f);
+                f.player.Tick(.02f);
+            }
+            Check(f.grapple.ArrivalSequence==0&&!hook.Spent&&hook.Available&&!f.grapple.ZipStrikeReady,
+                "Reaching the former position cannot spend a displaced socket or trigger patrol arrival");
+        }
+        {
+            var f=new Fixture();var hook=f.Anchor<FixedGrappleAnchor>(new Vector2(10,0));
+            hook.MovePatrolSocket(hook.Point,.02f);
+            Check(f.grapple.TryStartAt(hook),"Curving patrol hook starts a straight dash");
+            for(int i=0;i<40&&f.grapple.Active;i++)
+            {
+                f.player.Tick(.02f);
+                float t=Math.Min(1,(i+1)/8f);
+                hook.MovePatrolSocket(new Vector2(10,.43f*t*t),.02f);
+            }
+            Check(f.grapple.LastArrival==hook&&f.grapple.ArrivalSequence==1,"A curved .43-unit deviation still intersects capsule and ring");
+        }
+        {
+            var f=new Fixture();var hook=f.Anchor<FixedGrappleAnchor>(new Vector2(9,1));
+            Check(f.grapple.TryStartAt(hook),"First room tick can precede the first patrol sample");
+            hook.MovePatrolSocket(new Vector2(9,5),.02f);
+            for(int i=0;i<30&&f.grapple.Active;i++)f.player.Tick(.02f);
+            Check(f.grapple.ArrivalSequence==0&&hook.Available,"First movement invalidates stale arrivals on the already committed line");
+            Call(hook,"OnDisable");Call(hook,"OnEnable");
+            Check(hook.PatrolDriven && hook.PatrolVelocity.sqrMagnitude==0,"Reactivated moving socket retains contact semantics and discards stale speed");
+        }
+        {
+            // 47번 방의 교차 궤도와 서쪽 지붕에서 실제 두 번의 견인을 연결한다.
+            var f=new Fixture();f.body.position=new Vector2(10,6.7f);
+            var west=f.Anchor<FixedGrappleAnchor>(new Vector2(10,7.5f));
+            var east=f.Anchor<FixedGrappleAnchor>(new Vector2(37,8.9f));
+            float time=2f;
+            void MoveRails(float t)
+            {
+                float wave=(1f-(float)Math.Cos(t*1.31f))*.5f;
+                west.MovePatrolSocket(new Vector2(9.6f+12.7f*wave,7.45f+wave*2.65f),.02f);
+                east.MovePatrolSocket(new Vector2(37.4f-12.3f*wave,8.55f+wave*2.65f),.02f);
+            }
+            MoveRails(time-.02f);MoveRails(time);
+            int stops=0;
+            foreach(var hook in new[]{west,east})
+            {
+                Check(f.grapple.TryStartAt(hook),"At the cable exchange the next socket can be reached from the last actual landing");
+                for(int i=0;i<80&&f.grapple.Active;i++)
+                {f.player.Tick(.02f);time+=.02f;MoveRails(time);}
+                Check(f.grapple.ArrivalSequence==++stops && f.grapple.LastArrival==hook,"Each crossing transfer credits its own moving ring");
+            }
+        }
+        Check(!GrappleRules.TryIntercept(10,0,72,0,.02f,72,out _) &&
+            GrappleRules.TryIntercept(10,0,-72,0,0,72,out float catchTime) && Math.Abs(catchTime-10f/144f)<.0001f,
+            "Equal-speed receding target is unreachable, approaching target has a stable finite intercept");
+    }
+
     static void Main()
     {
         foreach(int hz in new[]{30,50,60,120,240})foreach(int kind in new[]{0,1,2})
@@ -75,6 +177,7 @@ class GrappleControllerChecks
             Check(!f.player.Primary()&&!f.grapple.Active,"Clicking a closed timed socket cannot unexpectedly fall through to a wall behind it");
             anchor.SetOperational(true);Check(f.player.Primary(),"The same socket becomes a valid target when its window opens");
         }
+        PatrolInterceptions();
         Console.WriteLine("PASS: "+checks+" shipping grapple/anchor controller checks with a narrow wall and movement-owner double; native physics/input not simulated");
     }
 }

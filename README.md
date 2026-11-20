@@ -1,8 +1,10 @@
 # PLUGIN · Ancient Civilization
 
-**v0.37.0 · 조커의 옥상 결투와 개발자 이동**
+**v0.38.0 · 다섯 층의 도시 자유 순찰과 조커의 옥상 결투**
 
-[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.37.0-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.38.0-download.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+
+메인 화면에서 **도시 자유 순찰 · 5개 층**을 고르면 보스 없이 50개 방을 걸어서 왕복할 수 있습니다. 한 번 완주한 길에서는 **T**로 직전 주행 잔상과 달립니다. [탐험방 50곳과 이동 장치 50개](AncientCivilization/PATROL_KO.md)
 
 게임에서 숫자 **0**을 누르고 **17287**을 입력하면 층과 구역, 보스전을 골라 이동할 수 있습니다. 보스 목록에서 최상층 저격수를 골라 여섯 페이즈를 플레이하세요. [조커 대치 공략](AncientCivilization/SNIPER_BOSS_KO.md)
 

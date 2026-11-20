@@ -106,7 +106,8 @@ namespace Plugin.AncientCivilization
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
         {
-            if(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name=="PlayerMovementPractice"||UnityEngine.SceneManagement.SceneManager.GetActiveScene().name=="TraversalRhythmPractice")return;
+            string scene=SceneManager.GetActiveScene().name;
+            if(scene=="PlayerMovementPractice"||scene=="TraversalRhythmPractice"||scene=="PatrolExpedition")return;
             if(!Object.FindAnyObjectByType<AncientGame>())new GameObject("Ancient Civilization").AddComponent<AncientGame>();
         }
         public static int Saved(string key,int fallback=0)
@@ -126,7 +127,8 @@ namespace Plugin.AncientCivilization
             Instance=this;
             Feedback = Resources.Load<AncientFeedbackProfile>("Audio/FieldFeedback");
             reducedFeedback = Saved("reducedFeedback") != 0;
-            bool quickStart=AncientDeveloperTravel.ConsumeQuickStart()||startAfterReload||IsQAProfile;MainMenu=!quickStart;HasSession=quickStart;startAfterReload=false; audioCues=gameObject.AddComponent<AncientAudio>(); Time.timeScale=1; Physics2D.gravity=new Vector2(0,-32);
+            bool resumePatrol=Plugin.PlayerCore.PatrolEntry.ConsumeReturn();
+            bool quickStart=AncientDeveloperTravel.ConsumeQuickStart()||resumePatrol||startAfterReload||IsQAProfile;MainMenu=!quickStart;HasSession=quickStart;startAfterReload=false; audioCues=gameObject.AddComponent<AncientAudio>(); Time.timeScale=1; Physics2D.gravity=new Vector2(0,-32);
             coreMask=Saved("storyCores"); credits=Saved("credits"); checkpointStage=Saved("storyCheckpoint");
             bossDefeated=Saved("storyBoss")!=0; kills=Saved("kills");score=Saved("score");
             if(checkpointStage==1)checkpoint=new Vector2(46,2.3f);
@@ -180,6 +182,7 @@ namespace Plugin.AncientCivilization
             Projectiles=gameObject.AddComponent<AncientProjectilePool>();Projectiles.Initialize(this);
             hero=new GameObject("백 경위 / 하층 치안경찰").AddComponent<AncientHero>();hero.transform.position=checkpoint;
             DeveloperMenu=gameObject.AddComponent<AncientDeveloperMenu>();
+            gameObject.AddComponent<AncientPatrolGate>().Initialize(this);
             Story=gameObject.AddComponent<AncientStory>();Story.Initialize(this);
             Performance=gameObject.AddComponent<AncientPerformance>();Performance.Initialize(this);
             Feel=gameObject.AddComponent<AncientGameFeel>();Feel.Initialize(this);
@@ -508,6 +511,7 @@ namespace Plugin.AncientCivilization
         }
         public void NewRun()
         {
+            Plugin.PlayerCore.PatrolExpedition.ResetSavedProgress();
             if(AncientDeveloperTravel.IsVisiting) AncientDeveloperTravel.ClearSandboxProgress();
             else foreach(string key in ProgressSaveKeys)PlayerPrefs.DeleteKey(SaveKey+key);
             PlayerPrefs.Save();startAfterReload=true;Time.timeScale=1;SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);

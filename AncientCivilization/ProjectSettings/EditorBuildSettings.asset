@@ -14,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/TraversalRhythmPractice.unity
     guid: ffacffa49ab141b3b2020ae5e60c4fa3
+  - enabled: 1
+    path: Assets/Scenes/PatrolExpedition.unity
+    guid: 3430240a65644ca48aef33f2ef6f0282
   m_configObjects: {}

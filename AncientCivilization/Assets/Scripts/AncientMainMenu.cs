@@ -176,7 +176,8 @@ namespace Plugin.AncientCivilization
                 if(MenuButton(new Rect(x,buttons+64,width,44),"새 게임")){confirmNew=true;controls=false;}
                 GUI.enabled=oldEnabled;
                 if(MenuButton(new Rect(x,buttons+116,width,44),"조작 안내")){controls=true;confirmNew=false;}
-                if(MenuButton(new Rect(x+width+18,buttons+116,270,44),"새 지역 맵 둘러보기"))UnityEngine.SceneManagement.SceneManager.LoadScene("TraversalRhythmPractice");
+                if(MenuButton(new Rect(x+width+18,buttons+64,270,44),"도시 자유 순찰 · 5개 층"))Plugin.PlayerCore.PatrolEntry.Request(Plugin.PlayerCore.PatrolExpedition.LastRoom());
+                if(MenuButton(new Rect(x+width+18,buttons+116,270,44),"이동 연습장"))UnityEngine.SceneManagement.SceneManager.LoadScene("TraversalRhythmPractice");
                 if(MenuButton(new Rect(x,buttons+168,width,44),"종료"))
                 {
 #if UNITY_EDITOR

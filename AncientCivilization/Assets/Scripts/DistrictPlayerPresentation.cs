@@ -7,6 +7,7 @@ namespace Plugin.PlayerCore
     {
         PlayerStateMachine player;PlayerInputReader input;PlayerModeController mode;
         SpriteRenderer body;
+        public int BodyFrame { get; private set; }
         readonly AncientLocomotionMotion gait = new AncientLocomotionMotion();
         float naturalSize, lean, stretchX = 1, stretchY = 1;
         void Awake()
@@ -54,6 +55,7 @@ namespace Plugin.PlayerCore
             lean = Mathf.Lerp(lean, angle, blend);
             stretchX = Mathf.Lerp(stretchX, sx, blend);
             stretchY = Mathf.Lerp(stretchY, sy, blend);
+            BodyFrame = frame;
             body.sprite = AncientArt.Hero(frame);
             body.flipX = facing < 0;
             body.transform.localRotation = Quaternion.Euler(0, 0, lean);
