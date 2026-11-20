@@ -21,7 +21,7 @@ namespace Plugin.AncientCivilization
         // The finale pauses ordinary simulation itself, so its own cinematic clock
         // must distinguish that hold from a menu, another conversation or lost focus.
         bool ExternalPaused
-        {get{return !game||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||!Application.isFocused;}}
+        {get{return !game||game.DeveloperMenu&&game.DeveloperMenu.Capturing||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||!Application.isFocused;}}
         public void Build(AncientGame owner)
         {
             game=owner;phase=Mathf.Clamp(AncientGame.Saved("finalePhase"),0,5);zone=Mathf.Clamp(AncientGame.Saved("finaleZone"),0,4);

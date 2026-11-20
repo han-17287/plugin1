@@ -36,7 +36,7 @@ namespace Plugin.AncientCivilization
         public string Objective {get{return objective;}}
         public float DriveSpeed {get{return lane?Mathf.Min(17,Mathf.Max(0,(AncientProductionLayout.ChaseEnd-46-game.hero.transform.position.x)*.8f)):17;}}
         public void Initialize(AncientGame owner){game=owner;AncientArt.ProductionTruck();AncientArt.ProductionCaptain(0);}
-        bool ExternalPaused {get{return !game||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||!Application.isFocused;}}
+        bool ExternalPaused {get{return !game||game.DeveloperMenuOpen||game.MainMenu||game.skills||(game.Journal&&game.Journal.Open)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||!Application.isFocused;}}
         bool EnsureActors()
         {
             if(ready)return true;if(!game.hero||!game.hero.Combat)return false;
@@ -101,6 +101,22 @@ namespace Plugin.AncientCivilization
             sequence.RestoreRound(Mathf.Clamp(AncientGame.Saved("productionRound"),0,1));applied=AncientProductionPhase.Dormant;lane=true;
             truckX=AncientProductionLayout.ChaseStart+24+sequence.Round*420;truck.position=new Vector2(truckX,0);commander.ResetProductionHealth(sequence.HealthRatio);game.boss=commander;
             game.ProductionMap.OpenBreach();ApplyPhase();game.SnapCameraToHero();
+            if (AncientDeveloperTravel.ConsumeProductionArrival(out bool finisher)) EnterSelectedDeck(finisher);
+        }
+
+        void EnterSelectedDeck(bool finisher)
+        {
+            // 정규 추격의 차량·지붕 충돌체·대장을 그대로 사용한다.
+            while (sequence.Phase == AncientProductionPhase.Chase) sequence.Tick(AncientProductionRules.MaxTickSeconds);
+            if (!sequence.BeginBoarding() || !sequence.LandOnDeck()) return;
+            game.hero.TravelTo(truck.position + new Vector2(-1.6f, 3.88f));
+            ApplyPhase();
+            if (finisher)
+            {
+                sequence.ApplyDamage(1);
+                ApplyPhase();
+            }
+            game.SnapCameraToHero();
         }
         public void ResumeArrestScene()
         {

@@ -101,12 +101,12 @@ class LowerControllerChecks
         f.game.Story.DialogueOpen=true;f.game.Production.Active=true;TimerFrame(timer,3);
         Check(AncientGame.Saved("lowerTimeTotal0")==5000&&AncientGame.Saved("lowerTimeDialogue0")==3000&&AncientGame.Saved("lowerTimeBoss0")==3000,"Dialogue and production boss categories use the real controller's eligibility without double-counting total time");
         f.game.Story.DialogueOpen=false;f.game.Production.Active=false;
-        foreach(int kind in new[]{0,1,2,3})
+        foreach(int kind in new[]{0,1,2,3,4})
         {
-            if(kind==0)f.game.skills=true;if(kind==1)f.game.Journal.Open=true;if(kind==2)f.game.Story.LiftBusy=true;if(kind==3)f.game.MainMenu=true;
+            if(kind==0)f.game.skills=true;if(kind==1)f.game.Journal.Open=true;if(kind==2)f.game.Story.LiftBusy=true;if(kind==3)f.game.MainMenu=true;if(kind==4)f.game.DeveloperMenuOpen=true;
             int before=AncientGame.Saved("lowerTimeTotal0");TimerFrame(timer,100);
-            f.game.skills=f.game.Journal.Open=f.game.Story.LiftBusy=f.game.MainMenu=false;TimerFrame(timer,100);
-            Check(AncientGame.Saved("lowerTimeTotal0")==before,"Menu/journal/lift time and the first resumed frame are excluded, even with a long suspended delta");
+            f.game.skills=f.game.Journal.Open=f.game.Story.LiftBusy=f.game.MainMenu=f.game.DeveloperMenuOpen=false;TimerFrame(timer,100);
+            Check(AncientGame.Saved("lowerTimeTotal0")==before,"Developer menu/title/journal/lift time and the first resumed frame are excluded, even with a long suspended delta");
             TimerFrame(timer,1);Check(AncientGame.Saved("lowerTimeTotal0")==before+1000,"The clock resumes on the next uninterrupted gameplay frame");
         }
         int total=AncientGame.Saved("lowerTimeTotal0");Application.isFocused=false;TimerCall(timer,"OnApplicationFocus",false);TimerFrame(timer,200);

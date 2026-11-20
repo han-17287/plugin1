@@ -34,7 +34,7 @@ namespace Plugin.AncientCivilization
         }
         void LateUpdate()
         {
-            if(!game||!game.Story||!wreck)return;
+            if(!game||!game.Story||!wreck||game.DeveloperMenuOpen)return;
             if(game.HasSession&&!game.MainMenu&&Application.isFocused&&!(game.Journal&&game.Journal.Open))
             {age=Mathf.Min(1,age+Time.unscaledDeltaTime);Pose();}
             bool visible=game.HasSession&&!game.MainMenu&&AncientChapterView.NearCamera(game,origin+Vector2.up*3,1);

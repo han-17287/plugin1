@@ -246,7 +246,7 @@ namespace Plugin.AncientCivilization
 
         internal bool PlayingIntro => InputLocked && IntroVisible;
 
-        bool IntroVisible => game && !game.MainMenu && !game.skills && Application.isFocused &&
+        bool IntroVisible => game && !game.DeveloperMenuOpen && !game.MainMenu && !game.skills && Application.isFocused &&
             !(game.Story && (game.Story.DialogueOpen || game.Story.LiftBusy)) && !(game.Journal && game.Journal.Open);
 
         void OnApplicationFocus(bool focused)

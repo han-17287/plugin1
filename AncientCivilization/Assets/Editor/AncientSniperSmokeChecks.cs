@@ -13,9 +13,9 @@ namespace Plugin.AncientCivilization.EditorChecks
     [InitializeOnLoad]
     public static class AncientSniperSmokeChecks
     {
-        const string Menu="PLUGIN/검사/저격수 4페이즈";
+        const string Menu="PLUGIN/검사/저격수 6페이즈";
         const string Root="PLUGIN.QA.SniperSmoke.",ProfileKey="PLUGIN.QA.ActiveProfile",NormalPrefix="PLUGIN.Ancient.v2.",QAPrefix="PLUGIN.Ancient.QA.";
-        const double TimeoutSeconds=60;
+        const double TimeoutSeconds=110;
         static readonly string[] optionKeys=AncientGame.OptionSaveKeys;
         static AncientSniperEncounter retiredEncounter;
         [Serializable] sealed class PrefSnapshot {public string[] keys;public bool[] present;public int[] values;}
@@ -36,7 +36,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             SnapshotNormalProfile();
             SessionState.SetBool(Root+"Running",true);SessionState.SetBool(Root+"Finishing",false);SessionState.SetBool(Root+"Passed",false);
             SessionState.SetString(Root+"Profile",profile);SessionState.SetString(ProfileKey,profile);SessionState.SetString(Root+"Log","");
-            SetTime("Started",Now);SetStage(0);
+            SetTime("Started",Now);SetStage(0);SessionState.SetInt(Root+"ClubFrames",0);
             Set(profile,"questStage",9);Set(profile,"cityFloor",4);Set(profile,"storyBoss",1);Set(profile,"storyCores",7);
             Set(profile,"residencePoints",5000);Set(profile,"started",1);Set(profile,"cityCleared",14);
             Set(profile,"campaignVersion",AncientCampaignRules.RouteVersion);Set(profile,"campaignComplete",(1<<19)-1);
@@ -103,7 +103,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             if(EditorApplication.isPaused)return;
             try
             {
-                if(Now-TimeValue("Started")>TimeoutSeconds)throw new TimeoutException("Smoke check exceeded 60 seconds. Stage="+SessionState.GetInt(Root+"Stage",0));
+                if(Now-TimeValue("Started")>TimeoutSeconds)throw new TimeoutException("Smoke check exceeded "+TimeoutSeconds+" seconds. Stage="+SessionState.GetInt(Root+"Stage",0));
                 var game=AncientGame.Instance;if(!game||!game.hero)return;
                 if(!AncientGame.IsQAProfile)throw new InvalidOperationException("Refusing to modify a normal gameplay profile.");
                 game.hero.hp=10000; // Isolated test only: prevent incidental AI hits from interrupting structural checks.
@@ -112,6 +112,23 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==0)
                 {
                     if(!encounter||!encounter.Owner||StageAge<.4)return;
+                    int observed=SessionState.GetInt(Root+"ClubFrames",0);
+                    int pose=encounter.ClubDuelFrame;
+                    if(pose>=0)
+                    {
+                        if((observed&(1<<pose))!=0)return;
+                        var expected=AncientJokerDuelArt.Frame(pose);
+                        foreach(var sprite in encounter.Owner.GetComponentsInChildren<SpriteRenderer>())
+                            if(sprite.enabled&&sprite.sprite==expected)
+                            {
+                                SessionState.SetInt(Root+"ClubFrames",observed|(1<<pose));
+                                break;
+                            }
+                        return;
+                    }
+                    // 실제 결투에서 총을 멘 준비 자세와 적어도 한 번의 단검 베기가 출력되어야 한다.
+                    if((observed&1)==0||(observed&10)==0)return;
+                    Append("PASS: Club duel displayed its slung-rifle windup and knife strike on the live boss renderer.");
                     Assert(AncientGame.IsQAProfile,"Runtime uses the isolated QA profile");
                     Assert(!game.MainMenu&&encounter.Phase==1,"Phase 1 starts in the actual scene without menu interaction");
                     Assert(CloneCount(game)==0,"Phase 1 has no energy clones");
@@ -119,7 +136,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 }
                 if(stage==1)
                 {
-                    if(!encounter||encounter.Phase!=2||StageAge<.2)return;
+                    if(!encounter||encounter.Phase!=2||StageAge<.2||!encounter.CanWireOwner)return;
                     Assert(CloneCount(game)==1,"Phase 2 creates exactly one live clone");encounter.Owner.Hit(100000,true);SetStage(2);return;
                 }
                 if(stage==2)
@@ -151,7 +168,22 @@ namespace Plugin.AncientCivilization.EditorChecks
                 }
                 if(stage==5)
                 {
-                    if(!encounter||encounter.Phase!=4||StageAge<.2)return;
+                    if(!encounter||encounter.Phase!=4||!encounter.CanWireOwner||!encounter.Recovering)return;
+                    Assert(!encounter.Clashing&&!encounter.InputLocked,"Rooftop relay opens a punish window with free player controls");
+                    Assert(encounter.TurretsBroken==0,"Both turrets are reserved for the final phase");
+                    encounter.Owner.Hit(100000,true);SetStage(6);return;
+                }
+                if(stage==6)
+                {
+                    if(!encounter||encounter.Phase!=5||!encounter.CanWireOwner||!encounter.Recovering)return;
+                    Assert(encounter.LastFullHouseLength>=2&&encounter.LastFullHouseLength<=3,
+                        "Full House resolves a two- or three-card chain before the punish window");
+                    Assert(!encounter.Clashing&&!encounter.InputLocked,"Ordinary rooftop lasers never lock player input");
+                    encounter.Owner.Hit(100000,true);SetStage(7);return;
+                }
+                if(stage==7)
+                {
+                    if(!encounter||encounter.Phase!=6||StageAge<.2)return;
                     Assert(CloneCount(game)==0,"Final phase removes all clones");
                     AssertTurretVisibleAt(0,firstTurret);AssertTurretVisibleAt(1,secondTurret);
                     float health=encounter.Owner.HealthRatio;encounter.Owner.Hit(100000,true);
@@ -163,16 +195,16 @@ namespace Plugin.AncientCivilization.EditorChecks
                     Assert(encounter.TurretsBroken==2,"Both final-phase turrets can be broken");
                     game.hero.AddCapturedEnergy(100);
                     Assert(encounter.Clashing&&encounter.InputLocked&&game.hero.CaptureEnergy<.01f,"Full collected energy starts automatic clash and consumes the charge");
-                    SetStage(6);return;
+                    SetStage(8);return;
                 }
-                if(stage==6)
+                if(stage==8)
                 {
                     if(!encounter)throw new InvalidOperationException("Encounter ended before the no-input clash failure check. Keep controls untouched.");
                     if(encounter.Clashing||StageAge<8.2)return;
-                    Assert(encounter.Phase==4&&encounter.TurretsBroken==0&&!encounter.InputLocked,"No-input clash failure restores both turrets and collection controls");
-                    retiredEncounter=encounter;game.hero.RetryFromCheckpoint();SetStage(7);return;
+                    Assert(encounter.Phase==6&&encounter.TurretsBroken==0&&!encounter.InputLocked,"No-input clash failure restores both turrets and collection controls");
+                    retiredEncounter=encounter;game.hero.RetryFromCheckpoint();SetStage(9);return;
                 }
-                if(stage==7)
+                if(stage==9)
                 {
                     if(!encounter||encounter==retiredEncounter||StageAge<.6)return;
                     Assert(encounter.Phase==1&&CloneCount(game)==0&&!encounter.InputLocked,"Combat checkpoint retry creates a fresh phase-1 encounter");

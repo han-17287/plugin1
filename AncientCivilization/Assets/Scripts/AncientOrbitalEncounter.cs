@@ -280,7 +280,7 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             // 퇴장 시에는 적 목록에서 이미 빠졌으므로 연출만 독립적으로 마친다.
-            if (state != Beat.Leaving || !game || game.MainMenu || game.skills ||
+            if (state != Beat.Leaving || !game || game.DeveloperMenuOpen || game.MainMenu || game.skills ||
                 (game.Journal && game.Journal.Open) || !Application.isFocused) return;
             timer += Mathf.Min(Time.unscaledDeltaTime, .1f);
             float t = Mathf.Clamp01(timer / duration);

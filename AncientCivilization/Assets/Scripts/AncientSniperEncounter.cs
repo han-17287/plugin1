@@ -2,25 +2,27 @@ using UnityEngine;
 namespace Plugin.AncientCivilization
 {
     // Joker is a mask/callsign here. His personal identity and past remain unrevealed.
-    public sealed class AncientSniperEncounter : MonoBehaviour
+    public sealed partial class AncientSniperEncounter : MonoBehaviour
     {
         sealed class Actor
         {
             public AncientEnemy enemy;public LineRenderer tell;public int state,shots,magazine,grenades;
-            public bool grenadeUsed;public float until,began,flash;public Vector2 aim;
+            public bool grenadeUsed,duelUsed,lateLock,coveringPlate,ejected; public float ejectAt, coverY; public Vector2 ejectFrom,ejectTo;public float until,began,flash;public Vector2 aim;
         }
         sealed class Turret
         {
             public GameObject root;public SpriteRenderer body,barrel;public LineRenderer tell;
-            public Vector2 position,aim;public bool broken,charging;public float until,started,riseAt,hp=65;public int lastLaserPulse;
+            public Vector2 position,aim;public bool broken,charging;public float until,started,riseAt,hp=65;public int lastLaserPulse,plateIndex;
         }
         sealed class ObjectShot
         {public SpriteRenderer art;public Vector2 position,velocity;public bool live,friendly,grenade;public float age;}
         AncientGame game;AncientEnemy owner;AncientSniperGround ground;
         readonly Actor[] actors=new Actor[4];readonly Turret[] turrets=new Turret[2];
         readonly ObjectShot[] objects=new ObjectShot[24];int cursor,phase=1,mounted=-1,droppedSpawns;
+        float nextRewind,coverAt,coverHeight; int airBladeFrame; bool plateQueued;
         float left,right,refillAt,impactAt,winningAt=-1;bool clashing,finished;Vector2 heroAnchor;
         LineRenderer heroBeam,bossBeam,heroCore,bossCore,heroGlow,bossGlow;AncientBeamVisuals heroBeamProfile,bossBeamProfile;AncientSniperClash clash;
+        readonly LineRenderer[] curtain=new LineRenderer[4];
         Material cloneMaterial;GUIStyle label,title;
         public AncientEnemy Owner {get{return owner;}}
         public int Phase {get{return phase;}}
@@ -30,16 +32,38 @@ namespace Plugin.AncientCivilization
         public int LiveObjects {get{int count=0;foreach(var item in objects)if(item!=null&&item.live)count++;return count;}}
         public int ObjectCapacity {get{return objects.Length;}}
         public int DroppedSpawns {get{return droppedSpawns;}}
-        static readonly string[] phaseHints={"","저격수 1페이즈 / 조준 2초 · 5발 후 재장전","저격수 2페이즈 / 조준 2초 · 5발 후 재장전","저격수 3페이즈 / 조준 2초 · 5발 후 재장전"};
-        public bool InputLocked {get{return clashing||mounted>=0;}}
-        public bool Telegraphing {get{return phase<4&&actors[0]!=null&&actors[0].state==1;}}
-        public bool Recovering {get{return phase<4&&actors[0]!=null&&actors[0].state==2;}}
-        public float WindupProgress {get{var a=actors[0];return Telegraphing?Mathf.Clamp01((Time.time-a.began)/Mathf.Max(.01f,a.until-a.began)):0;}}
-        public float RecoveryRemaining {get{return Recovering?Mathf.Clamp01((actors[0].until-Time.time)/AncientSniperRules.ReloadSeconds):0;}}
+        static readonly string[] phaseHints =
+        {
+            "", "1 · 다섯 발의 박자", "2 · 두 개의 사선", "3 · 포탑 탈취",
+            "4 · 옥상 릴레이", "5 · 조커 풀하우스", "6 · 레이저 충돌"
+        };
+        public int ClubDuelFrame => phase==1 && actors[0]!=null && actors[0].state==5 ? 0 :
+            phase==1 && actors[0]!=null && actors[0].state==6 ? attacks.ClubFrame : -1;
+        public bool InRearLane(int slot)
+        {
+            if(slot<=0) return inBackground && (phase!=5 || relay!=RelayBeat.Return);
+            if(slot!=1) return false;
+            if(phase==2) return !inBackground;
+            return phase==5 && relay!=RelayBeat.Feint;
+        }
+        public bool InputLocked => clashing || mounted >= 0;
+        public bool Telegraphing => (attacks != null && attacks.Telegraphing) ||
+            (phase < 4 && actors[0] != null && actors[0].state == 1);
+        public bool Recovering => (phase < 4 && actors[0] != null && actors[0].state == 2) ||
+            (phase >= 4 && phase < 6 && relay == RelayBeat.Opening);
+        public float WindupProgress => attacks != null && attacks.Telegraphing ? attacks.WindupProgress :
+            Telegraphing ? Mathf.InverseLerp(actors[0].began, actors[0].until, Time.time) : 0;
+        public float RecoveryRemaining => !Recovering ? 0 : phase < 4 ?
+            Mathf.Clamp01((actors[0].until-Time.time)/AncientSniperRules.ReloadSeconds) :
+            1-BeatProgress;
         public void Initialize(AncientEnemy enemy,AncientGame world)
         {
             owner=enemy;owner.BindSniperEncounter(this);game=world;game.Sniper=this;left=AncientCityLayout.ArenaLeft(4)+1;right=AncientCityLayout.ArenaRight(4)-1;
             var floor=new GameObject("Recoverable sniper arena floor");ground=floor.AddComponent<AncientSniperGround>();ground.Initialize(game,left-1,right+1);
+            arena = new AncientJokerArena(game, game.transform, left, right);
+            attacks = new AncientJokerAttacks(game, game.transform, left, right);
+            attacks.SetArena(arena);
+            arena.SetPhase(1);
             var shader=Resources.Load<Shader>("Shaders/AncientEnergyClone");cloneMaterial=new Material(shader?shader:Shader.Find("Sprites/Default"));
             for(int i=0;i<4;i++)
             {
@@ -61,7 +85,7 @@ namespace Plugin.AncientCivilization
             bossGlow=game.Line("Sniper clash laser soft light",new Color(1,.15f,.3f,.5f),1.8f,22);
             heroBeamProfile=new AncientBeamVisuals(heroGlow);bossBeamProfile=new AncientBeamVisuals(bossGlow);
             heroBeam.positionCount=bossBeam.positionCount=heroCore.positionCount=bossCore.positionCount=heroGlow.positionCount=bossGlow.positionCount=2;ShowBeams(false);
-            game.Notice("저격수 / 조준 2초 · 5발 뒤 재장전 · 수류탄에 파괴된 지면은 복구됩니다.",4);
+            game.Notice("조커 / 다섯 번째 총성 뒤에 장전합니다. 도탄은 빛나는 거울에서 이어지는 선을 보세요.",4);
         }
         void BuildTurret(int i)
         {
@@ -78,83 +102,186 @@ namespace Plugin.AncientCivilization
         {
             var a=actors[slot];if(a.enemy)return;
             var e=new GameObject("Blue energy sniper clone "+slot).AddComponent<AncientEnemy>();e.Initialize(1);e.ConfigureDistrict(4,false);e.ConfigureSniperClone(this,slot);
-            e.transform.position=position;a.enemy=e;a.state=0;a.shots=0;a.grenadeUsed=false;a.until=Time.time+.7f;game.enemies.Add(e);
+            e.transform.position=position;a.enemy=e;ResetActor(a, .7f);game.enemies.Add(e);
         }
         public Material CloneMaterial {get{return cloneMaterial;}}
         public void CloneDown(int slot,Vector2 point)
         {if(slot<1||slot>3)return;actors[slot].enemy=null;actors[slot].tell.enabled=false;game.hero.Combat.EmitParticles(point,18);game.Burst(point,AncientGame.Cyan,12);}
         void RemoveClones()
         {
-            for(int i=1;i<4;i++)
-            {if(actors[i]==null)continue;if(actors[i].enemy){game.enemies.Remove(actors[i].enemy);Destroy(actors[i].enemy.gameObject);}actors[i].enemy=null;actors[i].tell.enabled=false;}
+            for(int i=1;i<actors.Length;i++)
+            {
+                var a=actors[i];
+                if(a==null) continue;
+                if(a.enemy)
+                {
+                    if(game) game.enemies.Remove(a.enemy);
+                    Destroy(a.enemy.gameObject);
+                }
+                a.enemy=null;
+                if(a.tell) a.tell.enabled=false;
+            }
         }
         public float FilterDamage(float damage,float hp,float maxHP)
-        {return phase==4||finished?0:Mathf.Min(damage,Mathf.Max(0,hp-maxHP*AncientSniperRules.HealthFloor(phase)));}
+        {
+            if (phase == 6 || finished || inBackground) return 0;
+            if (phase == 4 && relay == RelayBeat.Return)
+            {
+                if (!airBladeHit || airBladeFrame != Time.frameCount) return 0;
+                airBladeFrame=-1;
+            }
+            return Mathf.Min(damage, Mathf.Max(0, hp - maxHP * AncientSniperRules.HealthFloor(phase)));
+        }
         void ChangePhase(int next)
         {
-            phase=next;ClearObjects();foreach(var shot in game.shots.ToArray())if(shot)shot.Remove();
-            owner.FaceToward(game.hero.transform.position.x);game.Sound(8);game.Impact(owner.AimPoint,AncientGame.Cyan,true);
-            if(next==2)
-            {SpawnClone(1,new Vector2(left+1,0));game.Notice("2페이즈 / 에너지 분신 · 두 곳의 조준을 확인하세요.",4);}
-            if(next==3)
+            if (mounted >= 0) Dismount();
+            attacks.Clear();
+            CloseCurtain();
+            ClearObjects();
+            game.ClearBattleProjectiles();
+            RemoveClones();
+            foreach (var t in turrets) { t.charging=false; t.tell.enabled=false; }
+            ResetActor(actors[0], .85f);
+            inBackground=false; airCatch=false; airBladeHit=false; swapping=false;
+            phase=next;
+            arena.SetPhase(phase);
+            owner.FaceToward(game.hero.transform.position.x);
+            game.Sound(8);
+            game.Impact(owner.AimPoint,AncientGame.Cyan,true);
+            switch (phase)
             {
-                RemoveClones();for(int i=0;i<2;i++){turrets[i].root.SetActive(true);turrets[i].broken=false;turrets[i].until=Time.time+1;turrets[i].riseAt=Time.time;}
-                SpawnClone(1,new Vector2(left+1,0));SpawnClone(2,turrets[0].position+Vector2.up*.65f);SpawnClone(3,turrets[1].position+Vector2.up*.65f);
-                game.Notice("3페이즈 / 포탑 분신을 제압하면 가까이서 E로 조종 · 좌클릭 압축 발사 · E 하차",5);
-            }
-            if(next==4)
-            {
-                Dismount();RemoveClones();ground.RestoreAll();game.hero.Combat.ResetCombat();
-                owner.transform.position=new Vector2(right-1,0);RestoreTurrets();refillAt=Time.time+7;
-                game.Notice("파이널 / 저격수 충전 중 무적\n포탑 두 개를 부숴 나온 입자를 우클릭으로 모으세요. 가득 차면 레이저 충돌!",6);
+                case 2:
+                    realSide=SideOf(owner.transform.position.x);
+                    owner.transform.position=arena.RailPoint(realSide);
+                    SpawnClone(1,arena.LandingPoint(1-realSide));
+                    actors[1].until=Time.time+.25f;
+                    inBackground=true; nextSwap=Time.time+5.5f;
+                    game.Notice("다이아 거울 교대 / 모자 그림자가 진짜 귀환 지점입니다.", 4);
+                    break;
+                case 3:
+                    ground.RestoreAll();
+                    owner.transform.position=new Vector2(right-2,0);
+                    RestoreTurrets();
+                    for (int i=0;i<2;i++)
+                    {
+                        var t=turrets[i]; t.until=Time.time+1.2f+i*2.35f;
+                        t.riseAt=Time.time; t.plateIndex=i;
+                    }
+                    SpawnClone(1,new Vector2(left+2,0));
+                    SpawnClone(2,turrets[0].position+Vector2.up*.65f);
+                    SpawnClone(3,turrets[1].position+Vector2.up*.65f);
+                    nextRewind=Time.time+4.5f;
+                    game.Notice("스페이드 되감는 바닥 / 조종 분신 제압 후 E 탑승 · 좌클릭 압축판 · E 하차", 4);
+                    break;
+                case 4:
+                case 5:
+                    ground.RestoreAll(); relayCount=0; previousChain=0;
+                    realSide=SideOf(owner.transform.position.x);
+                    if(phase==5) SpawnClone(1,arena.RailPoint(1-realSide));
+                    StartRailRun();
+                    game.Notice(phase==4 ? "하트 옥상 릴레이 / 열린 셔터를 선점하고 공중 고리를 노리세요." :
+                        "조커 풀하우스 / 마지막 전조까지 보고 모자 그림자 쪽에서 반격하세요.", 4);
+                    break;
+                case 6:
+                    ground.RestoreAll(); game.hero.Combat.ResetCombat();
+                    game.hero.SpendCapturedEnergy();
+                    owner.transform.position=new Vector2(right-1,0); RestoreTurrets(); refillAt=Time.time+7;
+                    game.Notice("파이널 / 두 포탑을 부숴 입자를 완충하세요. 레이저 충돌에서 Space와 좌클릭을 모두 연타!", 5);
+                    break;
             }
         }
         public void Tick()
         {
-            if(finished||!game||game.boss!=owner||clashing&&!Application.isFocused)return;
-            if(phase<4)
-            {
-                int next=AncientSniperRules.Phase(owner.HealthRatio);if(next>phase)ChangePhase(next);
-            }
-            if(phase==4){TickFinal();return;}
-            TickObjects();if(game.boss!=owner)return;owner.BossContact();if(game.boss!=owner)return;
-            for(int i=0;i<4;i++)if(actors[i].enemy&&(i<2||phase<3))TickActor(i);
-            if(phase>=3)for(int i=0;i<2;i++)TickTurret(i);
+            if (finished || !game || game.boss!=owner || clashing && !Application.isFocused) return;
+            int next=AncientSniperRules.Phase(owner.HealthRatio);
+            if (phase<6 && next>phase) ChangePhase(phase+1);
+            if (phase==6) { TickFinal(); return; }
+            arena.Tick();
+            attacks.Tick(Time.deltaTime, game.hero.transform.position);
+            if (!StillFighting) return;
+            TickObjects();
+            if (!StillFighting) return;
+            if (!inBackground && !Recovering && (phase!=4 || relay!=RelayBeat.Return)) owner.BossContact();
+            if (!StillFighting) return;
+            if (phase>=4) { TickRelay(); return; }
+            if (phase==2 && TickSwap()) return;
+            TickActor(0);
+            if (phase>=2 && StillFighting && actors[1].enemy) TickActor(1);
+            if (phase!=3 || !StillFighting) return;
+            if(Time.time>=nextRewind) { arena.BeginRewind(); nextRewind=Time.time+10; }
+            for(int i=0;i<2;i++) TickTurret(i);
             if(mounted>=0)
             {
-                game.hero.CinematicMove(turrets[mounted].position+Vector2.up*1.7f);game.hero.CinematicPose(false,owner.transform.position.x<game.hero.transform.position.x?-1:1);
-                if(game.GameplayInputReady&&Input.GetKeyDown(KeyCode.E))Dismount();
+                game.hero.CinematicMove(turrets[mounted].position+Vector2.up*1.7f);
+                game.hero.CinematicPose(false,owner.transform.position.x<game.hero.transform.position.x?-1:1);
+                if(game.GameplayInputReady&&Input.GetKeyDown(KeyCode.E)) Dismount();
             }
         }
         void TickActor(int i)
         {
             var a=actors[i];var e=a.enemy;if(!e||!e.IsAlive){a.tell.enabled=false;return;}
             Vector2 target=game.hero.transform.position;float facing=target.x<e.transform.position.x?-1:1;
-            e.BossVisual(a.state==2?5:a.state==1?(a.grenades>0?3:3):Time.time<a.flash?4:0,facing,a.state==1?Mathf.Clamp01((Time.time-a.began)/(a.until-a.began)):0,a.state==1,a.state==2);
+            bool aiming=a.state==1 || a.state==4 && attacks.Telegraphing;
+            float windup=a.state==4?attacks.WindupProgress:aiming?Mathf.InverseLerp(a.began,a.until,Time.time):0;
+            int pose=a.state==2?5:aiming?3:a.state==5?1:Time.time<a.flash?4:0;
+            e.BossVisual(pose,facing,windup,aiming,a.state==2);
             Vector2 origin=e.SniperMuzzle;
+            if (a.state == 4)
+            {
+                // 반사 사격도 같은 탄창에 들어간다.
+                if (!attacks.Busy) ConsumeRound(a);
+                return;
+            }
+            if (a.state == 5)
+            {
+                float t=Mathf.InverseLerp(a.began,a.until,Time.time);
+                owner.transform.position=Vector2.Lerp(travelStart,travelEnd,Mathf.SmoothStep(0,1,t));
+                DrawCurtain(travelEnd,1-t*.65f,Mathf.Min(1,t*4));
+                if(t>=1)
+                {
+                    e.FaceToward(target.x);
+                    attacks.Club(e.AimPoint,target.x<e.transform.position.x?-1:1);
+                    a.state=6;
+                }
+                return;
+            }
+            if (a.state==6)
+            {
+                if(!attacks.Busy){CloseCurtain();a.state=0;a.until=Time.time+.85f;}
+                else DrawCurtain(travelEnd,.35f*(1-attacks.Progress),Mathf.Clamp01((1-attacks.Progress)*8));
+                return;
+            }
             if(a.state==2)
             {
-                if(Time.time>=a.until){a.state=0;a.shots=0;a.magazine++;a.grenadeUsed=false;a.until=Time.time+.3f;}
+                if(Time.time>=a.until){a.state=0;a.shots=0;a.magazine++;a.grenadeUsed=a.duelUsed=false;a.until=Time.time+.3f;}
                 return;
             }
             if(a.state==1)
             {
-                if(a.until-Time.time>.35f)a.aim=target;
+                float lockLead=a.grenades>0?.35f:a.lateLock?.32f:1.05f;
+                if(a.until-Time.time>lockLead) a.aim=ShotTarget(i,a,target);
                 a.tell.enabled=true;
                 if(a.grenades>0)
                 {
                     a.tell.positionCount=12;Vector2 v=(a.aim-origin)/1.05f+Vector2.up*7.35f;
                     for(int j=0;j<12;j++){float t=j*1.05f/11;a.tell.SetPosition(j,origin+v*t+Vector2.down*7*t*t);}
                 }
-                else{a.tell.positionCount=2;a.tell.SetPosition(0,origin);a.tell.SetPosition(1,a.aim);}
-                if(Time.time<a.until)return;a.tell.enabled=false;
+                else
+                {
+                    Vector2 d=(a.aim-origin).normalized;
+                    a.tell.positionCount=2; a.tell.SetPosition(0,origin); a.tell.SetPosition(1,origin+d*38);
+                    bool locked=Time.time>=a.until-lockLead;
+                    Color c=i==0?new Color(1,.42f,.35f):AncientGame.Cyan;
+                    c.a=locked?1:.42f; a.tell.startColor=a.tell.endColor=c;
+                    a.tell.startWidth=a.tell.endWidth=locked?.057f:.028f;
+                }
+                if(Time.time<a.until)return; a.tell.enabled=false;
                 if(a.grenades>0){a.state=3;a.until=Time.time;}
                 else
                 {
                     Vector2 d=(a.aim-origin).normalized;if(d.sqrMagnitude<.1f)d=Vector2.right*facing;
                     if(game.shots.Count<48)game.Projectiles.Spawn(origin+d*.25f,d*25,18,false,0);
-                    a.flash=Time.time+.18f;a.shots++;
-                    a.state=a.shots>=AncientSniperRules.MagazineSize?2:0;a.until=Time.time+(a.state==2?AncientSniperRules.ReloadSeconds:.3f);game.Sound(0);game.Burst(origin+d*.2f,new Color(1,.85f,.4f),3);
+                    a.flash=Time.time+.18f;ConsumeRound(a);game.Sound(0);game.Burst(origin+d*.2f,new Color(1,.85f,.4f),3);
                 }
                 return;
             }
@@ -164,31 +291,121 @@ namespace Plugin.AncientCivilization
                 SpawnObject(origin,(p-origin)/1.05f+Vector2.up*7.35f,true,false);a.grenades--;a.until=Time.time+.22f;
                 if(a.grenades==0){a.state=0;a.until=Time.time+.5f;}return;
             }
-            if(Time.time<a.until)return;
-            bool grenade=Vector2.Distance(origin,target)>7&&a.shots==2&&!a.grenadeUsed&&a.magazine%2==0;
-            if(grenade)a.grenadeUsed=true;a.grenades=grenade?4:0;a.aim=target;a.state=1;a.began=Time.time;a.until=Time.time+(grenade?.8f:AncientSniperRules.AimSeconds);
+            if(Time.time<a.until || attacks.Busy && i==0) return;
+            if(phase==3 && i==0 && (HasGunner(0)||HasGunner(1)))
+            {
+                if(!plateQueued || Time.time<coverAt) return;
+                plateQueued=false; a.coveringPlate=true; a.coverY=coverHeight;
+            }
+            if(phase==1 && !a.duelUsed && a.shots==4 && a.magazine%2==0)
+            {
+                a.duelUsed=true; travelStart=e.transform.position;
+                float approach=target.x<e.transform.position.x?1:-1;
+                travelEnd=new Vector2(Mathf.Clamp(target.x+approach*1.9f,left+1,right-1),0);
+                a.state=5;a.began=Time.time;a.until=Time.time+.55f;
+                game.Burst(e.AimPoint,new Color(.22f,.38f,.47f),12);return;
+            }
+            bool grenade=Vector2.Distance(origin,target)>7 && a.shots==2 && !a.grenadeUsed &&
+                a.magazine%2==0 && !a.coveringPlate && (i!=0 || phase!=2 || !inBackground);
+            if(!grenade && i==0 && ((phase==1 && (a.shots+a.magazine)%3==2) || (phase==2 && inBackground)))
+            {
+                attacks.Mirror(origin,target,1);
+                a.state=4; return;
+            }
+            if(grenade) a.grenadeUsed=true;
+            a.grenades=grenade?4:0;
+            a.lateLock=(a.shots+a.magazine)%3==1;
+            a.aim=ShotTarget(i,a,target);a.state=1;a.began=Time.time;
+            a.until=Time.time+(grenade?.8f:AncientSniperRules.AimSeconds);
+        }
+        // 장막은 착지점 뒤에 펼쳐진다. 플레이어와 두 번의 칼 궤적은 앞에 그대로 보인다.
+        void DrawCurtain(Vector2 foot,float closed,float opacity)
+        {
+            for(int i=0;i<curtain.Length;i++)
+            {
+                var fold=curtain[i];
+                if(!fold)
+                {
+                    fold=game.Line("Joker duel curtain fold "+i,Color.white,.6f,6);
+                    fold.positionCount=3;
+                    curtain[i]=fold;
+                }
+                float side=i<2?-1:1;
+                float overlap=i%2*.38f;
+                float outer=1.45f+overlap;
+                float hem=Mathf.Lerp(1.75f,.18f,closed)+overlap;
+                float ripple=.12f*Mathf.Sin(Time.time*7+i);
+                fold.startColor=new Color(.16f,.11f,.29f,.76f*opacity);
+                fold.endColor=new Color(.52f,.29f,.70f,.54f*opacity);
+                fold.startWidth=.7f;
+                fold.endWidth=.46f;
+                fold.SetPosition(0,foot+new Vector2(side*outer,3.4f));
+                fold.SetPosition(1,foot+new Vector2(side*(hem+.2f)+ripple,1.95f));
+                fold.SetPosition(2,foot+new Vector2(side*hem+ripple,.22f+overlap));
+                fold.enabled=true;
+            }
+        }
+        void CloseCurtain()
+        {
+            foreach(var fold in curtain) if(fold) fold.enabled=false;
+        }
+        Vector2 ShotTarget(int i,Actor a,Vector2 target)
+        {
+            if(a.coveringPlate) return new Vector2(target.x,a.coverY);
+            if(phase==2 && i==1 && inBackground && a.grenades==0)
+                return new Vector2(target.x,.9f);
+            return target;
+        }
+        void ConsumeRound(Actor a)
+        {
+            a.coveringPlate=false; a.shots++;
+            a.state=a.shots>=AncientSniperRules.MagazineSize?2:0;
+            a.until=Time.time+(a.state==2?AncientSniperRules.ReloadSeconds:.36f);
         }
         void TickTurret(int i)
         {
             var t=turrets[i];if(t.broken)return;
             float rise=Mathf.Clamp01((Time.time-t.riseAt)/.8f);t.root.transform.position=t.position+Vector2.up*Mathf.Lerp(-1.5f,0,rise*rise*(3-2*rise));
-            if(actors[i+2].enemy)actors[i+2].enemy.transform.position=(Vector2)t.root.transform.position+Vector2.up*.65f;
+            var operatorActor=actors[i+2];
+            if(operatorActor.enemy && operatorActor.ejected)
+            {
+                float p=Mathf.InverseLerp(operatorActor.ejectAt,operatorActor.ejectAt+.52f,Time.time);
+                Vector2 path=Vector2.Lerp(operatorActor.ejectFrom,operatorActor.ejectTo,p);
+                path.y+=Mathf.Sin(p*Mathf.PI)*1.65f;
+                operatorActor.enemy.transform.position=path;
+                if(p>=1)operatorActor.enemy.Hit(1000,true);
+            }
+            else if(operatorActor.enemy)
+                operatorActor.enemy.transform.position=(Vector2)t.root.transform.position+Vector2.up*.65f;
             if(rise<1)return;
-            bool manned=actors[i+2].enemy&&actors[i+2].enemy.IsAlive;
+            bool manned=HasGunner(i);
             bool friendly=mounted==i;
             if(!manned&&!friendly){t.charging=false;t.tell.enabled=false;return;}
             Vector2 origin=t.position+Vector2.up*1.4f;
             if(!t.charging)
             {
                 if(Time.time<t.until||friendly&&!Input.GetMouseButtonDown(0))return;
-                t.charging=true;t.started=Time.time;t.until=Time.time+3.2f;t.aim=friendly?(Vector2)game.View.ScreenToWorldPoint(Input.mousePosition):(Vector2)game.hero.transform.position;
+                t.charging=true;t.started=Time.time;t.until=Time.time+3.2f;
+                t.aim=friendly?(Vector2)game.View.ScreenToWorldPoint(Input.mousePosition):
+                    new Vector2(i==0?right:left,t.plateIndex%2==0?1.05f:3.7f);
             }
-            if(t.until-Time.time>.4f)t.aim=friendly?(Vector2)game.View.ScreenToWorldPoint(Input.mousePosition):(Vector2)game.hero.transform.position;
+            if(friendly && t.until-Time.time>.4f)t.aim=game.View.ScreenToWorldPoint(Input.mousePosition);
             Vector2 d=(t.aim-origin).normalized;t.barrel.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(d.y,d.x)*Mathf.Rad2Deg);
             t.tell.enabled=true;t.tell.startColor=t.tell.endColor=friendly?AncientGame.Cyan:AncientGame.Orange;t.tell.SetPosition(0,origin);t.tell.SetPosition(1,t.aim);
             t.body.color=Color.Lerp(new Color(.18f,.28f,.36f),friendly?AncientGame.Cyan:AncientGame.Orange,Mathf.Clamp01((Time.time-t.started)/3.2f));
             if(Time.time<t.until)return;
-            SpawnObject(origin+d*2.2f,d*13,false,friendly);game.Sound(4);game.Burst(origin+d*2.2f,AncientGame.Cyan,5);t.charging=false;t.tell.enabled=false;t.until=Time.time+1;
+            SpawnObject(origin+d*2.2f,d*13,false,friendly);game.Sound(4);game.Burst(origin+d*2.2f,AncientGame.Cyan,5);t.charging=false;t.tell.enabled=false;t.until=Time.time+1.5f;
+            if(!friendly)
+            {
+                t.plateIndex++;
+                // 압축판을 넘은 직후의 통로를 본체가 별도의 조준선으로 겨눈다.
+                if (!plateQueued)
+                {
+                    plateQueued=true;
+                    coverHeight=t.plateIndex%2==1?3.5f:1.05f;
+                    coverAt=Time.time+Mathf.Clamp(Mathf.Abs(game.hero.transform.position.x-origin.x)/13f,.1f,1.85f);
+                }
+            }
         }
         void SpawnObject(Vector2 position,Vector2 velocity,bool grenade,bool friendly)
         {
@@ -220,7 +437,20 @@ namespace Plugin.AncientCivilization
                     for(int i=game.enemies.Count-1;i>=0;i--)
                     {
                         var e=game.enemies[i];if(!e||!e.IsAlive)continue;
-                        if(DistanceToSegment(e.AimPoint,s.position,next)<.9f){e.Hit(75,true);RemoveObject(s);break;}
+                        if(DistanceToSegment(e.AimPoint,s.position,next)<.9f)
+                        {
+                            int seat=e==actors[2].enemy?0:e==actors[3].enemy?1:-1;
+                            if(phase==3 && seat>=0 && HasGunner(seat))
+                            {
+                                var gunner=actors[seat+2];
+                                gunner.ejected=true; gunner.ejectAt=Time.time;
+                                gunner.ejectFrom=e.transform.position;
+                                gunner.ejectTo=new Vector2(Mathf.Clamp(gunner.ejectFrom.x+Mathf.Sign(s.velocity.x)*2.3f,left,right),0);
+                                game.Impact(e.AimPoint,AncientGame.Cyan,true);
+                                RemoveObject(s);break;
+                            }
+                            e.Hit(75,true);RemoveObject(s);break;
+                        }
                     }
                 }
                 else if(DistanceToSegment(game.hero.transform.position,s.position,next)<(s.grenade?.5f:.95f))
@@ -235,7 +465,19 @@ namespace Plugin.AncientCivilization
         public bool TryBlade(Vector2 origin,Vector2 direction)
         {
             bool found=TryBreakObjects(origin,direction);
-            if(phase==4&&!clashing)for(int i=0;i<2;i++)
+            if (phase==4 && relay==RelayBeat.Return && airCatch && !airBladeHit)
+            {
+                Vector2 delta=owner.AimPoint-origin;
+                if(delta.sqrMagnitude<9 && Vector2.Dot(delta.normalized,direction)>-.15f &&
+                    !Physics2D.Linecast(origin,owner.AimPoint,1<<8))
+                {
+                    airBladeHit=true;
+                    // 다음 프레임에는 이 공중 베기 기회를 닫는다. 실제 피해는 통상 블레이드 판정으로 처리한다.
+                    airBladeFrame=Time.frameCount;
+                    found=true;
+                }
+            }
+            if(phase==6&&!clashing)for(int i=0;i<2;i++)
             {
                 var t=turrets[i];Vector2 p=t.position+Vector2.up,d=p-origin;
                 if(!t.broken&&d.sqrMagnitude<3.1f*3.1f&&Vector2.Dot(d.normalized,direction)>-.15f&&!Physics2D.Linecast(origin,p,1<<8))HitTurret(i,35);
@@ -256,7 +498,7 @@ namespace Plugin.AncientCivilization
         public void OnLaser(Vector2 start,Vector2 end,float bodyRadius=0,int pulseId=0)
         {
             Vector2 delta=end-start;
-            if(phase==4&&!clashing)for(int i=0;i<2;i++)
+            if(phase==6&&!clashing)for(int i=0;i<2;i++)
             {
                 var t=turrets[i];Vector2 point=t.position+Vector2.up,target=point-start;
                 if(!t.broken&&(pulseId==0||t.lastLaserPulse!=pulseId)&&AncientBeamRules.IntersectsCircle(delta.x,delta.y,target.x,target.y,bodyRadius,1.1f)&&!Physics2D.Linecast(start,point,1<<8))
@@ -283,7 +525,7 @@ namespace Plugin.AncientCivilization
             for(int i=0;i<2;i++)
             {
                 var t=turrets[i];if(t.broken||Vector2.Distance(game.hero.transform.position,t.position+Vector2.up)>2.6f)continue;
-                if(actors[i+2].enemy){game.Notice("포탑을 조종하는 에너지 분신부터 제압하세요.",2);return true;}
+                if(HasGunner(i)){game.Notice("포탑을 조종하는 에너지 분신부터 제압하세요.",2);return true;}
                 mounted=i;t.charging=false;t.until=Time.time+.25f;game.hero.HoldForEncounter(true);game.hero.CinematicMove(t.position+Vector2.up*1.7f);game.BlockGameplayInput();return true;
             }
             return false;
@@ -328,7 +570,7 @@ namespace Plugin.AncientCivilization
             }
         }
         public void EnergyChanged()
-        {if(phase==4&&!finished&&!clashing&&turrets[0].broken&&turrets[1].broken&&game.hero.CaptureEnergy>=99.99f)BeginClash();}
+        {if(phase==6&&!finished&&!clashing&&turrets[0].broken&&turrets[1].broken&&game.hero.CaptureEnergy>=99.99f)BeginClash();}
         void BeginClash()
         {
             clashing=true;winningAt=-1;clash.Reset();game.hero.SpendCapturedEnergy();game.hero.Combat.ResetCombat();
@@ -344,21 +586,24 @@ namespace Plugin.AncientCivilization
                 AncientHUD.Panel(new Rect(Screen.width/2-210,Screen.height*.18f+85,420,16),new Color(.3f,.08f,.13f));
                 AncientHUD.Panel(new Rect(Screen.width/2-210,Screen.height*.18f+85,420*clash.Progress,16),AncientGame.Cyan);
             }
-            else if(phase==4)GUI.Label(new Rect(Screen.width/2-300,95,600,60),"파이널 / 보스 충전 중 무적\n포탑 2개 파괴 ▶ 우클릭 입자 수집 ▶ 자동 레이저 충돌",label);
+            else if(phase==6)GUI.Label(new Rect(Screen.width/2-300,95,600,60),"파이널 / 보스 충전 중 무적\n포탑 2개 파괴 ▶ 우클릭 입자 수집 ▶ 자동 레이저 충돌",label);
             else
             {
-                GUI.Label(new Rect(Screen.width/2-300,95,600,55),phaseHints[Mathf.Clamp(phase,1,3)],label);
+                GUI.Label(new Rect(Screen.width/2-300,95,600,55),ActivePhaseHint(),label);
                 if(phase==3)for(int i=0;i<2;i++)
                 {
                     var t=turrets[i];Vector3 p=game.View.WorldToScreenPoint(t.position+Vector2.up*3);
-                    string text=mounted==i?"좌클릭: 3초 압축 발사 / E: 하차":actors[i+2].enemy?"조종 분신을 제압하세요":"E: 포탑 조종";
+                    string text=mounted==i?"좌클릭: 3초 압축 발사 / E: 하차":HasGunner(i)?"조종 분신을 제압하세요":"E: 포탑 조종";
                     GUI.Label(new Rect(p.x-150,Screen.height-p.y-25,300,60),text,label);
                 }
             }
         }
         void OnDestroy()
         {
-            if(game){if(game.Sniper==this)game.Sniper=null;if(game.hero)game.hero.HoldForEncounter(false);}
+            if(game && game.Sniper==this){game.Sniper=null;if(game.hero&&(mounted>=0||clashing))game.hero.HoldForEncounter(false);}
+            foreach(var fold in curtain) if(fold) Destroy(fold.gameObject);
+            if(attacks!=null)attacks.Dispose();
+            if(arena!=null)arena.Dispose();
             RemoveClones();if(ground)Destroy(ground.gameObject);if(cloneMaterial)Destroy(cloneMaterial);
             foreach(var a in actors)if(a!=null&&a.tell)Destroy(a.tell.gameObject);
             foreach(var t in turrets)if(t!=null){if(t.root)Destroy(t.root);if(t.tell)Destroy(t.tell.gameObject);}

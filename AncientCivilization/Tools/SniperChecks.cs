@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Plugin.AncientCivilization;
 class SniperChecks
 {
@@ -6,16 +7,97 @@ class SniperChecks
     static void Check(bool value,string label){checks++;if(!value)throw new Exception(label);}
     static bool Near(float a,float b){return Math.Abs(a-b)<.0001f;}
     static AncientSniperClash NewClash(){var c=new AncientSniperClash();c.Reset();return c;}
+
+    static void CheckPhases()
+    {
+        float[] gates = { .8f, .6f, .45f, .35f, .25f };
+        Check(AncientSniperRules.Phase(1f) == 1, "Full health starts the duel");
+        for (int i = 0; i < gates.Length; i++)
+        {
+            int phase = i + 1;
+            Check(AncientSniperRules.HealthFloor(phase) == gates[i], "Burst damage stops at this phase's gate");
+            Check(AncientSniperRules.Phase(gates[i] + .0001f) == phase, "Old phase continues above gate");
+            Check(AncientSniperRules.Phase(gates[i]) == phase + 1, "Exactly reaching a gate advances once");
+            foreach (float maxHp in new[] { 73f, 117.3f, 310f, 10667f })
+            {
+                float hp = maxHp * gates[i];
+                Check(AncientSniperRules.Phase(hp / maxHp) == phase + 1, "Rounded HP ratio cannot stick at a gate");
+            }
+        }
+        Check(AncientSniperRules.Phase(0) == 6 && AncientSniperRules.HealthFloor(6) == 0f,
+            "The final quarter belongs to the laser clash");
+        Check(AncientSniperRules.Phase(float.NaN) == 1, "Invalid ratio never awards a phase transition");
+    }
+
+    static void CheckFullHouse()
+    {
+        var signatures = new HashSet<int>();
+        var finishes = new HashSet<JokerMove>();
+        int pairs = 0;
+        for (int variation = 0; variation < 36; variation++)
+        {
+            Check(AncientSniperRules.TryChain(variation, -1, 1, 7, (move, beat) => 7, out var chain),
+                "Open roofs admit a chain");
+            Check(signatures.Add(chain.Signature), "Each permutation has a distinct signature");
+            if (chain.At(0) == JokerMove.DoubleRicochet) finishes.Add(chain.At(chain.Length - 1));
+            if (chain.Length == 2) pairs++;
+            Check(AncientSniperRules.TryChain(variation, chain.Signature, 1, 7, (move, beat) => 7, out var next)
+                && next.Signature != chain.Signature, "Previous chain is excluded even on identical seed");
+        }
+        Check(pairs == 12 && signatures.Count - pairs == 24 && finishes.Count == 3,
+            "Both chain lengths and different endings for a shared opener are available");
+        Check(!AncientSniperRules.TryChain(0, -1, 0, 7, (move, beat) => 4, out _),
+            "Leftmost player cannot reach the opposite lane in a single tell");
+        Check(!AncientSniperRules.TryChain(0, -1, 0, 1, (move, beat) => 2, out _),
+            "An escape lane without a roof cannot be selected");
+        int FoldThenSweep(JokerMove move, int beat)
+        {
+            if (beat == 0 && move == JokerMove.Fold) return 1;
+            if (beat == 1 && move == JokerMove.Sweep) return 2;
+            return 0;
+        }
+        Check(!AncientSniperRules.TryChain(0, -1, 1, 7, FoldThenSweep, out _),
+            "The escape path cannot cross a roof already folded earlier in the same chain");
+        int Dogleg(JokerMove move, int beat)
+        {
+            if (beat == 0 && move == JokerMove.DoubleRicochet) return 3;
+            if (beat == 1 && move == JokerMove.Sweep) return 4;
+            return 0;
+        }
+        Check(AncientSniperRules.TryChain(0, -1, 0, 7, Dogleg, out var detour)
+            && detour.SafeLaneAt(0) == 1 && detour.SafeLaneAt(1) == 2,
+            "A valid route can require moving to the middle one beat in advance");
+        Check(!AncientSniperRules.TryChain(0, detour.Signature, 0, 7, Dogleg, out _),
+            "If only the previous chain fits, wait and resample");
+        var rng = new Random(17287);
+        for (int trial = 0; trial < 500; trial++)
+        {
+            int start = rng.Next(3), supports = rng.Next(1,8);
+            int[,] projected = new int[4,3];
+            for (int card = 0; card < 4; card++)
+            for (int beat = 0; beat < 3; beat++) projected[card,beat] = rng.Next(8);
+            int Safe(JokerMove move, int beat) => projected[(int)move,beat];
+            if (!AncientSniperRules.TryChain(rng.Next(), -1, start, supports, Safe, out var route)) continue;
+            int lane = start;
+            for (int beat = 0; beat < route.Length; beat++)
+            {
+                JokerMove move = route.At(beat);
+                int open = supports & Safe(move, beat);
+                int next = route.SafeLaneAt(beat);
+                Check(Math.Abs(lane - next) <= 1 && (open & (1 << next)) != 0,
+                    "Every planned escape has support, lies outside the attack and can be reached in one tell");
+                if (move == JokerMove.Fold) supports = open;
+                lane = next;
+            }
+        }
+    }
     static void Main()
     {
         Check(AncientSniperRules.AimSeconds==2,"Every aimed shot takes two seconds");
         Check(AncientSniperRules.MagazineSize==5,"Five shots precede a reload");
-        Check(AncientSniperRules.Phase(1)==1&&AncientSniperRules.Phase(.7501f)==1,"First phase above 75 percent");
-        Check(AncientSniperRules.Phase(.75f)==2&&AncientSniperRules.Phase(.5001f)==2,"Second phase starts at 75 percent");
-        Check(AncientSniperRules.Phase(.5f)==3&&AncientSniperRules.Phase(.2501f)==3,"Third phase starts at 50 percent");
-        Check(AncientSniperRules.Phase(.25f)==4&&AncientSniperRules.Phase(0)==4,"Final phase starts at 25 percent");
-        Check(AncientSniperRules.Phase(float.NaN)==1,"Invalid ratio never awards a phase transition");
-        Check(AncientSniperRules.HealthFloor(1)==.75f&&AncientSniperRules.HealthFloor(2)==.5f&&AncientSniperRules.HealthFloor(3)==.25f,"Large hits can be capped at each phase threshold");
+        CheckPhases();
+        CheckFullHouse();
+        AncientSniperEncounter.CheckChoreography(Check);
         Check(AncientSniperRules.FloorCell(-100,0,10,2)==0,"Left grenade impact clamps to first floor cell");
         Check(AncientSniperRules.FloorCell(100,0,10,2)==9,"Right grenade impact clamps to final floor cell");
         Check(AncientSniperRules.FloorCell(4,0,10,2)==2,"Exact impact boundary chooses the cell on its right");

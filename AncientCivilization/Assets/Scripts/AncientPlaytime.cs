@@ -32,7 +32,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!game||!game.Story||!game.HasSession||AncientGame.IsQAProfile){previousActive=false;return;}
+            if(!game||!game.Story||!game.HasSession||game.DeveloperMenuOpen||AncientGame.IsQAProfile){previousActive=false;return;}
             int floor=game.Story.CurrentFloor,previousComplete=measured.CompletedMask;
             if(floor>0&&AncientCampaignRules.FloorCount(game.Campaign.CompletedMask,0)==4)measured.Complete(0);
             if((game.City.Cleared&2)!=0&&!game.Story.DialogueOpen)measured.Complete(1);

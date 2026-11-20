@@ -21,14 +21,14 @@ namespace Plugin.AncientCivilization
         public void Close(){Open=false;game.BlockGameplayInput();Time.timeScale=game.Paused?0:1;}
         void Update()
         {
-            if(game.MainMenu||game.skills||game.Story.DialogueOpen||game.Story.LiftBusy||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic))return;
+            if(game.DeveloperMenu&&game.DeveloperMenu.Capturing||game.MainMenu||game.skills||game.Story.DialogueOpen||game.Story.LiftBusy||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic))return;
             if(Input.GetKeyDown(KeyCode.Tab))
             {Open=!Open;game.BlockGameplayInput();Time.timeScale=game.Paused?0:1;}
             else if(Open&&Input.GetKeyDown(KeyCode.Escape))Close();
         }
         void OnGUI()
         {
-            if(!Open||game.MainMenu)return;
+            if(!Open||game.MainMenu||game.DeveloperMenu&&game.DeveloperMenu.Capturing)return;
             if(text==null)
             {
                 text=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=18,wordWrap=true};

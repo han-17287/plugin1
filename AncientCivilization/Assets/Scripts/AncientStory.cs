@@ -270,7 +270,7 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(!Application.isFocused)return;
+            if(!Application.isFocused||game.DeveloperMenu&&game.DeveloperMenu.Capturing)return;
             if(Stage>=8&&Truck){Destroy(Truck.gameObject);Truck=null;}
             if(choiceOpen)
             {
@@ -570,7 +570,7 @@ namespace Plugin.AncientCivilization
         void OnDestroy(){if(speech!=null)speech.Dispose();}
         void OnGUI()
         {
-            if(!game||!game.hero||!game.View||game.MainMenu||!game.HasSession||(game.Journal&&game.Journal.Open)||(game.Finale&&(game.Finale.Active||game.Finale.Finished)))return;
+            if(!game||game.DeveloperMenu&&game.DeveloperMenu.Capturing||!game.hero||!game.View||game.MainMenu||!game.HasSession||(game.Journal&&game.Journal.Open)||(game.Finale&&(game.Finale.Active||game.Finale.Finished)))return;
             if(game.Production&&game.Production.Cinematic&&!DialogueOpen)return;
             if(!LiftBusy&&!DialogueOpen&&Event.current.type!=EventType.Repaint)return;
             if(DialogueOpen&&!choiceOpen){DrawSpeech();return;}

@@ -103,6 +103,14 @@ def main():
             assert abs(pcm[0]) < 64 and abs(pcm[-1]) < 256, name
             if name in stems:
                 assert count == 8 * 22050, name
+            elif name == 'JokerCharge':
+                # Starting pitch stays low; the warning resolves as the regular sweep goes live.
+                assert count == round(1.22 * 22050), name
+                def crossings(start, end):
+                    chunk = pcm[round(start * 22050):round(end * 22050)]
+                    return sum(a <= 0 < b for a, b in zip(chunk, chunk[1:]))
+                assert 10 <= crossings(.10, .30) <= 20, name
+                assert crossings(.96, 1.16) > 1.8 * crossings(.10, .30), name
             else:
                 assert .07 <= count / 22050 <= .75, name
     print(f'PASS: {len(cues)} equipment cues, two four-bar stems, PCM headroom/edges and mixer group references')
