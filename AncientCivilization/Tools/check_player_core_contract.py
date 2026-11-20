@@ -20,7 +20,7 @@ def main():
     assert len(paths['Move'])==10
     for binding in action_map['bindings']:assert binding['action'] in actions
     manifest=json.loads((ROOT/'Packages/manifest.json').read_text())
-    assert manifest['dependencies']['com.unity.inputsystem']=='1.11.2'
+    assert manifest['dependencies']['com.unity.inputsystem']=='1.20.1'
     assert 'com.unity.modules.tilemap' in manifest['dependencies']
     assert 'activeInputHandler: 2' in (ROOT/'ProjectSettings/ProjectSettings.asset').read_text()
     importer=(ROOT/'Assets/Resources/PlayerCore/P1Player.inputactions.meta').read_text()

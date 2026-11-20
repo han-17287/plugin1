@@ -1,8 +1,8 @@
 # PLUGIN · Ancient Civilization
 
-**v0.38.1 · 도시의 악보**
+**v0.38.2 · Unity 6 입력 패키지 호환성**
 
-[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.38.1-unity-project.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
+[Unity 프로젝트 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/v0.38.2-unity-project.zip) · [집행관 여섯 자세](ArtReferences/Record_Enforcer_Poses.png) · [실행·조작](AncientCivilization/README_KO.md)
 
 메인 화면에서 **도시 자유 순찰 · 5개 층**을 고르면 보스 없이 50개 방을 걸어서 왕복할 수 있습니다. 한 번 완주한 길에서는 **T**로 직전 주행 잔상과 달립니다. [탐험방 50곳과 이동 장치 50개](AncientCivilization/PATROL_KO.md)
 
@@ -35,7 +35,7 @@ Main 메인 화면에서 **새 지역 맵 둘러보기**를 선택합니다. 생
 
 P1 이동 연습도 포함합니다. **새 이동을 확인하려면 `Assets/Scenes/PlayerMovementPractice.unity`를 열고 Play**하세요. 신 Input System, 모드별 입력 연결, 상태 패턴, 가변 점프·벽 점프·대시·발판 하강과 디버그 표시를 포함합니다. [설정·스크립트 구성·튜닝 값·테스트·흔한 버그](AncientCivilization/P1_MOVEMENT_KO.md). 기존 `Main.unity`는 아직 기존 조작을 사용합니다. 추가 앵커와 무기·입자·레이저는 후속 단계에서 순서대로 연결합니다.
 
-Input System 1.11.2를 추가하고 입력 설정을 Both로 변경했습니다. Unity가 요청하면 재시작하세요. 실제 Unity 임포트·Play·물리·FPS는 이 환경에서 실행하지 못했습니다.
+이 프로젝트는 Unity 6000.6.7f1과 Input System 1.20.1을 사용합니다. 기존 입력과 새 입력을 함께 쓰기 위해 Active Input Handling은 Both입니다. Unity가 요청하면 재시작하세요.
 
 Main 씬에는 기존 초반 학습과 하층 진행 개선도 포함돼 있습니다. 베기·입자 수집·수광부 레이저로 실제 검수문을 열고, 필수 행동 현장은 접근 안내 후 해결 즉시 다음 길로 이어집니다. 경비는 등장 전에 위치를 예고하며, 고정된 안전 발판에 착지하면 재도전 지점이 저장됩니다. 기존 지형·이야기·보스는 유지합니다. **실제 Unity 플레이와 난이도·완주 시간 검증은 아직 남아 있습니다.** [변경 내용과 확인할 점](AncientCivilization/GAMEPLAY_FLOW_KO.md)
 

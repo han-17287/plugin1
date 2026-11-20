@@ -1,4 +1,4 @@
-# PLUGIN — ANCIENT CIVILIZATION v0.38.1
+# PLUGIN — ANCIENT CIVILIZATION v0.38.2
 
 메인 화면 **도시 자유 순찰 · 5개 층**에서 하역 도크부터 해 뜨는 관측교까지 탐험할 수 있습니다. 각 층에는 방 10곳과 그 안에서 사용하는 이동 장치 10개가 있습니다. 캠페인 중에는 층 입구 순찰 안내소 앞에서 **P**, 순찰 중에는 **P**로 본편에 복귀합니다. 지름길과 순찰 기록은 저장됩니다. [길 찾기와 방별 기믹](PATROL_KO.md)
 
@@ -23,7 +23,7 @@ Unity 6000.6.7f1에서 `Assets/Scenes/Main.unity`를 열고 Play를 누르면 �
 ## 실행
 
 1. ZIP을 풀고 `AncientCivilization` 폴더를 Unity Hub에서 프로젝트로 추가합니다. `ArtReferences`는 프로젝트 옆에 보관합니다.
-2. Unity **6000.6.7f1**로 열고 임포트가 끝날 때까지 기다립니다.
+2. Unity **6000.6.7f1**로 열고 Input System **1.20.1** 설치와 임포트가 끝날 때까지 기다립니다.
 3. `Assets/Scenes/Main.unity`를 연 뒤 Play를 누릅니다. 월드와 주민·전투 장치는 실행 중 생성됩니다.
 4. 처음부터 튜토리얼과 추격을 확인하려면 메인 화면의 새 게임을 사용합니다. 이어하기는 기존 수사·보스 기록을 복구합니다.
 
@@ -31,7 +31,7 @@ Unity 6000.6.7f1에서 `Assets/Scenes/Main.unity`를 열고 Play를 누르면 �
 
 ### Unity WebGL 내보내기
 
-Unity Hub에서 6000.6.7f1의 **Web Build Support**를 설치합니다. 프로젝트의 **PLUGIN → 빌드 → WebGL 플레이어 내보내기**에서 저장 위치를 선택합니다. 빌드를 마치면 `PLUGIN-v0.38.1-WebGL` 폴더 전체를 ZIP으로 묶어 배포에 사용합니다. `index.html`과 `Build`, `TemplateData` 등 Unity가 생성한 파일을 함께 담습니다.
+Unity Hub에서 6000.6.7f1의 **Web Build Support**를 설치합니다. 프로젝트의 **PLUGIN → 빌드 → WebGL 플레이어 내보내기**에서 저장 위치를 선택합니다. 빌드를 마치면 `PLUGIN-v0.38.2-WebGL` 폴더 전체를 ZIP으로 묶어 배포에 사용합니다. `index.html`과 `Build`, `TemplateData` 등 Unity가 생성한 파일을 함께 담습니다.
 
 배치 빌드에서는 Unity 실행 파일에 다음 인자를 전달합니다. `-projectPath`에는 이 프로젝트의 실제 경로를 사용합니다.
 

@@ -1,3 +1,11 @@
+v0.38.2 Input System editor compatibility
+
+The reported InputEventTreeView and InputStateWindow lines match Input System
+1.11.2. Unity 6000.6.7f1 marks the non-generic TreeView types as obsolete
+errors. Input System 1.20.1 selects the generic types under
+UNITY_6000_2_OR_NEWER. The published importer GUID still matches the existing
+P1Player.inputactions metadata. Native Unity import and WebGL build are pending.
+
 v0.38.1 City Score ensemble arrangements
 
 All 50 MIDI arrangements retain the original tempo maps and durations. The
