@@ -99,8 +99,21 @@ namespace Plugin.PlayerCore
             alley.UseAction("세탁소 분실물 확인");
             Check(alley.PortalOpen(11),"The secret laundromat opens a road back to the market");
             var shop=Open(17,alley);
+            shop.Point(31.5f,1.55f);
+            Check(!shop.WantsRoomMusic(),"A silent accordion must not interrupt the score before repair");
             shop.UseAction("손풍금 수리공 은주에게 말 걸기");
             Check(shop.Flag("living.reedsFixed") && shop.PortalOpen(11),"Lost accordion from room 12 unlocks the shop shortcut in room 17");
+            shop.Point(31.5f,1.55f);
+            Check(shop.WantsRoomMusic(),"Approaching the repaired accordion must request the music bus");
+            shop.TickSpeaker(false,false,false);
+            Check(!shop.roomSpeaker.isPlaying,"Accordion must wait for the region fade");
+            shop.Tick(10);
+            Check(shop.roomSpeaker.isPlaying && shop.roomSpeaker.volume > 0,"Granted accordion must be audible");
+            shop.TickSpeaker(true,false,true);
+            Check(!shop.roomSpeaker.isPlaying && shop.speakerPaused,"Menu must pause the accordion");
+            shop.Point(0,0);
+            shop.Tick(20);
+            Check(!shop.WantsRoomMusic() && !shop.roomSpeaker.isPlaying,"Leaving a muted room source must return control to the score");
         }
 
         static void CheckAdministration()
@@ -166,6 +179,23 @@ namespace Plugin.PlayerCore
             }
             Check(travel>20 && opened && closed && deployed,"Driving the maintenance car extends the relay sockets and temporary bridge");
             var station=Open(49);
+            station.UseAction("무전 수신 주파수 맞추기");
+            Check(station.WantsRoomMusic(),"Tuning the accordion station must request focus");
+            station.TickSpeaker(false,false,false);
+            Check(!station.roomSpeaker.isPlaying,"The radio melody must wait for the score fade");
+            station.Tick(2);
+            Check(station.roomSpeaker.isPlaying,"The tuned radio melody was lost");
+            station.TickSpeaker(true,false,true);
+            Check(!station.roomSpeaker.isPlaying,"The summit radio kept playing while the room was paused");
+            station.Tick();
+            station.roomSpeaker.isPlaying=false;
+            Check(!station.WantsRoomMusic(),"A completed radio melody still held the soundtrack");
+            station.Tick();
+            Check(!station.roomSpeaker.isPlaying,"A completed radio clue started looping");
+            station.UseAction("무전 수신 주파수 맞추기");
+            Check(!station.WantsRoomMusic(),"A metal sound effect should not stop the soundtrack");
+            station.TickSpeaker(false,false,false);
+            Check(station.roomSpeaker.isPlaying,"A radio sound effect incorrectly required a music grant");
             station.TrialActive=true;station.Grounded=false;
             station.Point(5,4,8,9);station.Tick();
             station.Point(46,8);station.Tick();

@@ -1,3 +1,17 @@
+v0.38.1 City Score ensemble arrangements
+
+All 50 MIDI arrangements retain the original tempo maps and durations. The
+corresponding 44.1 kHz stereo Ogg masters decode to the sample counts in the
+catalog. The highest reconstructed true peak is -1.2 dBTP. The 60-second
+countdown is 2,646,000 frames. The 137 grouped stems for 15 cues match the
+duration of their masters, with no shift in the measured accent envelopes.
+The comparison MP3 pairs the same five bars at matched integrated loudness
+for Enforcer III, Shift Current and the main theme.
+
+Portable audio and patrol tests exercise the handoff between the floor score,
+local accordion, tuned radio, checkpoint and retry. Actual headset/speaker
+balance during Unity Play Mode awaits a listening pass in the editor.
+
 v0.38.0 Five-floor patrol expedition
 
 The exploration scene enters from Main, floor entrance kiosks or the developer
