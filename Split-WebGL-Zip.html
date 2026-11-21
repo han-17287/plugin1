@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebGL ZIP 나누기</title>
+  <style>
+    :root { color-scheme: dark; font: 100%/1.55 system-ui, sans-serif; background: #10151d; color: #eef3f8; }
+    main { max-width: 38rem; margin: 10vh auto; padding: 1.5rem; }
+    h1 { margin: 0 0 .55rem; font-size: 1.75rem; }
+    p { color: #bccbd8; }
+    input, button { font: inherit; }
+    input { width: 100%; margin: .7rem 0; }
+    button, input::file-selector-button {
+      padding: .55rem .85rem; background: #b9ecff; color: #0b2430;
+      border: 0; border-radius: .35rem; cursor: pointer;
+    }
+    button:disabled { opacity: .65; cursor: wait; }
+    ul { display: flex; flex-wrap: wrap; gap: .65rem; padding: 0; list-style: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>WebGL ZIP 나누기</h1>
+    <p>이미 만든 게임 ZIP을 선택하고, 아래에 나오는 조각을 모두 저장해 채팅에 첨부하세요.</p>
+    <input id="source" type="file" accept=".zip,application/zip" aria-label="WebGL 빌드 ZIP 선택">
+    <p id="status" role="status"></p>
+    <ul id="parts"></ul>
+  </main>
+  <script id="splitter">
+    const chunkSize = 24 * 1024 * 1024;
+    const utf8 = new TextEncoder();
+    const crcTable = Uint32Array.from({ length: 256 }, (_, value) => {
+      for (let bit = 0; bit < 8; bit++) {
+        value = (value >>> 1) ^ (value & 1 ? 0xedb88320 : 0);
+      }
+      return value;
+    });
+
+    function crc32(bytes) {
+      let crc = 0xffffffff;
+      for (const value of bytes) {
+        crc = (crc >>> 8) ^ crcTable[(crc ^ value) & 255];
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function storeZip(files) {
+      const localRecords = [];
+      const centralRecords = [];
+      let offset = 0;
+      let centralSize = 0;
+      for (const { name, content } of files) {
+        const filename = utf8.encode(name);
+        const crc = crc32(content);
+        const local = new DataView(new ArrayBuffer(30));
+        local.setUint32(0, 0x04034b50, true);
+        local.setUint16(4, 20, true);
+        local.setUint16(12, 33, true);
+        local.setUint32(14, crc, true);
+        local.setUint32(18, content.length, true);
+        local.setUint32(22, content.length, true);
+        local.setUint16(26, filename.length, true);
+        localRecords.push(local.buffer, filename, content);
+
+        const central = new DataView(new ArrayBuffer(46));
+        central.setUint32(0, 0x02014b50, true);
+        central.setUint16(4, 20, true);
+        central.setUint16(6, 20, true);
+        central.setUint16(14, 33, true);
+        central.setUint32(16, crc, true);
+        central.setUint32(20, content.length, true);
+        central.setUint32(24, content.length, true);
+        central.setUint16(28, filename.length, true);
+        central.setUint32(42, offset, true);
+        centralRecords.push(central.buffer, filename);
+        centralSize += central.byteLength + filename.length;
+        offset += local.byteLength + filename.length + content.length;
+      }
+
+      const end = new DataView(new ArrayBuffer(22));
+      end.setUint32(0, 0x06054b50, true);
+      end.setUint16(8, files.length, true);
+      end.setUint16(10, files.length, true);
+      end.setUint32(12, centralSize, true);
+      end.setUint32(16, offset, true);
+      return new Blob([...localRecords, ...centralRecords, end.buffer], { type: 'application/zip' });
+    }
+
+    async function makePart(file, batch, index) {
+      const offset = (index - 1) * chunkSize;
+      const content = new Uint8Array(await file.slice(offset, offset + chunkSize).arrayBuffer());
+      const info = {
+        format: 'plugin-webgl-parts-v1',
+        batch,
+        filename: file.name,
+        totalBytes: file.size,
+        partCount: Math.ceil(file.size / chunkSize),
+        index,
+        offset,
+        bytes: content.length,
+      };
+      const blob = storeZip([
+        { name: 'manifest.json', content: utf8.encode(JSON.stringify(info)) },
+        { name: 'part.bin', content },
+      ]);
+      return { blob, info };
+    }
+  </script>
+  <script>
+    const source = document.querySelector('#source');
+    const status = document.querySelector('#status');
+    const parts = document.querySelector('#parts');
+
+    source.addEventListener('change', () => {
+      parts.replaceChildren();
+      const file = source.files[0];
+      if (!file) {
+        status.textContent = '';
+        return;
+      }
+      if (file.size <= 32 * 1024 * 1024) {
+        status.textContent = '이 ZIP은 32MiB 이하입니다. 원본을 그대로 첨부하세요.';
+        return;
+      }
+      const batch = Array.from(crypto.getRandomValues(new Uint32Array(4)), x => x.toString(16).padStart(8, '0')).join('');
+      const count = Math.ceil(file.size / chunkSize);
+      status.textContent = `아래 ZIP ${count}개를 저장해 함께 첨부하세요.`;
+      for (let index = 1; index <= count; index++) {
+        const item = document.createElement('li');
+        const button = document.createElement('button');
+        button.textContent = `조각 ${index} / ${count} 저장`;
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          try {
+            const { blob } = await makePart(file, batch, index);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `PLUGIN-WebGL-part-${String(index).padStart(2, '0')}-of-${count}.zip`;
+            document.body.append(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+          } catch (error) {
+            status.textContent = `조각 ${index} 저장 중 오류가 발생했습니다. ${error.message}`;
+          } finally {
+            button.disabled = false;
+          }
+        });
+        item.append(button);
+        parts.append(item);
+      }
+    });
+  </script>
+</body>
+</html>
