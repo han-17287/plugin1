@@ -1,0 +1,32 @@
+#EXTM3U
+#PLAYLIST:PLUGIN · 보스 전투곡
+#EXTINF:27.170,짐칸 위의 결투
+Mixes/roof-captain.ogg
+#EXTINF:36.923,리벳의 맥박 I · 기동
+Mixes/iron-suit-1.ogg
+#EXTINF:33.684,리벳의 맥박 II · 압력실
+Mixes/iron-suit-2.ogg
+#EXTINF:30.720,리벳의 맥박 III · 푸른 균열
+Mixes/iron-suit-3.ogg
+#EXTINF:35.888,집행 개시 Ⅰ
+Mixes/enforcer-1.ogg
+#EXTINF:33.103,집행 개시 Ⅱ
+Mixes/enforcer-2.ogg
+#EXTINF:30.476,집행 개시 Ⅲ
+Mixes/enforcer-3.ogg
+#EXTINF:27.429,진열장 속 심장 Ⅰ · 계측
+Mixes/residence-warden-1.ogg
+#EXTINF:33.391,진열장 속 심장 Ⅱ · 굴절
+Mixes/residence-warden-2.ogg
+#EXTINF:30.720,진열장 속 심장 Ⅲ · 파쇄
+Mixes/residence-warden-3.ogg
+#EXTINF:32.941,숨을 세는 눈
+Mixes/joker-sightline.ogg
+#EXTINF:34.595,유리 속의 둘
+Mixes/joker-double.ogg
+#EXTINF:32.269,바닥 아래의 포좌
+Mixes/joker-turrets.ogg
+#EXTINF:22.326,두 빛의 접점
+Mixes/joker-beam.ogg
+#EXTINF:32.821,영점 결재
+Mixes/clock-secretary.ogg
