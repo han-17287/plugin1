@@ -24,7 +24,8 @@
       "glass",
       "strings",
       "leadguitar",
-      "brass"
+      "brass",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -50,7 +51,8 @@
       "drums",
       "coil",
       "piano",
-      "bass"
+      "bass",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -622,7 +624,8 @@
       "cleanguitar",
       "gayageum",
       "glass",
-      "daegeum"
+      "daegeum",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -646,7 +649,8 @@
       "spiccato",
       "coil",
       "pad",
-      "haegeum"
+      "haegeum",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -781,7 +785,8 @@
       "piri",
       "strings",
       "piano2",
-      "cleanguitar"
+      "cleanguitar",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -807,7 +812,8 @@
       "spiccato",
       "strings",
       "glass",
-      "cleanguitar"
+      "cleanguitar",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -835,7 +841,8 @@
       "harp",
       "strings",
       "haegeum",
-      "piano"
+      "piano",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -862,7 +869,8 @@
       "daegeum",
       "piano",
       "cleanguitar",
-      "glass"
+      "glass",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -972,7 +980,8 @@
       "daegeum",
       "drums",
       "piano",
-      "glass"
+      "glass",
+      "circuit bass"
     ],
     "stems": false
   },
@@ -1226,7 +1235,8 @@
       "drums",
       "coil",
       "cleanguitar",
-      "synth"
+      "synth",
+      "circuit bass"
     ],
     "stems": false
   },

@@ -21,7 +21,8 @@ FIELD = [
     ("glass-terrace", 9, 4), ("greenhouse-fault", 9, 8), ("truck-pursuit", 9, 8),
     ("redline-remount", 17, 8), ("retreat", 1, 2),
 ]
-COMPARISON = [("iron-suit-3", 25, 4), ("joker-sightline", 1, 4), ("clock-secretary", 21, 4)]
+# 타이틀의 피아노/플루트 교대, 재고 관리의 기타 응답, 비서실장 곡의 루프 종지를 비교한다.
+COMPARISON = [("ignition-title", 11, 4), ("morning-inventory", 15, 3), ("clock-secretary", 31, 4)]
 PATROL = [
     ("shift-current", 33, 3), ("alley-trail", 9, 3), ("shutter-index", 13, 3),
     ("greenhouse-fault", 9, 3), ("summit-trespass", 9, 3),
@@ -32,9 +33,18 @@ def excerpt(directory, cue, first, count):
     record = CATALOG[cue]
     frames_per_bar = RATE * 240 / record["bpm"]
     lo = round((first - 1) * frames_per_bar)
-    hi = min(record["frames"], round((first + count - 1) * frames_per_bar))
+    hi = round((first + count - 1) * frames_per_bar)
+    frames = record["frames"]
+    if not record["loop"]:
+        hi = min(hi, frames)
+    filters = []
+    if hi > frames:
+        # 마지막 마디에서 첫 마디로 넘어가는 구절은 게임처럼 PCM 샘플 경계에서 잇는다.
+        # 발췌 시작과 끝에만 페이드를 적용해 실제 루프 접점을 들을 수 있게 한다.
+        filters.append(f"aloop=loop=1:size={frames}")
+    filters.append(f"atrim=start_sample={lo}:end_sample={hi}")
     result = subprocess.run(["ffmpeg", "-v", "error", "-i", str(directory / (cue + ".ogg")),
-                             "-af", f"atrim=start_sample={lo}:end_sample={hi}",
+                             "-af", ",".join(filters),
                              "-f", "f32le", "-ac", "2", "-ar", str(RATE), "-"],
                             capture_output=True, check=True)
     audio = np.frombuffer(result.stdout, dtype="<f4").reshape(-1, 2).copy()
@@ -65,7 +75,12 @@ def sequence(path, excerpts, masters, previous=None):
         common_trim = min(1, 0.88 / max(peak, 0.001))
         for i, x in enumerate(pair):
             tag = ["이전", "수정"][i] if previous else ""
-            title = f"{CATALOG[cue]['title']} · {first}–{first + count - 1}마디 {tag}".rstrip()
+            last = first + count - 1
+            bars = CATALOG[cue]["bars"]
+            span = f"{first}–{min(last, bars)}"
+            if CATALOG[cue]["loop"] and last > bars:
+                span += f" → 1–{last - bars}"
+            title = f"{CATALOG[cue]['title']} · {span}마디 {tag}".rstrip()
             if pieces:
                 gap = .27 if previous and i == 1 else .52 if path.name == "Before-After.mp3" else .10
                 silence = np.zeros((round(RATE * gap), 2), dtype="<f4")
@@ -105,7 +120,7 @@ def main():
     split = round(4 * 240 * RATE / cue["bpm"])
     for name, trim in [("intro", f"end_sample={split}"), ("loop", f"start_sample={split}")]:
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(args.masters / "shift-current.ogg"),
-                        "-af", f"atrim={trim}", "-map_metadata", "-1", "-c:a", "libvorbis", "-q:a", "6",
+                        "-af", f"atrim={trim},asettb=1/{RATE},asetpts=N", "-map_metadata", "-1", "-c:a", "libvorbis", "-q:a", "6",
                         str(args.out / f"shift-current-{name}.ogg")], check=True)
 
 

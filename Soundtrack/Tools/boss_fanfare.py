@@ -20,7 +20,7 @@ PHRASES = {
     'iron': (
         [(0,-3,2),(3,-3,1.4),(6,0,2.6),(9,0,3.6),(14,-1,1.4)],
         [(0,-3,5.5),(7,1,1.5),(9,0,4.5),(15,-4,.75)],
-        [(0,4,1.8),(3,4,2),(6,5,1.7),(9,4,2.6),(13,0,2.7)]),
+        [(0,1,1.8),(3,1,2),(6,3,1.7),(9,2,2.6),(13,-2,2.7)]),
     'enforcer': (
         [(0,4,1.5),(2,5,2.6),(5,4,2.2),(8,1,3.6),(12,2,3.4)],
         [(0,0,5.4),(6,-1,1.8),(8,1,1.6),(10,2,4.3)],
@@ -31,13 +31,17 @@ PHRASES = {
         [(0,5,3.6),(4,8,2.7),(7,7,2.7),(10,4,3.2),(14,2,1.6)]),
     'joker': (
         [(0,4,1.35),(3,3,1.35),(7,0,1.5),(10,1,1.45),(14,-3,1.35)],
-        [(2,2,3.4),(8,-1,2.1),(13,0,2.3)],
-        [(0,4,2.5),(4,6,1.3),(7,5,2.4),(11,1,2.2),(15,0,.8)]),
+        [(2,-2,3.4),(8,0,2.6),(13,2,2.4)],
+        [(0,-2,2.5),(4,0,1.3),(7,2,2.4),(11,1,2.2),(15,3,.8)]),
     'clock': (
-        [(0,7,2.5),(3,4,2.4),(6,2,1.5),(8,6,2.7),(11,4,2.6),(14,1,1.6)],
-        [(0,5,2.8),(3,2,2.4),(6,0,1.5),(9,4,3.7),(14,-1,1.6)],
-        [(0,9,2.4),(3,7,2.5),(6,4,1.45),(8,6,1.5),(10,4,1.5),(12,2,1.5),(14,0,1.5)]),
+        [(0,7,2.5),(3,5,2.4),(6,3,1.5),(8,5,2.7),(11,4,2.6),(14,2,1.6)],
+        [(0,3,2.8),(3,1,2.4),(6,0,1.5),(9,3,3.7),(14,5,1.6)],
+        [(0,2,2.4),(3,4,2.5),(6,6,1.45),(8,7,1.5),(10,5,1.5),(12,4,1.5),(14,6,1.5)]),
 }
+
+# 마지막 네 음은 첫 마디의 음역과 리듬으로 되돌아가는 각 보스의 여린박이다.
+TURN = {'captain': (2,3,1,1), 'iron': (-1,1,-1,-2), 'enforcer': (2,3,5,3),
+        'warden': (5,3,2,1), 'joker': (-2,0,2,3), 'clock': (2,4,5,6)}
 
 # 주 악기, 응답 악기, 합주 때 주제를 같은 리듬으로 받는 악기. GM 프로그램은 0부터 센다.
 VOICES = {
@@ -102,26 +106,56 @@ def write_parts(cue, score, info):
 
     def note(seat, step, pitch, length, velocity):
         start = round((bar*4 + step/4) * ppq)
-        end = min(round((bar*4 + (step+length)/4) * ppq), (bar+1)*4*ppq)
+        end = round((bar*4 + (step+length)/4) * ppq)
         if end > start:
             parts[seat].notes.append(Note(start, end, pitch, velocity))
+
+    # 성부를 렌더링하기 전에 다음 마디 첫 음까지 포함한 프레이즈를 만든다.
+    chart = []
+    seats = []
+    for bar, section in enumerate(form):
+        phrase = PHRASES[group][2 if bar%4==3 else bar%2]
+        if section == 'break':
+            phrase = [(0, phrase[0][1], 9.5), (12, phrase[-1][1], 2.5)]
+        elif bar == bars-1:
+            phrase = [(step, degree, gate) for step,degree,gate in
+                      zip((0,7,10,14), TURN[group], (5.2,2,2.9,1.8))]
+        chart.append(phrase)
+        seats.append(int((section == 'answer' and bar%2) or section == 'break'))
 
     fast = cue.endswith(('-2','-3','double','turrets','beam')) or group == 'clock'
     for bar,section in enumerate(form):
         root = roots[bar]
-        phrase = PHRASES[group][2 if bar%4==3 else bar%2]
-        if section == 'break':
-            # 한 손의 긴 음. 마지막 마디의 응답으로 다음 전합주의 박을 예고한다.
-            phrase = [(0, phrase[0][1], 9.5), (12, phrase[-1][1], 2.5)]
-        elif section == 'return' and bar%4 == 3:
-            phrase = [(0,4,5.2), (7,3,2), (10,1,2.9), (14,-1,1.4)]
-        call = 1 if (section == 'answer' and bar%2) or section == 'break' else 0
+        phrase = chart[bar]
+        call = seats[bar]
+        next_bar = (bar + 1) % bars
         for i,(step,degree,length) in enumerate(phrase):
             pitch=scale_pitch(tonic,degree)
+            final = i == len(phrase)-1
             if i == 0 or length >= 4:
                 pitch=closest_chord_tone(pitch,root,tonic)
             velocity = (109 if i==0 else 100 if step%4==0 else 93) - (12 if section=='break' else 0)
-            note(call,step,pitch,length,velocity)
+
+            # 눈금과 킥은 그대로 두고, 프레이즈가 계속되는 음만 손가락/활을 늦게 뗀다.
+            # 조커의 첫 다섯 저격과 다음 마디 첫 쉼, 슈트의 반복 피킹은 의도한 스타카토다.
+            next_step = 16 if final else phrase[i+1][0]
+            space = next_step-step
+            pulse = (group=='joker' and bar%2==0 and section!='break') or (
+                group=='iron' and length<=2.0 and section!='break')
+            if pulse:
+                gate = length
+            else:
+                # 같은 간격이라도 활과 금관은 더 잇고, 시계의 타건과 쉬어 가는 마디는 숨을 둔다.
+                join = .82 if parts[call].program in (48,49,50,60,61) else .66
+                if section=='break' or (group=='clock' and step in (0,8)):
+                    join = .48
+                gate = length + join * (space-length)
+                if final and seats[next_bar] != call and chart[next_bar][0][0] == 0:
+                    # 악기가 교대하면 잠깐 앞 음을 겹쳐 두 성부가 하나의 선율로 들리게 한다.
+                    gate = space + .16
+                if bar%4 == 3 and final and section in ('head','climax'):
+                    gate = min(gate, space-.50)
+            note(call,step,pitch,gate,velocity)
             if section == 'climax' or (section=='return' and bar%2==0):
                 if i in (0,len(phrase)-1) or length>=3.4:
                     # 현/금관은 주제의 강박만 길게 받는다.
@@ -147,6 +181,15 @@ def mix_hooks(mix, cue, score, info):
     tracks, form = write_parts(cue,score,info)
     total, ticks = info['frames'], info['bars']*4*score.ppq
     to_frame = lambda tick: round(tick * total/ticks)
+    # 답하는 악기가 네 마디 중 일부에서 주성부를 넘겨받을 때 음량과 위치도 중앙으로 잇는다.
+    is_reply = np.array([s=='break' or (s=='answer' and b%2==1) for b,s in enumerate(form)], dtype='f')
+    samples_per_bar = total / len(form)
+    # 마디 전후 1/8박씩 교차한다. 앰프 기타의 페이드로 연주 타이밍을 미루지 않는다.
+    bar_time = np.arange(total, dtype='f') / samples_per_bar
+    current = np.floor(bar_time + .5).astype(int)
+    cross = np.clip((bar_time-current)*16 + .5, 0, 1)
+    cross *= cross*(3-2*cross)
+    handoff = is_reply[(current-1)%len(form)]*(1-cross) + is_reply[current%len(form)]*cross
     sampler = DrySampler(os.environ.get('BOSS_SF2','/usr/share/sounds/sf2/TimGM6mb.sf2'))
     try:
         for seat,track in enumerate(tracks):
@@ -156,18 +199,21 @@ def mix_hooks(mix, cue, score, info):
             take[:tail] += take[total:]
             take = take[:total]
             cutoff = 5400 if track.program in (27,28,29,30) else 8300
-            take = filter_audio(take, (115 if seat==0 else 145,cutoff),'bandpass')
+            pad = RATE//10
+            take = filter_audio(np.concatenate((take[-pad:],take)), (115 if seat==0 else 145,cutoff),'bandpass')[pad:]
             level = active_level(take)
             if level<=0:
                 raise ValueError(f'{cue}: empty {track.name}')
             targets = (.095, .063, .054)
             gain = targets[seat]/level
+            if seat==1:
+                gain = gain * (1 + .35*handoff)
             mono = take.mean(axis=1)*gain
             side = (take[:,0]-take[:,1])*(gain*.20)
             if track.program in (29,30):
                 # 작은 스피커에서도 기타 피킹의 중역이 남도록 앰프의 약한 포화와 캐비닛을 거친다.
                 mono = filter_audio(.37*np.tanh(mono/.37), 4700, 'lowpass')
-            pan = (0,.19,-.18)[seat]
+            pan = .19*(1-handoff) if seat==1 else (0 if seat==0 else -.18)
             mix[:,0] += mono*(1-pan)+side
             mix[:,1] += mono*(1+pan)-side
     finally:

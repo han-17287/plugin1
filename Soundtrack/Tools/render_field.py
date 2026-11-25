@@ -16,6 +16,7 @@ import numpy as np
 from scipy import ndimage, signal
 
 from ensemble_score import read_score
+from field_phrasing import entrances, phrase
 
 SR = 44100
 ROOT = Path(__file__).resolve().parents[1]
@@ -185,21 +186,33 @@ def active_level(x):
     return float(np.percentile(active, 72)) if len(active) else 0
 
 
-def phrase_controls(lead_roles, name, bar_length, frames):
-    # Only written phrases come forward, and only one instrument takes centre.
-    active = np.array([part == name for part in lead_roles], dtype=F32)
-    if not active.any():
+def phrase_controls(entries, name, at, beat, frames, loop):
+    # 실음이 바뀌는 순간을 중심으로, 두 음색의 어택과 여운을 1/3박 정도 겹친다.
+    boundaries = [(at(tick), part) for tick,part in entries]
+    if not any(part == name for _,part in boundaries):
         return None
-    transitions = np.arange(len(active)+1) * bar_length
-    x, y = [0.0], [active[0]]
-    for i in range(1, len(active)):
-        if active[i] != active[i-1]:
-            x.extend((transitions[i] - min(SR*.045, .1*bar_length), transitions[i] + SR*.028))
-            y.extend((active[i-1], active[i]))
+    span = min(.4*beat, .21*SR)
+    level = float(boundaries[0][1] == name)
+    x, y = [0.0], [level]
+    for i, (onset, part) in enumerate(boundaries[1:],1):
+        target = float(part == name)
+        if level == target:
+            continue
+        before = min(span*.38, (onset-boundaries[i-1][0])*.4)
+        after = min(span*.62,(boundaries[i+1][0]-onset)*.4) if i+1<len(boundaries) else span*.62
+        x.extend((onset-before,onset+after))
+        y.extend((level,target))
+        level=target
+    if loop and boundaries[-1][1] != boundaries[0][1]:
+        # 끝 구절의 여운에도 동일한 크로스페이드를 적용한다.
+        edge = (float(boundaries[-1][1] == name) + y[0])*.5
+        y[0:1] = [edge,y[0]]
+        x[0:1] = [0.,min(span*.5,boundaries[1][0]*.4)]
+        x.extend((max(x[-1],frames-span*.5),frames)); y.extend((level,edge))
     return np.interp(np.arange(frames), x, y).astype(F32)
 
 
-def render_cue(sampler, source, roles, cue, info, target, output):
+def render_cue(sampler, source, roles, cue, info, target, output, quality=5.6):
     total = int(info['frames'])
     tail = round(1.2*SR)
     samples = total + (tail if info['loop'] else 0)
@@ -209,7 +222,9 @@ def render_cue(sampler, source, roles, cue, info, target, output):
         return max(0, round(tick * beat / score.ppq))
     dry = np.zeros((total, 2), F32)
     space = np.zeros(total, F32)
-    leads, style = roles['lead'], roles['style']
+    style = roles['style']
+    score, leads = phrase(score,roles['lead'],info,style)
+    entries = entrances(score,leads)
     for track in score.tracks:
         if not track.notes:
             continue
@@ -241,7 +256,7 @@ def render_cue(sampler, source, roles, cue, info, target, output):
             mid[:tail] += mid[total:total+tail]
             sides[:tail] += sides[total:total+tail]
         mid, sides = mid[:total], sides[:total]
-        foreground = phrase_controls(leads, name, beat*4, total)
+        foreground = phrase_controls(entries, name, at, beat, total, info['loop'])
         if foreground is None:
             seat = pan
         else:
@@ -306,7 +321,7 @@ def render_cue(sampler, source, roles, cue, info, target, output):
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_name('.' + output.stem + '.writing.ogg')
     subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-fflags','+bitexact','-f','f32le','-ar',str(SR),
-                    '-ac','2','-i','pipe:0','-c:a','libvorbis','-q:a','6','-flags:a','+bitexact','-fflags','+bitexact','-map_metadata','-1',
+                    '-ac','2','-i','pipe:0','-c:a','libvorbis','-q:a',str(quality),'-flags:a','+bitexact','-fflags','+bitexact','-map_metadata','-1',
                     str(temporary)],input=dry.astype('<f4',copy=False).tobytes(),check=True)
     temporary.replace(output)
     return loudness(dry), float(np.max(np.abs(dry)))
@@ -333,6 +348,7 @@ def main():
     parser.add_argument('--output',required=True,type=Path)
     parser.add_argument('--soundfont',type=Path,default=Path('/usr/share/sounds/sf2/TimGM6mb.sf2'))
     parser.add_argument('--targets',type=Path,default=Path(__file__).with_name('field_loudness.json'))
+    parser.add_argument('--quality',type=float,default=5.6,help='Vorbis quality of the game master')
     parser.add_argument('cues',nargs='*')
     args=parser.parse_args()
     catalog=json.loads((ROOT/'catalog.json').read_text())
@@ -341,7 +357,7 @@ def main():
         sampler=DrySampler(args.soundfont)
         try:
             roles=json.loads((args.roles/f'{cue}.json').read_text())
-            lufs,peak=render_cue(sampler,args.midi/f'{cue}.mid',roles,cue,catalog[cue],levels[cue],args.output/f'{cue}.ogg')
+            lufs,peak=render_cue(sampler,args.midi/f'{cue}.mid',roles,cue,catalog[cue],levels[cue],args.output/f'{cue}.ogg',args.quality)
             print(f'{cue}: {catalog[cue]["frames"]} frames; {lufs:.2f} LUFS; PCM peak {peak:.3f}',flush=True)
         finally:
             sampler.close()

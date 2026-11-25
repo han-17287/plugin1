@@ -211,8 +211,11 @@ def comp_edit(take, group, cue, notes, parts, beat_seconds, kicks, snares):
         if responses:
             start,end=round(lo*samples_per_beat),round(hi*samples_per_beat)
             region=take[start:end]
-            ramp=np.ones(len(region),'f'); edge=round(.016*RATE)
-            ramp[:edge] = np.linspace(0,1,edge); ramp[-edge:] = np.linspace(1,0,edge)
+            # 마디 양 끝에서 이미 울던 코드의 릴리스를 남겨 새 보이싱을 부드럽게 넘긴다.
+            ramp=np.ones(len(region),'f')
+            edge=round(beat_seconds * (.30 if group=='keys' else .20) * RATE)
+            rise=.5-.5*np.cos(np.linspace(0,np.pi,edge,dtype='f'))
+            ramp[:edge],ramp[-edge:] = rise,rise[::-1]
             # 원본의 방 울림이 남도록 완전 음소거 대신 연주 바닥만 낮춘다.
             take[start:end] = region*(1-.83*ramp[:,None]) + 1.16*rendered*ramp[:,None]
             edited += 1
@@ -246,7 +249,7 @@ def master_bus(mix, info):
     return np.sign(mix)*(np.minimum(absolute,knee)+.18*np.tanh(np.maximum(absolute-knee,0)/.18))
 
 
-def render(cue, out, catalog, quality=5.4):
+def render(cue, out, catalog, quality=5.2):
     info = catalog[cue]
     score = read_score(ROOT/'MIDI'/f'{cue}.mid')
     notes, parts, beat, leaders, front, anchors, breath, kicks, snares = score_lanes(cue, score, info)
@@ -328,7 +331,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('cues',nargs='*')
     parser.add_argument('--output',type=Path,required=True)
-    parser.add_argument('--quality',type=float,default=5.4,help='Vorbis encoding quality')
+    parser.add_argument('--quality',type=float,default=5.2,help='Vorbis encoding quality')
     args=parser.parse_args()
     args.output.mkdir(parents=True,exist_ok=True)
     catalog=json.loads((ROOT/'catalog.json').read_text())
