@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace Plugin.PlayerCore
 {
-    public enum PlayerStateId {Idle,Run,Jump,Fall,WallSlide,WallJump,Dash,GrappleAim,GrappleDash,Attack,Throw,LaserCharge,LaserFire,Hurt,Dead}
+    public enum PlayerStateId {Idle,Run,Jump,Fall,WallSlide,WallJump,Dash,GrappleAim,GrappleDash,Attack,Throw,LaserCharge,LaserFire,Hurt,Dead,WallRest}
     public interface IPlayerState {PlayerStateId Id {get;} void Enter();void Tick(float dt);void Exit();}
     [RequireComponent(typeof(Rigidbody2D),typeof(CapsuleCollider2D))]
     [RequireComponent(typeof(PlayerInputReader),typeof(PlayerModeController))]
@@ -27,6 +27,8 @@ namespace Plugin.PlayerCore
         public event Func<PlayerCommand,PlayerStateId,bool> ActionRequested;
         public event Action<float> ExternalStep;
         public event Action<PlayerStateId,PlayerStateId> StateChanged;
+        public event Action Respawned;
+        public event Action JumpLaunched;
         public void Configure(PlayerMovementData value){data=value;input=GetComponent<PlayerInputReader>();input.data=value;}
         void Awake()
         {
@@ -38,7 +40,7 @@ namespace Plugin.PlayerCore
             filter=new ContactFilter2D();filter.SetLayerMask(data.solidLayers);filter.useTriggers=false;
             Add(new LocomotionState(this,PlayerStateId.Idle));Add(new LocomotionState(this,PlayerStateId.Run));
             Add(new AirState(this,PlayerStateId.Jump));Add(new AirState(this,PlayerStateId.Fall));Add(new WallState(this,false));Add(new WallState(this,true));Add(new DashState(this));
-            foreach(var id in new[]{PlayerStateId.GrappleAim,PlayerStateId.GrappleDash,PlayerStateId.Attack,PlayerStateId.Throw,PlayerStateId.LaserCharge,PlayerStateId.LaserFire,PlayerStateId.Hurt,PlayerStateId.Dead})Add(new ExternalState(this,id));
+            foreach(var id in new[]{PlayerStateId.GrappleAim,PlayerStateId.GrappleDash,PlayerStateId.Attack,PlayerStateId.Throw,PlayerStateId.LaserCharge,PlayerStateId.LaserFire,PlayerStateId.Hurt,PlayerStateId.Dead,PlayerStateId.WallRest})Add(new ExternalState(this,id));
             dashes=data.airDashes;Change(PlayerStateId.Idle);
         }
         bool ownedData;
@@ -49,19 +51,45 @@ namespace Plugin.PlayerCore
         public void FinishExternal(Vector2 launch,bool resetAirActions)
         {if(State==PlayerStateId.Dead||State==PlayerStateId.Hurt)return;if(resetAirActions){ResetAirActions();arrivalJump=true;}velocity=launch;body.linearVelocity=launch;cutJump=true;groundAt=-100;momentumUntil=clock+.18f;Change(launch.y>0?PlayerStateId.Jump:PlayerStateId.Fall);}
         // 외부 상태의 속도는 물리 틱의 최종 쓰기에도 보존되어야 한다.
+        public bool BeginWallRest(int outwardSign)
+        {
+            if (State > PlayerStateId.WallJump || State == PlayerStateId.WallJump && clock < lockUntil) return false;
+            Change(PlayerStateId.WallRest);
+            facing = -outwardSign;
+            SetExternalVelocity(Vector2.zero);
+            groundAt = -100;
+            return true;
+        }
+        public void LeaveWallRest(int jumpSign, Vector2 supportVelocity)
+        {
+            if (State != PlayerStateId.WallRest) return;
+            if (jumpSign == 0)
+            {
+                FinishExternal(supportVelocity, false);
+                return;
+            }
+            facing = jumpSign;
+            lockUntil = clock + data.wallInputLock;
+            JumpStarted();
+            velocity = supportVelocity + new Vector2(jumpSign * data.wallJumpX, data.wallJumpY);
+            body.linearVelocity = velocity;
+            Change(PlayerStateId.WallJump);
+        }
         public void SetExternalVelocity(Vector2 value)
-        {if(State<PlayerStateId.GrappleAim||State>PlayerStateId.LaserFire)return;velocity=value;body.linearVelocity=value;}
+        {if((State<PlayerStateId.GrappleAim||State>PlayerStateId.LaserFire)&&State!=PlayerStateId.WallRest)return;velocity=value;body.linearVelocity=value;}
         public bool TryExternalDash()
-        {if(State!=PlayerStateId.GrappleAim&&State!=PlayerStateId.GrappleDash||dashes<=0||clock<dashReady)return false;Change(PlayerStateId.Dash);return true;}
+        {if(State!=PlayerStateId.GrappleAim&&State!=PlayerStateId.GrappleDash&&State!=PlayerStateId.WallRest||dashes<=0||clock<dashReady)return false;Change(PlayerStateId.Dash);return true;}
         // 환기류도 같은 속도 소유자에 전달해 입력 해제가 상승을 반감시키지 않게 한다.
         public void ApplyEnvironmentalLift(float minimum)
         {if(State>PlayerStateId.WallJump||!GrappleRules.Finite(minimum)||minimum<=0)return;environmentalLift=Mathf.Max(environmentalLift,minimum);liftUntil=clock+Time.fixedDeltaTime*1.5f;}
         public void ResetAirActions(){arrivalJump=false;dashes=data.airDashes;cutJump=false;dashReady=clock;}
+        float invulnerableUntil;
+        public void Protect(float seconds) => invulnerableUntil=Mathf.Max(invulnerableUntil,clock+Mathf.Max(0,seconds));
         public void ReceiveHurt(Vector2 knockback,float duration)
-        {if(State==PlayerStateId.Dead)return;environmentalLift=0;arrivalJump=false;input.Buffer.Clear();velocity=knockback;body.linearVelocity=velocity;hitUntil=clock+Mathf.Max(.01f,duration);Change(PlayerStateId.Hurt);}
+        {if(State==PlayerStateId.Dead||clock<invulnerableUntil)return;environmentalLift=0;arrivalJump=false;input.Buffer.Clear();velocity=knockback;body.linearVelocity=velocity;hitUntil=clock+Mathf.Max(.01f,duration);Change(PlayerStateId.Hurt);}
         public void Die(){environmentalLift=0;input.ClearTransient();velocity=Vector2.zero;body.linearVelocity=Vector2.zero;Change(PlayerStateId.Dead);}
         public void Respawn(Vector2 point)
-        {environmentalLift=0;RestorePlatforms();input.ClearTransient();body.position=point;velocity=Vector2.zero;body.linearVelocity=velocity;groundAt=-100;jumpedAt=-100;lockUntil=clock;momentumUntil=clock;apexAge=0;ResetAirActions();Change(PlayerStateId.Fall);}
+        {invulnerableUntil=0;environmentalLift=0;RestorePlatforms();input.ClearTransient();body.position=point;velocity=Vector2.zero;body.linearVelocity=velocity;groundAt=-100;jumpedAt=-100;lockUntil=clock;momentumUntil=clock;apexAge=0;ResetAirActions();Change(PlayerStateId.Fall);Respawned?.Invoke();}
         void FixedUpdate()
         {
             bool freeze=input.Paused||!Application.isFocused||!input.Ready;
@@ -112,7 +140,7 @@ namespace Plugin.PlayerCore
             else if(Grounded||clock-groundAt<=data.coyoteTime||arrivalJump)
             {input.Buffer.Take(PlayerCommand.Jump,now);velocity.y=data.jumpSpeed;JumpStarted();Change(PlayerStateId.Jump);}
         }
-        void JumpStarted(){arrivalJump=false;Grounded=false;groundAt=-100;jumpedAt=clock;cutJump=false;apexAge=0;}
+        void JumpStarted(){arrivalJump=false;Grounded=false;groundAt=-100;jumpedAt=clock;cutJump=false;apexAge=0;JumpLaunched?.Invoke();}
         void Horizontal(float dt)
         {
             if(clock<lockUntil)return;
@@ -164,13 +192,13 @@ namespace Plugin.PlayerCore
             foreach(var cmd in commandOrder)
             {
                 if(!input.Buffer.Has(cmd,now))continue;
-                PlayerStateId requested=cmd==PlayerCommand.Throw?PlayerStateId.Throw:cmd==PlayerCommand.LaserPress?PlayerStateId.LaserCharge:cmd==PlayerCommand.LaserRelease?PlayerStateId.LaserFire:cmd==PlayerCommand.Primary?(mode.Mode==PlayerMode.Hook?PlayerStateId.GrappleAim:PlayerStateId.Attack):State;
+                PlayerStateId requested=cmd==PlayerCommand.LaserPress?PlayerStateId.LaserCharge:cmd==PlayerCommand.LaserRelease?PlayerStateId.LaserFire:cmd==PlayerCommand.Primary?(mode.Mode==PlayerMode.Hook?PlayerStateId.GrappleAim:PlayerStateId.Attack):State;
                 var handlers=ActionRequested;if(handlers==null)continue;
                 foreach(Func<PlayerCommand,PlayerStateId,bool> handler in handlers.GetInvocationList())
                     if(handler(cmd,requested)){input.Buffer.Take(cmd,now);return;}
             }
         }
-        static readonly PlayerCommand[] commandOrder={PlayerCommand.Explode,PlayerCommand.Throw,PlayerCommand.LaserRelease,PlayerCommand.LaserPress,PlayerCommand.Primary};
+        static readonly PlayerCommand[] commandOrder={PlayerCommand.LaserRelease,PlayerCommand.LaserPress,PlayerCommand.Primary};
         void OnDisable(){RestorePlatforms();if(paused&&body)body.simulated=lastSimulation;paused=false;}
         void OnDestroy(){if(material)Destroy(material);if(ownedData&&data)Destroy(data);}
         abstract class StateBase:IPlayerState

@@ -10,5 +10,7 @@
     <Compile Include="ControllerFixtures/SniperChoreographyChecks.cs" />
     <Compile Include="../Assets/Scripts/AncientSniperRules.cs" />
     <Compile Include="../Assets/Scripts/AncientSniperChoreography.cs" />
+    <Compile Include="../Assets/Scripts/AncientJokerLaneTransition.cs" />
+    <Compile Include="../Assets/Scripts/AncientJokerMotion.cs" />
   </ItemGroup>
 </Project>

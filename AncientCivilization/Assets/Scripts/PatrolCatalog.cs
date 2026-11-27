@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Plugin.PlayerCore
 {
     public static class PatrolCatalog
@@ -18,7 +20,7 @@ namespace Plugin.PlayerCore
         public static readonly string[] Devices = {
             "관성 도약판", "움직이는 열쇠구멍", "화물 갈아타기", "딱 한 번 켜지는 고리", "컨베이어 멀리뛰기",
             "경사판 착지", "점프 높이 선별기", "반동 범퍼", "속도 제한문", "낙하 중 환승",
-            "창턱 급정거", "한 층만 내려가기", "차양 반동", "창문 릴레이", "간판 그림자 발판",
+            "파란 플러그 갈림길", "한 층만 내려가기", "차양 반동", "창문 릴레이", "간판 그림자 발판",
             "셔틀 통과 착지", "폭 좁은 행선지", "공중 징검다리", "들어올 때 못 보던 문", "빨래차 봉쇄 해제",
             "셔터 연속 통과", "승인 문양 고리", "대기 시간 저금", "도착 순서 바꾸기", "가짜 직선 지름길",
             "세로 스캔 통로", "방향 전환 문", "무게 교대 발판", "천장 빗장", "왕복 출입증",
@@ -34,7 +36,42 @@ namespace Plugin.PlayerCore
             81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
             98, 94, 97, 92, 91, 96, 93, 95, 99, 100
         };
-        public static string Device(int id) => id >= 1 && id <= Count ? Devices[pairedDevices[id-1]-51] : "";
+        // 바닥 동선과 출구를 보존하면서 기존 발판에 합류할 수 있는 방별 설치 좌표.
+        internal static bool TryPowerSite(int id, out Vector2 origin, out bool secondSite)
+        {
+            secondSite = (id - 1) % 10 != 0;
+            switch (id)
+            {
+                case 1:  origin = new Vector2(12, 0); return true;     // 하역 도크 → 크레인 레일
+                case 9:  origin = new Vector2(19, 4.35f); return true; // 화물열차 둘째 객차 → 셋째 객차 지붕
+                case 11: origin = new Vector2(6.5f, 4.1f); return true; // 가판 지붕의 셔터
+                case 16: origin = new Vector2(14.2f, 2.15f); return true; // 심야 극장 무대 → 조명교
+                case 21: origin = new Vector2(8.1f, 7.2f); return true;  // 셔터 구동부 위 정비로
+                case 27: origin = new Vector2(15.2f, 5.3f); return true; // 인계 스캔 → 기록 중계 발판
+                case 31: origin = new Vector2(27, 0); return true;   // 정원 동쪽 온실 난간
+                case 35: origin = new Vector2(1.55f, 0); return true; // 서쪽 탱크 받침
+                case 41: origin = new Vector2(18.7f, 4.5f); return true; // 하부 점검로 → 맞은편
+                case 47: origin = new Vector2(25.3f, 2.0f); return true; // 환승 실패 난간 → 동부 베이
+                default: origin = default; return false;
+            }
+        }
+
+        static readonly string[] mapDevices = BuildMapDevices();
+
+        static string[] BuildMapDevices()
+        {
+            var descriptions = new string[Count];
+            for (int i = 0; i < Count; i++)
+            {
+                string label = Devices[pairedDevices[i] - 51];
+                if (TryPowerSite(i + 1, out _, out bool secondSite))
+                    label += " · " + PlugDistrictDevice.SiteLabel(i / 10, secondSite);
+                descriptions[i] = label;
+            }
+            return descriptions;
+        }
+
+        public static string Device(int id) => id >= 1 && id <= Count ? mapDevices[id - 1] : "";
         public static string Name(int id) => id >= 1 && id <= Count ? Rooms[id-1] : "";
     }
 }

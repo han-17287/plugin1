@@ -24,10 +24,16 @@ namespace Plugin.AncientCivilization
         Vector2 bladeDirection,bufferedDirection,beamStart,beamEnd;float beamWidth,bladeFacing=1;
         readonly AncientLaserPulse<AncientEnemy> laserPulse=new AncientLaserPulse<AncientEnemy>();
         readonly Vector3[] slashPoints=new Vector3[9];
+        Plugin.PlayerCore.FilamentStrikeFX bladeFx;
+        bool hadFieldCut;
+        internal bool LegacyFinale => game && game.InSniperFinalPhase;
+        internal Vector2 StrikeDirection => bladeDirection;
+        internal int DrawnCutFrame => AncientBladeRules.AnimationFrame(combo, Time.time-bladeStarted);
         static readonly Color Yellow=new Color(1,.88f,.18f);
         public void Initialize(AncientHero owner)
         {
             hero=owner;game=AncientGame.Instance;
+            bladeFx=gameObject.AddComponent<Plugin.PlayerCore.FilamentStrikeFX>();
             // Each cut has sixteen authored poses. These lines only show the blade's swept light.
             slashTrail=game.Line("Blade swept light",new Color(1,.9f,.25f,.45f),.07f,23);
             slashGlow=game.Line("Blade swept light glow",new Color(1,.8f,.1f,.12f),.24f,22);
@@ -37,14 +43,14 @@ namespace Plugin.AncientCivilization
             beamGlow=game.Line("Continuous laser sheath",new Color(.1f,.6f,1,.45f),AncientBeamRules.SheathWidth(0),22);
             beamProfile=new AncientBeamVisuals(beamGlow,true);
             beamCore=game.Line("White hot laser core",new Color(1,1,.95f),AncientBeamRules.CoreWidth(0),24);
-            beamProfile.StyleBody(beam, beamCore);
+            beamProfile.StyleBody(beam, beamCore, true);
             beam.numCapVertices=beamGlow.numCapVertices=beamCore.numCapVertices=0;
             slashTrail.enabled=slashGlow.enabled=aim.enabled=beam.enabled=beamGlow.enabled=beamCore.enabled=false;
             motes=new AncientEnergyMote[48];
             moteVisuals=new AncientMoteVisuals();
             for(int i=0;i<motes.Length;i++)
             {
-                var o=game.Box("Reusable blue energy mote",Vector2.zero,Vector2.one,Color.white,20);
+                var o=game.Box("재사용 축전 입자",Vector2.zero,Vector2.one,Color.white,20);
                 motes[i]=o.AddComponent<AncientEnergyMote>();motes[i].Initialize(this,hero,moteVisuals.Attach(o.GetComponent<SpriteRenderer>(),i));o.SetActive(false);
             }
         }
@@ -55,7 +61,7 @@ namespace Plugin.AncientCivilization
             if(!game.View)return Origin+Vector2.right*hero.Facing*10;
             return game.View.ScreenToWorldPoint(Input.mousePosition);
         }
-        bool ControlsReady {get{return hero&&game&&!(game.Orbital&&game.Orbital.Arena!=null&&game.Orbital.Arena.BladeAway)&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted&&!(game.Living&&game.Living.InputLocked);}}
+        bool ControlsReady {get{return hero&&game&&!game.Paused&&!game.won&&game.GameplayInputReady&&!(game.Sniper&&game.Sniper.InputLocked)&&!hero.MeleeInterrupted&&!(game.Living&&game.Living.InputLocked);}}
         bool PulseInterrupted {get{return !hero||!game||(game.Living&&game.Living.InputLocked)||!hero.AttackMode||hero.Wired||hero.MeleeInterrupted||game.won||(game.Sniper&&game.Sniper.InputLocked)||(game.Story&&(game.Story.DialogueOpen||game.Story.LiftBusy))||(game.Finale&&game.Finale.Cinematic)||(game.Production&&game.Production.Cinematic);}}
         public void CancelInput(){heldAt=-1;readySignal=false;bladeBufferedUntil=0;if(aim)aim.enabled=false;}
         public void CancelAttacks()
@@ -66,6 +72,7 @@ namespace Plugin.AncientCivilization
         {
             bladeHitPending=bladeRebounded=false;bladeUntil=bladeBufferedUntil=bladeReady=0;combo=0;
             if(slashTrail)slashTrail.enabled=false;if(slashGlow)slashGlow.enabled=false;
+            if (bladeFx && hadFieldCut) { bladeFx.Clear(); hadFieldCut=false; }
             if(hero)hero.CancelBladePose();
         }
         public void HandleInput()
@@ -76,14 +83,13 @@ namespace Plugin.AncientCivilization
             if(!hero.AttackMode)
             {CancelInput();CancelBlade();return;}
             if(Firing){hero.AimWeaponAt((Vector2)hero.transform.position+new Vector2(laserPulse.DirectionX,laserPulse.DirectionY)*AncientBeamRules.Range);CancelInput();return;}
-            if(Input.GetMouseButtonDown(0)){heldAt=Time.time;readySignal=false;}
-            if(Input.GetMouseButtonUp(0)&&heldAt>=0)
+            if(Input.GetKeyDown(KeyCode.F) && !hero.Wired){heldAt=Time.time;readySignal=false;}
+            if(heldAt<0&&Input.GetMouseButtonDown(0))StrikeBlade();
+            if(Input.GetKeyUp(KeyCode.F)&&heldAt>=0)
             {
                 float held=Time.time-heldAt;heldAt=-1;aim.enabled=false;
-                var action=AncientRules.ResolveLeftRelease(held,hero.CaptureEnergy);
-                if(action==LeftReleaseAction.Blade)StrikeBlade();
-                else if(action==LeftReleaseAction.Laser||action==LeftReleaseAction.Empty)FireLaser();
-                else game.Notice("레이저 취소 / 조준선이 금색이 될 때까지 누르세요.",1.2f);
+                if(held>=ReadyDelay)FireLaser();
+                else game.Notice("F를 누르고 조준선이 밝아지면 놓으세요.",1.2f);
             }
             if(Charging)
             {
@@ -94,7 +100,7 @@ namespace Plugin.AncientCivilization
                 if(laserReady&&!readySignal){readySignal=true;game.Sound(3);}
                 // Ready feedback lives at the cursor and follows actual charge state;
                 // a global timed popup would survive the shot or a paused cinematic.
-                aim.startColor=aim.endColor=hero.CaptureEnergy<=0?AncientGame.Orange:laserReady?Yellow:new Color(.25f,1,.7f,.45f);
+                aim.startColor=aim.endColor=hero.CaptureEnergy<=0?AncientGame.Orange:laserReady?Yellow:new Color(1,.66f,.24f,.45f);
                 aim.SetPosition(0,start);aim.SetPosition(1,end);
             }
         }
@@ -121,7 +127,9 @@ namespace Plugin.AncientCivilization
             bladeDirection=direction;
             bladeFacing=AncientCombatFeedbackRules.BladeFacing(bladeDirection.x,hero.Facing);
             hero.AimWeaponAt((Vector2)hero.transform.position+Vector2.right*bladeFacing);
-            hero.BladePose(bladeFacing,combo);BladeUses++;game.Sound(8+combo);
+            hero.BladePose(bladeFacing,combo);BladeUses++;
+            if (LegacyFinale) game.Sound(8+combo);
+            else { hadFieldCut=true; bladeFx.BeginBlade(combo); }
         }
         void Update()
         {
@@ -142,7 +150,11 @@ namespace Plugin.AncientCivilization
         void ResolveScheduledBladeImpact()
         {
             if(!AncientBladeRules.ConsumeScheduledImpact(combo,Time.time-bladeStarted,ref bladeHitPending))return;
-            if(hero.AttackMode&&!hero.Wired)ResolveBladeHit();
+            if(hero.AttackMode&&!hero.Wired)
+            {
+                if (!LegacyFinale) bladeFx.SwingSound();
+                ResolveBladeHit();
+            }
         }
         void ResolveBladeHit()
         {
@@ -150,10 +162,23 @@ namespace Plugin.AncientCivilization
             // 프레임 사이에 베기 활성 구간을 건너뛰어도 낙하물을 벨 수 있다.
             rebound |= BreakEnforcerObjects(origin);
             if (game.Orbital && game.Orbital.Arena != null) game.Orbital.Arena.CutSupply(origin, bladeDirection);
+            var tuning=hero.Loadout.Data;
+            float damage=combo==3?tuning.comboThird:combo==2?tuning.comboSecond:tuning.comboFirst;
             for(int i=game.enemies.Count-1;i>=0;i--)
             {
                 var enemy=game.enemies[i];if(!enemy)continue;Vector2 delta=enemy.AimPoint-origin;
-                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8)){if(enemy.kind==4)rebound=true;if(enemy.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Blade,combo==3?42:28);else enemy.Hit(combo==3?42:28,combo==3);}
+                if(delta.sqrMagnitude<3*3&&Vector2.Dot(delta.normalized,bladeDirection)>-.15f&&!Physics2D.Linecast(origin,enemy.AimPoint,1<<8))
+                {
+                    if(enemy.kind==4)rebound=true;
+                    Vector2 contact=enemy.AimPoint;
+                    float hpBefore=enemy.HealthRatio;
+                    bool field=!LegacyFinale;
+                    if(enemy.IsLivingBoss&&game.Living.Boss)game.Living.Boss.ReceiveHit(AncientLivingHit.Blade,damage);
+                    else enemy.Hit(damage,combo==3);
+                    // 적이 실제 피해를 받았을 때만 칼 불티를 보인다. 접촉음은 원래 피격 코드가 한 번 낸다.
+                    if(field&&!LegacyFinale&&(!enemy||!enemy.IsAlive||enemy.HealthRatio<hpBefore))
+                        bladeFx.BladeContact(contact,-bladeDirection,false);
+                }
             }
             if(rebound)ReboundOnce();
             // The blade trail is the whiff effect. Actual enemy hits, fractured
@@ -190,7 +215,7 @@ namespace Plugin.AncientCivilization
         public void EmitParticles(Vector2 position,float energy)
         {
             for(int i=0;i<3;i++)motes[moteCursor++%motes.Length].Play(position,energy/3,new Vector2((i-1)*2,2+i*.7f));
-            game.Burst(position,AncientMoteVisuals.Blue,7);
+            game.Burst(position,AncientMoteVisuals.ChargeColor,7);
         }
         public bool TryCollectionTarget(out Vector2 point)
         {
@@ -210,9 +235,9 @@ namespace Plugin.AncientCivilization
             hero.AddCapturedEnergy(energy);CollectedParticles++;game.Story.OnTraining(6);game.PickupSound();
             if(game.Sniper&&game.Sniper.InputLocked)return;
             if(before<100&&hero.CaptureEnergy>=100)
-            {game.Feel.Signal("입자 완충 · 최대 출력 레이저",AncientMoteVisuals.Blue,1.1f);game.Impact(Origin,AncientMoteVisuals.Blue,true);game.Sound(5);}
+            {game.Feel.Signal("입자 완충 · 최대 출력 레이저",AncientMoteVisuals.ChargeColor,1.1f);game.Impact(Origin,AncientMoteVisuals.ChargeColor,true);game.Sound(5);}
             else if(stage>0&&hero.CaptureStage>stage)
-            {game.Feel.Signal("입자 축적 "+hero.CaptureStage+"단계 · 레이저 강화",AncientMoteVisuals.Blue,.8f);game.Impact(Origin,AncientMoteVisuals.Blue,false);game.Sound(3);}
+            {game.Feel.Signal("입자 축적 "+hero.CaptureStage+"단계 · 레이저 강화",AncientMoteVisuals.ChargeColor,.8f);game.Impact(Origin,AncientMoteVisuals.ChargeColor,false);game.Sound(3);}
         }
         Vector2 ResolveBeam(Vector2 origin,Vector2 target,float energy)
         {
@@ -239,7 +264,7 @@ namespace Plugin.AncientCivilization
             laserUntil=laserPulse.Until;beamWidth=AncientBeamRules.BodyWidth(energy);beam.startWidth=beam.endWidth=beamWidth;
             beamCore.startWidth=beamCore.endWidth=AncientBeamRules.CoreWidth(energy);
             beamGlow.startWidth=beamGlow.endWidth=AncientBeamRules.SheathWidth(energy);
-            LaserShots++;game.LaserSound(power);game.Shake(.08f+power*.1f);game.Impact(beamEnd,new Color(.55f,.9f,1),power>.6f);
+            LaserShots++;game.LaserSound(power);game.Shake(.08f+power*.1f);game.Impact(beamEnd,AncientBeamVisuals.FilamentInk(power),power>.6f);
             ResolveLaserHits();
             if(PulseInterrupted)CancelLaser();
         }
@@ -272,11 +297,31 @@ namespace Plugin.AncientCivilization
             if(game.Story.Truck)game.Story.Truck.HitByLaser(beamStart,beamEnd,damage,radius,pulseId);
             if(game.Finale)game.Finale.HitTruck(beamStart,beamEnd,damage,radius,pulseId);
         }
+        internal void PresentCut(SpriteRenderer art, bool grounded)
+        {
+            if (LegacyFinale)
+            {
+                // 포탑 충전 준비부터 충돌 종료까지 원래 자세·선·음향을 사용한다.
+                if (hadFieldCut) bladeFx.Clear();
+                hadFieldCut=false;
+                return;
+            }
+            float elapsed=Time.time-bladeStarted;
+            bool showing=BladeAnimating && !hero.bike && !hero.Wired && !hero.MeleeInterrupted &&
+                hero.AttackMode && !game.Paused && !game.won && art.enabled;
+            if (!showing) { bladeFx.HideSweep(); return; }
+            int frame=DrawnCutFrame;
+            AncientBladeMotion.Paint(art,combo,frame,elapsed,bladeDirection,bladeFacing,grounded,
+                new Vector2(hero.HorizontalSpeed, hero.VerticalSpeed),new Vector2(0,-1.05f),1);
+            if (AncientBladeRules.IsActive(combo,elapsed)) bladeFx.BladeSweep(art,combo,frame,1<<8);
+            else bladeFx.HideSweep();
+        }
+
         void LateUpdate()
         {
             if(!hero)return;
             float elapsed=Time.time-bladeStarted;
-            bool sweeping=Time.time<bladeUntil&&AncientBladeRules.IsActive(combo,elapsed)&&!game.Paused&&!game.won;
+            bool sweeping=LegacyFinale&&Time.time<bladeUntil&&AncientBladeRules.IsActive(combo,elapsed)&&!game.Paused&&!game.won;
             slashTrail.enabled=slashGlow.enabled=sweeping;
             if(sweeping)
             {
@@ -298,9 +343,9 @@ namespace Plugin.AncientCivilization
                 beamGlow.SetPosition(0,beamStart);beamGlow.SetPosition(1,beamEnd);
                 beamCore.SetPosition(0,beamStart);beamCore.SetPosition(1,beamEnd);
                 float fade=AncientBeamRules.Opacity(laserUntil-Time.time);
-                beamProfile.UpdateBody(beam, beamGlow, beamCore, fade, Time.time);
+                beamProfile.UpdateBody(beam, beamGlow, beamCore, fade, Time.time, AncientBeamRules.Power(laserPulse.Energy));
             }
-            beamProfile.ShowEndpoints(beamStart,beamEnd,beamWidth,AncientBeamRules.Opacity(laserUntil-Time.time),firing);
+            beamProfile.ShowEndpoints(beamStart,beamEnd,beamWidth,AncientBeamRules.Opacity(laserUntil-Time.time),firing,AncientBeamRules.Power(laserPulse.Energy));
         }
         void OnApplicationFocus(bool focus){if(!focus)CancelAttacks();}
         public void ResetCombat()

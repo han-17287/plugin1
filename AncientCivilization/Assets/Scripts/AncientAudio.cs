@@ -9,8 +9,8 @@ namespace Plugin.AncientCivilization
         const int PublicCueCount=12,RoadDebrisCue=12,RoadBombCue=13,CaptainTellCue=14,ParticleLaserCue=15,SampleRate=22050;
         readonly AudioClip[] clips=new AudioClip[16];
         readonly float[] nextVoice=new float[PublicCueCount];
-        readonly AudioClip[] equipment = new AudioClip[(int)AncientEquipmentCue.JokerCharge + 1];
-        readonly float[] nextEquipment = new float[(int)AncientEquipmentCue.JokerCharge + 1];
+        readonly AudioClip[] equipment = new AudioClip[(int)AncientEquipmentCue.ClockStrike + 1];
+        readonly float[] nextEquipment = new float[(int)AncientEquipmentCue.ClockStrike + 1];
         // 일반 효과가 공격 전조나 UI 음성을 빼앗지 않도록 재생 자리를 분리한다.
         readonly AudioSource[] effects = new AudioSource[6], warnings = new AudioSource[3];
         readonly float[] warningStarted = new float[3];
@@ -222,7 +222,8 @@ namespace Plugin.AncientCivilization
             if (Blocked) return;
             bool contact = cue == AncientEquipmentCue.Contact || cue == AncientEquipmentCue.Shatter;
             int rank = cue == AncientEquipmentCue.Counter || cue == AncientEquipmentCue.Overload || cue == AncientEquipmentCue.JokerCharge ? 2 :
-                cue == AncientEquipmentCue.Forge || cue == AncientEquipmentCue.Sweep || cue == AncientEquipmentCue.Lens ? 1 : 0;
+                cue == AncientEquipmentCue.Forge || cue == AncientEquipmentCue.Sweep || cue == AncientEquipmentCue.Lens ||
+                cue == AncientEquipmentCue.ClockStrike ? 1 : 0;
             nextEquipment[index] = Time.unscaledTime + (contact ? .065f : .10f);
             if (rank > 0 || cue == AncientEquipmentCue.Shatter || cue == AncientEquipmentCue.MetalFall)
                 duckUntil = Mathf.Max(duckUntil, Time.unscaledTime + profile.duckSeconds);

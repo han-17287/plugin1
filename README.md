@@ -8,7 +8,7 @@
 
 게임에서 숫자 **0**을 누르고 **17287**을 입력하면 층과 구역, 보스전을 골라 이동할 수 있습니다. 보스 목록에서 최상층 저격수를 골라 여섯 페이즈를 플레이하세요. [조커 대치 공략](AncientCivilization/SNIPER_BOSS_KO.md)
 
-**사운드트랙 50곡 · 합주 리듬 개정판** · [보스 하이라이트 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-downbeat/Soundtrack/City-Score-Preview.mp3) · [세 곡의 같은 구절 전후 비교](https://raw.githubusercontent.com/han-17287/plugin1/city-score-downbeat/Soundtrack/Before-After.mp3) · [메인 테마 MP3](https://raw.githubusercontent.com/han-17287/plugin1/city-score-downbeat/Soundtrack/Main-Theme.mp3) · [음악 ZIP](https://github.com/han-17287/plugin1/archive/refs/tags/city-score-downbeat.zip) · [전곡 목록](Soundtrack/README_KO.md)
+**게임 사운드트랙 50곡** · [보스 하이라이트 MP3](Soundtrack/City-Score-Preview.mp3) · [같은 음량으로 들려주는 수정 전후 비교](Soundtrack/Before-After.mp3) · [메인 테마 MP3](Soundtrack/Main-Theme.mp3) · [전곡 목록](Soundtrack/README_KO.md)
 
 상층 거주구 두 번째 조사 뒤 화물 검사대에서 궤도 봉쇄기와 처음 마주칩니다. 병기는 후퇴했다가 상층 끝 외벽 통제선에서 다시 나타납니다. 1차전만 바로 플레이하려면 Unity에서 `Assets/Scenes/Main.unity`를 연 뒤 **PLUGIN → 검사 → 궤도 봉쇄기 1차전 바로 플레이**를 선택하세요. [전조와 조작](AncientCivilization/FLOOR_DESIGN_KO.md#상층-화물-검사대)
 

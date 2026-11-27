@@ -81,7 +81,7 @@ namespace Plugin.AncientCivilization
             Quad(12.4f,1.35f,7,2.7f,new Color(.03f,.045f,.055f));
             for(float x=9.2f;x<15.8f;x+=.45f)Quad(x,2.6f,.16f,.32f,Edge);
             Plate("정비소 / 순찰 오토바이",13,5.5f,7,Teal);
-            Plate("입자 와이어 점검",8.8f,7.5f,3.8f,Teal);
+            Plate("파란 플러그 점검",8.8f,7.5f,3.8f,Teal);
             Quad(17.4f,1.35f,1.35f,1.65f,new Color(.2f,.25f,.27f));
             Quad(17.4f,1.35f,.85f,.85f,Warm);Quad(17.4f,1.35f,.48f,.48f,Wall);
             Plate("장비 훈련 구역",17.4f,3.1f,3.6f,Warm);

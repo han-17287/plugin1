@@ -3,6 +3,8 @@ using UnityEngine;
 
 namespace UnityEngine
 {
+    public sealed class SerializeField : Attribute { }
+
     public static partial class Mathf
     {
         public static int Min(int a,int b) => Math.Min(a,b);
@@ -50,8 +52,9 @@ namespace UnityEngine
 
     public sealed class AudioClip : Object
     {
-        public static AudioClip Create(string name,int length,int channels,int rate,bool stream) => new AudioClip();
-        public void SetData(float[] samples,int offset) { }
+        public int frequency; public float[] Pcm;
+        public static AudioClip Create(string name,int length,int channels,int rate,bool stream) => new AudioClip { frequency=rate };
+        public void SetData(float[] samples,int offset) { Pcm=samples; }
     }
 
     public sealed class AudioSource : Component
@@ -96,13 +99,52 @@ namespace Plugin.AncientCivilization
 
 namespace Plugin.PlayerCore
 {
+    public sealed class BluePlugSocket : Component
+    {
+        Vector2 towOffset;
+        public BoxCollider2D WallFace { get; private set; }
+        public int WallOutwardSign { get; private set; }
+        public bool CanWallRest => gameObject.activeSelf && WallFace && WallFace.enabled;
+        public void ConfigureWallRest(BoxCollider2D face, int outwardSign)
+        {
+            WallFace = face;
+            WallOutwardSign = outwardSign < 0 ? -1 : 1;
+        }
+        public Vector2 Point => transform.position;
+        public Vector2 TowPoint => Point + towOffset;
+        public bool PowersEquipment { get; private set; }
+        public void MarkPowerOutlet() => PowersEquipment = true;
+        public BluePlugSkill Supported { get; private set; }
+        public Vector2 EntryDirection { get; private set; }
+        public GrappleAnchor BoundAnchor { get; private set; }
+        public bool Operational => gameObject.activeSelf && (!BoundAnchor || BoundAnchor.Available);
+
+        public void BindAnchor(GrappleAnchor anchor)
+        {
+            BoundAnchor=anchor;
+            Configure(Vector2.zero,BluePlugSkill.Tow | BluePlugSkill.Swing,Vector2.up);
+        }
+
+        public void Configure(Vector2 towOffset,BluePlugSkill supported,Vector2 entryDirection)
+        {
+            this.towOffset=towOffset;
+            Supported=supported;
+            EntryDirection=entryDirection.normalized;
+        }
+    }
+
     public sealed class GrappleAnchor : Component
     {
         public bool Available {get; private set;}=true;
         public void SetOperational(bool value) { Available=value; }
     }
     public enum PlayerMode { Hook, Attack }
-    public sealed class PatrolTestPlayer { public PlayerMode Mode=PlayerMode.Hook; }
+    public sealed class PatrolTestPlayer
+    {
+        public PlayerMode Mode=PlayerMode.Hook;
+        public float LastLift;
+        public void ApplyEnvironmentalLift(float speed) { LastLift=speed; }
+    }
     public sealed class PatrolTestExpedition : UnityEngine.Object
     {
         public bool Paused;

@@ -42,11 +42,35 @@ namespace Plugin.AncientCivilization
                 "Cancelled tell executed after retry");
         }
 
+        static void CheckBladeHunt(int response)
+        {
+            var game = new AncientGame();
+            var battle = Spawn(game, out var boss);
+            boss.Health = .45f * AncientEnemy.MaxHealth;
+            for (int i = 0; i < 10000; i++)
+            {
+                battle.Tick();
+                if (battle.Telegraphing && battle.CurrentMove == OrbitalMove.BladeHunt) break;
+            }
+            Check(battle.Telegraphing && battle.CurrentMove == OrbitalMove.BladeHunt, "No blade hunt in phase four");
+            var blade = game.hero.Loadout;
+            if (response == 1) blade.State = Plugin.PlayerCore.SummonedBladeState.Equipped;
+            if (response == 2) blade.InstallationId++;
+            if (response == 3) blade.Handle.Point += Vector2.right * 2;
+            for (int i = 0; i < 60; i++) battle.Tick();
+            Check(blade.Broken == 0, "Hunt hit before the announced impact");
+            for (int i = 0; i < 10; i++) battle.Tick();
+            Check(blade.Broken == (response == 0 ? 1 : 0), "Frozen target, rescue or installation identity failed");
+            Check(Math.Abs(battle.FilterDamage(10, boss.Health, AncientEnemy.MaxHealth)-10) < .001f, "Hunt recovery must reward the counterattack");
+            battle.StopBattle();
+        }
+
         public static void Main()
         {
             Time.deltaTime = Frame;
             Time.unscaledDeltaTime = Frame;
             CheckInterruptedTell();
+            for (int response = 0; response < 4; response++) CheckBladeHunt(response);
             var game = new AncientGame();
             var battle = Spawn(game, out var boss);
             var arena = battle.Arena;

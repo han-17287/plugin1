@@ -169,7 +169,9 @@ namespace Plugin.AncientCivilization.EditorChecks
             {
                 game.skills=false;Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,Time.frameCount-1);
                 carrier.linearVelocity=new Vector2(7,0);Prepare(hero,new Vector2(2,71.1f),new Vector2(7,0));Tick(hero,"Update");
-                Assert(hero.IsOnGround&&motion.Frame==0&&art.sprite==AncientArt.Hero(0),"Standing on the actual seven-unit moving support keeps the feet idle rather than running with world speed");
+                var patrolSheet=Resources.Load<Texture2D>("Traversal/OfficerFieldGait");
+                Assert(hero.IsOnGround && motion.Frame==0 && motion.FieldFrame<8 && patrolSheet &&
+                    art.sprite.texture==patrolSheet, "움직이는 지지대에서 정지한 경위가 본편 순찰 시트의 대기 자세를 유지해야 합니다.");
                 Assert(Near(body.linearVelocity.x,7)&&Near(body.linearVelocity.y,0)&&Near(hero.transform.eulerAngles.z,0),"Visual gait leaves the actual root velocity and collider orientation untouched");
                 body.linearVelocity=new Vector2(12,0);Tick(hero,"Update");
                 if(Time.deltaTime>0)Assert(motion.Frame>=1&&motion.Frame<=4,"Walking relative to the actual moving support selects an authored locomotion pose");

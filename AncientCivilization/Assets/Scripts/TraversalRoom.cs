@@ -11,10 +11,12 @@ namespace Plugin.PlayerCore
         public TraversalDifficultyData difficulty;
         public PlayerInputReader clockOwner;
         readonly List<GrappleAnchor> anchors=new List<GrappleAnchor>();
+        readonly List<BluePlugSocket> plugSockets=new List<BluePlugSocket>();
         Sprite sprite;Texture2D texture;GrappleAnchorData movingData;bool built;
         public float Width {get;private set;}
         public Vector2 Checkpoint= new Vector2(3,1.1f);
         public IReadOnlyList<GrappleAnchor> Anchors=>anchors;
+        public BluePlugSocket[] BluePlugSockets()=>plugSockets.ToArray();
         public void Build(TraversalDifficultyData profile,PlayerInputReader reader)
         {
             if(built)return;built=true;if(!floorProfile)floorProfile=Resources.Load<FloorTraversalProfile>("Traversal/Production");difficulty=profile;clockOwner=reader;
@@ -30,8 +32,7 @@ namespace Plugin.PlayerCore
                 // 도형과 실제 판정이 같은 위험 범위를 갖는다.
                 for(float x=10;x<exitX-2;x+=1)Box("가시 밝은 윗선",new Vector2(x+.3f,.94f),new Vector2(.6f,.08f),new Color(1,.65f,.3f),0);
             }
-            // 위는 전부 닫힌 천장이다. 천장 견인이라는 두 번째 해결법을 유지한다.
-            var roof=Box("와이어 가능한 닫힌 천장",new Vector2(Width*.5f,14.5f),new Vector2(Width,1),new Color(.1f,.24f,.3f),8);roof.AddComponent<BoxCollider2D>();
+            var roof=Box("닫힌 천장",new Vector2(Width*.5f,14.5f),new Vector2(Width,1),new Color(.1f,.24f,.3f),8);roof.AddComponent<BoxCollider2D>();
             Box("왼쪽 외벽",new Vector2(-.5f,7),new Vector2(1,14),new Color(.12f,.25f,.3f),8).AddComponent<BoxCollider2D>();
             Spawn("FixedAnchor",new Vector2(6,4));
             for(int i=1;i<=count;i++){float x,y;FloorTraversalLayout.Anchor(Floor,i,count,gap,out x,out y);Spawn(i%2==0?"MovingAnchor":"OneUseAnchor",new Vector2(x,y));}
@@ -45,6 +46,9 @@ namespace Plugin.PlayerCore
             var template=Resources.Load<GameObject>("Traversal/"+prefab);var instance=Instantiate(template,transform.TransformPoint(point),Quaternion.identity,transform);
             var anchor=instance.GetComponent<GrappleAnchor>();anchor.clockOwner=clockOwner;
             if(anchor is MovingGrappleAnchor)anchor.data=movingData;anchor.ResetForRetry();anchors.Add(anchor);
+            var socket=instance.AddComponent<BluePlugSocket>();
+            socket.BindAnchor(anchor);
+            plugSockets.Add(socket);
         }
         GameObject Box(string title,Vector2 point,Vector2 size,Color color,int layer)
         {var go=new GameObject(title);go.transform.SetParent(transform,false);go.transform.localPosition=point;go.transform.localScale=new Vector3(size.x,size.y,1);go.layer=layer;var art=go.AddComponent<SpriteRenderer>();art.sprite=sprite;art.color=color;return go;}

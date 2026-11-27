@@ -9,14 +9,29 @@ namespace Plugin.PlayerCore
     {
         const string Scene = "PatrolExpedition";
         static int requested = 1;
-        static bool resumeCampaign;
+        static bool resumeCampaign, socketRoute;
+        public static bool SocketRoute => socketRoute;
+        public static bool InStory => AncientStorySocketPassage.Active;
+
+        internal static void PrepareStoryRoom(int id)
+        {
+            requested = id;
+            socketRoute = true;
+            preview = null;
+        }
+
+        internal static void EndStoryRoom()
+        {
+            requested = 1;
+            socketRoute = false;
+        }
         static Dictionary<string, int> preview;
         public static bool Preview => preview != null;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Reset()
         {
-            requested = 1; resumeCampaign = false; preview = null;
+            requested = 1; resumeCampaign = socketRoute = false; preview = null;
         }
 
         public static int Read(string key, int fallback=0)
@@ -33,13 +48,14 @@ namespace Plugin.PlayerCore
         {
             if (!Preview) preview = new Dictionary<string,int>();
         }
-        public static bool Request(int roomId, bool developer=false)
+        public static bool Request(int roomId, bool developer=false, bool wallSockets=false)
         {
             if (roomId < 1 || roomId > PatrolCatalog.Count || !Application.CanStreamedLevelBeLoaded(Scene)) return false;
             var game = AncientGame.Instance;
             resumeCampaign = game && game.HasSession && !game.MainMenu;
             if (resumeCampaign) game.Save();
             requested = roomId;
+            socketRoute = wallSockets;
             preview = null;
             if (developer) BeginPreview();
             SceneManager.LoadScene(Scene);
@@ -58,6 +74,7 @@ namespace Plugin.PlayerCore
         public static bool ConsumeReturn()
         {
             preview = null;
+            socketRoute = false;
             bool resume = resumeCampaign; resumeCampaign = false; return resume;
         }
     }

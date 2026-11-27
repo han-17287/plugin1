@@ -7,9 +7,9 @@ namespace Plugin.PlayerCore
         {
             var player=other.GetComponent<PlayerStateMachine>();if(!player)return;
             var input=player.GetComponent<PlayerInputReader>();if(input.Paused||!input.Ready||!Application.isFocused)return;
-            var grapple=player.GetComponent<PlayerGrapple>();
-            // 위험 레이어만 돌진 무적이다. 일반 적/보스 공격에는 이 검사를 쓰지 않는다.
-            if(grapple&&grapple.data&&(grapple.data.hazards.value&(1<<gameObject.layer))!=0&&grapple.HazardInvulnerable)return;
+            var plug=player.GetComponent<PlayerBluePlug>();
+            // 연습장의 위험 레이어에서만 직선 견인 중 재시도를 유예한다.
+            if(gameObject.layer==10&&plug&&plug.HazardInvulnerable)return;
             var lab=GetComponentInParent<TraversalRhythmPractice>();if(lab)lab.Retry();
         }
     }

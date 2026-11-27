@@ -87,6 +87,13 @@ namespace UnityEngine
     public enum EventType {Repaint,Layout}
     public class Event {public EventType type=EventType.Repaint;public static Event current=new Event();}
 }
+namespace Plugin.PlayerCore
+{
+    using UnityEngine;
+    public enum BluePlugPhase { Ready, Winding }
+    public sealed class BluePlugVisuals:MonoBehaviour
+    {public void Show(Vector2 hand, Vector2 tip, Vector2 direction, BluePlugPhase phase){}}
+}
 namespace Plugin.AncientCivilization
 {
     using UnityEngine;
@@ -98,6 +105,7 @@ namespace Plugin.AncientCivilization
         public Camera View=new Camera();public bool HasSession=true,MainMenu,DeveloperMenuOpen,GameplayInputReady=true,skills,ArenaActive;public static bool IsQAProfile;public bool Paused=>Story.DialogueOpen||MainMenu||DeveloperMenuOpen;
         public RouteCityFixture City=new RouteCityFixture();public RouteJournalFixture Journal=new RouteJournalFixture();public RouteProductionFixture Production=new RouteProductionFixture();
         public int credits,SaveCount,CameraSnaps;public readonly List<AncientEnemy> enemies=new List<AncientEnemy>();
+        public readonly List<Vector2> anchors=new List<Vector2>();
         public GameObject Box(string name,Vector2 p,Vector2 size,Color color,int order){var o=new GameObject(name);o.transform.position=p;o.AddComponent<SpriteRenderer>();return o;}
         public LineRenderer Line(string name,Color color,float width,int order)=>new GameObject(name).AddComponent<LineRenderer>();
         public void StaticBox(string name,Vector2 point,Vector2 size,Color color,int order){}public void Platform(float a,float b,float height){}
@@ -112,6 +120,7 @@ namespace Plugin.AncientCivilization
     public sealed class RouteCombatFixture {public float Emitted;public int EmissionCount;public void EmitParticles(Vector2 p,float amount){Emitted+=amount;EmissionCount++;}public void CancelAttacks(){}}
     public sealed class RouteStoryFixture:Object
     {
+        public bool TryBladeReserve()=>false;
         public int RadioCalls;public string RadioText;public void RadioBark(string speaker,string text){RadioCalls++;RadioText=text;}
         public int CurrentFloor;public bool DialogueOpen,LiftBusy;public Action Pending;public string[] LastLines,LastSpeakers;
         public void Conversation(Action done,int art,string[] people,string[] lines){Pending=done;LastLines=lines;LastSpeakers=people;DialogueOpen=true;}

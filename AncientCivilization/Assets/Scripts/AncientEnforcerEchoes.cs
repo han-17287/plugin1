@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Cue = Plugin.AncientCivilization.AncientBossCue;
 
 namespace Plugin.AncientCivilization
 {
@@ -244,7 +245,7 @@ namespace Plugin.AncientCivilization
                 fallResolved = true;
                 game.Sound(3);
                 game.Shake(.26f);
-                Flash(new Vector2(center, floor + .25f), true);
+                Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Contact, new Vector2(center, floor + .25f), Vector2.up, 1.24f);
                 Vector2 impact = new Vector2(center, floor + .07f);
                 if (Mathf.Abs(player.x - center) <= FallRadius + .25f && player.y < floor + 3.4f && !Physics2D.Linecast(impact, player, 1 << 8))
                     game.hero.Hurt(27f);
@@ -298,7 +299,7 @@ namespace Plugin.AncientCivilization
             {
                 Vector2 origin = feet + new Vector2(i == 0 ? -2.34f : 2.34f, 3f);
                 Launch(ShotStyle.Fist, origin, player + new Vector2(i == 0 ? -.6f : .6f, 0), 11.4f + i, 0, 19f);
-                Flash(origin, true);
+                Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Strike, origin, player - origin, .85f);
             }
             game.Sound(3);
         }
@@ -427,6 +428,7 @@ namespace Plugin.AncientCivilization
             if (firing && !xResolved)
             {
                 xResolved = true;
+                Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Strike, (xOrigins[0] + xEnds[0]) * .5f, Vector2.up, 1.1f);
                 game.Sound(3);
                 game.Shake(.17f);
             }

@@ -22,7 +22,5 @@ namespace Plugin.PlayerCore
         public LayerMask solidLayers=1<<8;
         [Min(.001f)] public float skin=.025f,groundProbe=.09f,wallProbe=.12f,dropDuration=.22f;
         [Range(0,1)] public float groundNormal=.65f;
-        [Header("입력")]
-        [Min(.01f)] public float scrollCooldown=.16f,scrollThreshold=.1f;
     }
 }

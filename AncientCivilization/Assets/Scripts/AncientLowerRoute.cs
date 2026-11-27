@@ -46,7 +46,13 @@ namespace Plugin.AncientCivilization
                 device.enabled=false;devices[id]=device;
                 game.StaticBox("Route safe rest marker",new Vector2(basePoint.x,basePoint.y-1.27f),new Vector2(5,.06f),new Color(.24f,.62f,.75f),3);
                 if(action==AncientRouteAction.Wire)
-                {game.Platform(p.x-2.3f,p.x+2.3f,p.y-1.3f);game.StaticBox("Upper service station",p-Vector2.up*1.1f,new Vector2(3,.12f),AncientGame.Cyan,4);}
+                {
+                    game.Platform(p.x-2.3f,p.x+2.3f,p.y-1.3f);
+                    game.StaticBox("Upper service station",p-Vector2.up*1.1f,new Vector2(3,.12f),AncientGame.Cyan,4);
+                    // 작업대 양끝 외측에서 접근하면 작업대 몸체가 견인 경로를 막지 않는다.
+                    game.anchors.Add(p + new Vector2(-3.4f, .4f));
+                    game.anchors.Add(p + new Vector2(3.4f, .4f));
+                }
                 if(action==AncientRouteAction.Throw)game.Living.AddRouteObject(basePoint+new Vector2(-10,-.3f),id==45);
             }
         }
@@ -142,6 +148,8 @@ namespace Plugin.AncientCivilization
             }
             if(current<0)return false;
             Vector2 player=game.hero.transform.position,witness=(Vector2)actor.transform.position+Vector2.up,p=Point(current);
+            if(Started&&!resolved&&(Stop.Action==AncientRouteAction.Blade||Stop.Action==AncientRouteAction.Relay) &&
+                (p-player).sqrMagnitude<=12.25f && game.Story.TryBladeReserve())return true;
             if(Started&&!resolved&&Stop.Action==AncientRouteAction.Wire&&(p-player).sqrMagnitude<2.5f*2.5f)
             {ResolveAction();game.hero.ReleaseWire();game.Notice(Stop.Optional?"상부 접속 완료 · 아래 작업자에게 확인":"상부 접속 완료 · 동쪽 통로로 계속 이동",2);return true;}
             if(!residents.InPlace(current)||(witness-player).sqrMagnitude>3.2f*3.2f)return false;

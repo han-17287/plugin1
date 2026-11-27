@@ -250,7 +250,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             // calls below must preserve live movement; a mock body cannot establish that.
             Call(campaign,"LeaveFloor");typeof(AncientCampaign).GetField("chapters",PrivateInstance).SetValue(campaign,0);
             typeof(AncientCampaign).GetField("restored",PrivateInstance).SetValue(campaign,false);typeof(AncientCampaign).GetField("restoreId",PrivateInstance).SetValue(campaign,-1);
-            hero.TravelTo(new Vector2(115,1.3f));hero.SetProductionAttackMode(false);body.linearVelocity=new Vector2(4,2);Physics2D.SyncTransforms();
+            hero.TravelTo(new Vector2(115,1.3f));hero.PrepareProductionEquipment(false);body.linearVelocity=new Vector2(4,2);Physics2D.SyncTransforms();
             var attach=typeof(AncientHero).GetMethod("AttachWire",PrivateInstance);
             attach.Invoke(hero,new object[]{new Vector2(119,10),null,Vector2.down});
             Assert(hero.Wired,"The continuous-assignment probe starts with an actual ceiling wire attached");
@@ -388,7 +388,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Assert((Vector2)selected.transform.position==centre+Vector2.right*77&&game.anchors[slot]==expected,"A crane on an inactive floor cannot advance motion or its selectable anchor");floorSetter.Invoke(game.Story,new object[]{0});
                 typeof(AncientMovingAnchor).GetMethod("Update",PrivateInstance).Invoke(selected,null);Transform found;Vector2 point=(Vector2)selected.transform.position+Vector2.right*.08f;
                 Assert(campaign.TryMovingAnchor(point,out found)&&found==selected.transform,"The inactive completed chapter still resolves its live crane as a moving support");
-                hero.TravelTo((Vector2)selected.transform.position+Vector2.left*3);hero.SetProductionAttackMode(false);Physics2D.SyncTransforms();
+                hero.TravelTo((Vector2)selected.transform.position+Vector2.left*3);hero.PrepareProductionEquipment(false);Physics2D.SyncTransforms();
                 typeof(AncientHero).GetMethod("AttachWire",PrivateInstance).Invoke(hero,new object[]{point,null,Vector2.zero});
                 var moving=typeof(AncientHero).GetField("wireMovingAnchor",PrivateInstance);var local=typeof(AncientHero).GetField("wireMovingLocal",PrivateInstance);var anchor=typeof(AncientHero).GetField("anchor",PrivateInstance);
                 Assert(hero.Wired&&(Transform)moving.GetValue(hero)==selected.transform,"The actual hero wire binds to the revisited crane rather than freezing at a world-space point");

@@ -33,7 +33,7 @@
           "initialStateCheck": false
         },
         {
-          "name": "ModeToggle",
+          "name": "Summon",
           "type": "Button",
           "id": "af654f84-6712-464d-990f-d47a4275cd17",
           "expectedControlType": "Button",
@@ -60,7 +60,7 @@
           "initialStateCheck": false
         },
         {
-          "name": "Throw",
+          "name": "Detach",
           "type": "Button",
           "id": "aad4ce9c-aec4-447d-a27b-427bfe8a16cc",
           "expectedControlType": "Button",
@@ -78,7 +78,7 @@
           "initialStateCheck": false
         },
         {
-          "name": "Explode",
+          "name": "Overload",
           "type": "Button",
           "id": "e3a13c49-4633-4b9d-855a-56978c76e91d",
           "expectedControlType": "Button",
@@ -100,15 +100,6 @@
           "type": "Button",
           "id": "6f45d7a6-ec5d-487a-87a5-4344fe6a363e",
           "expectedControlType": "Button",
-          "processors": "",
-          "interactions": "",
-          "initialStateCheck": false
-        },
-        {
-          "name": "ModeScroll",
-          "type": "PassThrough",
-          "id": "73e1438d-5eab-439e-8d82-667219237dab",
-          "expectedControlType": "Axis",
           "processors": "",
           "interactions": "",
           "initialStateCheck": false
@@ -263,7 +254,7 @@
           "interactions": "",
           "processors": "",
           "groups": "KeyboardMouse",
-          "action": "ModeToggle",
+          "action": "Summon",
           "isComposite": false,
           "isPartOfComposite": false
         },
@@ -296,7 +287,7 @@
           "interactions": "",
           "processors": "",
           "groups": "KeyboardMouse",
-          "action": "Throw",
+          "action": "Detach",
           "isComposite": false,
           "isPartOfComposite": false
         },
@@ -318,7 +309,7 @@
           "interactions": "",
           "processors": "",
           "groups": "KeyboardMouse",
-          "action": "Explode",
+          "action": "Overload",
           "isComposite": false,
           "isPartOfComposite": false
         },
@@ -365,17 +356,6 @@
           "action": "Drop",
           "isComposite": false,
           "isPartOfComposite": true
-        },
-        {
-          "name": "",
-          "id": "7b889500-d5c2-458c-b47e-3228dea059b8",
-          "path": "<Mouse>/scroll/y",
-          "interactions": "",
-          "processors": "",
-          "groups": "KeyboardMouse",
-          "action": "ModeScroll",
-          "isComposite": false,
-          "isPartOfComposite": false
         },
         {
           "name": "",

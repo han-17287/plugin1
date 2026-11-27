@@ -42,13 +42,23 @@ namespace Plugin.AncientCivilization
         public void BeginAftermath(Transform rig,Vector2 point){Wreck=true;}
     }
     public sealed class StoryFixture {public void RadioBark(string speaker,string text){}}
+    public static class AncientVisuals
+    {
+        public static bool HighQuality = true;
+    }
     public sealed class AncientGame : Object
     {
+        public bool ReducedFeedback;
         public static readonly Color Cyan=new Color(.2f,.8f,1),Orange=new Color(1,.4f,.1f);
         public readonly AncientHero hero=new AncientHero();public readonly AncientLivingDistrict Living=new AncientLivingDistrict();public readonly StoryFixture Story=new StoryFixture();
         public readonly List<AncientProjectile> shots=new List<AncientProjectile>();public ProjectileFixture Projectiles;public bool Paused;public int InputBlocks;
         public AncientGame(){Projectiles=new ProjectileFixture(this);}
-        public LineRenderer Line(string name,Color color,float width,int order){return new GameObject(name).AddComponent<LineRenderer>();}
+        public LineRenderer Line(string name,Color color,float width,int order)
+        {
+            var line = new GameObject(name).AddComponent<LineRenderer>();
+            line.sortingOrder = order;
+            return line;
+        }
         public void Notice(string words,float seconds=2){}public void Sound(int sound){}public void Shake(float amount){}public void Impact(Vector2 point,Color color,bool heavy){}public void Burst(Vector2 point,Color color,int count){}
         public void ClearBattleProjectiles(){shots.Clear();}public void BlockGameplayInput(){InputBlocks++;}
     }

@@ -6,12 +6,12 @@ namespace Plugin.PlayerCore
     {
         public FloorTraversalProfile profile;public PlayerInputReader clockOwner;public bool dangerous;
         public GrappleAnchor socket;public float phase;
-        PlayerStateMachine player;PlayerGrapple grapple;SpriteRenderer art;BoxCollider2D shutter;
+        PlayerStateMachine player;PlayerBluePlug plug;SpriteRenderer art;BoxCollider2D shutter;
         Vector3 origin;float age,exposure;
         public bool GateOpen {get;private set;}
         public float Exposure=>exposure;
         public void Initialize(FloorTraversalProfile data,PlayerInputReader reader,bool precision)
-        {profile=data;clockOwner=reader;player=reader.GetComponent<PlayerStateMachine>();grapple=reader.GetComponent<PlayerGrapple>();art=GetComponent<SpriteRenderer>();shutter=GetComponent<BoxCollider2D>();origin=transform.localPosition;dangerous=precision;ResetForRetry();}
+        {profile=data;clockOwner=reader;player=reader.GetComponent<PlayerStateMachine>();plug=reader.GetComponent<PlayerBluePlug>();art=GetComponent<SpriteRenderer>();shutter=GetComponent<BoxCollider2D>();origin=transform.localPosition;dangerous=precision;ResetForRetry();}
         public void ResetForRetry()
         {age=exposure=0;transform.localPosition=origin;if(socket)socket.SetOperational(true);if(shutter)shutter.enabled=false;GateOpen=true;}
         void FixedUpdate()
@@ -24,7 +24,7 @@ namespace Plugin.PlayerCore
             {
                 case TraversalFloor.Living:
                     transform.localPosition=origin+Vector3.right*(Mathf.Sin(age*2*Mathf.PI/Mathf.Max(.1f,profile.scanPeriod))*2.5f);
-                    bool seen=FloorTraversalLayout.ScanOverlap(p.x,p.y,transform.position.x,profile.scanWidth)&&!(grapple&&grapple.HazardInvulnerable);
+                    bool seen=FloorTraversalLayout.ScanOverlap(p.x,p.y,transform.position.x,profile.scanWidth)&&!(plug&&plug.HazardInvulnerable);
                     exposure=seen?exposure+dt:0;
                     if(art)art.color=exposure>0?new Color(1,.45f,.15f,.7f):new Color(1,.9f,.3f,.25f);
                     if(dangerous&&exposure>=profile.scanHold){var lab=GetComponentInParent<TraversalRhythmPractice>();if(lab)lab.Retry();}

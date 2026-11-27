@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="BluePlugChecks.cs"/>
+    <Compile Include="../Assets/Scripts/BluePlugRules.cs"/>
+    <Compile Include="../Assets/Scripts/BluePlugMotionTimeline.cs"/>
+    <Compile Include="../Assets/Scripts/GrappleRules.cs"/>
+  </ItemGroup>
+</Project>

@@ -5,17 +5,15 @@ namespace Plugin.AncientCivilization
     public sealed class AncientOrbitalArena
     {
         const float DropSeconds = .68f, DropY = .48f, FreightY = 4.85f;
-        const float ExplosionMinimum = 10f;
         static readonly Vector2 Unavailable = new Vector2(-100000, -100000);
         static readonly Color Dark = new Color(.12f,.17f,.22f);
         static readonly Color Steel = new Color(.38f,.48f,.56f);
         static readonly Color Gold = new Color(1,.76f,.23f);
         static readonly Color Blue = new Color(.38f,.89f,1);
         static readonly Color Locked = new Color(.96f,.33f,.20f);
-        enum BladeState { Held, Flying, Stuck }
 
         readonly AncientGame game;
-        readonly GameObject scenery, shutter, blade;
+        readonly GameObject scenery, shutter;
         readonly GameObject[] crates = new GameObject[2];
         readonly BoxCollider2D[] crateColliders = new BoxCollider2D[2];
         readonly SpriteRenderer[] crateGrips = new SpriteRenderer[2];
@@ -33,11 +31,10 @@ namespace Plugin.AncientCivilization
         readonly Vector2 leftAnchor, rightAnchor;
         readonly int slots;
         readonly float left, right;
-        float lockTime, dropTime, platformTime, shutterTime, supplyTime, bladeAge, recallCooldown, latchFlash, wireRecoveryTime;
-        int lockedSide, bladeSide;
+        float lockTime, dropTime, platformTime, shutterTime, supplyTime, latchFlash;
+        int lockedSide;
         bool dropping, landed, usedDropHook, dropHurts, hitByCrate, disposed;
-        Vector2 fallTarget, fallingAt, bladePosition;
-        BladeState bladeState;
+        Vector2 fallTarget, fallingAt;
 
         public float CentreX => (left + right) * .5f;
         public Vector2 CargoPoint => freight.position;
@@ -59,9 +56,6 @@ namespace Plugin.AncientCivilization
         public Vector2 DispenserPoint { get; }
         public bool LeftAnchorAvailable => !disposed && (lockTime <= 0 || lockedSide != -1);
         public bool RightAnchorAvailable => !disposed && (lockTime <= 0 || lockedSide != 1);
-        public bool BladeAway => bladeState != BladeState.Held;
-        public bool BladeStuck => bladeState == BladeState.Stuck;
-
         public AncientOrbitalArena(AncientGame owner, Transform parent, float left, float right)
         {
             game = owner;
@@ -78,7 +72,7 @@ namespace Plugin.AncientCivilization
             if (game.OrbitalAnchorSlot < 0)
             {
                 game.OrbitalAnchorSlot = game.anchors.Count;
-                for (int i=0;i<5;i++) game.anchors.Add(Unavailable);
+                for (int i=0;i<4;i++) game.anchors.Add(Unavailable);
             }
             slots = game.OrbitalAnchorSlot;
             Trim("화물 주행 레일", new Vector2(CentreX, 7.65f), new Vector2(right-left-1,.14f), Steel, 1);
@@ -87,7 +81,7 @@ namespace Plugin.AncientCivilization
                 Vector2 anchor = i == 0 ? leftAnchor : rightAnchor;
                 Trim("케이블 행거", anchor + Vector2.up*.5f, new Vector2(.10f,.9f), Steel, 5);
                 Trim("연결점 하우징", anchor, new Vector2(.54f,.44f), Dark, 6);
-                anchorLamps[i] = Trim("와이어 체결 표시", anchor, new Vector2(.35f,.22f), Blue, 7);
+                anchorLamps[i] = Trim("플러그 체결 표시", anchor, new Vector2(.35f,.22f), Blue, 7);
                 Trim("체결구 중앙", anchor, new Vector2(.13f,.08f), Dark, 8);
             }
             freightBody = Platform("왕복 화물", new Vector2(CentreX,FreightY), new Vector2(3.1f,.68f), out _);
@@ -97,7 +91,7 @@ namespace Plugin.AncientCivilization
             leftGrip = Part(freight, "화물 왼쪽 잠금쇠", new Vector2(-1.15f,.08f),new Vector2(.14f,.48f), Gold, 8);
             rightGrip = Part(freight,"화물 오른쪽 잠금쇠",new Vector2(1.15f,.08f),new Vector2(.14f,.48f), Gold, 8);
             Part(freight,"화물 이음판",Vector2.zero,new Vector2(1.65f,.31f),Steel,7);
-            Part(freight,"와이어 걸쇠",new Vector2(0,-.47f),new Vector2(.25f,.22f),Blue,8);
+            Part(freight,"화물 플러그 소켓",new Vector2(0,-.47f),new Vector2(.25f,.22f),Blue,8);
             Part(freight,"운반 도르래",new Vector2(0,2.79f),new Vector2(.68f,.28f),Dark,6);
             Part(freight,"화물 현수줄",new Vector2(0,1.52f),new Vector2(.06f,2.4f),Steel,3);
             for (int i=0; i<crates.Length; i++)
@@ -117,12 +111,7 @@ namespace Plugin.AncientCivilization
             Trim("입자 공급기 함체",DispenserPoint,new Vector2(.85f,1.55f),Dark,6);
             Trim("공급기 커넥터",DispenserPoint+Vector2.up*.56f,new Vector2(.61f,.12f),Steel,7);
             supplyLamp=Trim("충전 카트리지",DispenserPoint,new Vector2(.42f,.72f),Blue,7);
-            blade=new GameObject("투척된 샤프심 전구 블레이드");
-            blade.transform.SetParent(scenery.transform,false);
-            Part(blade.transform,"소켓",new Vector2(-.40f,0),new Vector2(.35f,.17f),Steel,19);
-            Part(blade.transform,"전구",new Vector2(-.22f,0),new Vector2(.22f,.23f),Gold,20);
-            Part(blade.transform,"필라멘트 날",new Vector2(.18f,0),new Vector2(.68f,.10f),new Color(1,1,.64f),20);
-            blade.SetActive(false);
+
             SyncAnchors();
         }
 
@@ -154,7 +143,6 @@ namespace Plugin.AncientCivilization
         }
 
         Vector2 CargoGrip => CargoPoint + Vector2.down*.47f;
-        Vector2 BladeSocket => CargoPoint + new Vector2(bladeSide*1.65f,.05f);
         Vector2 DropGrip => (Vector2)drop.transform.position+Vector2.up*.70f;
 
         void SyncAnchors()
@@ -163,7 +151,6 @@ namespace Plugin.AncientCivilization
             game.anchors[slots+1] = RightAnchorAvailable ? rightAnchor : Unavailable;
             game.anchors[slots+2] = CargoGrip;
             game.anchors[slots+3] = (dropping || landed) && !usedDropHook ? DropGrip : Unavailable;
-            game.anchors[slots+4] = BladeStuck ? BladeSocket : Unavailable;
             anchorLamps[0].color = LeftAnchorAvailable ? Blue : Locked;
             anchorLamps[1].color = RightAnchorAvailable ? Blue : Locked;
         }
@@ -187,9 +174,6 @@ namespace Plugin.AncientCivilization
                     lockedSide=side<0?-1:1;
                     lockTime=4.5f;
                     if (game.hero) game.hero.ReleaseWireAt(FixedAnchorPoint(lockedSide));
-                    break;
-                case OrbitalMove.BladeFerry:
-                    rail.FerryAcross(side);
                     break;
                 case OrbitalMove.DropCargo:
                 case OrbitalMove.CargoRush:
@@ -227,6 +211,19 @@ namespace Plugin.AncientCivilization
             if(game.hero.Combat)game.hero.Combat.EmitParticles(DispenserPoint,22f);
         }
 
+        internal bool UnsafeBladeGround(Vector2 point)
+        {
+            if (disposed) return false;
+            return (dropping && Mathf.Abs(point.x - fallTarget.x) < 1.6f && point.y < fallingAt.y + 1) ||
+                (supplyTime > 0 && (point - DispenserPoint).sqrMagnitude < 2.25f);
+        }
+
+        internal void BreakSupplyInRadius(Vector2 origin, float radius)
+        {
+            if (!disposed && supplyTime <= 0 && (DispenserPoint-origin).sqrMagnitude <= radius*radius &&
+                !Physics2D.Linecast(origin+Vector2.up*.1f, DispenserPoint, 1<<8)) BreakSupply();
+        }
+
         public bool CutSupply(Vector2 origin,Vector2 direction)
         {
             Vector2 offset=DispenserPoint-origin;
@@ -257,8 +254,6 @@ namespace Plugin.AncientCivilization
         {
             if (disposed || !game.hero || dt<=0) return;
             lockTime=Mathf.Max(0,lockTime-dt);
-            recallCooldown=Mathf.Max(0,recallCooldown-dt);
-            wireRecoveryTime=Mathf.Max(0,wireRecoveryTime-dt);
             supplyTime=Mathf.Max(0,supplyTime-dt);
             latchFlash=Mathf.Max(0,latchFlash-dt);
             supplyLamp.color=supplyTime>0 ? Dark : Blue;
@@ -289,12 +284,16 @@ namespace Plugin.AncientCivilization
                 if (dropHurts && !hitByCrate && Mathf.Abs(hero.x-fallingAt.x)<1.3f && hero.y>=y-1.3f && hero.y<=previous+1.25f)
                 {
                     hitByCrate=true;
+                    AncientBossCue.Play(game, AncientBossCue.Style.Orbital, AncientBossCue.Beat.Contact,
+                        new Vector2(Mathf.Clamp(hero.x,fallingAt.x-1.05f,fallingAt.x+1.05f), hero.y), Vector2.down, .74f);
                     game.hero.Hurt(14f);
                     if(disposed)return;
                 }
                 if (progress>=1)
                 {
                     dropping=false; landed=true; platformTime=4f;
+                    AncientBossCue.Play(game, AncientBossCue.Style.Orbital, AncientBossCue.Beat.Contact,
+                        new Vector2(fallingAt.x,DropY-.40f), Vector2.up, 1.12f);
                     game.Burst(fallingAt,Steel,8);
                 }
             }
@@ -308,7 +307,6 @@ namespace Plugin.AncientCivilization
                 else if (Mathf.Abs(hero.x-drop.transform.position.x)>1.5f || hero.y>1.85f)
                     landingBox.enabled=true;
             }
-            if (BladeAway) TickBlade(dt,hero);
             if (disposed) return;
             SyncAnchors();
         }
@@ -317,8 +315,6 @@ namespace Plugin.AncientCivilization
         {
             support=null;
             if (disposed) return false;
-            if (BladeStuck && (selected-BladeSocket).sqrMagnitude<.18f*.18f)
-            {support=freight;wireRecoveryTime=3.5f;return true;}
             if ((selected-CargoGrip).sqrMagnitude<.18f*.18f)
             {support=freight;return true;}
             if ((dropping||landed) && !usedDropHook && (selected-DropGrip).sqrMagnitude<.18f*.18f)
@@ -332,91 +328,13 @@ namespace Plugin.AncientCivilization
             return false;
         }
 
-        public bool ThrowBlade()
-        {
-            if (disposed || !game.hero || !game.hero.Combat) return false;
-            if (BladeAway || game.hero.Combat.Firing || game.hero.Combat.BladeAnimating) return true;
-            bladePosition=game.hero.WireOrigin;
-            bladeSide=bladePosition.x<CargoPoint.x?-1:1;
-            var wall=Physics2D.Linecast(bladePosition,BladeSocket,1<<8);
-            if (wall && wall.rigidbody!=freightBody)
-            {
-                game.Notice("화물이 보이는 곳에서 E / 짐칸에 블레이드 투척",1.4f);
-                return true;
-            }
-            game.hero.Combat.CancelAttacks();
-            bladeAge=0;bladeState=BladeState.Flying;
-            blade.transform.position=bladePosition;
-            blade.SetActive(true);
-            game.Sound(3);
-            return true;
-        }
-
-        void TickBlade(float dt,Vector2 hero)
-        {
-            if (bladeState==BladeState.Flying)
-            {
-                bladeAge+=dt;
-                Vector2 goal=BladeSocket;
-                Vector2 heading=goal-bladePosition;
-                if (heading.sqrMagnitude>.001f)
-                    blade.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(heading.y,heading.x)*Mathf.Rad2Deg);
-                Vector2 next=Vector2.MoveTowards(bladePosition,goal,dt*28f);
-                var hit=Physics2D.Linecast(bladePosition,next,1<<8);
-                if ((hit && hit.rigidbody!=freightBody) || bladeAge>2.4f)
-                {RecoverBlade();return;}
-                bladePosition=next;
-                blade.transform.position=next;
-                if ((next-goal).sqrMagnitude<.01f)
-                {
-                    bladeState=BladeState.Stuck;
-                    blade.transform.SetParent(freight,true);
-                    blade.transform.localPosition=new Vector2(bladeSide*1.65f,.05f);
-                    game.Burst(goal,Gold,6);
-                }
-                return;
-            }
-            Vector2 socket=BladeSocket;
-            if (Input.GetKeyDown(KeyCode.R) && game.GameplayInputReady)
-            {
-                if (recallCooldown<=0 && game.hero.CaptureEnergy>=ExplosionMinimum)
-                {
-                    float energy=game.hero.SpendCapturedEnergy();
-                    RecoverBlade(); recallCooldown=6;
-                    float reach=2f+energy*.045f;
-                    game.Impact(socket,Gold,true);
-                    game.Burst(socket,Blue,16);
-                    for (int i=game.enemies.Count-1;i>=0;i--)
-                    {
-                        var foe=game.enemies[i];
-                        if (!foe || !foe.IsAlive || (foe.AimPoint-socket).sqrMagnitude>reach*reach) continue;
-                        foe.Hit(10f+.4f*energy,true);
-                        if (disposed) return;
-                    }
-                    return;
-                }
-                game.Notice(recallCooldown>0?"폭발 회수 재충전 중":"폭발 회수에 입자 10 이상 필요",1.2f);
-            }
-            float reachDirect=wireRecoveryTime>0?1.85f:1.2f;
-            if ((hero+Vector2.up*.26f-socket).sqrMagnitude<=reachDirect*reachDirect) RecoverBlade();
-        }
-
-        void RecoverBlade()
-        {
-            bladeState=BladeState.Held;
-            wireRecoveryTime=0;
-            blade.transform.SetParent(scenery.transform,true);
-            blade.SetActive(false);
-            game.anchors[slots+4]=Unavailable;
-        }
-
         public void Dispose()
         {
             if (disposed) return;
             disposed=true;
             if (game)
             {
-                for(int i=0;i<5;i++)game.anchors[slots+i]=Unavailable;
+                for(int i=0;i<4;i++)game.anchors[slots+i]=Unavailable;
                 if(game.hero && game.hero.Wired)game.hero.ReleaseWire();
             }
             if(scenery) {scenery.SetActive(false);Object.Destroy(scenery);}

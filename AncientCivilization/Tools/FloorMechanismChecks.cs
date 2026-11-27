@@ -2,6 +2,12 @@ using System;
 using System.Reflection;
 using Plugin.PlayerCore;
 using UnityEngine;
+namespace Plugin.PlayerCore
+{
+    // The real controller is covered by its own assembly with keyboard and cast fixtures.
+    public sealed class PlayerBluePlug:MonoBehaviour
+    {public bool HazardInvulnerable {get;set;}}
+}
 class FloorMechanismChecks
 {
     static int checks;
@@ -9,11 +15,11 @@ class FloorMechanismChecks
     static void Tick(TraversalFloorMechanism item,int times=1){for(int i=0;i<times;i++)typeof(TraversalFloorMechanism).GetMethod("FixedUpdate",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(item,null);}
     sealed class Fixture
     {
-        public readonly PlayerStateMachine player;public readonly PlayerInputReader input;public readonly Rigidbody2D body;public readonly TraversalRhythmPractice lab;public readonly TraversalFloorMechanism mechanism;public readonly FloorTraversalProfile profile;
+        public readonly PlayerStateMachine player;public readonly PlayerInputReader input;public readonly Rigidbody2D body;public readonly TraversalRhythmPractice lab;public readonly TraversalFloorMechanism mechanism;public readonly FloorTraversalProfile profile;public readonly PlayerBluePlug plug;
         public Fixture(TraversalFloor floor,bool dangerous=true)
         {
             Application.isFocused=true;Time.fixedDeltaTime=.02f;
-            var root=new GameObject("Lab");lab=root.AddComponent<TraversalRhythmPractice>();var hero=new GameObject("Hero");body=hero.AddComponent<Rigidbody2D>();input=hero.AddComponent<PlayerInputReader>();player=hero.AddComponent<PlayerStateMachine>();body.position=new Vector2(0,2);
+            var root=new GameObject("Lab");lab=root.AddComponent<TraversalRhythmPractice>();var hero=new GameObject("Hero");body=hero.AddComponent<Rigidbody2D>();input=hero.AddComponent<PlayerInputReader>();player=hero.AddComponent<PlayerStateMachine>();plug=hero.AddComponent<PlayerBluePlug>();body.position=new Vector2(0,2);
             var go=new GameObject("Mechanism");go.transform.SetParent(root.transform,false);go.AddComponent<SpriteRenderer>();if(floor==TraversalFloor.Administration)go.AddComponent<BoxCollider2D>();
             profile=new FloorTraversalProfile{floor=floor};mechanism=go.AddComponent<TraversalFloorMechanism>();mechanism.Initialize(profile,input,dangerous);
         }
@@ -27,6 +33,13 @@ class FloorMechanismChecks
             f.input.Paused=true;Tick(f.mechanism,100);Check(f.mechanism.Exposure==exposure&&f.lab.Retries==0,"Pause does not accumulate searchlight exposure");f.input.Paused=false;
             Tick(f.mechanism,20);Check((f.lab.Retries>0)==dangerous,"The teaching room warns harmlessly; only the challenge room retries on sustained exposure");
             f.body.position=new Vector2(10,2);Tick(f.mechanism);Check(f.mechanism.Exposure==0,"Leaving the visible beam clears its accumulation");f.mechanism.ResetForRetry();Check(f.mechanism.Exposure==0,"Retry clears scan state");
+        }
+        {
+            var f=new Fixture(TraversalFloor.Living);f.profile.scanPeriod=10000;
+            f.plug.HazardInvulnerable=true;Tick(f.mechanism,40);
+            Check(f.mechanism.Exposure==0&&f.lab.Retries==0,"A powered straight tow crosses the practice searchlight safely");
+            f.plug.HazardInvulnerable=false;Tick(f.mechanism,40);
+            Check(f.lab.Retries>0,"Searchlight exposure resumes when the straight tow ends");
         }
         {
             var f=new Fixture(TraversalFloor.Administration);Tick(f.mechanism,100);Check(f.mechanism.GateOpen&&!f.mechanism.GetComponent<BoxCollider2D>().enabled,"A closing shutter defers while the player occupies its volume");

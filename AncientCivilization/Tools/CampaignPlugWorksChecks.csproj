@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="CampaignPlugWorksChecks.cs"/>
+    <Compile Include="ControllerFixtures/EncounterUnityDoubles.cs"/>
+    <Compile Include="../Assets/Scripts/AncientCampaignPlugWorks.cs"/>
+    <Compile Include="../Assets/Scripts/PlugDistrictCircuit.cs"/>
+    <Compile Include="../Assets/Scripts/AncientCampaignPlugLayout.cs"/>
+    <Compile Include="../Assets/Scripts/AncientChapterLayout.cs"/>
+  </ItemGroup>
+</Project>

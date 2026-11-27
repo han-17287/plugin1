@@ -34,8 +34,97 @@ class LivingControllerChecks
         public void Finish(int hz)
         {for(int i=0;i<hz*12&&State(boss)=="Active";i++)Tick(1f/hz);Check(State(boss)=="Recovery","An actual runtime attack reaches its recovery window");}
     }
+    static void CheckBossCues()
+    {
+        // 교차포의 단발 신호 네 개가 실제 대각선 위에만 놓이는지 확인한다.
+        var f = new Fixture(3);
+        AncientBossCue.Reset();
+        f.Attack(AncientLivingAttack.XBlast);
+        var cuts = AncientBossCue.Events;
+        Check(cuts.Count == 4, "교차포 발동 때 사선 네 개가 각각 한 번 인쇄됨");
+        int quadrants = 0;
+        foreach (var cue in cuts)
+        {
+            Check(cue.Game == f.game && cue.Style == AncientBossCue.Style.Mech &&
+                cue.Beat == AncientBossCue.Beat.Strike, "거대 로봇의 발동 신호");
+            Check(Math.Abs(cue.Point.y - 4.6f) < .001f && cue.Direction.x != 0 && cue.Direction.y != 0,
+                "교차포 신호는 실제 사선의 중심과 방향을 사용");
+            quadrants |= 1 << ((cue.Direction.x > 0 ? 1 : 0) + (cue.Direction.y > 0 ? 2 : 0));
+        }
+        Check(quadrants == 15, "네 사선이 서로 다른 사분면을 가리킴");
+        f.game.Paused = true;
+        for (int i = 0; i < 30; i++) f.Tick(.02f);
+        Check(cuts.Count == 4, "일시정지 중 발동 신호가 중복되지 않음");
+        f.game.Paused = false;
+        f.Finish(60);
+        Check(cuts.Count == 4, "시각 신호가 활성 프레임마다 반복되지 않음");
+
+        var suction = new Fixture(3);
+        AncientBossCue.Reset();
+        suction.Attack(AncientLivingAttack.Suction);
+        Check(cuts.Count == 2 && cuts[0].Point.x < cuts[1].Point.x &&
+            cuts[0].Direction.x > 0 && cuts[1].Direction.x < 0,
+            "흡입 효과는 양쪽에서 코어로 모임");
+        suction.boss.ReceiveHit(AncientLivingHit.Laser, 14, 60);
+        Check(cuts.Count == 3 && cuts[2].Beat == AncientBossCue.Beat.Contact && suction.boss.Recovering,
+            "과부하가 성립한 프레임에만 접촉 신호를 보냄");
+        AncientBossCue.Reset();
+    }
+    static void CheckXFilaments()
+    {
+        var f=new Fixture(3);
+        var marks=(LineRenderer[])Get(f.boss,"marks");
+        bool oldDetail=AncientVisuals.HighQuality;
+        AncientVisuals.HighQuality=true;
+        try
+        {
+            f.Attack(AncientLivingAttack.XBlast);
+            f.Tick(.12f);
+            Vector2 firstPacket=marks[4].GetPosition(3);
+            f.Tick(.11f);
+            Check(Vector2.Distance(firstPacket,marks[4].GetPosition(3))>1f,"압축 마디가 실제 사선 위에서 전진");
+            for(int i=0;i<marks.Length;i++)
+            {
+                Check(marks[i].enabled,"실제 활성 교차포의 기본선과 필라멘트가 표시됨");
+                if(i<2)
+                {
+                    Check(marks[i].positionCount==2 && marks[i].startWidth==3 && marks[i].endWidth==3,
+                        "피해를 읽는 두 선의 폭과 꼭짓점 수 유지");
+                    continue;
+                }
+                int diagonal=i<4?i-2:(i-4)/2;
+                Vector2 start=marks[diagonal].GetPosition(0),end=marks[diagonal].GetPosition(1);
+                Vector2 axis=(end-start).normalized;
+                for(int j=0;j<marks[i].positionCount;j++)
+                {
+                    Vector2 point=marks[i].GetPosition(j);
+                    float along=Vector2.Dot(point-start,axis);
+                    float side=Vector2.Dot(point-start,new Vector2(-axis.y,axis.x));
+                    Check(along>=-.001f && along<=Vector2.Distance(start,end)+.001f &&
+                        Math.Abs(side)+marks[i].startWidth*.5f<=1.5f,"추가 선의 양 끝과 굵기는 기존 빔 내부");
+                }
+            }
+            f.game.ReducedFeedback=true;
+            f.Tick(.01f);
+            for(int i=0;i<marks.Length;i++) Check(marks[i].enabled==(i<2),"감광 설정은 실제 빔만 표시");
+            Check(marks[0].startColor.r==.4f && marks[0].startColor.b==1f,"감광 중에는 기존 발사색 복구");
+            f.game.ReducedFeedback=false;
+            AncientVisuals.HighQuality=false;
+            f.Tick(.01f);
+            for(int i=2;i<marks.Length;i++) Check(!marks[i].enabled,"저사양에 장식선 잔류 없음");
+            AncientVisuals.HighQuality=true;
+            f.Tick(.01f);
+            Check(marks[2].enabled,"활성 중 품질 복구 시 현재 진행 위치에서 다시 표시");
+            f.Finish(60);
+            foreach(var line in marks) Check(!line.enabled && line.positionCount==2 && line.sortingOrder==15,
+                "회복에 진입하면 다음 공격이 재사용할 두 점의 선으로 정리됨");
+        }
+        finally { AncientVisuals.HighQuality=oldDetail; }
+    }
     static void Main()
     {
+        CheckBossCues();
+        CheckXFilaments();
         foreach(int hz in new[]{15,30,60,120,144,240})
         {
             foreach(int phase in new[]{1,2})

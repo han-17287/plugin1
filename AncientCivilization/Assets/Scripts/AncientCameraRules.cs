@@ -16,6 +16,34 @@ namespace Plugin.AncientCivilization
             float travel=velocity<0?-1:1;
             return (look+(travel-look)*carry)*magnitude;
         }
+        // 빨래골목의 기본 줌에서 다음 디딤면과 발밑을 동시에 남기는 시선 오프셋이다.
+        public static float LaundryLeadX(float vx, float facing, bool hasDock, float toDock)
+        {
+            float neutral = facing < 0 ? -1.7f : 1.7f;
+            float momentum = Math.Clamp(Speed(vx) * .30f, -4.4f, 4.4f);
+            float weight = Unit(Math.Abs(Speed(vx)) / 8);
+            float lead = neutral + (momentum - neutral) * weight;
+            return hasDock ? lead * .35f + Math.Clamp(Speed(toDock) * .62f, -4.4f, 4.4f) * .65f : lead;
+        }
+
+        public static float LaundryLeadY(float vy, bool hasDock, float toDock) =>
+            hasDock ? 1.2f + Math.Clamp(Speed(toDock) * .35f, -1.6f, 1.6f) :
+            1.7f + Math.Clamp(Speed(vy) * .14f, -2.1f, 1.3f);
+
+        public static float EaseLook(float current, float target, float dt) =>
+            current + (target - current) * (1f - (float)Math.Exp(-7f * Math.Clamp(Speed(dt), 0, .1f)));
+
+        public static float LaundryFrameAxis(float current, float actor, float look, float dt,
+            float halfExtent, float headroom, float footroom, float minCentre, float maxCentre)
+        {
+            float target = Math.Clamp(actor + look, minCentre, maxCentre);
+            float smooth = 1 - (float)Math.Exp(-8 * Math.Max(0, dt));
+            float frame = current + (target - current) * smooth;
+            float lower = actor - Math.Max(.1f, halfExtent - headroom);
+            float upper = actor + Math.Max(.1f, halfExtent - footroom);
+            return Math.Clamp(Math.Clamp(frame, lower, upper), minCentre, maxCentre);
+        }
+
         public static float TravelZoom(bool wired,bool mounted,bool grounded,float horizontalSpeed)
         {
             if(wired)return 7.5f;

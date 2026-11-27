@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="576" height="56" viewBox="0 0 576 56">
+  <title>Foundry floor dust · six outward-facing cels</title>
+  <defs>
+    <linearGradient id="dust" x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
+      <stop stop-color="#40505C"/><stop offset=".54" stop-color="#87999C"/><stop offset="1" stop-color="#D5D7C2"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#dust)" stroke="#3D4851" stroke-width="1.5" stroke-linejoin="round">
+    <g>
+      <path d="M4 49 Q12 48 16 44 Q14 47 21 45 L31 43 Q26 46 31 47 Q34 47 37 48 Q32 50 23 50 Z"/>
+      <path fill="#DADECD" stroke="none" d="M13 48 Q19 44 28 45 L21 47 Z"/>
+    </g>
+    <g transform="translate(96)">
+      <path d="M5 49 Q16 48 23 40 Q23 44 29 41 Q31 33 39 32 Q36 38 42 37 Q49 36 51 41 Q48 41 49 44 Q55 41 61 42 Q59 46 51 47 Q39 51 27 49 Z"/>
+      <path fill="#E0DECD" stroke="none" d="M23 45 Q31 41 33 36 L38 34 Q35 40 31 43 Z M42 38 Q48 36 50 41 L46 40 Z"/>
+      <path fill="#A4B1AA" d="M53 34 l6 -5 -2 4 Z"/>
+    </g>
+    <g transform="translate(192)">
+      <path d="M8 49 Q23 47 31 38 Q34 33 39 32 Q38 35 36 38 Q41 36 43 30 Q45 21 55 19 Q51 21 52 25 Q59 21 63 27 Q57 25 57 30 Q64 29 66 35 Q68 39 64 41 Q59 43 59 38 Q54 39 57 44 Q49 49 38 47 Q28 51 24 48 Z"/>
+      <path d="M61 47 Q66 45 69 40 Q72 37 75 38 Q78 39 77 42 Q74 40 72 44 Q67 48 61 47Z"/>
+      <path fill="#E0DECD" stroke="none" d="M40 36 Q42 24 51 21 Q46 27 46 30 Z M56 25 Q61 23 63 27 Q60 25 56 27 Z"/>
+      <path fill="#879A9D" d="M69 30 l6 -7 -1 5 Z M38 25 l2 -5 2 1 Z"/>
+    </g>
+    <g transform="translate(288)">
+      <path d="M17 48 Q30 46 39 37 L37 41 Q45 36 47 28 Q51 15 62 14 Q56 17 56 23 Q59 20 63 20 Q69 18 73 24 Q77 31 70 35 Q73 29 67 27 Q61 25 59 32 Q58 36 63 37 Q59 42 53 39 Q48 45 42 44 Q31 49 17 48Z"/>
+      <path d="M60 47 Q70 42 73 37 Q77 32 82 35 Q85 37 83 39 Q80 36 77 41 Q74 45 60 47Z"/>
+      <path fill="#E1DECC" stroke="none" d="M47 31 Q49 18 60 15 Q53 19 51 27 Z M64 21 Q70 19 73 24 L67 22 Z"/>
+      <path fill="#81959A" d="M75 17 l4 -6 0 4 Z M45 19 l2 -5 2 1 Z"/>
+    </g>
+    <g transform="translate(384)">
+      <path d="M32 45 Q45 41 50 32 Q50 37 46 40 Q53 38 54 32 Q56 19 67 16 Q61 20 60 26 Q66 23 69 25 Q63 26 62 32 Q61 37 57 37 Q52 42 43 43 Z"/>
+      <path d="M66 16 Q74 12 79 18 Q83 24 78 28 Q78 23 74 21 L76 20 Q74 17 66 16 Z"/>
+      <path d="M70 44 Q77 40 79 36 Q82 31 88 34 Q84 34 83 38 Q79 43 70 44Z"/>
+      <path fill="#CFD1C0" stroke="none" d="M55 30 Q56 22 64 18 L60 24 Z"/>
+    </g>
+    <g transform="translate(480)">
+      <path d="M41 43 Q50 41 53 35 Q54 40 47 42 Z M58 33 Q59 23 68 19 Q64 22 63 27 Z"/>
+      <path d="M76 14 Q82 13 84 20 Q82 17 78 17 Z M79 40 Q83 34 89 33 Q85 35 83 38 Z"/>
+    </g>
+  </g>
+</svg>

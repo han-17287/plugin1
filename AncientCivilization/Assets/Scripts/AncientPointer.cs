@@ -53,8 +53,9 @@ namespace Plugin.AncientCivilization
             Matrix4x4 oldMatrix=GUI.matrix;int oldDepth=GUI.depth;Color oldColor=GUI.color;
             GUI.matrix=Matrix4x4.identity;GUI.depth=-10000;
             bool isMenu=game.Paused||game.won;
-            Color color=isMenu?new Color(.85f,.95f,1):(game.hero.AttackMode||game.hero.HasWireTarget)?AncientGame.Cyan:new Color(.5f,.6f,.65f);
-            if(!isMenu&&!game.hero.AttackMode&&game.hero.WireCooldown<1)color=AncientGame.Orange;
+            Color color = isMenu ? new Color(.85f,.95f,1) : game.hero.AttackMode ? AncientMoteVisuals.ChargeColor
+                : game.hero.HasWireTarget ? Plugin.PlayerCore.BluePlugArt.MovementColor : new Color(.5f,.6f,.65f);
+            if(!isMenu&&!game.hero.AttackMode&&game.hero.WireCooldown<1)color=new Color(.45f,.48f,.51f);
             if(Time.unscaledTime<clickUntil)color=Color.white;
             GUI.color=color;
             float size=32*Mathf.Clamp(Screen.height/900f,.8f,1.4f);

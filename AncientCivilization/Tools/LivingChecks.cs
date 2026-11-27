@@ -21,7 +21,7 @@ static class LivingChecks
         }
         Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Bullets).Contains("파괴 불가"),"Non-breakable bullet tell never recommends a blade");
         Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Cannon).Contains("파괴 불가"),"Non-breakable shells are labelled for evasion");
-        Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Rocket).Contains("와이어"),"Rocket tell names the correct counter");
+        Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Rocket).Contains("플러그"),"Rocket tell names the correct counter");
         Check(AncientLivingRules.TelegraphHint(AncientLivingAttack.Missiles).Contains("베기"),"Missile tell preserves the particle opportunity");
         var first=new AncientLivingRules();
         for(int cycle=0;cycle<500;cycle++)

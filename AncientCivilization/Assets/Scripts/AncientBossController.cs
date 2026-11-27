@@ -103,10 +103,19 @@ namespace Plugin.AncientCivilization
             phaseTwo=owner.Enraged;move=AncientBossRules.Choose(floor,turn++,phaseTwo,Mathf.Abs(delta.x));
             rushes=phaseTwo?2:1;StartWindup(AncientBossRules.Windup(move));
         }
+        AncientBossCue.Style SignalStyle => floor == 3 ? AncientBossCue.Style.Orbital : AncientBossCue.Style.Guardian;
+        bool UsesCargoSignal => floor == 0 || floor == 3;
+
         void StartWindup(float seconds)
         {
             state=State.Windup;began=Time.time;until=began+seconds;aim=game.hero.transform.position;
             facing=aim.x<owner.AimPoint.x?-1:1;HideMarks();
+            if (UsesCargoSignal && move != AncientBossMove.CeilingDebris && move != AncientBossMove.FloorRoll)
+            {
+                var axis = aim-owner.AimPoint;
+                if (move == AncientBossMove.CoreLob || move == AncientBossMove.ArcCrate) axis += Vector2.up * (.95f*6.65f);
+                AncientBossCue.Play(game, SignalStyle, AncientBossCue.Beat.Tell, owner.AimPoint, axis, .95f, owner.transform);
+            }
             if(move==AncientBossMove.BankShot)
                 wallX=aim.x<(left+right)*.5f?right+.35f:left-.35f;
             if(move==AncientBossMove.CeilingDebris)
@@ -114,6 +123,7 @@ namespace Plugin.AncientCivilization
                 for(int i=0;i<3;i++)
                 {
                     drops[i]=new Vector2(Mathf.Clamp(aim.x+(i-1)*4,left+1,right-1),8.7f);
+                    if (UsesCargoSignal) AncientBossCue.Play(game, SignalStyle, AncientBossCue.Beat.Tell, drops[i], Vector2.down, .85f);
                     var line=marks[i];line.enabled=true;line.loop=true;line.positionCount=16;
                     line.startColor=line.endColor=AncientGame.Orange;
                     for(int j=0;j<16;j++){float a=j*Mathf.PI*2/16;line.SetPosition(j,new Vector2(drops[i].x+Mathf.Cos(a)*.7f,.12f+Mathf.Sin(a)*.08f));}
@@ -123,6 +133,12 @@ namespace Plugin.AncientCivilization
             {
                 game.Notice("지면 양방향 · 점프로 회피",seconds);
                 DrawFloorRollWarning();
+                if (UsesCargoSignal)
+                {
+                    var port = new Vector2(owner.transform.position.x, AncientBossRules.FloorRollHeight(0));
+                    AncientBossCue.Play(game, SignalStyle, AncientBossCue.Beat.Tell, port+Vector2.left*.4f, Vector2.left, .72f);
+                    AncientBossCue.Play(game, SignalStyle, AncientBossCue.Beat.Tell, port+Vector2.right*.4f, Vector2.right, .72f);
+                }
             }
         }
         void DrawFloorRollWarning()
@@ -171,6 +187,8 @@ namespace Plugin.AncientCivilization
             if(move==AncientBossMove.Slam)
             {
                 Vector2 delta=(Vector2)game.hero.transform.position-owner.AimPoint;
+                if (UsesCargoSignal)
+                    AncientBossCue.Play(game, SignalStyle, AncientBossCue.Beat.Strike, owner.AimPoint, Vector2.right*facing, 1.35f);
                 if(Mathf.Abs(delta.x)<4.8f&&Mathf.Abs(delta.y)<1.7f&&delta.x*facing>-.6f&&!Physics2D.Linecast(owner.AimPoint,game.hero.transform.position,1<<8))game.hero.Hurt(30);
                 game.Slash(owner.AimPoint,facing,true);game.Shake(.15f);Open();return;
             }
@@ -180,7 +198,14 @@ namespace Plugin.AncientCivilization
             state=State.Volley;until=Time.time;
         }
         void Shot(Vector2 origin,Vector2 velocity,int kind=0,float gravity=0,int ricochets=0)
-        {if(game.shots.Count<48)game.Projectiles.Spawn(origin,velocity,floor==4?18:20,false,kind,gravity,ricochets);}
+        {
+            if (game.shots.Count >= 48) return;
+            var shot = game.Projectiles.Spawn(origin,velocity,floor==4?18:20,false,kind,gravity,ricochets);
+            if (!shot || !UsesCargoSignal) return;
+            shot.MarkBossProjectile(SignalStyle);
+            AncientBossCue.Play(game, SignalStyle, AncientBossCue.Beat.Strike, origin, velocity,
+                move == AncientBossMove.CeilingDebris ? .82f : 1f);
+        }
         void Emit()
         {
             Vector2 origin=owner.AimPoint;

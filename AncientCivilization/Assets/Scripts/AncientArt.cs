@@ -37,7 +37,10 @@ namespace Plugin.AncientCivilization
                 // Keep one GPU copy of each sheet instead of retaining imported and packed CPU copies.
                 if(packedOnly)Resources.UnloadAsset(texture);texture=native;
             }
-            texture.filterMode = FilterMode.Point; texture.wrapMode = TextureWrapMode.Clamp;
+            // 집행관의 원화는 확대·축소 중에도 금속 테두리와 렌즈의 반투명 경계를 유지한다.
+            texture.filterMode = name.StartsWith("RecordEnforcer", System.StringComparison.Ordinal)
+                ? FilterMode.Bilinear : FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
             textures[name] = texture; return texture;
         }
         public static Sprite Slice(string sheet, string key, Rect topRect, float pixelsPerUnit, Vector2 pivot, bool trim = true, bool stableX = false)
@@ -96,6 +99,17 @@ namespace Plugin.AncientCivilization
             bladeCache[index]=Slice(AncientBladeAtlas.Sheet(step),"blade-combo-"+index,AncientBladeAtlas.Bounds(step,frame),
                 AncientBladeAtlas.PixelsPerUnit(step),AncientBladeAtlas.Pivot(step,frame),false);
             return bladeCache[index];
+        }
+        static readonly Sprite[] fieldBlades = new Sprite[48];
+        public static Sprite FieldBlade(int step,int frame)
+        {
+            step=AncientBladeRules.NormalizeStep(step);
+            frame=Mathf.Clamp(frame,0,AncientBladeAtlas.FrameCount-1);
+            int index=(step-1)*AncientBladeAtlas.FrameCount+frame;
+            if (!fieldBlades[index])
+                fieldBlades[index]=Slice("FieldBladeDetail","field-blade-"+index,AncientBladeAtlas.FieldBounds(step,frame),
+                    AncientBladeAtlas.PixelsPerUnit(step),AncientBladeAtlas.Pivot(step,frame),false);
+            return fieldBlades[index];
         }
         public static Sprite DistrictBackdrop(int floor)
         {

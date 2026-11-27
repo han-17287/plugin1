@@ -11,12 +11,33 @@ namespace UnityEngine
     }
 }
 
+namespace Plugin.PlayerCore
+{
+    public enum SummonedBladeState { None, Falling, Stuck, Equipped, Cooldown }
+    public sealed class TestHandle : UnityEngine.Object { public Vector2 Point = new Vector2(12, 1); }
+    public sealed class TestBlade : UnityEngine.Object
+    {
+        public SummonedBladeState State = SummonedBladeState.Stuck;
+        public readonly TestHandle Handle = new TestHandle();
+        public uint InstallationId = 1;
+        public int Broken;
+        public bool TryBreakInstalled()
+        {
+            if (State != SummonedBladeState.Stuck) return false;
+            State = SummonedBladeState.Cooldown;
+            Broken++;
+            return true;
+        }
+    }
+}
+
 namespace Plugin.AncientCivilization
 {
     // 물리 엔진 대신 고정된 전장과 생존 가능한 플레이어를 제공한다.
     // 공격 선택, 전조, 판정 시계, 반격 창, 체력 경계 및 퇴장은 게임의 코드를 실행한다.
     public sealed class TestHero : MonoBehaviour
     {
+        public readonly Plugin.PlayerCore.TestBlade Loadout = new Plugin.PlayerCore.TestBlade();
         public bool IsOnGround => true;
         public float HorizontalSpeed => 0;
         public void Hurt(float damage) {}

@@ -7,14 +7,14 @@ namespace Plugin.AncientCivilization
         public string Resources="",Objective="",Movement="",Performance="",Mode="",Capture="",Blade="",Boss="",Speed="",CoreDistance="";
         static readonly string[] cuts={"세로 베기","가로 베기","사선 마무리"};
         int bladeStep=-1;bool bladeActive,bladeQueued;
-        int hp=-1,energy=-1,credits=-1,cores=-1,stage=-1,floor=-1,chain=-1,capture=-1,speed=-1,metres=-1,productionPhase=-1;
+        int stored=-1,hp=-1,energy=-1,credits=-1,cores=-1,stage=-1,floor=-1,chain=-1,capture=-1,speed=-1,metres=-1,productionPhase=-1;
         bool bike,running,attack,quality,enraged,wired,finale,resourceBike,automatic;AncientEnemy boss;AncientPickup core;
-        string performance,productionGoal="",tutorialGoal="";
+        string performance,productionGoal="",tutorialGoal="",plugStatus="";
         public void Refresh(AncientGame game)
         {
             var hero=game.hero;int h=Mathf.CeilToInt(hero.bike?hero.bikeHP:hero.hp),e=Mathf.FloorToInt(hero.CaptureEnergy);
-            if(h!=hp||e!=energy||game.credits!=credits||resourceBike!=hero.bike)
-            {hp=h;energy=e;credits=game.credits;resourceBike=hero.bike;Resources=(resourceBike?"차량 내구 ":"체력 ")+h+"   입자 "+e+"   재화 "+credits;}
+            if(stored!=hero.SummonParticles||h!=hp||e!=energy||game.credits!=credits||resourceBike!=hero.bike)
+            {stored=hero.SummonParticles;hp=h;energy=e;credits=game.credits;resourceBike=hero.bike;Resources=(resourceBike?"차량 내구 ":"체력 ")+h+"   입자 "+stored+"   재화 "+credits;}
             bool chase=game.Finale&&game.Finale.Active;
             string currentProduction=game.Production&&(game.Production.Active||game.Production.InChaseLane)?game.Production.Objective:"";
             string currentTutorial=game.Story.Stage<=4?game.Story.ProductionTutorialObjective:"";
@@ -28,12 +28,14 @@ namespace Plugin.AncientCivilization
             bool auto=game.Production&&game.Production.AutoDrive;
             int phase=game.Production&&game.Production.Active?(int)game.Production.Sequence.Phase:-1;
             if(Movement.Length==0||bike!=hero.bike||running!=hero.running||chain!=hero.WireChain||wired!=hero.Wired||automatic!=auto)
-            {bike=hero.bike;running=hero.running;chain=hero.WireChain;wired=hero.Wired;automatic=auto;Movement=(automatic?"자동주행 · Space 점프":bike?"오토바이":running?"달리기":"걷기")+(chain>0?" · 와이어 연결 "+chain:"")+" · K 정비";}
-            if(Mode.Length==0||attack!=hero.AttackMode||productionPhase!=phase)
+            {bike=hero.bike;running=hero.running;chain=hero.WireChain;wired=hero.Wired;automatic=auto;Movement=(automatic?"자동주행 · Space 점프":bike?"오토바이":running?"달리기":"걷기")+(chain>0?" · 플러그 연계 "+chain:"")+" · K 정비";}
+            string currentPlug=hero.CampaignPlugStatus;
+            if(Mode.Length==0||attack!=hero.AttackMode||productionPhase!=phase||plugStatus!=currentPlug)
             {
-                attack=hero.AttackMode;productionPhase=phase;
-                Mode=phase==(int)AncientProductionPhase.Boarding?"와이어 견인 중 / 지붕 착지 후 공격":
-                    auto?"트럭 접근 후 좌클릭 / 와이어 승선":"휠 / "+(attack?"공격":"와이어")+" · 우클릭 입자 수집";
+                attack=hero.AttackMode;productionPhase=phase;plugStatus=currentPlug;
+                Mode=phase==(int)AncientProductionPhase.Boarding?"플러그 견인 중 / 지붕 착지 후 공격":
+                    currentPlug!=AncientHero.CampaignPlugReadyStatus?currentPlug:
+                    auto?"좌클릭 트럭 투척 · C 승선":attack?"좌클릭 베기 · F 충전 레이저":"좌클릭 회전·투척 · C 견인 · V 스윙 · G 회수";
             }
             if(hero.Combat)
             {

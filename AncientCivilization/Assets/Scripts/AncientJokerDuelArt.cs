@@ -4,24 +4,25 @@ namespace Plugin.AncientCivilization
 {
     public static class AncientJokerDuelArt
     {
-        // ♣ 단검 결투. 소총은 네 자세 모두 등에 메고, 기존 저격수와 같은 픽셀 밀도를 사용한다.
-        static readonly Rect[] bounds = {
-            new Rect(22, 1, 47, 60), new Rect(111, 2, 67, 59),
-            new Rect(22, 66, 47, 60), new Rect(115, 67, 62, 59)
+        // 원래 결투의 골반·발 좌표에 검은 전술복과 단검 포즈를 맞췄다. 각 칸은 투명 여백만 자른다.
+        static readonly Rect[] cuts = {
+            new Rect(40, 65, 140, 220), new Rect(9, 77, 199, 208),
+            new Rect(38, 74, 131, 211), new Rect(16, 67, 185, 218)
         };
-        static readonly float[] pelvisX = { 44, 141, 44, 144 };
         static readonly Sprite[] frames = new Sprite[4];
+        const int Width = 288, Height = 288;
 
         public static Sprite Frame(int pose)
         {
             pose = Mathf.Clamp(pose, 0, frames.Length - 1);
             if (frames[pose]) return frames[pose];
-            Rect crop = bounds[pose];
-            // 각 칸마다 발바닥 아래 투명 픽셀 한 줄을 둔다.
-            Vector2 pivot = new Vector2((pelvisX[pose] - crop.x) / crop.width, 1f / crop.height);
-            frames[pose] = AncientArt.Slice("JokerClubDuel", "joker-club-duel-" + pose,
-                crop, AncientBossAtlas.Ppu[4] / 8f, pivot, false);
-            return frames[pose];
+            Rect crop = cuts[pose];
+            Vector2 pivot = new Vector2((103.5f - crop.x) / crop.width, (crop.yMax - 281.25f) / crop.height);
+            crop.x += pose * Width;
+            crop.y += 5 * Height;
+            var sprite = AncientArt.Slice("JokerRifleMotion", "joker-club-duel-" + pose, crop, 82.5f, pivot, false);
+            sprite.texture.filterMode = FilterMode.Bilinear;
+            return frames[pose] = sprite;
         }
     }
 }

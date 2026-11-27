@@ -21,7 +21,9 @@ namespace Plugin.AncientCivilization
         readonly GameObject root;
         readonly float left, right;
         readonly LineRenderer body, glow, core;
+        readonly AncientBeamVisuals optics;
         readonly LineRenderer[] marks = new LineRenderer[3];
+        readonly LineRenderer[] caustics = new LineRenderer[2];
         readonly Vector2[] ray = new Vector2[4];
         readonly Vector2[] candidate = new Vector2[4];
         AncientJokerArena arena;
@@ -30,7 +32,11 @@ namespace Plugin.AncientCivilization
         Vector2 origin, previousHero;
         float time, duration;
         int firstMirror, bounceCount, lit, facing, safeLane, hits, revision;
-        bool descending, disposed, haveHero, locked, fired, secondSlash;
+        bool descending, laserFromRight, disposed, haveHero, locked, fired, secondSlash;
+
+        // 정해진 탄도와 박자가 확정될 때만 알린다. 일반전의 표시 담당자가 연출을 선택한다.
+        internal event System.Action<Vector2, Vector2, float> TellCue, StrikeCue, ContactCue;
+        internal System.Func<bool> SweepFromRight { private get; set; }
 
         public int ClubFrame
         {
@@ -41,8 +47,24 @@ namespace Plugin.AncientCivilization
                 return time < SlashB ? 2 : 3;
             }
         }
+        // 일반 패턴 시각화가 이미 고정된 사선과 스윕 끝점을 읽는다.
+        internal bool MirrorSight(out Vector2 muzzle, out Vector2 target)
+        {
+            muzzle = ray[0]; target = ray[1];
+            return attack == Attack.Mirror;
+        }
+        internal bool SweepEmitter(float shooterX, out Vector2 edge)
+        {
+            edge = default;
+            if (attack != Attack.Laser) return false;
+            bool fromLeft = shooterX < (left + right) * .5f;
+            edge = new Vector2(fromLeft ? LaserLeft : LaserRight, SweepY(time));
+            return true;
+        }
+
         public bool Busy => attack != Attack.None;
         public bool StartedFiring => Busy && fired;
+        internal float FiringAge => Mathf.Max(0, time - Tell);
         public bool Telegraphing => Busy && (!fired || (attack == Attack.Club && time >= SlashA+SlashTime && time < SlashB));
         public float Duration => duration;
         public float Progress => duration > 0 ? Mathf.Clamp01(time/duration) : 0;
@@ -61,7 +83,15 @@ namespace Plugin.AncientCivilization
             root = new GameObject("조커 · 탄도와 전조");
             root.transform.SetParent(parent, false);
             glow = MakeLine("잔광", 17); body = MakeLine("판정", 19); core = MakeLine("필라멘트", 20);
+            // 일반전 광학계만 이 인스턴스를 쓴다. 최종 맞발사 광선은 별도 소유자다.
+            optics = new AncientBeamVisuals(glow, true, false);
+            optics.StyleBody(body, core, true);
             for (int i=0; i<marks.Length; i++) marks[i] = MakeLine("광학 표식 " + i, 21);
+            for (int i=0; i<caustics.Length; i++)
+            {
+                caustics[i] = MakeLine("굴절광 " + i, 22);
+                caustics[i].positionCount = 4;
+            }
             audio = game.gameObject.GetComponent<AncientAudio>();
         }
 
@@ -165,6 +195,8 @@ namespace Plugin.AncientCivilization
             if (!Begin(Attack.Laser,LaserTell+LaserTime)) return;
             this.descending = descending;
             this.safeLane = safeLane;
+            laserFromRight = SweepFromRight?.Invoke() ?? false;
+            TellCue?.Invoke(LaserPort(), LaserDirection, .58f);
             game.Sound(AncientEquipmentCue.JokerCharge);
             RenderLaser();
         }
@@ -197,7 +229,15 @@ namespace Plugin.AncientCivilization
             {
                 fired = true;
                 game.Sound(attack == Attack.Mirror ? AncientEquipmentCue.Contact : AncientEquipmentCue.Sweep);
-                if (attack == Attack.Mirror) game.Burst(ray[bounceCount+1], Gold, 5);
+                if (attack == Attack.Mirror)
+                {
+                    StrikeCue?.Invoke(ray[0], (ray[1]-ray[0]).normalized, .68f);
+                    for (int i=1; i<=bounceCount; i++)
+                        ContactCue?.Invoke(ray[i], (ray[i+1]-ray[i]).normalized, .52f);
+                    game.Burst(ray[bounceCount+1], Gold, 5);
+                }
+                else if (attack == Attack.Laser)
+                    StrikeCue?.Invoke(LaserPort(), LaserDirection, .92f);
             }
             if (attack == Attack.Club && !secondSlash && time >= SlashB)
             {
@@ -277,6 +317,8 @@ namespace Plugin.AncientCivilization
         {
             lit = count;
             arena?.SetMirrors(firstMirror,count);
+            // 들어오는 쪽 면만 밝힌다. 두 번째 거울은 실제로 켜지기 전까지 숨겨진다.
+            TellCue?.Invoke(ray[count], (ray[count-1]-ray[count]).normalized, .46f);
             game.Sound(AncientEquipmentCue.Lens);
         }
 
@@ -285,18 +327,27 @@ namespace Plugin.AncientCivilization
             // 고정 전에는 밝혀진 거울까지만 선을 그리고 최종 반사 방향은 얇게 추적한다.
             int points = bounceCount+2;
             int shown = !locked && lit < bounceCount ? lit+1 : points;
-            Path(body,ray,shown, fired ? RayWidth : locked ? .055f : .022f,
-                fired ? Color.white : locked ? Gold : new Color(.39f,.79f,.87f,.72f));
-            if (locked) Path(glow,ray,points,fired ? .31f : .14f,
-                fired ? new Color(1,.63f,.17f,.59f) : new Color(.91f,.56f,.16f,.28f));
+            Color pathColor = fired ? Color.white : locked ? Gold : new Color(.82f,.68f,.87f,.76f);
+            Path(body,ray,shown, fired ? RayWidth : locked ? .064f : .036f, pathColor);
+            if (locked)
+            {
+                float flare = fired ? 1f - Mathf.InverseLerp(MirrorFire, MirrorEnd, time) : 0f;
+                Path(glow,ray,points,fired ? .24f + .18f * flare : .15f,
+                    fired ? new Color(1f,.58f,.19f,.74f) : new Color(.91f,.56f,.16f,.4f));
+            }
             for (int i=1; i<=lit; i++)
             {
                 Vector2 a = (ray[i]-ray[i-1]).normalized;
                 Vector2 b = (ray[i+1]-ray[i]).normalized;
-                Vector2 tangent = (a+b).normalized;
-                if (tangent.sqrMagnitude < .01f) tangent = new Vector2(-a.y,a.x);
-                Segment(marks[i-1],ray[i]-tangent*.50f,ray[i]+tangent*.50f,locked ? .12f : .075f,
-                    fired ? Color.white : i == 1 ? Ice : Gold);
+                // 굴절점에서 현재 점등된 입사·출사 두 가지만 찍는다.
+                // 두 번째 거울의 위치는 그 거울이 실제로 켜질 때까지 드러내지 않는다.
+                var mark = marks[i-1];
+                float arm = locked ? .37f : .52f;
+                bool outgoing = i < lit || lit == bounceCount;
+                Stroke(mark, outgoing ? 3 : 2, fired ? .12f : .085f, pathColor);
+                mark.SetPosition(0,ray[i]-a*arm);
+                mark.SetPosition(1,ray[i]);
+                if (outgoing) mark.SetPosition(2,ray[i]+b*arm);
             }
         }
 
@@ -347,6 +398,8 @@ namespace Plugin.AncientCivilization
         // 낮은 통로로 피하거나, 광선이 이미 지나간 높이로 건널 수 있다.
         float LaserLeft => safeLane == 0 ? Mathf.Lerp(left,right,.22f) : left;
         float LaserRight => safeLane == 2 ? Mathf.Lerp(left,right,.78f) : right;
+        Vector2 LaserDirection => laserFromRight ? Vector2.left : Vector2.right;
+        Vector2 LaserPort() => new Vector2(laserFromRight ? LaserRight : LaserLeft, SweepY(LaserTell));
         float SweepY(float t)
         {
             float p = Mathf.SmoothStep(0,1,Mathf.InverseLerp(LaserTell,LaserTell+LaserTime,t));
@@ -358,19 +411,78 @@ namespace Plugin.AncientCivilization
         {
             float y = SweepY(time);
             Vector2 a = new Vector2(LaserLeft,y), b = new Vector2(LaserRight,y);
-            Segment(body,a,b,fired ? LaserWidth : .23f,fired ? Ruby : new Color(.98f,.23f,.35f,.85f));
-            Segment(glow,a,b,fired ? 1.38f : .47f,new Color(.98f,.12f,.24f,fired ? .34f : .18f));
-            Segment(core,a,b,fired ? .24f : .045f,fired ? Color.white : new Color(1f,.79f,.62f));
+            float charge = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(time/LaserTell));
+            Segment(body,a,b,LaserWidth,fired ? Ruby : new Color(.73f,.11f,.25f,.13f + charge * .15f));
+            Segment(glow,a,b,fired ? 1.47f : .64f,new Color(.98f,.12f,.24f,fired ? .52f : .18f));
+            Segment(core,a,b,fired ? .29f : .044f,fired ? Color.white : new Color(1f,.72f,.58f));
             float dir = descending ? -1 : 1;
-            for (int i=0; i<marks.Length; i++)
+            if (!fired)
             {
-                float x = Mathf.Lerp(a.x,b.x,(i+.5f)/marks.Length);
-                float h = y+dir*(.62f+.11f*Mathf.Sin(time*9));
-                var arrow = marks[i];
-                Stroke(arrow,3,.085f,fired ? Color.white : Ruby);
-                arrow.SetPosition(0,new Vector2(x-.34f,h-dir*.28f));
-                arrow.SetPosition(1,new Vector2(x,h));
-                arrow.SetPosition(2,new Vector2(x+.34f,h-dir*.28f));
+                // 좌우 안전 레인을 침범하지 않고 실제 광선 폭의 양 경계를 표시한다.
+                Vector2 half = Vector2.up*(LaserWidth*.5f);
+                var edge = new Color(1f,.41f,.53f,.58f + .34f*charge);
+                Segment(marks[0],a+half,b+half,.035f,edge);
+                Segment(marks[1],a-half,b-half,.035f,edge);
+                float x = (a.x+b.x)*.5f;
+                float tip = y + dir*(.66f + .16f*charge);
+                Stroke(marks[2],3,.085f,edge);
+                marks[2].SetPosition(0,new Vector2(x-.34f,tip-dir*.25f));
+                marks[2].SetPosition(1,new Vector2(x,tip));
+                marks[2].SetPosition(2,new Vector2(x+.34f,tip-dir*.25f));
+                return;
+            }
+            marks[2].enabled = false;
+            DrawCaustics(y);
+            // 두 가닥 모두 실제 판정 안쪽에 가두어 다음 디딤면이 읽히게 한다.
+            for (int strand=0; strand<2; strand++)
+            {
+                var line = marks[strand];
+                Stroke(line,ArcSteps+1,.036f,new Color(1f,.81f,.72f,.78f));
+                for (int i=0; i<=ArcSteps; i++)
+                {
+                    float u = (float)i/ArcSteps;
+                    float wave = Mathf.Sin(u*17f - (time-LaserTell)*12f + strand*Mathf.PI);
+                    float offset = wave * Mathf.Sin(u*Mathf.PI) * LaserWidth*.29f;
+                    line.SetPosition(i,new Vector2(Mathf.Lerp(a.x,b.x,u),y+offset));
+                }
+            }
+        }
+
+        // 두 짧은 굴절광이 실제 발사구에서 반대편으로 이동한다. 양 끝의 여백만큼 안전 레인에 들어가지 않는다.
+        void DrawCaustics(float y)
+        {
+            if (game.ReducedFeedback || !AncientVisuals.HighQuality)
+            {
+                foreach (var line in caustics) line.enabled = false;
+                return;
+            }
+            const float margin = .09f, period = .68f;
+            float span = LaserRight - LaserLeft - 2f*margin;
+            float sign = laserFromRight ? -1f : 1f;
+            float sourceX = laserFromRight ? LaserRight-margin : LaserLeft+margin;
+            for (int i=0; i<caustics.Length; i++)
+            {
+                var line = caustics[i];
+                float age = time - LaserTell - i*.27f;
+                float u = (age % period)/period;
+                float head = span*u;
+                line.enabled = age > 0f && span > 0f && head > .12f;
+                if (!line.enabled) continue;
+
+                float pulse = Mathf.Clamp01(u*11f) * Mathf.Clamp01((1f-u)*9f);
+                float length = Mathf.Min(head, i == 0 ? 2.8f : 2.15f);
+                float x = sourceX + sign*(head-length);
+                float face = i == 0 ? 1f : -1f;
+                Color color = i == 0 ? Ice : new Color(1f,.48f,.63f);
+                line.startColor = new Color(color.r,color.g,color.b,.24f*pulse);
+                line.endColor = new Color(color.r,color.g,color.b,.94f*pulse);
+                line.startWidth = .13f;
+                line.endWidth = .031f;
+                // 가장 바깥 면(.252)과 반선폭(.065)을 더해도 실제 판정 반폭(.41)보다 안쪽이다.
+                line.SetPosition(0, new Vector2(x, y+face*.095f));
+                line.SetPosition(1, new Vector2(x+sign*length*.42f, y+face*.252f));
+                line.SetPosition(2, new Vector2(x+sign*length*.65f, y+face*.197f));
+                line.SetPosition(3, new Vector2(x+sign*length, y+face*.18f));
             }
         }
 
@@ -403,6 +515,7 @@ namespace Plugin.AncientCivilization
             if (body) body.enabled = false;
             if (core) core.enabled = false;
             foreach (var line in marks) if (line) line.enabled = false;
+            foreach (var line in caustics) if (line) line.enabled = false;
         }
 
         public void Dispose()
@@ -410,6 +523,7 @@ namespace Plugin.AncientCivilization
             if (disposed) return;
             Clear();
             disposed = true;
+            optics.Dispose();
             if (root)
             {
                 root.SetActive(false);

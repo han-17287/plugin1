@@ -99,7 +99,7 @@ namespace Plugin.PlayerCore
             speakerProfile = Resources.Load<AncientFeedbackProfile>("Audio/FieldFeedback");
         }
 
-        void TuneRadio(AudioClip clip, bool musical)
+        void PlayRoomCue(AudioClip clip, bool musical)
         {
             roomSpeaker.Stop();
             roomSpeaker.volume = 0;
@@ -126,6 +126,13 @@ namespace Plugin.PlayerCore
         public void TickSpeaker(bool paused, bool muted, bool allowsMusic)
         {
             if (!roomSpeaker) return;
+            // 음소거 중의 짧은 신호는 다음에 소리를 켰을 때 뒤늦게 울리지 않게 한다.
+            if (muted && !speakerMusical)
+            {
+                if (roomSpeaker.isPlaying || speakerPaused) roomSpeaker.Stop();
+                speakerQueued = speakerPaused = false;
+                return;
+            }
             if (!paused && !speakerNear && !roomSpeaker.isPlaying)
             {
                 if (speakerPaused) roomSpeaker.Stop();
@@ -238,36 +245,94 @@ namespace Plugin.PlayerCore
             LivingVendor(11,42.3f);
         }
 
+        void BuildTowBench(float x)
+        {
+            TrainingSign("첫 정비소", x, 3.2f);
+            Use("직선 견인 학습 · 첫 정비소",x,1,() =>
+            {
+                SetFlag(BluePlugSkillKeys.Tow);
+                Say("직선 견인 해금. 플러그를 던져 꽂고 C를 누르세요.");
+            },1.30f);
+        }
+
+        void BuildSwingBench(float x)
+        {
+            TrainingSign("스윙 교정대", x, 2.4f);
+            Use("진자 스윙 학습 · 교정대",x,1,() =>
+            {
+                if(!Flag(BluePlugSkillKeys.Tow))
+                {
+                    Say("왼쪽 첫 정비소에서 직선 견인을 먼저 배우세요.");
+                    return;
+                }
+                SetFlag(BluePlugSkillKeys.Swing);
+                Say("진자 스윙 해금. 꽂은 뒤 V로 매달리고 A/D로 가속, 다시 V로 놓습니다.");
+            },1.30f);
+        }
+
+        void TrainingSign(string label, float x, float width)
+        {
+            Box(label+" 안내판",x,2.30f,width,.66f,new Color(.11f,.22f,.30f),false,-2);
+            Box(label+" 파란 유도등",x,2.59f,width-.06f,.06f,new Color(.23f,.78f,1),false,-1);
+            Sign(label,x,3.05f);
+        }
+
         void BuildLaundryAlley()
         {
             LivingWall(0,0,10,0,1.35f); LivingWall(0,1,31,0,1.5f);
-            Deck("공동 옥상",8,4.4f,10); Hook("권취기 시작",8,6.1f);
-            Deck("세탁소 비밀 창턱",26,4.95f,2.25f); LivingWindow("음악이 새는 창문",26,4.95f,true);
-            Deck("지붕 본길",36.8f,5.2f,9); Hook("건너편 홈통",37,7.55f);
-            var hook=Hook("긴 빨래 리프트 고리",24,6.35f);
-            var laundry=new GameObject[4];
-            for (int i=0; i<4; i++)
-                laundry[i]=Box("바람에 마르는 빨래",22+i*.75f,7.56f,.59f,1.05f,i%2==0 ? Tile : ReedGold,false,-2);
-            Box("빨래 철선",22,8.5f,17,.09f,Tile,false,-3);
-            float brake=0; bool spent=false;
-            Step(dt=>
+            var blue = new Color(.23f, .78f, 1f);
+            var housing = new Color(.11f, .22f, .30f);
+            BuildTowBench(7.4f);
+            BuildSwingBench(12.4f);
+
+            Deck("출발대 계단 1",10.2f,1.10f,2.30f);
+            Deck("출발대 계단 2",12.5f,2.15f,2.20f);
+            Deck("출발대 계단 3",14.1f,3.25f,2.50f);
+            Deck("플러그 출발대",15.55f,4.30f,2.20f);
+            Box("출발대 청색 눈금",16.36f,4.31f,.42f,.075f,blue,false,6);
+            Sign("좌클릭을 눌러 회전, 놓아 투척   C 옥상 견인",13.1f,6.1f);
+            Sign("오른쪽 끝을 살짝 벗어나 V  ·  창문 앞에서 V로 놓고 A로 제동",13.1f,5.60f);
+
+            Deck("견인 도착 · 세탁소 옥상",26.5f,9.15f,10.2f);
+            Deck("지붕 본길",37.4f,5.20f,10.1f);
+            Box("옥상 배선 덕트",26.5f,8.67f,10.10f,.18f,housing,false,-2);
+            Box("옥상 청색 유도선",26.5f,9.13f,10.08f,.055f,blue,false,5);
+            Sign("옥상 정비로",27.1f,10.8f);
+            var socketObject = new GameObject("파란 플러그 전용 콘센트");
+            socketObject.transform.SetParent(transform,false);
+            socketObject.transform.localPosition = new Vector2(23.5f,9.25f);
+            var socket = socketObject.AddComponent<BluePlugSocket>();
+            socket.Configure(new Vector2(0,.95f),BluePlugSkill.Tow | BluePlugSkill.Swing,new Vector2(.55f,.83f));
+            RegisterBluePlugSocket(socket);
+
+            var shutter = Box("시험용 상단 셔터",20.15f,7.45f,.48f,2.70f,housing,true,6);
+            var shutterRail = Box("상단 셔터 청색 띠",20.15f,7.53f,.10f,2.5f,blue,false,7);
+            shutterRail.transform.SetParent(shutter.transform,true);
+            shutter.SetActive(false);
+            Use("상단 셔터 열기·닫기 · 경로 시험",16.30f,5.2f,() =>
             {
-                float x=25.6f+Mathf.Sin(Elapsed*1.15f)*2.6f;
-                Place(hook,x,6.5f);
-                for(int i=0;i<laundry.Length;i++)Place(laundry[i],x-1.65f+i*.75f,7.87f+.12f*Mathf.Sin(Elapsed*3+i));
-                if(Arrived(hook) && !spent) {brake=.49f;spent=true;Push(15,3.6f);}
-                if(!Near(x,6.5f,3.5f))spent=false;
-                if(brake<=0)return;
-                brake-=dt;
-                if(Axis<-.2f && Mathf.Abs(Hero.x-26)<3.45f)
-                {
-                    Push(Mathf.Clamp((26-Hero.x)*3.5f,-5,5),-2.8f);
-                    if(Mathf.Abs(Hero.x-26)<.65f)brake=0;
-                }
+                bool closed = !shutter.activeSelf;
+                shutter.SetActive(closed);
+                Say(closed ? "셔터가 투척과 견인 경로를 막습니다." : "셔터가 열렸습니다.");
+            },1.30f);
+
+            Box("빨래 철선",10.4f,8.38f,9.8f,.062f,Tile,false,-3);
+            for(int i=0;i<6;i++)
+                Box("바람에 마르는 빨래",6.8f+i*1.42f,7.90f,.80f,.68f+(i%3)*.14f,i%2==0 ? Tile : ReedGold,false,-2);
+            Deck("스윙 도착 · 수선집 창턱",31.5f,3.50f,5.80f);
+            for(int tick=0;tick<3;tick++)
+                Box("스윙 이탈 청색 눈금",28.74f,3.70f+tick*.19f,.10f,.115f,blue,false,5);
+            Sign("V 놓기",27.90f,4.70f);
+            LivingCanvas("수선집 차양",31.5f,6.07f,5.0f);
+            LivingWindow("수선집 불 켜진 창문",31.5f,3.50f,true);
+            Sign("수선집 창문",31.5f,6.62f);
+            Sign("아래 골목 · 세탁소와 야시장",20.5f,1.70f);
+            LivingWindow("세탁소 반지하",24.6f,0,true); LivingAccordion(25.8f,2.2f);
+            Use("세탁소 창을 열고 안으로 들어가기",31.5f,4.40f,() =>
+            {
+                Warp(24.6f,1.0f);
+                Say("수선집 창문 아래 계단을 내려오자 물받이 옆에서 손풍금 소리가 샌다.");
             });
-            LivingSteps("아랫골목 건조대",18,1.45f,3,2.65f,1.24f);
-            LivingWindow("세탁소 반지하",24.6f,0,true);LivingAccordion(25.8f,2.2f);
-            Use("세탁소 창을 열고 안으로 들어가기",26,5.87f,()=>{Warp(24.6f,1.0f);Say("물받이 밑 반쯤 열린 창에서 손풍금 소리가 샌다.");});
             Use("세탁소 분실물 확인",24.2f,1,()=>
             {
                 LivingUnlock("living.marketLaundry",12);
@@ -276,7 +341,6 @@ namespace Plugin.PlayerCore
             });
             Portal("세탁소 뒷문 · 야시장",28.7f,1,11,()=>Flag("living.marketLaundry"));
             Portal("야경 세탁실 정비 승강기",34,1,40,()=>Flag("living.laundryLift"));
-            Sign("긴 고리 뒤 A로 제동 / 그대로 옥상행",9,5.75f);
             LivingVendor(12,40.7f);
         }
 

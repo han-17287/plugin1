@@ -4,6 +4,49 @@ class RulesChecks
 {
     static int checks;
     static void Check(bool condition,string name){if(!condition)throw new Exception(name);checks++;}
+    static void ClockRainChecks()
+    {
+        float left = AncientCityLayout.BossArenaLeft(4, true);
+        float right = AncientCityLayout.BossArenaRight(4, true);
+        float width = right - left;
+        int lanes = AncientClockRules.RainLaneCount(width);
+        int waves = AncientClockRules.RainWaves;
+        float radius = AncientClockRules.SpearHitRadius;
+        Check(lanes == 8 && waves == 7, "Real secretary arena releases eight hands in all seven volleys");
+        Check(AncientClockRules.SpearCapacity(lanes) >= lanes * waves + 5, "Stuck rain and five vector spears can coexist without stealing live shots");
+        Check(AncientClockRules.RainFirstTell >= .9f && AncientClockRules.RainBeat >= .65f, "Every rain bank gets a readable warning");
+        Check(Math.Abs((waves - 1) * AncientClockRules.RainBeat + AncientClockRules.RainAfterRelease - 4.2f) < .001f, "Full rain keeps its original active window");
+
+        var columns = new float[waves, lanes];
+        for (int wave = 0; wave < waves; wave++)
+        {
+            int hands = 0, quarters = 0;
+            for (int lane = 0; lane < lanes; lane++)
+            {
+                float x = AncientClockRules.RainX(left, right, lanes, wave, lane);
+                columns[wave, lane] = x;
+                Check(x > left && x < right, "Rain falls inside the gates");
+                float relative = AncientClockRules.RainX(0, width, lanes, wave, lane);
+                Check(Math.Abs((x - left) - relative) < .005f, "Each landing is fixed in arena coordinates");
+                if (lane > 0)
+                    Check(x - columns[wave, lane - 1] - 2 * radius >= 2.65f, "Every pair of live lanes leaves standing room");
+                int hand = AncientClockRules.RainHand(wave, lane);
+                hands |= 1 << hand;
+                quarters |= 1 << (int)(4 * (x - left) / width);
+            }
+            Check(quarters == 15 && hands == 7, "Every volley reaches all four quarters with all three hand types");
+        }
+        // 양 끝 벽부터 중앙까지 일곱 소절 내내 가만히 서 있을 수 있는 사각지대가 없어야 한다.
+        for (int eighth = 0; eighth <= (int)width * 8; eighth++)
+        {
+            float standingX = left + eighth * .125f;
+            bool reaches = false;
+            foreach (float x in columns)
+                if (Math.Abs(x - standingX) <= radius) reaches = true;
+            Check(reaches, "Rain visits every reachable floor sample over one cycle");
+        }
+    }
+
     static void Main()
     {
         Check(AncientRules.ResolveLeftRelease(.1f,0)==LeftReleaseAction.Blade,"Tap is a blade even without energy");
@@ -530,6 +573,7 @@ class RulesChecks
         }
         Check(AncientClockRules.SpinSeconds==3,"Clock force cast lasts exactly three seconds");
         Check(!AncientClockRules.ThirdVectorShot(0)&&!AncientClockRules.ThirdVectorShot(1)&&AncientClockRules.ThirdVectorShot(2),"Only third vector cast adds both hand directions");
+        ClockRainChecks();
         Check(!AncientClockRules.BroadHit(0,-5,11),"Directly beneath secretary is safe during broad clock sweep");
         Check(!AncientClockRules.BroadHit(1.1f,-5,11),"Safe lane includes character-width ground margin");
         Check(AncientClockRules.BroadHit(2,-5,11),"Moving outside underfoot safe lane enters broad attack");

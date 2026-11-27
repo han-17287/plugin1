@@ -168,6 +168,58 @@ namespace Plugin.AncientCivilization
             new Vector2(-0.185344828f,0.198275862f),
             new Vector2(-0.616379310f,0.232758621f),
         };
+        // 각 자세의 기계 손목 단자와 등허리/보조 손의 케이블 감개. 기준은 부츠 피벗, 단위는 월드이다.
+        static readonly Vector2[] Hilts={
+            new Vector2(-0.361f,0.900f), new Vector2(-0.506f,0.900f), new Vector2(-0.083f,1.522f), new Vector2(-0.028f,2.022f),
+            new Vector2(-0.161f,2.122f), new Vector2(0.550f,1.678f), new Vector2(0.728f,1.067f), new Vector2(0.561f,0.689f),
+            new Vector2(0.483f,0.689f), new Vector2(0.328f,0.467f), new Vector2(0.328f,0.456f), new Vector2(0.350f,0.578f),
+            new Vector2(0.317f,0.656f), new Vector2(0.183f,0.700f), new Vector2(0.206f,0.722f), new Vector2(-0.206f,0.811f),
+            new Vector2(-0.179f,0.950f), new Vector2(-0.371f,1.042f), new Vector2(-0.396f,1.092f), new Vector2(-0.213f,1.033f),
+            new Vector2(0.154f,1.067f), new Vector2(0.454f,1.008f), new Vector2(0.629f,1.092f), new Vector2(0.646f,1.183f),
+            new Vector2(0.663f,1.242f), new Vector2(0.546f,1.208f), new Vector2(0.454f,1.075f), new Vector2(0.371f,0.983f),
+            new Vector2(0.229f,0.908f), new Vector2(-0.004f,0.917f), new Vector2(-0.279f,0.942f), new Vector2(-0.354f,0.942f),
+            new Vector2(-0.228f,0.862f), new Vector2(-0.470f,1.052f), new Vector2(-0.487f,1.103f), new Vector2(-0.013f,1.871f),
+            new Vector2(0.073f,2.112f), new Vector2(0.366f,1.966f), new Vector2(0.944f,1.276f), new Vector2(0.953f,0.940f),
+            new Vector2(0.909f,0.810f), new Vector2(0.720f,0.698f), new Vector2(0.582f,0.647f), new Vector2(0.220f,0.836f),
+            new Vector2(0.151f,0.914f), new Vector2(-0.047f,0.905f), new Vector2(-0.194f,0.914f), new Vector2(-0.409f,0.948f),
+        };
+        static readonly Vector2[] Reels={
+            new Vector2(0.283f,0.944f), new Vector2(0.306f,1.044f), new Vector2(0.394f,1.156f), new Vector2(0.328f,1.000f),
+            new Vector2(0.283f,1.078f), new Vector2(0.294f,1.011f), new Vector2(0.039f,0.900f), new Vector2(0.072f,0.900f),
+            new Vector2(-0.028f,0.911f), new Vector2(-0.161f,0.822f), new Vector2(-0.194f,0.756f), new Vector2(-0.150f,0.878f),
+            new Vector2(-0.139f,0.922f), new Vector2(0.383f,1.000f), new Vector2(0.272f,1.022f), new Vector2(0.328f,1.056f),
+            new Vector2(0.388f,1.000f), new Vector2(0.421f,1.150f), new Vector2(0.387f,1.283f), new Vector2(0.287f,1.133f),
+            new Vector2(0.437f,0.992f), new Vector2(0.137f,1.058f), new Vector2(0.129f,1.042f), new Vector2(-0.071f,0.958f),
+            new Vector2(-0.054f,0.992f), new Vector2(-0.046f,1.042f), new Vector2(0.012f,1.033f), new Vector2(0.137f,1.000f),
+            new Vector2(0.013f,1.092f), new Vector2(0.296f,1.092f), new Vector2(0.262f,1.108f), new Vector2(0.237f,1.042f),
+            new Vector2(0.358f,0.931f), new Vector2(0.341f,1.164f), new Vector2(0.427f,1.069f), new Vector2(0.470f,1.103f),
+            new Vector2(0.573f,1.138f), new Vector2(0.591f,1.060f), new Vector2(0.254f,1.052f), new Vector2(0.194f,0.974f),
+            new Vector2(0.272f,1.000f), new Vector2(0.056f,0.983f), new Vector2(-0.013f,0.862f), new Vector2(0.384f,1.060f),
+            new Vector2(0.358f,1.052f), new Vector2(0.323f,1.069f), new Vector2(0.228f,1.060f), new Vector2(0.116f,1.043f),
+        };
+        public static Vector2 HiltLocal(int step,int frame) => Hilts[Index(step,frame)];
+        public static Vector2 ReelLocal(int step,int frame) => Reels[Index(step,frame)];
+        public const int FieldSheetWidth = 1216;
+        static readonly Rect[] FieldRects = PackField();
+
+        static Rect[] PackField()
+        {
+            // 원본 투명 여백만 덜어 낸다. 각 이미지 크기·발 피벗·단위당 픽셀은 그대로이다.
+            var packed = new Rect[Rectangles.Length];
+            float x=2, y=2, rowHeight=0;
+            for (int i=0; i<packed.Length; i++)
+            {
+                Rect frame=Rectangles[i];
+                if (x+frame.width+2>FieldSheetWidth)
+                { x=2; y+=rowHeight+2; rowHeight=0; }
+                packed[i]=new Rect(x,y,frame.width,frame.height);
+                x+=frame.width+2;
+                rowHeight=Mathf.Max(rowHeight,frame.height);
+            }
+            return packed;
+        }
+
+        public static Rect FieldBounds(int step,int frame) => FieldRects[Index(step,frame)];
         static int Index(int step,int frame){return Mathf.Clamp(step-1,0,2)*FrameCount+Mathf.Clamp(frame,0,FrameCount-1);}
         public static Vector2 TipLocal(int step,int frame){return Tips[Index(step,frame)];}
         public static string Sheet(int step){return Sheets[Mathf.Clamp(step-1,0,2)];}

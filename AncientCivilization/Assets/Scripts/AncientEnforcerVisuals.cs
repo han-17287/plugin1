@@ -5,7 +5,7 @@ using Object = UnityEngine.Object;
 namespace Plugin.AncientCivilization
 {
     // 판정과 별개로 조형·배리어·컷신에 쓰이는 2D 표현을 소유한다.
-    public sealed class AncientEnforcerVisuals : IDisposable
+    public sealed partial class AncientEnforcerVisuals : IDisposable
     {
         public static readonly Color ParticleColor = new Color(.40f, .80f, 1f);
         static readonly Color Light = new Color(.72f, .94f, 1f);
@@ -292,15 +292,59 @@ namespace Plugin.AncientCivilization
 
         // 도감 원화의 왼쪽 위를 기준으로 자른다. 장비와 건틀릿이 벌어져도 두 발 사이의 피벗을 유지한다.
         static readonly Rect[] PoseCells = {
-            new Rect(141, 0, 194, 467), new Rect(625, 0, 222, 466), new Rect(1096, 3, 352, 463),
-            new Rect(89, 561, 281, 444), new Rect(594, 486, 266, 503), new Rect(1066, 679, 369, 331)
+            new Rect(140, 4, 258, 501), new Rect(647, 5, 257, 500), new Rect(505, 515, 464, 502),
+            new Rect(135, 517, 328, 499), new Rect(1057, 4, 339, 501), new Rect(1102, 587, 299, 429)
         };
         static readonly Vector2[] PoseFeet = {
-            new Vector2(243, 460), new Vector2(754, 459), new Vector2(1249, 459),
-            new Vector2(225, 998), new Vector2(751, 982), new Vector2(1265, 1003)
+            new Vector2(256, 499), new Vector2(768, 499), new Vector2(768, 1011),
+            new Vector2(256, 1010), new Vector2(1280, 499), new Vector2(1280, 1010)
         };
-        static readonly float[] PosePixelsPerUnit = { 133, 132, 132, 137, 145, 135 };
+        static readonly float[] PosePixelsPerUnit = { 195, 195, 195, 195, 195, 195 };
+        // 원화 좌상단 픽셀 좌표. 몸체의 뒤집기와 후방 축척을 그대로 따르는 컷신 기준점이다.
+        static readonly Vector2[] LensPixels = {
+            new Vector2(263, 43), new Vector2(775, 43), new Vector2(778, 555),
+            new Vector2(264, 555), new Vector2(1290, 42), new Vector2(1347, 625)
+        };
+        static readonly Vector2[] DossierPixels = {
+            new Vector2(363.1f, 175.1f), new Vector2(867.5f, 47.6f), new Vector2(635.7f, 689.3f),
+            new Vector2(427.8f, 556.1f), new Vector2(1085.7f, 57.8f), new Vector2(1365.8f, 687.5f)
+        };
+        // 문서의 가로/세로 축을 따르는 읽기 선. 투영된 대각선 테두리 밖으로 새지 않는다.
+        static readonly Vector4[] DossierAxes = {
+            new Vector4(.90f, -.17f, -.14f, .79f), new Vector4(.97f, -.09f, -.12f, .90f),
+            new Vector4(.91f, -.17f, -.16f, .83f), new Vector4(.90f, -.12f, -.15f, .78f),
+            new Vector4(.85f, -.17f, .02f, .78f), new Vector4(.93f, -.15f, -.14f, .82f)
+        };
+        static Sprite scanLine;
+
+        public static Vector2 LensWorld(SpriteRenderer body, int pose) =>
+            SourcePoint(body, pose, LensPixels, AncientEnforcerBridgeAtlas.Lenses);
+        public static Vector2 DossierWorld(SpriteRenderer body, int pose) =>
+            SourcePoint(body, pose, DossierPixels, AncientEnforcerBridgeAtlas.Dossiers);
+
+        static Vector2 SourcePoint(SpriteRenderer body, int pose, Vector2[] points, Vector2[] bridgePoints)
+        {
+            if (!body) return Vector2.zero;
+            pose = Mathf.Clamp(pose, 0, points.Length - 1);
+            int bridge = BridgeFrameOf(body.sprite);
+            Vector2 offset = bridge >= 0
+                ? (bridgePoints[bridge] - AncientEnforcerBridgeAtlas.Feet[bridge]) / BridgePixelsPerUnit
+                : (points[pose] - PoseFeet[pose]) / PosePixelsPerUnit[pose];
+            return body.transform.TransformPoint(new Vector3(body.flipX ? -offset.x : offset.x,
+                body.flipY ? offset.y : -offset.y, 0));
+        }
+
         static readonly Sprite[] Poses = new Sprite[6];
+        // 발광 부분만 조밀하게 패킹하고 본체 원화 좌표로 되돌린다.
+        static readonly Rect[] OpticsCells = {
+            new Rect(5, 5, 73, 189), new Rect(86, 5, 46, 89), new Rect(140, 5, 140, 63),
+            new Rect(288, 5, 115, 83), new Rect(5, 202, 147, 91), new Rect(160, 202, 145, 168)
+        };
+        static readonly Vector2[] OpticsSourceCenters = {
+            new Vector2(232.5f, 133.5f), new Vector2(791, 83.5f), new Vector2(841, 582.5f),
+            new Vector2(314.5f, 592.5f), new Vector2(1222.5f, 83.5f), new Vector2(1280.5f, 705)
+        };
+        static readonly Sprite[] Optics = new Sprite[6];
         static readonly Sprite[] Objects = new Sprite[5];
         static readonly Color32 Ink = new Color32(11, 19, 29, 255);
         static readonly Color32 Navy = new Color32(29, 47, 65, 255);
@@ -316,9 +360,72 @@ namespace Plugin.AncientCivilization
             pose = Mathf.Clamp(pose, 0, Poses.Length - 1);
             if (Poses[pose]) return Poses[pose];
             Rect cell = PoseCells[pose];
-            Vector2 root = PoseFeet[pose];
-            Vector2 pivot = new Vector2((root.x - cell.x) / cell.width, (cell.yMax - root.y) / cell.height);
-            return Poses[pose] = AncientArt.Slice("RecordEnforcer", "기록 집행관 자세 " + pose, cell, PosePixelsPerUnit[pose], pivot, false);
+            Vector2 foot = PoseFeet[pose];
+            Vector2 pivot = new Vector2((foot.x - cell.x) / cell.width, (cell.yMax - foot.y) / cell.height);
+            return Poses[pose] = AncientEnforcerCostume.Articulate(AncientArt.Slice("RecordEnforcer",
+                "기록 집행관 자세 " + pose, cell, PosePixelsPerUnit[pose], pivot, false));
+        }
+
+        // 렌즈와 압인 장갑의 표시등만 별도 피벗 정합 레이어로 맥동한다.
+        // 컷신/후방 사격의 뒤집기, 축척, 투명도는 몸체와 함께 변한다.
+        public static void PresentOptics(SpriteRenderer body, ref SpriteRenderer lights, ref SpriteRenderer scan, int pose)
+        {
+            if (!lights)
+            {
+                lights = new GameObject("단안 렌즈와 입자 압인기 표시등").AddComponent<SpriteRenderer>();
+                lights.transform.SetParent(body.transform, false);
+                scan = new GameObject("홀로그램 기록 읽기 선").AddComponent<SpriteRenderer>();
+                scan.transform.SetParent(body.transform, false);
+                if (!scanLine) scanLine = AncientEnforcerCostume.Articulate(AncientArt.Slice("RecordEnforcerOptics",
+                    "집행관 기록 읽기 선", new Rect(408, 224, 64, 8), 64, new Vector2(.5f, .5f), false));
+                scan.sprite = scanLine;
+            }
+
+            pose = Mathf.Clamp(pose, 0, Optics.Length - 1);
+            int bridge = BridgeFrameOf(body.sprite);
+            float pixelsPerUnit = PosePixelsPerUnit[pose];
+            Vector2 foot = PoseFeet[pose], lightsCenter = OpticsSourceCenters[pose], dossier = DossierPixels[pose];
+            Vector4 axes = DossierAxes[pose];
+            if (bridge >= 0)
+            {
+                pixelsPerUnit = BridgePixelsPerUnit;
+                foot = AncientEnforcerBridgeAtlas.Feet[bridge];
+                lightsCenter = AncientEnforcerBridgeAtlas.OpticCenters[bridge];
+                dossier = AncientEnforcerBridgeAtlas.Dossiers[bridge];
+                axes = AncientEnforcerBridgeAtlas.DossierAxes[bridge];
+                lights.sprite = BridgeOpticsSprite(bridge);
+            }
+            else
+            {
+                if (!Optics[pose]) Optics[pose] = AncientEnforcerCostume.Articulate(AncientArt.Slice("RecordEnforcerOptics",
+                    "집행관 광학 장비 " + pose, OpticsCells[pose], pixelsPerUnit, new Vector2(.5f, .5f), false));
+                lights.sprite = Optics[pose];
+            }
+            Vector2 offset = (lightsCenter - foot) / pixelsPerUnit;
+            lights.transform.localPosition = new Vector3(body.flipX ? -offset.x : offset.x, body.flipY ? offset.y : -offset.y);
+            lights.enabled = body.enabled && body.color.a > .005f;
+            lights.flipX = body.flipX;
+            lights.flipY = body.flipY;
+            lights.sortingLayerID = body.sortingLayerID;
+            lights.sortingOrder = body.sortingOrder + 1;
+            float wave = .5f + .5f * Mathf.Sin(Time.time * 4.25f);
+            lights.color = new Color(1f, 1f, 1f, body.color.a * (.12f + .76f * wave * wave));
+
+            float step = Mathf.Repeat(Time.time * .48f, 1f);
+            Vector2 center = dossier + new Vector2(axes.z, axes.w) * Mathf.Lerp(-18f, 16f, step);
+            Vector2 scanOffset = (center - foot) / pixelsPerUnit;
+            float flipX = body.flipX ? -1 : 1;
+            float flipY = body.flipY ? 1 : -1;
+            scan.transform.localPosition = new Vector3(flipX * scanOffset.x, flipY * scanOffset.y, 0);
+            Vector2 along = new Vector2(axes.x * flipX, axes.y * flipY);
+            scan.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(along.y, along.x) * Mathf.Rad2Deg);
+            scan.transform.localScale = new Vector3(42f * along.magnitude / pixelsPerUnit,
+                25f / pixelsPerUnit, 1);
+            float visible = Mathf.Clamp01(Mathf.Min(step, 1f - step) * 9f);
+            scan.color = new Color(1, 1, 1, visible * body.color.a * .63f);
+            scan.enabled = lights.enabled;
+            scan.sortingLayerID = lights.sortingLayerID;
+            scan.sortingOrder = lights.sortingOrder;
         }
 
         // 컷신과 패턴에 쓰이는 물체는 같은 강철·서류 팔레트를 공유한다.

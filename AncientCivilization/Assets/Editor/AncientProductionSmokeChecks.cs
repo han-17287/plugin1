@@ -203,7 +203,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             int cores=game.Cores,points=story.ResidencePoints,credits=game.credits,score=game.score;
             hero.TravelTo(new Vector2(AncientProductionLayout.StockX,2.5f));Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);
             Assert(!hero.IsOnGround&&story.TryProductionStock()&&!story.DialogueOpen&&story.Stage==stage,"An actual airborne stock-terminal request is handled without starting the report or breach");
-            hero.TravelTo(new Vector2(AncientProductionLayout.StockX,1.06f));hero.SetProductionAttackMode(false);Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);
+            hero.TravelTo(new Vector2(AncientProductionLayout.StockX,1.06f));hero.PrepareProductionEquipment(false);Physics2D.SyncTransforms();Field(typeof(AncientHero),"groundSampleTick").SetValue(hero,-1f);
             Assert(hero.IsOnGround,"The wire-safety probe starts with the actual capsule resting at the stock-room floor");
             Call(hero,"AttachWire",new Vector2(AncientProductionLayout.StockX+1.5f,10),null,Vector2.down);
             Assert(hero.Wired&&hero.IsOnGround&&story.TryProductionStock()&&!story.DialogueOpen&&story.Stage==stage,"A live ceiling wire blocks the stock report even during its still-grounded launch frame");
@@ -306,7 +306,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 hero.enabled=false;MoveHero(hero,new Vector2(AncientProductionLayout.ChaseStart+6,.84f));
                 Field(typeof(AncientHero),"axis").SetValue(hero,-1f);body.linearVelocity=Vector2.zero;Call(hero,"FixedUpdate");
                 Assert(hero.bike&&body.simulated&&hero.GetComponent<BoxCollider2D>().enabled&&!hero.GetComponent<CapsuleCollider2D>().enabled,"The initial automatic mount uses the real motorcycle body and collider");
-                Assert(!hero.AttackMode&&hero.ZipMode,"The actual automatic mount starts in straight-wire mode without retaining a prior attack or swing mode");
+                Assert(!hero.AttackMode&&hero.ZipMode,"자동 탑승 시 플러그를 사용할 수 있고 이전 장착·스윙 상태가 남지 않는다");
                 Assert(Near(body.linearVelocity.x,director.DriveSpeed)&&body.linearVelocity.x>0,"Bike physics advances without a held forward key and overrides a stale reverse axis");
                 Field(typeof(AncientHero),"jumpBufferedUntil").SetValue(hero,Time.time+AncientMovementRules.BufferSeconds);
                 Field(typeof(AncientHero),"jumpHeld").SetValue(hero,true);Field(typeof(AncientHero),"cutJump").SetValue(hero,false);Call(hero,"FixedUpdate");
@@ -445,7 +445,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                         {sawPending=true;Assert(hero.Wired,"The final planned zip step keeps its wire until physics has actually moved the capsule");}
                         Physics2D.SyncTransforms();Physics2D.Simulate(dt);Step(director,dt);
                     }
-                    Assert(sawPending&&director.DeckCombat&&!hero.bike&&hero.AttackMode&&!hero.Wired,"Actual capsule casts, moving-truck physics and completed-step release deliver the "+gap+"m probe to deck combat");
+                    Assert(sawPending&&director.DeckCombat&&!hero.bike&&!hero.AttackMode&&!hero.Wired&&hero.Loadout&&hero.SummonParticles>=hero.Loadout.Data.summonCost,"Actual capsule casts, moving-truck physics and completed-step release deliver the "+gap+"m probe to deck combat with a funded summon");
                     Assert(frames*dt<2&&!(bool)Field(typeof(AncientHero),"wireFinishPending").GetValue(hero),"The "+gap+"m boarding finishes before any age fallback without retaining a stale finish request");
                     Assert(Mathf.Abs(hero.transform.position.x-director.Commander.transform.position.x)<5.5f&&hero.transform.position.y>3.4f,"The moving roof remains under the physically boarded officer");
                 }
@@ -495,6 +495,8 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Field(typeof(AncientProductionPursuit),"captainPattern").SetValue(director,0);Field(typeof(AncientProductionPursuit),"captainWindup").SetValue(director,true);Field(typeof(AncientProductionPursuit),"captainFacing").SetValue(director,1f);Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,.5f);
                 Field(typeof(AncientProductionPursuit),"captainAim").SetValue(director,(Vector2)hero.transform.position-(Vector2)captain.transform.parent.position);director.TickCommander(captain);
                 Assert(art.sprite==AncientArt.ProductionCaptain(1)&&!art.flipX,"The actual transport captain selects the original melee-anticipation sprite and locked facing");
+                Assert(zone.enabled && zone.positionCount==7 && Near(zone.GetPosition(1).x-zone.GetPosition(0).x,3.8f) &&
+                    zone.GetPosition(2).y>zone.GetPosition(6).y,"Melee uses a forward-pointing deck stencil within the original footprint");
                 MoveHero(hero,new Vector2(captain.transform.position.x-2,3.76f));Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,0f);director.TickCommander(captain);director.TickCommander(captain);
                 Assert(art.sprite==AncientArt.ProductionCaptain(2)&&!art.flipX,"Resolving the real melee pattern selects its follow-through and keeps facing when the officer crosses behind");
                 Field(typeof(AncientProductionPursuit),"captainActionUntil").SetValue(director,Time.time-1);director.TickCommander(captain);
@@ -504,11 +506,20 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Field(typeof(AncientProductionPursuit),"captainPattern").SetValue(director,1);Field(typeof(AncientProductionPursuit),"captainWindup").SetValue(director,true);Field(typeof(AncientProductionPursuit),"captainFacing").SetValue(director,-1f);Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,.5f);
                 Field(typeof(AncientProductionPursuit),"captainAim").SetValue(director,(Vector2)hero.transform.position-(Vector2)captain.transform.parent.position);director.TickCommander(captain);
                 Assert(art.sprite==AncientArt.ProductionCaptain(3)&&art.flipX&&tell.enabled,"The physical plate pattern uses its distinct original throwing-anticipation pose and real trajectory tell");
+                Assert(Near(zone.GetPosition(1).x-zone.GetPosition(0).x,1.5f) && Near(zone.GetPosition(2).y,zone.GetPosition(6).y) &&
+                    Near(zone.GetPosition(3).y,zone.GetPosition(4).y),"A thrown plate has a two-sided shallow landing cradle");
                 Vector2 muzzle=tell.GetPosition(0);int shots=game.shots.Count;
                 Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,0f);director.TickCommander(captain);
                 Assert(game.shots.Count==shots+1&&((Vector2)game.shots[game.shots.Count-1].transform.position-muzzle).sqrMagnitude<.00001f,"The actual thrown plate starts exactly at the displayed arm-side trajectory origin");
                 MoveHero(hero,new Vector2(captain.transform.position.x+1,3.76f));director.TickCommander(captain);
                 Assert(art.sprite==AncientArt.ProductionCaptain(4)&&art.flipX&&!tell.enabled&&!zone.enabled,"Throw follow-through keeps its facing and clears the resolved attack tell after the officer crosses sides");
+                Field(typeof(AncientProductionPursuit),"captainPattern").SetValue(director,2);
+                Field(typeof(AncientProductionPursuit),"captainWindup").SetValue(director,true);
+                Field(typeof(AncientProductionPursuit),"captainTimer").SetValue(director,.5f);
+                director.TickCommander(captain);
+                Assert(tell.positionCount==2 && Near(tell.GetPosition(0).x,tell.GetPosition(1).x) &&
+                    Near(zone.GetPosition(1).x-zone.GetPosition(0).x,1.5f) && zone.GetPosition(3).y-zone.GetPosition(4).y>.3f,
+                    "The falling plate shows a downward notch at the locked vertical drop rather than the throw cradle");
             }
             finally
             {

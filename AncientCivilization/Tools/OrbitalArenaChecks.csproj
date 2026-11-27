@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="OrbitalArenaChecks.cs"/>
     <Compile Include="ControllerFixtures/EncounterUnityDoubles.cs"/>
+    <Compile Include="ControllerFixtures/BossCueCapture.cs"/>
     <Compile Include="ControllerFixtures/OrbitalArenaDoubles.cs"/>
     <Compile Include="../Assets/Scripts/AncientOrbitalArena.cs"/>
     <Compile Include="../Assets/Scripts/AncientOrbitalFreight.cs"/>

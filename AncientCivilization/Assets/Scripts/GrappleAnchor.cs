@@ -7,7 +7,7 @@ namespace Plugin.PlayerCore
         static readonly List<GrappleAnchor> registry=new List<GrappleAnchor>();
         public static IReadOnlyList<GrappleAnchor> Registry=>registry;
         public GrappleAnchorData data;public PlayerInputReader clockOwner;
-        bool operational=true;bool leased,spent;LineRenderer ring;Material material;bool selected;
+        bool operational=true;bool leased,spent,bluePlugVisual;LineRenderer ring;Material material;bool selected;
         public Vector2 Point=>transform.position;
         bool hasPatrolSample;
         public bool PatrolDriven {get;private set;}
@@ -50,7 +50,8 @@ namespace Plugin.PlayerCore
         {if(!leased)return;leased=false;if(arrived&&Consumable)spent=true;Refresh();}
         public virtual void ResetForRetry(){operational=true;leased=spent=selected=false;Refresh();}
         public void Highlight(bool value){if(selected==value)return;selected=value;Refresh();}
+        public void UseBluePlugVisual(){bluePlugVisual=true;Refresh();}
         void Refresh()
-        {if(!ring)return;ring.enabled=!spent;Color c=selected?Color.white:data?data.color:Color.cyan;if(!operational)c.a=.15f;ring.startColor=ring.endColor=c;ring.widthMultiplier=selected?.12f:.07f;}
+        {if(!ring)return;ring.enabled=!spent&&!bluePlugVisual;Color c=selected?Color.white:data?data.color:Color.cyan;if(!operational)c.a=.15f;ring.startColor=ring.endColor=c;ring.widthMultiplier=selected?.12f:.07f;}
     }
 }

@@ -302,14 +302,15 @@ namespace Plugin.PlayerCore
         }
 
         static AudioClip residenceBell;
-        AudioSource ResidenceBellSource(float x,float y)
+        void PrepareResidenceBell(float x,float y)
         {
             if(!residenceBell)
             {
                 const int rate=22050;
-                var pcm=new float[rate*2];
-                // 진입 프레임에 삼각함수를 반복 호출하지 않고 세 부분음을 점화식으로 합성한다.
-                double[] tones={392,781,1093}, gain={.36,.17,.07};
+                var pcm=new float[rate*9/10];
+                // 두 거주층 곡이 공유하는 E와 B로 종을 조율한다. 부분음은 E4의 1·2·3배다.
+                const double fundamental=329.6275569;
+                double[] tones={fundamental,fundamental*2,fundamental*3}, gain={.36,.15,.055};
                 for(int n=0;n<tones.Length;n++)
                 {
                     double angle=2*System.Math.PI*tones[n]/rate;
@@ -320,20 +321,23 @@ namespace Plugin.PlayerCore
                         double next=factor*cur-prev;prev=cur;cur=next;
                     }
                 }
-                double decay=System.Math.Exp(-2.9/rate), envelope=1;
-                for(int i=0;i<pcm.Length;i++){pcm[i]*=(float)(System.Math.Min(i*110.0/rate,1)*envelope);envelope*=decay;}
+                double decay=System.Math.Exp(-6.5/rate), envelope=1;
+                for(int i=0;i<pcm.Length;i++)
+                {
+                    double attack=System.Math.Min(i*110.0/rate,1);
+                    double release=System.Math.Min((pcm.Length-1-i)*32.0/rate,1);
+                    pcm[i]*=(float)(attack*envelope*release);
+                    envelope*=decay;
+                }
                 residenceBell=AudioClip.Create("거주구 종탑",pcm.Length,1,rate,false);residenceBell.SetData(pcm,0);
             }
-            var speaker=new GameObject("종탑 종소리");speaker.transform.SetParent(transform,false);
-            speaker.transform.localPosition=new Vector3(x,y,0);
-            var source=speaker.AddComponent<AudioSource>();source.playOnAwake=false;source.clip=residenceBell;source.volume=.28f;
-            return source;
+            CreateSpeaker("종탑 종소리",x,y,52,.22f);
         }
 
         void ResidenceBelfry()
         {
             var striker=Box("종탑의 종",11.2f,9.3f,1.25f,1.55f,ResBrass,false,-1);
-            var speaker=ResidenceBellSource(11.2f,8.4f);
+            PrepareResidenceBell(11.2f,8.4f);
             var first=Hook("새 그림자 속 첫 고리",15.2f,8.0f);
             var second=Hook("맞은편 창의 점검 고리",30.2f,8.7f);
             var birds=new GameObject[6];
@@ -360,7 +364,7 @@ namespace Plugin.PlayerCore
                 cycle+=dt;
                 if(cycle>=7.1f){cycle-=7.1f;called=false;}
                 bool flown=cycle<3.1f;
-                if(flown&&!called){called=true;speaker.Play();}
+                if(flown&&!called){called=true;PlayRoomCue(residenceBell,false);}
                 striker.transform.localRotation=Quaternion.Euler(0,0,flown?Mathf.Sin(cycle*10)*Mathf.Exp(-cycle*2)*13:0);
                 if(Arrived(first)) tookFirst=true;
                 if(tookFirst && ResidenceStanding(18.5f,4.35f,6.4f)) landed=true;

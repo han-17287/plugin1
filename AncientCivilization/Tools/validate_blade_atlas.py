@@ -2,6 +2,7 @@
 import math
 import re
 from PIL import Image
+from pack_field_blade import layout
 
 
 def validate_blade_atlas(root, check, png_info):
@@ -12,11 +13,22 @@ def validate_blade_atlas(root, check, png_info):
     def points(name):
         return [tuple(float(value.rstrip('f')) for value in item) for item in re.findall(r'new Vector2\((-?[0-9.]+f?),(-?[0-9.]+f?)\)', block(name))]
     pivots, tips = points('Pivots'), points('Tips')
+    hilts, reels = points('Hilts'), points('Reels')
+    check(len(hilts) == len(reels) == 48, 'each melee frame has a measured wrist and cable reel')
     sheets = re.findall(r'"([A-Za-z]+)"', block('Sheets'))
     ppu = [float(v.rstrip('f')) for v in block('Ppu').split(',')]
     check(len(rects)==len(pivots)==len(tips)==48, 'three blade cuts each have sixteen measured crops, foot pivots and tip points')
     check(len(sheets)==len(ppu)==3 and all(p>0 for p in ppu), 'three blade sheets have explicit positive world scales')
     grid = int(re.search(r'GridSize=(\d+)', source)[1])
+    field_path = root / 'Assets/Resources/Art/FieldBladeDetail.png'
+    field = Image.open(field_path).convert('RGBA')
+    width = int(re.search(r'FieldSheetWidth\s*=\s*(\d+)', source)[1])
+    regions = list(layout(rects, width))
+    check(field.size == (width, max(y+h for _, y, _, h in regions)+2) and max(field.size) <= 2048,
+          'full-density field melee sheet fits its unscaled Unity import limit')
+    field_meta = field_path.with_suffix('.png.meta').read_text()
+    check(all(setting in field_meta for setting in ('isReadable: 0', 'filterMode: 0', 'textureCompression: 0', 'enableMipMap: 0')),
+          'field melee sheet uses point pixels, no compression, mips or retained CPU copy')
     signatures=[]
     for step, name in enumerate(sheets):
         path = root / ('Assets/Resources/Art/'+name+'.png')
@@ -36,6 +48,10 @@ def validate_blade_atlas(root, check, png_info):
             cy0=round(frame//4*height/4);cy1=round((frame//4+1)*height/4)
             check(0<=x<x+w<=width and 0<=y<y+h<=height and cx0<x+w*.5<cx1 and cy0<y+h*.5<cy1,
                   name+' measured crop stays in the texture and follows frame order '+str(frame))
+            fx, fy, fw, fh = regions[index]
+            packed = field.crop((fx,fy,fx+fw,fy+fh))
+            check(packed.tobytes() == image.crop((x,y,x+w,y+h)).convert('RGBA').tobytes(),
+                  f'{name} frame {frame} field art retains every RGBA pixel from the authored PNG')
             others=rects[step*16:step*16+16]
             check(all(other==frame or min(x+w,ox+ow)<=max(x,ox) or min(y+h,oy+oh)<=max(y,oy)
                       for other,(ox,oy,ow,oh) in enumerate(others)), name+' crop has no overlap with another pose '+str(frame))
@@ -67,5 +83,14 @@ def validate_blade_atlas(root, check, png_info):
             check(any(native(xx,yy)[3]>=110 and native(xx,yy)[0]>170 and native(xx,yy)[1]>120 and native(xx,yy)[0]>native(xx,yy)[2]*1.2
                       for yy in range(max(y,round(tipy)-4),min(y+h,round(tipy)+5))
                       for xx in range(max(x,round(tipx)-4),min(x+w,round(tipx)+5))), name+' tip metadata touches the yellow blade '+str(frame))
+            for socket, label in ((hilts[index], 'hilt'), (reels[index], 'reel')):
+                gx = round(x + px*w + socket[0]*ppu[step])
+                gy = round(y + (1-py)*h - socket[1]*ppu[step])
+                visible = [native(xx,yy) for yy in range(max(y,gy-2),min(y+h,gy+3))
+                           for xx in range(max(x,gx-2),min(x+w,gx+3)) if native(xx,yy)[3] > 128]
+                check(bool(visible), f'{name} frame {frame} {label} lands on opaque actor pixels')
+                if label == 'hilt':
+                    check(any(g>85 and g>r*1.15 and b>r*1.15 for r,g,b,a in visible),
+                          f'{name} frame {frame} hilt meets the drawn mechanical wrist')
             signatures.append(frozenset(main))
     check(len(set(signatures))==48, 'all forty-eight blade frames have distinct measured silhouettes')

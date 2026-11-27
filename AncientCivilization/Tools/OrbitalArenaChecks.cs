@@ -48,8 +48,10 @@ static class OrbitalArenaChecks
     }
     static void LandingPlatforms()
     {
+        AncientBossCue.Reset();
         var target=new Vector2(12,0);
         Start(OrbitalMove.DropCargo,target);
+        Check(arena.UnsafeBladeGround(target) && !arena.UnsafeBladeGround(target+Vector2.left*4),"Blade summon excludes the falling cargo footprint");
         var hook=Anchor(3);
         Check(hook.y>8 && arena.TryAttach(hook,out _),"Hook exists on falling cargo");
         Check(!arena.TryAttach(hook,out _) && Anchor(3).x<0,"One-use hook spent only once");
@@ -69,60 +71,25 @@ static class OrbitalArenaChecks
         Hero.transform.position=new Vector2(12,1);
         Advance(.72f);
         Check(Hero.HurtCalls==1,"No repeat damage from the same falling box");
+        int groundImpacts=0, bodyImpacts=0;
+        foreach(var cue in AncientBossCue.Events)
+        {
+            if (cue.Beat!=AncientBossCue.Beat.Contact || cue.Style!=AncientBossCue.Style.Orbital) continue;
+            if (cue.Direction.y>.9f) groundImpacts++;
+            if (cue.Direction.y<-.9f) bodyImpacts++;
+        }
+        Check(groundImpacts==3 && bodyImpacts==1,"Three landed crates and the single physical body hit each light once");
         Hero.transform.position=new Vector2(2,1);
         Advance(5);
-    }
-    static Vector2 ThrowAndStick()
-    {
-        Hero.transform.position=new Vector2(2,1);
-        arena.ThrowBlade();
-        Check(arena.BladeAway && !arena.BladeStuck,"Blade enters flight");
-        Advance(1);
-        Check(arena.BladeStuck,"Blade embeds in freight");
-        return Anchor(4);
-    }
-    static void Recovery()
-    {
-        Vector2 socket=ThrowAndStick();
-        Hero.transform.position=socket-Vector2.up*.26f;
-        Advance(.01f);
-        Check(!arena.BladeAway && Anchor(4).x<0,"Direct contact equips blade and removes anchor");
-        socket=ThrowAndStick();
-        Check(arena.TryAttach(socket,out var support) && support,"Stuck blade offers moving wire support");
-        Hero.transform.position=socket+Vector2.left*1.5f;
-        Advance(.01f);
-        Check(!arena.BladeAway,"Wire arrival recovers blade before hull collides");
-        socket=ThrowAndStick();
-        var near=new AncientEnemy{AimPoint=socket+Vector2.up};
-        var far=new AncientEnemy{AimPoint=socket+Vector2.up*10};
-        game.enemies.Add(near);
-        game.enemies.Add(far);
-        Hero.CaptureEnergy=9;
-        Input.Recall=true;
-        arena.Tick(.01f);
-        Check(arena.BladeStuck && Hero.CaptureEnergy==9,"Below minimum no charge is spent");
-        Hero.CaptureEnergy=45;
-        arena.Tick(.01f);
-        Input.Recall=false;
-        Check(!arena.BladeAway && Hero.CaptureEnergy==0 && near.Received==28 && far.Received==0 && Hero.HurtCalls==1,"Remote recovery consumes all, applies local damage, spares hero");
-        ThrowAndStick();
-        Hero.CaptureEnergy=50;
-        Input.Recall=true;
-        arena.Tick(.01f);
-        Input.Recall=false;
-        Check(arena.BladeStuck && Hero.CaptureEnergy==50,"A second throw respects explosion cooldown");
-        Advance(5.2f);
-        Input.Recall=true;
-        arena.Tick(.01f);
-        Input.Recall=false;
-        Check(!arena.BladeAway && Hero.CaptureEnergy==0,"Explosion usable again after six seconds");
     }
     static void FreightAndMachinery()
     {
         var p=arena.DispenserPoint;
         Check(arena.CutSupply(p+Vector2.left,Vector2.right) && !arena.CutSupply(p+Vector2.left,Vector2.right) && Hero.Combat.Emissions==1,"Breaking supply yields once");
         Advance(7.1f);
-        Check(arena.CutSupply(p+Vector2.left,Vector2.right),"Dispenser recharges");
+        arena.BreakSupplyInRadius(p+Vector2.right*4,1);
+        arena.BreakSupplyInRadius(p+Vector2.left,2);
+        Check(Hero.Combat.Emissions==2 && !arena.CutSupply(p+Vector2.left,Vector2.right),"Recharged supply breaks once in the blade burst");
         Check(arena.LockHit(arena.LatchPoint) && !arena.LockHit(arena.LatchPoint+Vector2.right*3),"Stamped latch selects long opening");
         Start(OrbitalMove.ReverseRail,default,-1);
         var rail=ArenaField<AncientOrbitalFreight>("rail");
@@ -136,9 +103,6 @@ static class OrbitalArenaChecks
         Step(1);
         Check(arena.CargoPoint.x==x,"No movement during pause");
         game.Paused=false;
-        Start(OrbitalMove.BladeFerry,default,1);
-        Step(100);
-        Check(arena.CargoPoint.x>26 && arena.RailDirection==-1,"Ferry crosses entire lane and reverses at the far end");
         rail.transform.position=new Vector2(3.21f,arena.CargoPoint.y);
         arena.PrepareMove(OrbitalMove.ReverseRail,1,default);
         x=arena.CargoPoint.x;
@@ -154,12 +118,12 @@ static class OrbitalArenaChecks
         arena=new AncientOrbitalArena(game,null,0,32);
         Anchors();
         LandingPlatforms();
-        Recovery();
+
         FreightAndMachinery();
         arena.Dispose();
-        Check(game.anchors[0].x==33 && Anchor(0).x<0 && Anchor(4).x<0,"Cleanup preserves original anchors");
+        Check(game.anchors[0].x==33 && Anchor(0).x<0 && Anchor(3).x<0,"Cleanup preserves original anchors");
         arena=new AncientOrbitalArena(game,null,0,32);
-        Check(game.anchors.Count==6 && arena.LeftAnchorAvailable,"Retries reuse the same anchor slots");
+        Check(game.anchors.Count==5 && arena.LeftAnchorAvailable,"Retries reuse the same anchor slots");
         Console.WriteLine($"Orbital arena passed {checks} checks.");
     }
 }

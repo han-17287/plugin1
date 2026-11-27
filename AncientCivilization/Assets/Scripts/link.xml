@@ -1,0 +1,5 @@
+<linker>
+  <assembly fullname="Unity.RenderPipelines.Universal.Runtime" ignoreIfMissing="1">
+    <type fullname="UnityEngine.Rendering.Universal.Light2D" preserve="all"/>
+  </assembly>
+</linker>

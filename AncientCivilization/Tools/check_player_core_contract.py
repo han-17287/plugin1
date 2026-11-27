@@ -9,12 +9,12 @@ def main():
     data = json.loads((ROOT/'Assets/Resources/PlayerCore/P1Player.inputactions').read_text())
     maps = data['maps']; assert len(maps)==1 and maps[0]['name']=='Gameplay'
     action_map=maps[0]; actions={a['name']:a for a in action_map['actions']}
-    expected={'Move','Jump','Dash','Drop','ModeScroll','ModeToggle','Primary','Collect','Throw','Laser','Explode','Pause','Point'}
+    expected={'Move','Jump','Dash','Drop','Summon','Primary','Collect','Detach','Laser','Overload','Pause','Point'}
     assert set(actions)==expected
     identifiers=[a['id'] for a in action_map['actions']]+[b['id'] for b in action_map['bindings']]
     assert len(identifiers)==len(set(identifiers))
     paths={name:[b['path'] for b in action_map['bindings'] if b['action']==name] for name in actions}
-    for action,path in {'Jump':'<Keyboard>/space','Dash':'<Keyboard>/leftShift','ModeScroll':'<Mouse>/scroll/y','ModeToggle':'<Keyboard>/q','Primary':'<Mouse>/leftButton','Collect':'<Mouse>/rightButton','Throw':'<Keyboard>/e','Laser':'<Keyboard>/f','Explode':'<Keyboard>/r','Pause':'<Keyboard>/escape','Point':'<Mouse>/position'}.items():
+    for action,path in {'Jump':'<Keyboard>/space','Dash':'<Keyboard>/leftShift','Summon':'<Keyboard>/q','Primary':'<Mouse>/leftButton','Collect':'<Mouse>/rightButton','Detach':'<Keyboard>/e','Laser':'<Keyboard>/f','Overload':'<Keyboard>/r','Pause':'<Keyboard>/escape','Point':'<Mouse>/position'}.items():
         assert paths[action]==[path],(action,paths[action])
     assert paths['Drop']==['OneModifier','<Keyboard>/s','<Keyboard>/space']
     assert len(paths['Move'])==10

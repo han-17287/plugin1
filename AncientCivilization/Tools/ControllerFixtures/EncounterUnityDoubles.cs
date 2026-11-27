@@ -6,7 +6,7 @@ namespace UnityEngine
 {
     public class Object { public static void Destroy(Object obj){} public static implicit operator bool(Object value){return value!=null;} }
     public class Component : Object {public Transform transform=new Transform();public GameObject gameObject;}
-    public class MonoBehaviour : Component {}
+    public partial class MonoBehaviour : Component {}
     public class GameObject : Object
     {
         readonly Dictionary<Type,Component> parts=new Dictionary<Type,Component>();
@@ -57,6 +57,7 @@ namespace UnityEngine
     {
         public float r,g,b,a;public Color(float r,float g,float b,float a=1){this.r=r;this.g=g;this.b=b;this.a=a;}
         public static Color white=>new Color(1,1,1);
+        public static Color black=>new Color(0,0,0);
         public static Color Lerp(Color a,Color b,float t)=>new Color(Mathf.Lerp(a.r,b.r,t),Mathf.Lerp(a.g,b.g,t),Mathf.Lerp(a.b,b.b,t),Mathf.Lerp(a.a,b.a,t));
     }
     public static partial class Mathf
@@ -89,7 +90,7 @@ namespace UnityEngine
         public static RaycastHit2D Raycast(Vector2 origin,Vector2 direction,float distance,int mask)=>new RaycastHit2D{blocked=RayHit!=null&&RayHit(origin,direction,distance,mask)};
         public static RaycastHit2D Linecast(Vector2 a,Vector2 b,int mask)=>new RaycastHit2D{blocked=Blocked,point=HitPoint};
     }
-    public class BoxCollider2D:Component {public bool usedByEffector;public bool enabled=true;public Vector2 size;}
+    public partial class BoxCollider2D:Component {public bool usedByEffector;public bool enabled=true;public Vector2 size;}
     public enum RigidbodyType2D {Kinematic,Dynamic}
     public enum RigidbodyInterpolation2D {Interpolate}
     public partial class Rigidbody2D:Component
@@ -106,6 +107,7 @@ namespace UnityEngine
     public enum LineTextureMode { Stretch }
     public class LineRenderer : Component
     {
+        public int sortingOrder;
         public bool useWorldSpace; public LineTextureMode textureMode; public LineAlignment alignment;
         readonly Vector3[] points=new Vector3[64];public int positionCount;public bool enabled,loop;public Color startColor,endColor;public float startWidth,endWidth;
         public void SetPosition(int index,Vector3 point){points[index]=point;}public Vector3 GetPosition(int index)=>points[index];

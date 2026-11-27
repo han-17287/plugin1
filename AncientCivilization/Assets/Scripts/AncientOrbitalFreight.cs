@@ -7,9 +7,10 @@ namespace Plugin.AncientCivilization
     {
         Rigidbody2D body;
         AncientGame game;
-        float left, right, speed = 3.1f;
+        const float Speed = 3.1f;
+        float left, right;
         int direction = 1;
-        bool ferry, brake;
+        bool brake;
         public int Direction => direction;
 
         public void Initialize(AncientGame owner, Rigidbody2D platform, float minX, float maxX)
@@ -30,19 +31,6 @@ namespace Plugin.AncientCivilization
 
         public void ReleaseBrake() => brake = false;
 
-        public void FerryAcross(int goalSide)
-        {
-            direction = goalSide < 0 ? -1 : 1;
-            speed = 8f;
-            ferry = true;
-        }
-
-        public void Cruise()
-        {
-            speed = 3.1f;
-            ferry = false;
-        }
-
         void FixedUpdate()
         {
             if (!game || !body) return;
@@ -52,11 +40,10 @@ namespace Plugin.AncientCivilization
                 return;
             }
             float current = body.position.x;
-            float next = Mathf.Clamp(current + direction * speed * Time.fixedDeltaTime, left, right);
+            float next = Mathf.Clamp(current + direction * Speed * Time.fixedDeltaTime, left, right);
             body.MovePosition(new Vector2(next, body.position.y));
             if (next > left && next < right) return;
             direction = -direction;
-            if (ferry) Cruise();
         }
     }
 }

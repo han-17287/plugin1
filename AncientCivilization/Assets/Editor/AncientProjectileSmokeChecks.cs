@@ -71,7 +71,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             var constraints=body.constraints;bool enabled=hero.enabled;float hp=hero.hp;
             Vector2 velocity=body.linearVelocity;float gravity=body.gravityScale;
             float immunity=(float)Field(typeof(AncientHero),"invulnerableUntil").GetValue(hero),hurt=(float)Field(typeof(AncientHero),"hurtUntil").GetValue(hero);
-            AncientProjectile shot=null;AncientClockSpear spear=null;var wall=new GameObject("QA projectile ordering surface");
+            AncientProjectile shot=null;AncientClockSpear spear=null;AncientClockDial dial=null;var wall=new GameObject("QA projectile ordering surface");
             try
             {
                 // This isolated QA probe starts with cleared idle combat; live attack effects are not restored.
@@ -87,7 +87,9 @@ namespace Plugin.AncientCivilization.EditorChecks
                 wall.transform.position=new Vector2(6,80);MoveHero(hero,new Vector2(5,83));shot=Shot(game,new Vector2(2,80),new Vector2(8,80),1);Tick(shot);
                 Assert(!shot.Available&&shot.velocity.x<0,"A shot missing the hero still performs its authored wall ricochet");shot.Remove();shot.enabled=true;shot=null;
                 solid.size=new Vector2(20,1);wall.transform.position=new Vector2(2,79.5f);
-                spear=new GameObject("QA clock-hand ordering probe").AddComponent<AncientClockSpear>();spear.Initialize(game);spear.enabled=false;
+                dial = new GameObject("QA clock-hand art").AddComponent<AncientClockDial>();
+                dial.Initialize(game);
+                spear=new GameObject("QA clock-hand ordering probe").AddComponent<AncientClockSpear>();spear.Initialize(game,dial);spear.enabled=false;
                 MoveHero(hero,new Vector2(2,81.1f));spear.Play(new Vector2(2,82.3f),Vector2.down*(2.8f/Time.deltaTime),0);Tick(spear);
                 Assert(Mathf.Abs(hero.hp-982)<.001f&&spear.Available,"Clock rain crossing hero and floor in one stalled frame damages before it sticks");
                 hero.hp=1000;MoveHero(hero,new Vector2(2,79.8f));spear.Play(new Vector2(2,82.3f),Vector2.down*(2.8f/Time.deltaTime),0);Tick(spear);
@@ -99,6 +101,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             finally
             {
                 if(shot){shot.Remove();shot.enabled=true;}if(spear){spear.Disarm();UnityEngine.Object.Destroy(spear.gameObject);}
+                if(dial) UnityEngine.Object.Destroy(dial.gameObject);
                 wall.SetActive(false);UnityEngine.Object.Destroy(wall);MoveHero(hero,original);hero.hp=hp;hero.enabled=enabled;body.constraints=constraints;
                 body.gravityScale=gravity;body.linearVelocity=velocity;
                 Field(typeof(AncientHero),"invulnerableUntil").SetValue(hero,immunity);Field(typeof(AncientHero),"hurtUntil").SetValue(hero,hurt);

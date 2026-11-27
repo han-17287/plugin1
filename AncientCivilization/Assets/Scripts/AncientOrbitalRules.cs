@@ -8,7 +8,7 @@ namespace Plugin.AncientCivilization
         GroundWave, LandingStamp, ReturnBlade,
         AnchorLock, CargoSweep, DropCargo,
         RisingBeam, CrossBeam, ShutterFeint,
-        BladeFerry, CoreTrap, SupplyLeak,
+        BladeHunt, CoreTrap, SupplyLeak,
         ReverseRail, ChainDrop, SplitShutter,
         PursuitStamp, ClosingSweep, CargoRush
     }
@@ -16,10 +16,10 @@ namespace Plugin.AncientCivilization
     public readonly struct OrbitalArenaState
     {
         public readonly float Left, Right, HeroX;
-        public readonly bool Grounded, LeftAnchor, RightAnchor, AirDash;
+        public readonly bool Grounded, LeftAnchor, RightAnchor, AirDash, InstalledBlade;
 
         public OrbitalArenaState(float left, float right, float heroX, bool grounded,
-            bool leftAnchor, bool rightAnchor, bool airDash = false)
+            bool leftAnchor, bool rightAnchor, bool airDash = false, bool installedBlade = false)
         {
             Left = left;
             Right = right;
@@ -28,6 +28,7 @@ namespace Plugin.AncientCivilization
             LeftAnchor = leftAnchor;
             RightAnchor = rightAnchor;
             AirDash = airDash;
+            InstalledBlade = installedBlade;
         }
     }
 
@@ -81,7 +82,7 @@ namespace Plugin.AncientCivilization
                 if (move == last || move == previous ||
                     !Safe(move, arena, roomLeft, roomRight, last, followup)) continue;
                 mask |= 1 << i;
-                weight += i >= count - 3 ? 2 : 1;
+                weight += Weight(i, count);
             }
             if (weight == 0) return false;
             // 마지막 타에 잠금장치 유도 기회를 종종 제시한다. 두 찍기가 모두 최근에
@@ -102,7 +103,7 @@ namespace Plugin.AncientCivilization
             for (int i = 0; i < count; i++)
             {
                 if ((mask & (1 << i)) == 0) continue;
-                ticket -= i >= count - 3 ? 2 : 1;
+                ticket -= Weight(i, count);
                 if (ticket < 0)
                 {
                     pick = (OrbitalMove)i;
@@ -110,6 +111,12 @@ namespace Plugin.AncientCivilization
                 }
             }
             return false;
+        }
+
+        static int Weight(int i, int count)
+        {
+            int baseWeight = i >= count - 3 ? 2 : 1;
+            return i == (int)OrbitalMove.BladeHunt ? baseWeight * 3 : baseWeight;
         }
 
         static bool Safe(OrbitalMove move, OrbitalArenaState arena, float roomLeft, float roomRight,
@@ -131,6 +138,8 @@ namespace Plugin.AncientCivilization
 
             switch (move)
             {
+                case OrbitalMove.BladeHunt:
+                    return arena.InstalledBlade;
                 case OrbitalMove.AnchorLock:
                     return arena.LeftAnchor && arena.RightAnchor;
                 case OrbitalMove.CargoSweep:

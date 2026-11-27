@@ -7,6 +7,14 @@ namespace Plugin.AncientCivilization
 {
     // 렌더러가 실제로 받은 점과 실제 Hurt 호출을 관측한다.
     public enum AncientEquipmentCue { Lens, Counter, Contact, Sweep, Forge, ShortCircuit, JokerCharge }
+    // GPU에 올리는 재질만 대체한다. 선 좌표와 표시 상태는 실제 패턴 코드가 갱신한다.
+    public sealed class AncientBeamVisuals : IDisposable
+    {
+        public AncientBeamVisuals(LineRenderer glow, bool cannon, bool createEndpoints) {}
+        public void StyleBody(LineRenderer body, LineRenderer core, bool filament) {}
+        public void Dispose() {}
+    }
+    public static class AncientVisuals { public static bool HighQuality = true; }
     public class AncientAudio : Component { public int Stops; public void StopJokerCharge() { Stops++; } }
     public class AncientHero : Component
     {
@@ -16,6 +24,7 @@ namespace Plugin.AncientCivilization
     public class AncientGame : Component
     {
         public AncientHero hero;
+        public bool ReducedFeedback;
         public readonly Dictionary<string,LineRenderer> Lines = new Dictionary<string,LineRenderer>();
         public readonly List<AncientEquipmentCue> Sounds = new List<AncientEquipmentCue>();
         public LineRenderer Line(string name, Color color, float width, int order)
@@ -62,6 +71,8 @@ class JokerAttackChecks
         var t=new Stage();
         t.Attack.Mirror(Muzzle,Hero,2);
         Check(t.Body.positionCount==2 && t.Arena.Signals[0]==1,"Only first mirror is lit initially");
+        Check(t.Game.Lines["광학 표식 0"].positionCount==2 && !t.Game.Lines["광학 표식 1"].enabled,
+            "First mirror exposes only its illuminated incoming facet");
         t.Tick(.8f,Hero);
         Check(t.Body.positionCount==4 && t.Arena.Signals[1]==2,"Second lamp reveals the second physical reflection");
         Check(Vector2.Distance(t.Body.GetPosition(1),t.Arena.MirrorPoint(0))<.001f &&
@@ -143,6 +154,16 @@ class JokerAttackChecks
         var local=new Stage();
         local.Attack.Laser(false,2); var rightRefuge = new Vector2(25,5); local.Tick(1.21f,rightRefuge); local.Tick(2,rightRefuge);
         Check(local.Hits==0,"Planned edge refuge falls beyond truncated beam");
+        local.Attack.Laser(true,2);
+        var top=local.Game.Lines["광학 표식 0"]; var bottom=local.Game.Lines["광학 표식 1"];
+        Check(Math.Abs(top.GetPosition(0).y-bottom.GetPosition(0).y-local.Body.startWidth)<.001f &&
+            Math.Abs(top.GetPosition(1).x-local.Body.GetPosition(1).x)<.001f,"Warning rails mark the real beam width and stop before the refuge");
+        local.Tick(1.4f,rightRefuge);
+        for(int i=0; i<top.positionCount; i++)
+            Check(Math.Abs(top.GetPosition(i).y-local.Body.GetPosition(0).y)<local.Body.startWidth*.5f,
+                "Live plasma filament lies inside damaging beam");
+        local.Attack.Clear();
+        Check(!top.enabled && !bottom.enabled,"Interrupted sweep clears live filaments");
         local.Attack.Laser(true); local.Tick(0,Hero); Check(local.Attack.Progress==0,"Paused warning does not advance");
         local.Attack.Dispose(); local.Tick(15,Hero);
         Check(!local.Attack.Busy && !local.Body.enabled && local.Hits==0 &&
@@ -151,5 +172,52 @@ class JokerAttackChecks
         life.Game.hero.OnDamage=()=>life.Attack.Dispose(); life.Attack.Laser(false); life.Tick(1.2f,new Vector2(15,4)); life.Tick(2,new Vector2(15,4));
         Check(!life.Attack.Busy && life.Hits==1,"Respawn can tear down attack synchronously from Hurt");
     }
-    static void Main() { Mirrors(); Duel(); Laser(); Console.WriteLine($"{checks} Joker attack geometry and timing checks passed."); }
+    static void Caustics()
+    {
+        foreach (int lane in new[] {-1,0,2})
+        foreach (bool right in new[] {false,true})
+        {
+            var s = new Stage();
+            s.Attack.SweepFromRight = () => right;
+            s.Attack.Laser(false,lane);
+            var rays = new[] {s.Game.Lines["굴절광 0"], s.Game.Lines["굴절광 1"]};
+            Check(!rays[0].enabled && !rays[1].enabled,"No caustics in the warning corridor");
+            s.Tick(1.22f,Hero);
+            bool shown=false;
+            for (int frame=0; frame<92; frame++)
+            {
+                s.Tick(1f/60,Hero);
+                foreach (var ray in rays)
+                {
+                    if (!ray.enabled) continue;
+                    shown=true;
+                    var a=s.Body.GetPosition(0); var b=s.Body.GetPosition(1);
+                    Check((ray.GetPosition(3).x-ray.GetPosition(0).x)*(right?-1:1)>0,"Caustic travels away from the real firing port");
+                    for(int i=0;i<4;i++)
+                    {
+                        var p=ray.GetPosition(i); float rim=ray.startWidth*.5f;
+                        Check(p.x-rim>=a.x && p.x+rim<=b.x && Math.Abs(p.y-a.y)+rim<s.Body.startWidth*.5f,
+                            "Entire tapered strip stays inside the active beam and outside protected lanes");
+                    }
+                }
+            }
+            s.Tick(.10f,Hero);
+            Check(shown && !s.Attack.Busy && !rays[0].enabled && !rays[1].enabled,"Normal attack cleanup hides both reused strips");
+        }
+
+        var quality=new Stage();
+        quality.Attack.Laser(true); quality.Tick(1.66f,Hero);
+        var ribbon=quality.Game.Lines["굴절광 0"];
+        Check(ribbon.enabled,"Full detail draws travelling light during sweep");
+        quality.Game.ReducedFeedback=true;quality.Tick(.01f,Hero);
+        Check(!ribbon.enabled && quality.Body.enabled,"F5 mid-shot hides only extra light");
+        quality.Game.ReducedFeedback=false;AncientVisuals.HighQuality=false;quality.Tick(.01f,Hero);
+        Check(!ribbon.enabled && quality.Body.enabled,"Low detail retains original active beam");
+        AncientVisuals.HighQuality=true;quality.Tick(.01f,Hero);
+        Check(ribbon.enabled,"Detail restored during beam honors current settings");
+        quality.Attack.Dispose();
+        Check(!ribbon.enabled,"Disposal hides the ordinary sweep strip");
+    }
+
+    static void Main() { Caustics(); Mirrors(); Duel(); Laser(); Console.WriteLine($"{checks} Joker attack geometry and timing checks passed."); }
 }

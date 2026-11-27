@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="256" height="256" viewBox="0 0 128 128">
+<title>Blue plug, recessed duplex socket and locking guides</title>
+<defs>
+  <linearGradient id="shell" x1="0" y1="0" x2=".42" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#6fb6df"/><stop offset=".19" stop-color="#408bc6"/><stop offset=".56" stop-color="#2167a6"/><stop offset="1" stop-color="#193d63"/></linearGradient>
+  <linearGradient id="rubber" x2=".2" y2="1"><stop stop-color="#628399"/><stop offset=".29" stop-color="#36546c"/><stop offset="1" stop-color="#192c40"/></linearGradient>
+  <linearGradient id="steel" x2=".04" y2="1"><stop stop-color="#f3f8ee"/><stop offset=".21" stop-color="#b9d2d7"/><stop offset=".6" stop-color="#a7bec7"/><stop offset=".63" stop-color="#819ca6"/><stop offset="1" stop-color="#64838f"/></linearGradient>
+  <linearGradient id="panel" x2=".63" y2="1"><stop stop-color="#9dafb5"/><stop offset=".20" stop-color="#78909a"/><stop offset=".73" stop-color="#485d6e"/><stop offset="1" stop-color="#3c4d5a"/></linearGradient>
+  <linearGradient id="insert" x2=".27" y2="1"><stop stop-color="#839aa3"/><stop offset=".40" stop-color="#5e7785"/><stop offset="1" stop-color="#435a6b"/></linearGradient>
+  <linearGradient id="glass" x2=".3" y2="1"><stop stop-color="#477b95"/><stop offset=".31" stop-color="#243e58"/><stop offset=".65" stop-color="#193449"/><stop offset="1" stop-color="#355468"/></linearGradient>
+  <g id="blade">
+    <path d="M35.8 .5H54.8q1.1 0 1.9.8l1.4 1.4q.5.5.5 1.3v1.3q0 1-.9 1.65l-1.3.94q-.46.33-1.19.33H35.8z" fill="#15243c"/>
+    <path d="M38.5 1.74h16.3q.7 0 1.23.52l1.06 1.05v2.05l-1.54.99H38.5z" fill="url(#steel)"/>
+    <path d="M40.8 2.14h13.5" stroke="#f7f9ec" stroke-width=".59" stroke-linecap="round"/>
+    <path d="M53.75 2.90c-.51 0-1.08.55-1.08 1.15s.42.92.94.92c.62 0 1.12-.46 1.12-1.03 0-.65-.47-1.04-.98-1.04z" fill="#496779"/>
+    <path d="M53 4.55q.87.64 1.51-.23" fill="none" stroke="#d6e7e6" stroke-width=".35"/>
+  </g>
+  <path id="filament" d="M22.4 16.4h2.4c.46 0 .72-.14 1.02-.6l1.98-2.58-.62 3.72c-.06.34.2.48.45.2l2.15-2.53h2.07" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <g id="screw"><circle r="1.47" fill="#253749"/><circle r=".98" fill="#8ea4ab"/><path d="M-.6.5l1.15-.95" stroke="#263a4c" stroke-width=".53" stroke-linecap="round"/></g>
+</defs>
+<g transform="translate(0,94)"><use xlink:href="#blade" y="5.8"/><use xlink:href="#blade" y="21.8"/>
+<path d="M1.1 15.9q.15-1.73 1.49-1.9l3.63-.48 1.05-1.26 4.42-1.01 2.22-1.81 5.48-.62 2.5 2.06v11.9l-3.27 2.04-4.64-.77-2.36-1.84-4.07-.84-1.38-1.62-3.64-.56q-1.4-.24-1.45-1.3z" fill="#132640"/>
+<path d="M2.62 15.16l4.06-.61 2.21-1.56 5.14-1.37 4.46-1.25v13.16l-4.72-.99-4.97-1.44-2.30-2.0-3.94-.61z" fill="url(#rubber)"/>
+<g fill="none" stroke-linecap="round"><path d="M5.78 14.3q-.66 2.64.08 5.35m3.79-6.91q-1.12 3.48-.1 8.38m4.10-10.15q-1.4 5.18-.33 11.68" stroke="#152d45" stroke-width="1.35"/><path d="M6.27 14.25l-.22 1.76m3.98-3.36-.30 2.19m4.35-4.03-.47 2.33" stroke="#8aabba" stroke-width=".55"/></g>
+<path d="M13.92 12.9c.05-4.05 3.27-8.09 7.5-9.74 3.46-1.41 9.40-1.89 13.15-1.05 3.30.73 5.54 2.85 6.17 6.63.49 3.08.68 12.01.07 15.52-.7 4-3.69 6.65-7.06 7.25-3.34.6-8.54.7-12.1-.37-4.65-1.35-7.34-4.14-7.8-8.21-.28-2.50-.11-7.28.07-10.03z" fill="#11233e"/>
+<path d="M15.96 13.13c.05-3.65 2.58-6.94 6.33-8.35 3.14-1.29 8.32-1.6 11.78-.94 3.01.62 4.62 2.26 5.05 5.22.41 3.09.55 11.78.05 14.64-.61 3.51-2.91 5.31-5.94 5.97-3.43.68-7.66.52-10.84-.38-3.82-1.13-6.11-3.45-6.5-6.85-.24-2.43-.03-6.65.07-9.31z" fill="url(#shell)"/>
+<path d="M16.8 12.04c1.44-4.50 4.16-6.79 8.52-7.32 3.17-.39 5.92-.48 8.08.05-2.64.29-6.76.36-9.48 1.42-3.49 1.26-5.4 2.79-7.12 5.85z" fill="#a1c8de"/>
+<path d="M16.88 21.38c.4 3.77 3.28 6.24 7.71 6.91 2.82.40 6.21.31 9.16-.35" fill="none" stroke="#5d96bc" stroke-width=".7" stroke-linecap="round"/>
+<path d="M34.75 3.51q4.22.98 4.97 5.81l.20 13.81q-.47 4.43-4.27 6.33l-1.84-.59q3.14-2.65 3.22-6.18l-.2-12.73q-.25-3.1-3.36-5.51z" fill="#25435d"/>
+<path d="M36.44 5.08q2.10 1.46 2.51 4.66l.13 12.7q-.24 3.15-2.19 5.16" fill="none" stroke="#82adc7" stroke-width=".78"/>
+<path d="M20.3 12.98q.23-2.02 2.86-2.2l8.68-.47q1.96-.05 2.09 1.99l.12 5.2q-.08 1.97-2.27 2.19l-9.11.51q-2.27.04-2.42-1.97z" fill="#152b43" stroke="#83abc2" stroke-width=".55"/>
+<rect x="21.35" y="11.88" width="11.43" height="6.77" rx="1.53" fill="url(#glass)"/>
+<use xlink:href="#filament" stroke="#8ad5e8" stroke-width="1.12"/><path d="M22.7 12.43h3.13" stroke="#9bbdcc" stroke-width=".51" stroke-linecap="round"/>
+<use xlink:href="#screw" transform="translate(18.54 18.78) scale(.66)"/><use xlink:href="#screw" transform="translate(32.73 22.71) scale(.67)"/>
+<g fill="none" stroke-linecap="round"><path d="M21.77 23.05q2.47 1.50 6.91.84m-6.66.67q2.85 1.46 6.31.85" stroke="#294e6d" stroke-width=".66"/></g></g>
+<g transform="translate(64,94)"><use xlink:href="#filament" stroke="white" stroke-width=".80"/></g>
+<g transform="translate(0,39)"><path d="M7.7 1.22h35.28q.63 0 1.16.53l5.05 5.23q.38.49.38 1.11v34.43q0 .68-.43 1.13l-5.12 5.22q-.47.53-1.07.53H7.5q-.65 0-1.08-.49l-5.0-5.09q-.42-.54-.42-1.16V8.09q0-.69.52-1.18l5.08-5.18q.42-.5 1.1-.51z" fill="#14253a"/>
+<path d="M8.1 3.03h34.15l5.48 5.65v33.64l-5.30 5.42H8.04l-5.28-5.37V8.54z" fill="url(#panel)"/>
+<path d="M3.45 9.43l5.33-5.63h32.8" stroke="#c8d6d8" stroke-width=".89" fill="none" stroke-linecap="round"/>
+<path d="M4.52 42.04l4.39 4.44h32.88l4.55-4.33" stroke="#293d50" stroke-width="1.25" fill="none"/>
+<path d="M13.44 10.71h23.75l5.20 5.06v19.68l-4.76 4.69H13.14l-5.01-4.89V16.1z" fill="#283d50" stroke="#abbfc6" stroke-width=".92"/>
+<path d="M14.36 12.14h22.1l4.41 4.26v18.29l-4.08 3.97H14.03l-4.35-4.2V16.74z" fill="#192c3d"/>
+<g><use xlink:href="#screw" transform="translate(8.16 8.09)"/><use xlink:href="#screw" transform="translate(42.39 8.09)"/><use xlink:href="#screw" transform="translate(8.16 42.06)"/><use xlink:href="#screw" transform="translate(42.39 42.06)"/></g>
+<rect x="17.15" y="3.77" width="16.8" height="5.77" rx="2.05" fill="#172e43" stroke="#8cabb7" stroke-width=".5"/>
+<rect x="19.67" y="5.23" width="11.57" height="2.32" rx=".64" fill="#719aa9"/><path d="M20.65 5.75h8.47" stroke="#c2e3eb" stroke-width=".37"/>
+<path d="M19.07 42.14h12.50" stroke="#263d4f" stroke-width="2.11" stroke-linecap="round"/>
+<path d="M20.06 41.83h1.82m2.10 0h1.82m2.06 0h1.8" fill="none" stroke="#89a3ad" stroke-width=".70"/></g>
+<g transform="translate(77,4)"><rect x="20.29" y="5.39" width="10.54" height="1.87" rx=".55" fill="white"/></g>
+<g transform="translate(52,61)"><path d="M5.3 .49h18.37l4.85 4.89v18.19l-4.69 4.82H5.22L.51 23.50V5.36z" fill="#233b4e"/>
+ <path d="M6.06 1.82h17.09l4.06 4.08v17.00l-4.01 4.07H5.98l-4.08-4.1V5.98z" fill="url(#insert)"/><g transform="translate(0,3.65)"><rect x="5.11" y=".14" width="18.79" height="7.04" rx="1.24" fill="#a5b9c1"/><rect x="6.56" y="1.4" width="15.97" height="4.96" rx=".8" fill="#132435"/><path d="M18.5 2.89h2.48" stroke="#566e7c" stroke-width=".67"/></g><g transform="translate(0,18.55)"><rect x="5.11" y=".14" width="18.79" height="7.04" rx="1.24" fill="#a5b9c1"/><rect x="6.56" y="1.4" width="15.97" height="4.96" rx=".8" fill="#132435"/><path d="M18.5 2.89h2.48" stroke="#566e7c" stroke-width=".67"/></g></g>
+<g transform="translate(83,61)"><path d="M5.3 .49h18.37l4.85 4.89v18.19l-4.69 4.82H5.22L.51 23.50V5.36z" fill="#233b4e"/>
+ <path d="M6.06 1.82h17.09l4.06 4.08v17.00l-4.01 4.07H5.98l-4.08-4.1V5.98z" fill="url(#insert)"/><g transform="translate(0,3.65)"><rect x="4.30" y="-.56" width="20.7" height="8.04" rx="1.56" fill="#a3d0df"/><rect x="5.76" y=".73" width="17.83" height="5.69" rx="1.04" fill="#101f32"/><path d="M18.9 2.35h3.36" stroke="#437695" stroke-width=".85"/></g><g transform="translate(0,18.55)"><rect x="4.30" y="-.56" width="20.7" height="8.04" rx="1.56" fill="#a3d0df"/><rect x="5.76" y=".73" width="17.83" height="5.69" rx="1.04" fill="#101f32"/><path d="M18.9 2.35h3.36" stroke="#437695" stroke-width=".85"/></g><path d="M2.47 7.55v-4.65h4.61m14.62 0h4.56v4.65m0 13.78v4.71h-4.58m-14.58.01H2.48v-4.67" fill="none" stroke="#dcf6f9" stroke-width="1.34" stroke-linejoin="round" stroke-linecap="round"/></g>
+<g transform="translate(0,5)"><path d="M5.3 .49h18.37l4.85 4.89v18.19l-4.69 4.82H5.22L.51 23.50V5.36z" fill="#233b4e"/>
+ <path d="M6.06 1.82h17.09l4.06 4.08v17.00l-4.01 4.07H5.98l-4.08-4.1V5.98z" fill="url(#insert)"/><g transform="translate(0,3.65)"><rect x="4.66" y=".1" width="19.68" height="7.16" rx="1.55" fill="#223c50"/><rect x="5.58" y="1.19" width="17.2" height="4.92" rx="1.00" fill="url(#steel)"/><path d="M6.27 5.23h9.9" stroke="#55859b" stroke-width=".9"/></g><g transform="translate(0,18.55)"><rect x="4.66" y=".1" width="19.68" height="7.16" rx="1.55" fill="#223c50"/><rect x="5.58" y="1.19" width="17.2" height="4.92" rx="1.00" fill="url(#steel)"/><path d="M6.27 5.23h9.9" stroke="#55859b" stroke-width=".9"/></g><rect x="21.73" y="4.48" width="3.82" height="20.57" rx="1.21" fill="#1b384e"/><path d="M22.85 6.31v16.34" stroke="#abd5dd" stroke-width=".99"/><rect x="19.36" y="10.24" width="7.74" height="8.62" rx="1.65" fill="#263f55"/><rect x="20.51" y="11.62" width="5.34" height="5.53" rx="1.02" fill="#c4e1e3"/><path d="M21.46 14.16l1.13 1.17 2.23-2.59" stroke="#42748b" stroke-width=".78" fill="none"/></g>
+</svg>

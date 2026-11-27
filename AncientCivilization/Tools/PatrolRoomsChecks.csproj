@@ -6,8 +6,21 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../Assets/Resources/PlayerCore/DefaultMovement.asset" Link="DefaultMovement.asset" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../Assets/Resources/Traversal/DefaultBluePlug.asset" Link="DefaultBluePlug.asset" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="ControllerFixtures/EncounterUnityDoubles.cs" />
     <Compile Include="PatrolRoomsChecks/*.cs" />
+    <Compile Include="../Assets/Scripts/GrappleRules.cs" />
+    <Compile Include="../Assets/Scripts/BluePlugRules.cs" />
+    <Compile Include="../Assets/Scripts/PatrolPlugWorks.cs" />
+    <Compile Include="../Assets/Scripts/PatrolSocket*.cs" />
+    <Compile Include="../Assets/Scripts/AncientStoryPassageRules.cs" />
+    <Compile Include="../Assets/Scripts/AncientProductionLayout.cs" />
+    <Compile Include="../Assets/Scripts/AncientChapterLayout.cs" />
+    <Compile Include="../Assets/Scripts/PatrolCatalog.cs" />
+    <Compile Include="../Assets/Scripts/PlugDistrictCircuit.cs" />
+    <Compile Include="../Assets/Scripts/PlugDistrictSettings.cs" />
+    <Compile Include="../Assets/Scripts/PlugDistrictDevice.cs" />
     <Compile Include="../Assets/Scripts/PatrolProduction.cs" />
     <Compile Include="../Assets/Scripts/PatrolLiving.cs" />
     <Compile Include="../Assets/Scripts/PatrolAdministration.cs" />

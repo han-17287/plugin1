@@ -49,12 +49,12 @@ namespace Plugin.AncientCivilization
             switch(attack)
             {
                 case AncientLivingAttack.Bullets:case AncientLivingAttack.Cannon:return "파괴 불가 · 회피";
-                case AncientLivingAttack.Rocket:case AncientLivingAttack.DoubleRocket:return "와이어 반격";
+                case AncientLivingAttack.Rocket:case AncientLivingAttack.DoubleRocket:return "플러그 반격";
                 case AncientLivingAttack.Missiles:case AncientLivingAttack.CrossMissiles:return "베기 / 회피";
                 case AncientLivingAttack.Leap:return "착지점 회피";
                 case AncientLivingAttack.Grab:return "팔 궤도 회피";
                 case AncientLivingAttack.XBlast:return "빈 공간으로 이동";
-                default:return "와이어 고정 / 레이저";
+                default:return "플러그 고정 / 레이저";
             }
         }
         public static int BulletCount(int phase){return phase>=2?20:10;}

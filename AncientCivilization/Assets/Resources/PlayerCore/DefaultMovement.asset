@@ -33,5 +33,3 @@ MonoBehaviour:
   wallProbe: 0.12
   dropDuration: 0.22
   groundNormal: 0.65
-  scrollCooldown: 0.16
-  scrollThreshold: 0.1

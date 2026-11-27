@@ -89,12 +89,15 @@ def main():
     cue_enum = re.search(r'enum AncientEquipmentCue\s*{([^}]+)}', script.read_text(encoding='utf-8'))[1]
     cues = [token.strip() for token in cue_enum.split(',')]
     stems = ['ArchiveBass', 'ArchiveGlass']
-    expected = set(cues + stems)
+    blade_cues = {"BladeSwish": .125, "BladeWall": .079}
+    joker_actor_cues = {"JokerMagazine": .190, "JokerToss": .120}
+    expected = set(cues + stems) | blade_cues.keys() | joker_actor_cues.keys()
     assert {file.stem for file in directory.glob('*.wav')} == expected
     for name in expected:
         audio = directory / (name + '.wav')
         with wave.open(str(audio), 'rb') as wav:
-            assert (wav.getnchannels(), wav.getsampwidth(), wav.getframerate()) == (1, 2, 22050), name
+            rate = 32000 if name in joker_actor_cues else 22050
+            assert (wav.getnchannels(), wav.getsampwidth(), wav.getframerate()) == (1, 2, rate), name
             count = wav.getnframes()
             pcm = array('h', wav.readframes(count))
             if sys.byteorder != 'little':
@@ -103,6 +106,10 @@ def main():
             assert abs(pcm[0]) < 64 and abs(pcm[-1]) < 256, name
             if name in stems:
                 assert count == 8 * 22050, name
+            elif name in joker_actor_cues:
+                assert count == round(joker_actor_cues[name] * rate), name
+            elif name in blade_cues:
+                assert count == round(blade_cues[name] * 22050), name
             elif name == 'JokerCharge':
                 # Starting pitch stays low; the warning resolves as the regular sweep goes live.
                 assert count == round(1.22 * 22050), name
@@ -113,7 +120,7 @@ def main():
                 assert crossings(.96, 1.16) > 1.8 * crossings(.10, .30), name
             else:
                 assert .07 <= count / 22050 <= .75, name
-    print(f'PASS: {len(cues)} equipment cues, two four-bar stems, PCM headroom/edges and mixer group references')
+    print(f'PASS: {len(cues)} equipment cues, two blade cues, two actor cues and two four-bar stems, PCM headroom/edges and mixer group references')
 
 
 if __name__ == '__main__':

@@ -113,8 +113,15 @@ namespace Plugin.AncientCivilization
         }
         void Update()
         {
-            if(Input.GetKeyDown(KeyCode.F6))
-            {HighQuality=!HighQuality;AncientGame.SetSaved("graphics",HighQuality?1:0);PlayerPrefs.Save();game.Notice(HighQuality?"효과 / 고품질":"효과 / 가볍게");}
+            if(Input.GetKeyDown(KeyCode.F6)) game.Notice(ToggleQuality());
+        }
+
+        public static string ToggleQuality()
+        {
+            HighQuality = !HighQuality;
+            AncientGame.SetSaved("graphics", HighQuality ? 1 : 0);
+            PlayerPrefs.Save();
+            return HighQuality ? "효과 / 고품질" : "효과 / 가볍게";
         }
         void UpdateAnchorHalos(Vector2 camera,int sector,float halfWidth,float halfHeight,bool visible)
         {

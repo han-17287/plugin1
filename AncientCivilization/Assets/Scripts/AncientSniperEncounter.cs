@@ -7,7 +7,9 @@ namespace Plugin.AncientCivilization
         sealed class Actor
         {
             public AncientEnemy enemy;public LineRenderer tell;public int state,shots,magazine,grenades;
-            public bool grenadeUsed,duelUsed,lateLock,coveringPlate,ejected; public float ejectAt, coverY; public Vector2 ejectFrom,ejectTo;public float until,began,flash;public Vector2 aim;
+            public int lastGrenadePhase;
+            public float lastGrenadeRelease = float.NegativeInfinity;
+            public bool grenadeUsed,duelUsed,lateLock,aimLocked,coveringPlate,ejected; public float ejectAt, coverY; public Vector2 ejectFrom,ejectTo;public float until,began,flash;public Vector2 aim;
         }
         sealed class Turret
         {
@@ -63,6 +65,10 @@ namespace Plugin.AncientCivilization
             arena = new AncientJokerArena(game, game.transform, left, right);
             attacks = new AncientJokerAttacks(game, game.transform, left, right);
             attacks.SetArena(arena);
+            attacks.TellCue += JokerTell;
+            attacks.StrikeCue += JokerStrike;
+            attacks.ContactCue += JokerContact;
+            attacks.SweepFromRight = () => SideOf((phase == 5 ? ChainShooter : owner).transform.position.x) == 1;
             arena.SetPhase(1);
             var shader=Resources.Load<Shader>("Shaders/AncientEnergyClone");cloneMaterial=new Material(shader?shader:Shader.Find("Sprites/Default"));
             for(int i=0;i<4;i++)
@@ -78,15 +84,28 @@ namespace Plugin.AncientCivilization
                 objects[i]=new ObjectShot();objects[i].art=AncientArt.Display("Pooled grenade / compressed plate",AncientSniperEquipmentArt.Sprite(3),Vector2.zero,14);
                 objects[i].art.enabled=false;
             }
-            heroBeam=game.Line("Automatic player particle laser",new Color(.3f,.9f,1),.80f,23);
+            heroBeam=game.Line("Automatic player particle laser",new Color(1,.9f,.6f),.80f,23);
             bossBeam=game.Line("Charged sniper laser",new Color(1,.25f,.4f),.90f,23);
             heroCore=game.Line("Player laser core",Color.white,.26f,24);bossCore=game.Line("Sniper laser core",new Color(1,.95f,.95f),.30f,24);
-            heroGlow=game.Line("Player clash laser soft light",new Color(.15f,.65f,1,.5f),1.7f,22);
+            heroGlow=game.Line("Player clash laser soft light",new Color(1,.55f,.19f,.5f),1.7f,22);
             bossGlow=game.Line("Sniper clash laser soft light",new Color(1,.15f,.3f,.5f),1.8f,22);
             heroBeamProfile=new AncientBeamVisuals(heroGlow);bossBeamProfile=new AncientBeamVisuals(bossGlow);
             heroBeam.positionCount=bossBeam.positionCount=heroCore.positionCount=bossCore.positionCount=heroGlow.positionCount=bossGlow.positionCount=2;ShowBeams(false);
             game.Notice("조커 / 다섯 번째 총성 뒤에 장전합니다. 도탄은 빛나는 거울에서 이어지는 선을 보세요.",4);
         }
+        void JokerTell(Vector2 point, Vector2 direction, float scale)
+        {
+            AncientBossCue.Play(game, AncientBossCue.Style.Joker, AncientBossCue.Beat.Tell, point, direction, scale);
+        }
+        void JokerStrike(Vector2 point, Vector2 direction, float scale)
+        {
+            AncientBossCue.Play(game, AncientBossCue.Style.Joker, AncientBossCue.Beat.Strike, point, direction, scale);
+        }
+        void JokerContact(Vector2 point, Vector2 direction, float scale)
+        {
+            AncientBossCue.Play(game, AncientBossCue.Style.Joker, AncientBossCue.Beat.Contact, point, direction, scale);
+        }
+
         void BuildTurret(int i)
         {
             var t=new Turret();turrets[i]=t;t.position=new Vector2(i==0?left+4:right-4,0);
@@ -134,6 +153,11 @@ namespace Plugin.AncientCivilization
         }
         void ChangePhase(int next)
         {
+            if (next == 6)
+            {
+                AncientBossCue.Clear(game, AncientBossCue.Style.Joker);
+                if (ordinaryRigActive) ClearOrdinaryPresentation();
+            }
             if (mounted >= 0) Dismount();
             attacks.Clear();
             CloseCurtain();
@@ -261,10 +285,15 @@ namespace Plugin.AncientCivilization
                 float lockLead=a.grenades>0?.35f:a.lateLock?.32f:1.05f;
                 if(a.until-Time.time>lockLead) a.aim=ShotTarget(i,a,target);
                 a.tell.enabled=true;
+                if (!a.aimLocked && Time.time >= a.until - lockLead)
+                {
+                    a.aimLocked = true;
+                    Vector2 aim = a.grenades > 0 ? GrenadeVelocity(a,origin) : a.aim-origin;
+                    JokerTell(origin, aim.normalized, i == 0 ? .50f : .34f);
+                }
                 if(a.grenades>0)
                 {
-                    a.tell.positionCount=12;Vector2 v=(a.aim-origin)/1.05f+Vector2.up*7.35f;
-                    for(int j=0;j<12;j++){float t=j*1.05f/11;a.tell.SetPosition(j,origin+v*t+Vector2.down*7*t*t);}
+                    DrawGrenadeTell(a, origin, Time.time >= a.until - lockLead);
                 }
                 else
                 {
@@ -280,15 +309,24 @@ namespace Plugin.AncientCivilization
                 else
                 {
                     Vector2 d=(a.aim-origin).normalized;if(d.sqrMagnitude<.1f)d=Vector2.right*facing;
-                    if(game.shots.Count<48)game.Projectiles.Spawn(origin+d*.25f,d*25,18,false,0);
+                    Vector2 muzzle = origin + d*.25f;
+                    if (game.shots.Count < 48 && game.Projectiles.Spawn(muzzle,d*25,18,false,0))
+                        JokerStrike(muzzle, d, i == 0 ? .67f : .46f);
                     a.flash=Time.time+.18f;ConsumeRound(a);game.Sound(0);game.Burst(origin+d*.2f,new Color(1,.85f,.4f),3);
                 }
                 return;
             }
             if(a.state==3)
             {
-                if(Time.time<a.until)return;Vector2 p=a.aim+Vector2.right*(a.grenades-2)*1.7f;
-                SpawnObject(origin,(p-origin)/1.05f+Vector2.up*7.35f,true,false);a.grenades--;a.until=Time.time+.22f;
+                if(Time.time<a.until)return;
+                Vector2 velocity = GrenadeVelocity(a, origin);
+                if (SpawnObject(origin, velocity, true, false))
+                {
+                    JokerStrike(origin, velocity.normalized, .41f);
+                    a.lastGrenadePhase=phase;
+                    a.lastGrenadeRelease=Time.time;
+                }
+                a.grenades--;a.until=Time.time+.22f;
                 if(a.grenades==0){a.state=0;a.until=Time.time+.5f;}return;
             }
             if(Time.time<a.until || attacks.Busy && i==0) return;
@@ -315,9 +353,46 @@ namespace Plugin.AncientCivilization
             if(grenade) a.grenadeUsed=true;
             a.grenades=grenade?4:0;
             a.lateLock=(a.shots+a.magazine)%3==1;
-            a.aim=ShotTarget(i,a,target);a.state=1;a.began=Time.time;
+            a.aim=ShotTarget(i,a,target);a.state=1;a.began=Time.time;a.aimLocked=false;
             a.until=Time.time+(grenade?.8f:AncientSniperRules.AimSeconds);
         }
+        static Vector2 GrenadeVelocity(Actor actor, Vector2 origin)
+        {
+            Vector2 target = actor.aim + Vector2.right * (actor.grenades - 2) * 1.7f;
+            return (target - origin) / 1.05f + Vector2.up * 7.35f;
+        }
+
+        void DrawGrenadeTell(Actor actor, Vector2 origin, bool locked)
+        {
+            // 남은 투척 수에 따라 첫 탄의 가로 오프셋이 달라진다. 실제 발사 함수와 같은 초속을 읽는다.
+            const int samples = 12;
+            const float previewTime = 1.05f;
+            LineRenderer line = actor.tell;
+            line.positionCount = samples;
+            line.startColor = new Color(1f, .69f, .27f, locked ? .94f : .66f);
+            line.endColor = new Color(1f, .84f, .52f, locked ? .87f : .34f);
+            line.startWidth = locked ? .057f : .036f;
+            line.endWidth = locked ? .040f : .021f;
+            line.SetPosition(0, origin);
+            Vector2 velocity = GrenadeVelocity(actor, origin);
+            Vector2 previous = origin;
+            for (int j = 1; j < samples; j++)
+            {
+                float t = j * previewTime / (samples - 1);
+                // 실제 투척물은 매 프레임 중력을 먼저 더한 뒤 이동한다. 현재 프레임 간격으로 예측한다.
+                Vector2 next = origin + velocity * t + Vector2.down * (7f * t * (t + Time.deltaTime));
+                var floor = Physics2D.Linecast(previous, next, 1 << 8);
+                if (floor)
+                {
+                    line.SetPosition(j, floor.point);
+                    line.positionCount = j + 1;
+                    break;
+                }
+                line.SetPosition(j, next);
+                previous = next;
+            }
+        }
+
         // 장막은 착지점 뒤에 펼쳐진다. 플레이어와 두 번의 칼 궤적은 앞에 그대로 보인다.
         void DrawCurtain(Vector2 foot,float closed,float opacity)
         {
@@ -388,13 +463,22 @@ namespace Plugin.AncientCivilization
                 t.charging=true;t.started=Time.time;t.until=Time.time+3.2f;
                 t.aim=friendly?(Vector2)game.View.ScreenToWorldPoint(Input.mousePosition):
                     new Vector2(i==0?right:left,t.plateIndex%2==0?1.05f:3.7f);
+                if (!friendly)
+                {
+                    Vector2 direction = (t.aim-origin).normalized;
+                    JokerTell(origin + direction*2.2f, direction, .53f);
+                }
             }
             if(friendly && t.until-Time.time>.4f)t.aim=game.View.ScreenToWorldPoint(Input.mousePosition);
             Vector2 d=(t.aim-origin).normalized;t.barrel.transform.rotation=Quaternion.Euler(0,0,Mathf.Atan2(d.y,d.x)*Mathf.Rad2Deg);
             t.tell.enabled=true;t.tell.startColor=t.tell.endColor=friendly?AncientGame.Cyan:AncientGame.Orange;t.tell.SetPosition(0,origin);t.tell.SetPosition(1,t.aim);
             t.body.color=Color.Lerp(new Color(.18f,.28f,.36f),friendly?AncientGame.Cyan:AncientGame.Orange,Mathf.Clamp01((Time.time-t.started)/3.2f));
             if(Time.time<t.until)return;
-            SpawnObject(origin+d*2.2f,d*13,false,friendly);game.Sound(4);game.Burst(origin+d*2.2f,AncientGame.Cyan,5);t.charging=false;t.tell.enabled=false;t.until=Time.time+1.5f;
+            Vector2 barrelEnd = origin+d*2.2f;
+            if (SpawnObject(barrelEnd,d*13,false,friendly) && !friendly)
+                JokerStrike(barrelEnd, d, .74f);
+            game.Sound(4);game.Burst(barrelEnd,AncientGame.Cyan,5);
+            t.charging=false;t.tell.enabled=false;t.until=Time.time+1.5f;
             if(!friendly)
             {
                 t.plateIndex++;
@@ -407,16 +491,17 @@ namespace Plugin.AncientCivilization
                 }
             }
         }
-        void SpawnObject(Vector2 position,Vector2 velocity,bool grenade,bool friendly)
+        bool SpawnObject(Vector2 position,Vector2 velocity,bool grenade,bool friendly)
         {
             for(int k=0;k<objects.Length;k++)
             {
                 int at=(cursor+k)%objects.Length;var s=objects[at];if(s.live)continue;cursor=(at+1)%objects.Length;
                 s.live=true;s.age=0;s.position=position;s.velocity=velocity;s.grenade=grenade;s.friendly=friendly;
                 s.art.sprite=AncientSniperEquipmentArt.Sprite(grenade?2:3);s.art.transform.localScale=Vector3.one;
-                s.art.transform.position=position;s.art.color=friendly?AncientGame.Cyan:Color.white;s.art.enabled=true;return;
+                s.art.transform.position=position;s.art.color=friendly?AncientGame.Cyan:Color.white;s.art.enabled=true;return true;
             }
             droppedSpawns++;
+            return false;
         }
         void TickObjects()
         {
@@ -428,7 +513,12 @@ namespace Plugin.AncientCivilization
                 if(hit)
                 {
                     if(s.grenade)
-                    {ground.Explode(hit.point);if(Vector2.Distance(game.hero.transform.position,hit.point)<2.4f)game.hero.Hurt(22);game.Impact(hit.point,AncientGame.Orange,true);game.Sound(4);}
+                    {
+                        JokerContact(hit.point, hit.normal, .88f);
+                        ground.Explode(hit.point);
+                        if(Vector2.Distance(game.hero.transform.position,hit.point)<2.4f)game.hero.Hurt(22);
+                        game.Impact(hit.point,AncientGame.Orange,true);game.Sound(4);
+                    }
                     else game.Burst(hit.point,AncientGame.Orange,8);
                     RemoveObject(s);if(game.boss!=owner)return;continue;
                 }
@@ -462,6 +552,58 @@ namespace Plugin.AncientCivilization
         {Vector2 d=end-start;float t=d.sqrMagnitude>.001f?Mathf.Clamp01(Vector2.Dot(p-start,d)/d.sqrMagnitude):0;return Vector2.Distance(p,start+d*t);}
         void RemoveObject(ObjectShot s){s.live=false;s.art.enabled=false;}
         void ClearObjects(){foreach(var s in objects)if(s!=null)RemoveObject(s);foreach(var a in actors)if(a!=null)a.tell.enabled=false;}
+        internal bool UnsafeBladeGround(Vector2 point)
+        {
+            if (!owner || !game || game.boss != owner) return false;
+            foreach (var shot in objects)
+                if (shot != null && shot.live && shot.grenade && (shot.position-point).sqrMagnitude < 4f) return true;
+            return false;
+        }
+
+        internal int TurretAlongPlug(Vector2 start,Vector2 end,float tipRadius,out Vector2 contact)
+        {
+            contact=end;
+            if (!owner || !game || game.boss!=owner || phase!=6 || clashing) return -1;
+            int nearest=-1;
+            float best=2f;
+            Vector2 travel=end-start;
+            for(int i=0;i<turrets.Length;i++)
+            {
+                var t=turrets[i];
+                if(t==null || t.broken)continue;
+                Vector2 point=t.position+Vector2.up,offset=point-start;
+                if(Plugin.PlayerCore.ElectricPlugRules.SegmentHit(travel.x,travel.y,offset.x,offset.y,tipRadius+.72f,out float fraction) &&
+                    fraction<best && !Physics2D.Linecast(start,point,1<<8))
+                {nearest=i;best=fraction;contact=start+travel*fraction;}
+            }
+            return nearest;
+        }
+
+        internal void PlugTurret(int slot,float damage)
+        {
+            if(phase==6 && !clashing && (uint)slot<turrets.Length && !turrets[slot].broken)HitTurret(slot,damage);
+        }
+
+        internal void BladeBurst(Vector2 origin, float radius, float damage)
+        {
+            if (!owner || !game || game.boss != owner || clashing) return;
+            float reach = radius * radius;
+            foreach (var shot in objects)
+            {
+                if (shot == null || !shot.live || (shot.position-origin).sqrMagnitude > reach ||
+                    Physics2D.Linecast(origin+Vector2.up*.08f,shot.position,1<<8)) continue;
+                game.hero.Combat.EmitParticles(shot.position,shot.grenade?14:20);
+                RemoveObject(shot);
+            }
+            if (phase != 6) return;
+            for (int i=0;i<turrets.Length;i++)
+            {
+                var t=turrets[i];if(t==null||t.broken)continue;
+                Vector2 point=t.position+Vector2.up;
+                if ((point-origin).sqrMagnitude<=reach && !Physics2D.Linecast(origin+Vector2.up*.08f,point,1<<8))
+                    HitTurret(i,damage);
+            }
+        }
         public bool TryBlade(Vector2 origin,Vector2 direction)
         {
             bool found=TryBreakObjects(origin,direction);

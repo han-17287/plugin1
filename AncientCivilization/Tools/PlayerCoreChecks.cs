@@ -17,19 +17,15 @@ class PlayerCoreChecks
             foreach(PlayerCommand command in Enum.GetValues(typeof(PlayerCommand)))if(command!=PlayerCommand.Count)buffer.Put(command,press,.15);
             buffer.Clear();foreach(PlayerCommand command in Enum.GetValues(typeof(PlayerCommand)))if(command!=PlayerCommand.Count)Check(!buffer.Has(command,press),"Focus loss/death clears every buffered command");
         }
-        foreach(float noise in new[]{0,.001f,-.01f,.099f})
-        {var gate=new ScrollModeGate();Check(gate.Read(noise,1,.1f,.16f)==0,"Wheel noise cannot switch mode");}
-        foreach(int hz in new[]{30,60,144,240})
+        foreach (var command in new[] {PlayerCommand.Summon, PlayerCommand.Detach, PlayerCommand.Overload})
         {
-            var gate=new ScrollModeGate();Check(gate.Read(120,1,.1f,.16f)==1,"The first positive wheel impulse selects attack");
-            for(int i=1;i<=hz;i++)Check(gate.Read(120,1+i/(double)hz,.1f,.16f)==0,"A held/continuous wheel packet cannot repeatedly change modes");
-            Check(gate.Read(0,2.1,.1f,.16f)==0&&gate.Read(-120,2.2,.1f,.16f)==-1,"Returning to neutral rearms a later deliberate wheel movement");
-            gate.Reset();Check(gate.Read(-1,0,.1f,.16f)==-1,"Reset does not retain a previous session's cooldown");
+            var buffer = new PlayerInputBuffer();
+            buffer.Put(command, 1, .15);
+            Check(buffer.Take(command, 1.14) && !buffer.Take(command, 1.14), "Q/E/R are single independent edges");
+            Check(!buffer.Has(PlayerCommand.Primary, 1.14), "Loadout actions cannot inject a primary attack");
         }
-        var scroll=new ScrollModeGate();Check(scroll.Read(1,1,.1f,.16f)==1,"Initial wheel event accepted");scroll.Read(0,1.01,.1f,.16f);
-        Check(scroll.Read(-1,1.02,.1f,.16f)==0,"Opposite chatter inside the cooldown is suppressed");scroll.Read(0,1.2,.1f,.16f);Check(scroll.Read(-1,1.21,.1f,.16f)==-1,"A later intentional reverse wheel event is accepted");
         foreach(double invalid in new[]{double.NaN,double.PositiveInfinity,double.NegativeInfinity})
         {var buffer=new PlayerInputBuffer();buffer.Put(PlayerCommand.Jump,invalid,.1);Check(!buffer.Has(PlayerCommand.Jump,1),"Invalid input clocks cannot create a pending action");}
-        Console.WriteLine("PASS: "+checks+" player input buffer and wheel cadence checks; Unity movement/input/physics not executed");
+        Console.WriteLine("PASS: "+checks+" player input buffer and loadout key checks; Unity movement/input/physics not executed");
     }
 }

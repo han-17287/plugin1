@@ -18,12 +18,17 @@ namespace Plugin.AncientCivilization
         public bool SecretaryCleared {get;private set;}
         public bool ArenaActive {get{return activeBoss&&activeBoss.IsAlive;}}
         public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset)
+            => TryDialogueActor(speaker,out actor,out headOffset,out _);
+        public bool TryDialogueActor(string speaker,out Transform actor,out float headOffset,out float headSide)
         {
-            actor=null;headOffset=2.3f;
+            actor=null;headOffset=2.3f;headSide=0;
             if(!game||!game.Story)return false;
             if(game.Story.CurrentFloor==2&&speaker=="기록 집행관"&&retiringEnforcer)
             {
-                actor=retiringEnforcer.transform;headOffset=3.3f;
+                actor=retiringEnforcer.transform;
+                Vector2 lens = retiringEnforcer.EnforcerLensWorld - (Vector2)actor.position;
+                headOffset=lens.y+.14f;
+                headSide=lens.x;
                 return true;
             }
             if(game.Story.CurrentFloor!=4)return false;
@@ -31,7 +36,11 @@ namespace Plugin.AncientCivilization
             if(speaker=="저격수")candidate=retiringSniper?retiringSniper:activeBoss&&!activeBoss.IsSecretary?activeBoss:null;
             else if(speaker=="비서실장"||speaker=="중앙행정정보처리기관 비서실장")candidate=retiringSecretary?retiringSecretary:activeBoss&&activeBoss.IsSecretary?activeBoss:null;
             if(!candidate||!candidate.gameObject.activeInHierarchy)return false;
-            actor=candidate.transform;headOffset=candidate.IsSecretary?2.55f:2.15f;return true;
+            actor=candidate.transform;
+            // 퇴장 대화 자세에서는 총을 내리고 선 헬멧의 높이에 맞춰 말풍선이 얼굴을 피하게 한다.
+            headOffset = candidate.IsSecretary ? 2.55f :
+                candidate == retiringSniper && candidate.SniperBodyArt ? 2.89f * Mathf.Abs(candidate.SniperBodyArt.transform.lossyScale.y) : 2.15f;
+            return true;
         }
         void ClearDialogueActors()
         {
@@ -160,6 +169,11 @@ namespace Plugin.AncientCivilization
         {
             ClearDialogueActors();
             if(game.Enforcer)game.Enforcer.StopBattle();
+            if (activeBoss && activeBoss.IsSecretary)
+            {
+                var clock = activeBoss.GetComponent<AncientClockBoss>();
+                if (clock) clock.StopBattle();
+            }
             if (activeBoss && activeBoss.IsOrbitalFirst)
             {
                 var orbital = activeBoss.GetComponent<AncientOrbitalEncounter>();
@@ -206,7 +220,7 @@ namespace Plugin.AncientCivilization
                 game.CombatCheckpoint(3, new Vector2(left - 2, 1.3f));
                 var weapon = Spawn(right - 6, 0, 3, 3, true);
                 weapon.ConfigureOrbitalFirst(game, left, right);
-                game.Story.RadioBark("통신관", "백 경위, 공용 화물선이 닫혔다. 앵커 등부터 확인해.");
+                game.Story.RadioBark("통신관", "백 경위, 공용 화물선이 닫혔다. 파란 콘센트부터 확인해.");
                 game.Notice("코어 보안 병기 · 궤도 봉쇄기 / 화물 검사대", 3);
                 return;
             }
@@ -263,6 +277,8 @@ namespace Plugin.AncientCivilization
             if(floor==4)
             {
                 retiringSniper=speaker;if(speaker&&game.hero)speaker.FaceToward(game.hero.transform.position.x);
+                // 레이저 충돌이 끝나고 전투 명단을 떠난 뒤, 대화에서는 총을 내린 생존자의 모습으로 돌아온다.
+                if (speaker) speaker.LowerSniperRifle();
                 game.Story.OnDistrictCleared(floor,()=>FinishRetirement(speaker,false));
             }
             else

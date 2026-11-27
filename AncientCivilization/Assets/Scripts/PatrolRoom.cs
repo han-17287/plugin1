@@ -26,32 +26,32 @@ namespace Plugin.PlayerCore
         static Sprite pixel;
         readonly List<Action<float>> steps = new List<Action<float>>();
         readonly List<Interaction> actions = new List<Interaction>();
+        readonly List<BluePlugSocket> bluePlugSockets = new List<BluePlugSocket>();
         PatrolExpedition expedition;
         Rigidbody2D officer;
-        PlayerGrapple grapple;
-        Camera cameraView;
-        LineRenderer beamOuter, beamCore;
-        Material beamMaterial;
+        PlayerBluePlug bluePlug;
+        PlayerSummonLoadout loadout;
         Vector2 beamStart, beamEnd;
-        float beamLeft;
-        bool laserHeld, queuedShot, released;
+        int lastShot;
+        bool released;
         int room, lastArrival;
-        GrappleAnchor arrival;
+        BluePlugSocket arrival;
         Interaction selected;
 
         public static string NameOf(int id) => PatrolCatalog.Name(id);
-        public string Title => NameOf(room);
-        public string Prompt => selected==null ? "" : selected.available ? "E  " + selected.name : selected.name+" · 반대편에서 개방";
+        public string Title => socketRoute ? PatrolSocketCatalog.Name(room) : NameOf(room);
+        public BluePlugSocket[] BluePlugSockets => bluePlugSockets.ToArray();
+        public string Prompt => selected==null || (loadout && loadout.Equipped) ? "" : selected.available ? "E  " + selected.name : selected.name+" · 반대편에서 개방";
         public Color Accent => accents[(room-1)/10];
         public Vector2 Hero => (Vector2)transform.InverseTransformPoint(officer.position);
         public Vector2 Velocity => officer.linearVelocity;
         public bool Grounded => expedition.Player.Grounded;
-        public bool Zipping => grapple.Active;
+        public bool Zipping => bluePlug.Moving;
         public bool TrialActive => expedition.TrialActive;
         public float Axis => expedition.InputReader.Move.x;
         public bool JumpHeld => expedition.InputReader.JumpHeld;
         public bool CollectHeld => expedition.InputReader.CollectHeld;
-        public bool PrimaryHeld => Input.GetMouseButton(0);
+        public bool PrimaryHeld => loadout && loadout.Cutting;
         public float Elapsed {get;private set;}
         public bool Near(float x,float y,float distance) => (Hero-new Vector2(x,y)).sqrMagnitude<=distance*distance;
         public bool Flag(string key) => expedition.Flag(key);
@@ -65,16 +65,17 @@ namespace Plugin.PlayerCore
         public void Push(float vx,float vy) {officer.linearVelocity=new Vector2(vx,vy);}
         public void Warp(float x,float y)
         {
-            grapple.ResetForRetry();
+            bluePlug.ResetLink();
             expedition.Player.Respawn(transform.TransformPoint(new Vector2(x,y)));
         }
 
-        public void Build(PatrolExpedition manager,int id)
+        public void Build(PatrolExpedition manager,int id,bool socketRoute=false)
         {
             if (expedition || id<1 || id>PatrolCatalog.Count) throw new ArgumentOutOfRangeException(nameof(id));
-            expedition=manager; room=id; grapple=manager.Grapple;
-            officer=manager.Player.GetComponent<Rigidbody2D>(); cameraView=Camera.main;
-            lastArrival=grapple.ArrivalSequence;
+            expedition=manager; room=id; this.socketRoute=socketRoute; bluePlug=manager.BluePlug;
+            officer=manager.Player.GetComponent<Rigidbody2D>(); loadout=manager.Player.GetComponent<PlayerSummonLoadout>();
+            lastShot=loadout.LaserSequence;
+            lastArrival=bluePlug.ArrivalSequence;
             if (!pixel)
             {
                 pixel=Sprite.Create(Texture2D.whiteTexture,new Rect(0,0,1,1),Vector2.one*.5f,1,0,SpriteMeshType.FullRect);
@@ -84,8 +85,12 @@ namespace Plugin.PlayerCore
             var size=skyline.sprite.bounds.size;
             skyline.transform.localScale=new Vector3(50/size.x,19/size.y,1);
             skyline.color=new Color(.65f,.70f,.77f);
-            Box("순찰로 기초",24,-.8f,52,1.6f,new Color(.13f,.18f,.23f),true,0);
-            Box("기초 가장자리",24,-.10f,52,.17f,Color.Lerp(Accent,Color.black,.38f),false,1);
+            if (socketRoute) BuildSocketPaving(id);
+            else
+            {
+                Box("순찰로 기초",24,-.8f,52,1.6f,new Color(.13f,.18f,.23f),true,0);
+                Box("기초 가장자리",24,-.10f,52,.17f,Color.Lerp(Accent,Color.black,.38f),false,1);
+            }
             Box("밀폐 천장",24,16.6f,52,1.2f,new Color(.13f,.19f,.24f),true,0);
             for(int bay=0;bay<7;bay++)
             {
@@ -93,13 +98,42 @@ namespace Plugin.PlayerCore
                 Box("천장 이음",x,15.86f,.26f,.29f,new Color(.22f,.29f,.35f),false,-1);
                 Box("구역 유도등",x,15.7f,.68f,.09f,Accent,false,1);
             }
-            switch(floor)
+            // 소환·레이저가 필요한 길은 첫 방문이나 사망 직후에도 열 수 있다.
+            float supplyX = 3.8f;
+            Box("입자 보급 전구",supplyX,.7f,.32f,.53f,new Color(.82f,.71f,1f),false,4);
+            Sign("보급 전구 · 우클릭",supplyX,2.22f);
+            bool supplyHeld = false;
+            Step(dt => {
+                bool collecting = CollectHeld && Near(supplyX,1.1f,1.5f);
+                if (collecting && !supplyHeld && Charge < loadout.SupplyTarget)
+                    AddCharge(loadout.SupplyTarget-Charge);
+                supplyHeld = collecting;
+            });
+            if (socketRoute)
             {
-                case 0: BuildProduction(id); break;
-                case 1: BuildLiving(id); break;
-                case 2: BuildAdministration(id); break;
-                case 3: BuildResidence(id); break;
-                case 4: BuildSummit(id); break;
+                BuildSocketStreet(id);
+                InstallElectricFixtures(id);
+                if (manager.StoryStreet && id == 1) BuildTowBench(5.3f);
+                if (manager.StoryStreet && id == 6) BuildSwingBench(5.3f);
+            }
+            else
+            {
+                switch(floor)
+                {
+                    case 0: BuildProduction(id); break;
+                    case 1: BuildLiving(id); break;
+                    case 2: BuildAdministration(id); break;
+                    case 3: BuildResidence(id); break;
+                    case 4: BuildSummit(id); break;
+                }
+                InstallPlugWorks(id);
+            }
+            if (!manager.TrialActive && !manager.StoryStreet)
+            {
+                // 같은 구역의 두 순찰로는 서쪽 입구에서 만난다. 시험 주행 중에는 이 문이 기록을 끊지 않는다.
+                Box("서쪽 갈림문 기둥", 2, .98f, .23f, 1.96f, new Color(.16f,.22f,.28f),false,-2);
+                Box("갈림문 표시등", 2, 1.86f, .52f, .12f, Accent,false,-1);
+                Use(socketRoute ? "갈림문 · 기존 순찰로" : "갈림문 · 벽 콘센트 길", 2, 1, manager.SwitchStreet, .94f);
             }
         }
 
@@ -128,9 +162,15 @@ namespace Plugin.PlayerCore
         {
             var go=new GameObject(label);
             go.transform.SetParent(transform,false);go.transform.localPosition=new Vector2(x,y);
-            go.AddComponent<FixedGrappleAnchor>().clockOwner=expedition.InputReader;
+            // 기존 장치의 이동과 개폐 상태를 쓰고, 도착은 파란 콘센트를 통해 판정한다.
+            var anchor=go.AddComponent<FixedGrappleAnchor>();
+            anchor.clockOwner=expedition.InputReader;
+            var socket=go.AddComponent<BluePlugSocket>();
+            socket.BindAnchor(anchor);
+            RegisterBluePlugSocket(socket);
             return go;
         }
+        void RegisterBluePlugSocket(BluePlugSocket socket) => bluePlugSockets.Add(socket);
         public void Sign(string label,float x,float y)
         {
             var go=new GameObject(label);go.transform.SetParent(transform,false);go.transform.localPosition=new Vector2(x,y);
@@ -204,38 +244,9 @@ namespace Plugin.PlayerCore
             var ray=new Ray(new Vector3(beamStart.x,beamStart.y,bounds.center.z),new Vector3(delta.x,delta.y,0).normalized);
             return bounds.IntersectRay(ray,out float distance) && distance<=delta.magnitude+.05f;
         }
-        void Shoot()
-        {
-            beamStart=officer.position;
-            Vector2 pointer=cameraView.ScreenToWorldPoint(expedition.InputReader.Pointer);
-            Vector2 direction=(pointer-beamStart).normalized;
-            if(direction.sqrMagnitude<.5f)direction=Vector2.right*expedition.Player.Facing;
-            RaycastHit2D hit=Physics2D.Raycast(beamStart,direction,26,1<<8);
-            beamEnd=hit ? hit.point : beamStart+direction*26;
-            if(!beamMaterial)
-            {
-                beamMaterial=new Material(Shader.Find("Sprites/Default"));
-                beamOuter=BeamLayer("검수 레이저 후광",.21f,new Color(.19f,.73f,1,.65f),18);
-                beamCore=BeamLayer("검수 레이저 중심",.06f,Color.white,19);
-            }
-            beamOuter.enabled=beamCore.enabled=true;
-            beamOuter.SetPosition(0,beamStart);beamOuter.SetPosition(1,beamEnd);
-            beamCore.SetPosition(0,beamStart);beamCore.SetPosition(1,beamEnd);
-            beamLeft=.14f;
-        }
-        LineRenderer BeamLayer(string label,float width,Color tint,int order)
-        {
-            var go=new GameObject(label);go.transform.SetParent(transform,false);
-            var line=go.AddComponent<LineRenderer>();line.sharedMaterial=beamMaterial;line.useWorldSpace=true;line.positionCount=2;
-            line.widthMultiplier=width;line.startColor=line.endColor=tint;line.sortingOrder=order;return line;
-        }
-
         void Update()
         {
-            if (!expedition || expedition.Paused){laserHeld=queuedShot=false;return;}
-            bool held=expedition.InputReader.LaserHeld;
-            if(laserHeld && !held)queuedShot=true;
-            laserHeld=held;
+            if (!expedition || expedition.Paused) return;
             selected=null;float nearest=float.MaxValue;
             foreach(var entry in actions)
             {
@@ -246,19 +257,19 @@ namespace Plugin.PlayerCore
                 if(!entry.available)d+=100;
                 if(d<nearest){nearest=d;selected=entry;}
             }
-            if(selected!=null && selected.available && Input.GetKeyDown(KeyCode.E))selected.use();
+            if(selected!=null && selected.available && !loadout.BlocksInteract && expedition.InputReader.InteractPressed)selected.use();
         }
         void FixedUpdate()
         {
             if(!expedition || expedition.Paused)return;
             float dt=Time.fixedDeltaTime;Elapsed+=dt;
-            arrival=lastArrival!=grapple.ArrivalSequence?grapple.LastArrival:null;
-            lastArrival=grapple.ArrivalSequence;
-            released=queuedShot;queuedShot=false;
-            if(released)Shoot();
+            arrival=lastArrival!=bluePlug.ArrivalSequence?bluePlug.LastArrival:null;
+            lastArrival=bluePlug.ArrivalSequence;
+            released=lastShot!=loadout.LaserSequence;
+            lastShot=loadout.LaserSequence;
+            if(released){beamStart=loadout.LaserStart;beamEnd=loadout.LaserEnd;}
             foreach(var update in steps)update(dt);
-            if(beamLeft>0 && (beamLeft-=dt)<=0){beamOuter.enabled=beamCore.enabled=false;}
+            StepPlugWorks(dt);
         }
-        void OnDestroy(){if(beamMaterial)Destroy(beamMaterial);}
     }
 }

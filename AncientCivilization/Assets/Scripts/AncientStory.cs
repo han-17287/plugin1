@@ -172,9 +172,27 @@ namespace Plugin.AncientCivilization
             reportPending=false;lines.Clear();afterDialogue=null;lineIndex=0;ResetTyping();dialogueFocusReady=false;
             SetStage(5);game.BlockGameplayInput();if(game.Production)game.Production.BeginBreach();
         }
+        // 검수 배출구와 현장 작업대는 칼날 한 번을 부를 만큼만 보충한다.
+        public bool TryBladeReserve()
+        {
+            var hero=game.hero;
+            if(!hero||!hero.Loadout||game.Paused||!game.GameplayInputReady)return false;
+            var blade=hero.Loadout;
+            if(blade.State!=Plugin.PlayerCore.SummonedBladeState.None &&
+                blade.State!=Plugin.PlayerCore.SummonedBladeState.Cooldown)return false;
+            int missing=blade.Data.summonCost-hero.SummonParticles;
+            if(missing<=0)return false;
+            hero.particles+=missing;
+            game.Sound(2);
+            game.Notice("비상 보급 / 소환 입자 확보 · Q로 블레이드를 부르세요.",2);
+            return true;
+        }
         public bool TryProductionStock()
         {
             if(CurrentFloor!=0||Stage<1||Stage>4||!game.hero)return false;
+            if(Stage==3 && Mathf.Abs(game.hero.transform.position.y-AncientProductionLayout.TrainingEmitterY)<2.5f)
+                foreach(float emitter in AncientProductionLayout.TrainingEmitterX)
+                    if(Mathf.Abs(game.hero.transform.position.x-emitter)<3.0f && TryBladeReserve())return true;
             Vector2 point=new Vector2(AncientProductionLayout.StockX,1.3f);
             if(((Vector2)game.hero.transform.position-point).sqrMagnitude>2.7f*2.7f)return false;
             if(DialogueOpen||game.Paused||!game.GameplayInputReady)return true;
@@ -226,9 +244,9 @@ namespace Plugin.AncientCivilization
         void TrainingHint(int step)
         {
             ClearProductionRadio();
-            if(step==0)RadioBark("통신관","장비 검수 배출구다. 휠을 위로 돌린 뒤, 다가오는 빈 하우징을 짧은 좌클릭으로 베어라. 훈련 물체는 안전하다.");
-            else if(step==1)RadioBark("통신관",Has(6)?"입자가 비었군. 빈 하우징을 다시 베고, 파란 입자 가까이에서 우클릭을 누르고 있어라.":"베인 물체가 파란 입자로 변했다. 가까이 가서 우클릭을 누르고 있으면 수집된다. 모드는 그대로 둬도 된다.");
-            else if(step==2)RadioBark("통신관","입자가 모였다. 동쪽 검수문 앞의 파란 수광부를 겨냥해라. 좌클릭을 유지하고, 금색 조준선이 뜨면 놓아서 전력을 넣어라.");
+            if(step==0)RadioBark("통신관","스윙 기능이 열렸다. 꽂힌 상태에서 V로 스윙하고 다시 V로 놓는다. Q로 칼날을 부른 뒤 손잡이에 플러그를 던져라. 장착하면 좌클릭으로 빈 하우징을 벨 수 있다.");
+            else if(step==1)RadioBark("통신관",Has(6)?"입자가 비었군. 빈 하우징을 다시 베고, 입자 가까이에서 우클릭을 누르고 있어라.":"베인 물체가 입자로 변했다. 가까이 가서 우클릭을 누르고 있으면 수집된다.");
+            else if(step==2)RadioBark("통신관","입자가 모였다. 동쪽 검수문 앞의 파란 수광부를 겨냥해라. 블레이드를 장착하고 F를 눌러라. 금색 조준선이 뜨면 놓아서 전력을 넣어라.");
             else RadioBark("통신관","검수문 전력이 복구됐다. 열린 문을 지나 재고 단말에서 E를 눌러 실제 수량을 확인해라.");
             nextTrainingHint=Time.time+18;
         }
@@ -316,7 +334,7 @@ namespace Plugin.AncientCivilization
             }
             if(Stage==1&&hero.transform.position.x>=-154&&AncientRules.TutorialReady(1,flags))
             {
-                SetStage(2);RadioBark("통신관","휠 아래는 와이어 모드다. 천장에 좌클릭하면 직선 견인, 가운데 클릭하면 스윙한다. 위는 지름길이고 아래도 안전하다.");
+                SetStage(2);RadioBark("통신관","검수 회랑에서 견인 기능을 열어 뒀다. 파란 콘센트를 겨누고 좌클릭을 눌렀다 놓아라. 꽂히면 C로 견인한다. 아래 통로도 열려 있다.");
             }
             else if(Stage==2&&hero.transform.position.x>=-60)
             {
@@ -488,7 +506,7 @@ namespace Plugin.AncientCivilization
         string Objective()
         {
             if(Stage<=1)return "생산장으로 이동 / "+Check(0,"이동")+"  "+Check(1,"Space 점프")+"  "+Check(2,"Ctrl 달리기 전환");
-            if(Stage==2)return "검수 회랑으로 이동 / 천장 와이어 연습 · 아래는 안전 통로";
+            if(Stage==2)return "검수 회랑으로 이동 / 파란 플러그 견인 연습 · 아래는 안전 통로";
             if(Stage==3)
             {
                 int step=TrainingPracticeStep();
@@ -497,13 +515,13 @@ namespace Plugin.AncientCivilization
                 {
                     string direction=supplyDirection<0?"◀":"▶";
                     return step==0?"장비 확인 / "+direction+" 검수 배출구로 이동 · 빈 하우징 베기":
-                        "파란 입자 우클릭 수집 · 새 물체는 "+direction+" 검수 배출구로";
+                        "입자 우클릭 수집 · 새 물체는 "+direction+" 검수 배출구로";
                 }
-                if(step==0&&TooCloseToTrainingEmitter())return "장비 확인 / 배출구에서 두 걸음 물러나 빈 하우징을 베세요";
-                if(step==0)return "장비 확인 1 / 휠 위 ▶ 짧은 좌클릭으로 빈 하우징 베기";
-                if(step==1&&TooCloseToTrainingEmitter())return "장비 확인 2 / 파란 입자 우클릭 수집 · 새 물체는 배출구에서 두 걸음 뒤로";
-                if(step==1)return "장비 확인 2 / 파란 입자 근처에서 우클릭 유지 · 놓쳤다면 다시 베기";
-                if(step==2)return "장비 확인 3 / 동쪽 파란 수광부에 레이저 ▶ 좌클릭 유지 · 금색일 때 놓기";
+                if(step==0&&TooCloseToTrainingEmitter())return "장비 확인 / 배출구에서 E 비상 보급 · 두 걸음 물러나 장착 후 베기";
+                if(step==0)return "장비 확인 1 / Q 소환 ▶ 손잡이에 플러그를 던져 장착 ▶ 좌클릭 베기";
+                if(step==1&&TooCloseToTrainingEmitter())return "장비 확인 2 / 입자 우클릭 수집 · 새 물체는 배출구에서 두 걸음 뒤로";
+                if(step==1)return "장비 확인 2 / 입자 근처에서 우클릭 유지 · 놓쳤다면 다시 베기";
+                if(step==2)return "장비 확인 3 / 동쪽 파란 수광부에 레이저 ▶ F 유지 · 금색일 때 놓기";
                 return "장비 확인 완료 / 동쪽 재고 단말 앞에서 E로 수량 확인";
             }
             if(Stage==4)return "생산장 재고 보고 / 장부 120기 · 실제 117기";
@@ -520,16 +538,16 @@ namespace Plugin.AncientCivilization
             Vector2 player=game.hero.transform.position;head=player+Vector2.up*1.15f;feet=player-Vector2.up*1.05f;width=.9f;kind=0;
             if(IsHero(speaker))return;
             if(speaker=="통신관"||speaker=="사령관"){kind=1;return;}
-            Transform actor=null;float offset=2;
+            Transform actor=null;float offset=2,headSide=0;
             bool found=(game.Production&&game.Production.TryDialogueActor(speaker,out actor,out offset));
             if(!found)found=game.ProductionResidents&&game.ProductionResidents.TryDialogueActor(speaker,out actor,out offset);
             if(!found)found=game.LowerRoute&&game.LowerRoute.TryActor(speaker,out actor,out offset);
             if(!found)found=game.Living&&game.Living.TryActor(speaker,out actor,out offset);
-            if(!found)found=game.City&&game.City.TryDialogueActor(speaker,out actor,out offset);
+            if(!found)found=game.City&&game.City.TryDialogueActor(speaker,out actor,out offset,out headSide);
             if(!found)found=game.Campaign&&game.Campaign.TryDialogueActor(speaker,out actor,out offset);
             if(found&&actor)
             {
-                if(speaker=="기록 집행관"||Vector2.Distance(player,actor.position)<26){feet=actor.position;head=feet+Vector2.up*offset;width=offset>2.2f?1.2f:.9f;return;}
+                if(speaker=="기록 집행관"||Vector2.Distance(player,actor.position)<26){feet=actor.position;head=feet+new Vector2(headSide,offset);width=offset>2.2f?1.2f:.9f;return;}
                 kind=1;return;
             }
             if(speaker=="용의자"||speaker=="운송대장")

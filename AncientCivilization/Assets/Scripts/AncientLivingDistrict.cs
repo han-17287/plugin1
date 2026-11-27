@@ -7,7 +7,7 @@ namespace Plugin.AncientCivilization
         AncientGame game;readonly List<AncientWireObject> objects=new List<AncientWireObject>();readonly List<AncientWireObject> rockets=new List<AncientWireObject>();
         readonly List<AncientEnemy> guards=new List<AncientEnemy>();readonly List<AncientLivingSpotlight> lights=new List<AncientLivingSpotlight>();
         readonly MissileCue[] missiles=new MissileCue[24];AncientWireObject held;bool wave,announced;int wavesSpawned;float waveAt;
-        SpriteRenderer leader;GUIStyle hint;LineRenderer targetRing;AncientLivingAftermath aftermath;
+        SpriteRenderer leader;GUIStyle hint;AncientLivingAftermath aftermath;
         sealed class MissileCue {public LineRenderer line;public Vector2 start,end;public float until;public bool active;}
         public AncientLivingBoss Boss {get;set;}
         public bool WaveActive {get{return wave;}}
@@ -15,6 +15,10 @@ namespace Plugin.AncientCivilization
         public bool GrabbingPlayer {get{return Boss&&Boss.InputLocked;}}
         public bool Sucking {get{return Boss&&Boss.Sucking;}}
         public bool ThrowTaught {get{return AncientGame.Saved("livingThrowTaught")!=0;}}
+        internal IReadOnlyList<AncientWireObject> PlugObjects => objects;
+        internal bool PlugObjectsAvailable => game && game.Story && game.Story.CurrentFloor == 1 && !InputLocked && !held;
+        internal bool PlugObjectHeld => held && held.Orbiting;
+        internal void CancelPlugObject() { if (PlugObjectHeld) held.CancelPlugOrbit(); }
         public void Initialize(AncientGame owner)
         {
             game=owner;
@@ -39,7 +43,6 @@ namespace Plugin.AncientCivilization
             {var rocket=new GameObject("Reusable counterable rocket fist").AddComponent<AncientWireObject>();rocket.Initialize(game,this,Vector2.zero,false,true);objects.Add(rocket);rockets.Add(rocket);}
             for(int i=0;i<missiles.Length;i++)
             {var line=game.Line("Missile ignition warning",new Color(1,.5f,.15f,.65f),.035f,16);line.transform.SetParent(transform,true);line.enabled=false;missiles[i]=new MissileCue{line=line};}
-            targetRing=game.Line("Throwable target bracket",AncientGame.Cyan,.045f,21);targetRing.loop=true;targetRing.positionCount=4;targetRing.enabled=false;
             leader=AncientArt.Display("Gang leader above hangar",AncientArt.Enemy(5),new Vector2(AncientCityLayout.ArenaRight(1)-6,6.4f),9,transform);leader.enabled=false;
             game.StaticBox("Gang leader gantry",new Vector2(AncientCityLayout.ArenaRight(1)-6,6.2f),new Vector2(5,.25f),new Color(.3f,.38f,.42f),3);
             if((AncientGame.Saved("cityCleared")&2)!=0)BeginAftermath(null,new Vector2(AncientCityLayout.ArenaRight(1)-6,0),true);
@@ -69,10 +72,29 @@ namespace Plugin.AncientCivilization
             point=Vector2.zero;if(!game||!game.Story||game.Story.CurrentFloor!=1||InputLocked)return false;
             var target=Pick(game.View.ScreenToWorldPoint(Input.mousePosition));if(!target)return false;point=target.Point;return true;
         }
+        internal void BreakConductiveCargo(Vector2 centre, float radius)
+        {
+            if (!game || !game.Story || game.Story.CurrentFloor != 1) return;
+            foreach (var part in objects)
+            {
+                if (!part || !part.Selectable || rockets.Contains(part)) continue;
+                if ((part.Point-centre).sqrMagnitude<=radius*radius && !Physics2D.Linecast(centre,part.Point,1<<8))
+                    part.BreakByBlade();
+            }
+        }
+
         public bool TryThrow(Vector2 cursor)
         {
-            if(game.Story.CurrentFloor!=1||held)return false;var target=Pick(cursor);if(!target)return false;
-            held=target;target.Grab();return true;
+            return PlugObjectsAvailable && TryUsePlugObject(Pick(cursor), game.hero.WireOrigin);
+        }
+        internal bool TryUsePlugObject(AncientWireObject target, Vector2 origin)
+        {
+            if (!PlugObjectsAvailable || !target || !target.Selectable || !objects.Contains(target) ||
+                (target.Point - origin).sqrMagnitude > 23 * 23 || Physics2D.Linecast(origin, target.Point, 1 << 8))
+                return false;
+            held = target;
+            target.Grab();
+            return true;
         }
         public void ReleaseObject(AncientWireObject obj){if(held==obj)held=null;}
         public void RecordThrow(){if(!ThrowTaught){AncientGame.SetSaved("livingThrowTaught",1);game.Save();game.Story.RadioBark("사령관","물체를 적에게 던지고, 부서진 입자는 우클릭으로 수집해라.");}}
@@ -84,7 +106,16 @@ namespace Plugin.AncientCivilization
             return false;
         }
         public void LaunchRocket(AncientLivingBoss boss,Vector2 start,bool pair)
-        {foreach(var r in rockets)if(r.Available){r.LaunchRocket(boss,start,pair);return;}}
+        {
+            foreach (var rocket in rockets)
+            {
+                if (!rocket.Available) continue;
+                rocket.LaunchRocket(boss, start, pair);
+                AncientBossCue.Play(game, AncientBossCue.Style.Mech, AncientBossCue.Beat.Strike, start,
+                    (Vector2)game.hero.transform.position - start, 1.15f);
+                return;
+            }
+        }
         public void ClearRockets()
         {foreach(var r in rockets)if(r)r.ResetObject();foreach(var m in missiles)if(m!=null){m.active=false;m.line.enabled=false;}}
         public void QueueMissile(Vector2 start,Vector2 target,float delay)
@@ -127,9 +158,9 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             if(!game||!game.hero||!game.Story||game.Paused)return;
-            if(game.Story.CurrentFloor!=1){targetRing.enabled=false;return;}
+            if(game.Story.CurrentFloor!=1)return;
             if(!announced&&game.Campaign.CurrentRoom>=5)
-            {announced=true;game.Story.RadioBark("사령관","파란 고리가 보이는 상자를 와이어로 잡아라. 한 바퀴 돌리는 동안 마우스로 던질 방향을 정할 수 있다.");}
+            {announced=true;game.Story.RadioBark("사령관","상자의 파란 콘센트에 플러그를 던져 꽂아라. C를 눌러 잡고 마우스로 던질 방향을 정해.");}
             if(wave)
             {
                 if(NearbyGuards((AncientCityLayout.ArenaLeft(1)+AncientCityLayout.ArenaRight(1))*.5f)==0&&Time.time>=waveAt)
@@ -139,12 +170,19 @@ namespace Plugin.AncientCivilization
                     else {wave=false;leader.enabled=false;AncientGame.SetSaved("livingGuardsCleared",1);game.CombatCheckpoint(1,new Vector2(AncientCityLayout.ArenaLeft(1)+2,1.3f));game.Save();}
                 }
             }
-            foreach(var m in missiles)if(m.active&&Time.time>=m.until)
-            {m.active=false;m.line.enabled=false;if(game.shots.Count<60){var shot=game.Projectiles.Spawn(m.start,(m.end-m.start).normalized*11,18,false,0,0);if(shot)shot.SetLivingProjectile(true);}}
-            var selected=!game.hero.AttackMode&&!InputLocked?Pick(game.View.ScreenToWorldPoint(Input.mousePosition)):null;
-            targetRing.enabled=selected;
-            if(selected)
-            {Vector2 c=selected.Point;for(int i=0;i<4;i++){float a=(i+.5f)*Mathf.PI*.5f;targetRing.SetPosition(i,c+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*1.2f);}}
+            foreach (var missile in missiles)
+            {
+                if (!missile.active || Time.time < missile.until) continue;
+                missile.active = false;
+                missile.line.enabled = false;
+                if (game.shots.Count >= 60) continue;
+                Vector2 direction = missile.end - missile.start;
+                var shot = game.Projectiles.Spawn(missile.start, direction.normalized * 11, 18, false, 0, 0);
+                if (!shot) continue;
+                shot.SetLivingProjectile(true);
+                AncientBossCue.Play(game, AncientBossCue.Style.Mech, AncientBossCue.Beat.Strike,
+                    missile.start, direction, .65f);
+            }
         }
         void OnGUI()
         {
@@ -152,7 +190,6 @@ namespace Plugin.AncientCivilization
             if(hint==null)hint=new GUIStyle(GUI.skin.label){font=AncientKoreanUI.Font,fontSize=14,alignment=TextAnchor.MiddleCenter};
             if(Boss)GUI.Label(new Rect(Screen.width/2-280,158,560,26),"거대 로봇 두목 / "+Boss.Phase+"페이즈"+(Boss.Barrier>0?" / 배리어 "+Boss.Barrier+" / 70":""),hint);
             else if(wave)GUI.Label(new Rect(Screen.width/2-240,158,480,26),"본거지 경비 제압 / "+wavesSpawned+" / 2",hint);
-            else if(targetRing.enabled)GUI.Label(new Rect(Screen.width/2-220,Screen.height-108,440,28),"좌클릭: 와이어로 한 바퀴 돌려 투척 / 회전 중 조준",hint);
         }
     }
     public sealed class AncientLivingSpotlight : MonoBehaviour

@@ -26,10 +26,12 @@ namespace Plugin.AncientCivilization
         public AncientFinale Finale {get;private set;}
         public AncientCampaign Campaign {get;private set;}
         public AncientSniperEncounter Sniper {get;internal set;}
+        public bool InSniperFinalPhase => Sniper && Sniper.Phase == 6;
         internal int JokerAnchorSlot {get;set;} = -1;
         public AncientDeveloperMenu DeveloperMenu {get;private set;}
         public bool DeveloperMenuOpen => DeveloperMenu && DeveloperMenu.Open;
         public AncientLivingDistrict Living {get;private set;}
+        internal AncientBossCue BossCues { get; set; }
         public AncientOrbitalEncounter Orbital {get; internal set;}
         internal int OrbitalAnchorSlot {get; set;} = -1;
         public AncientEnforcerEncounter Enforcer {get;internal set;}
@@ -59,7 +61,7 @@ namespace Plugin.AncientCivilization
         public static readonly string[] OptionSaveKeys = { "muted", "graphics", "frameTarget", "reducedFeedback" };
         static string[] BuildProgressSaveKeys()
         {
-            string[] standard={"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","secretaryCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks","campaignCheckpoint","campaignRestMission","campaignRestSlot","campaignDefeated","campaignChapterStarted","productionRound","productionVersion","livingGuardsCleared","livingThrowTaught","orbitalMidWon"};
+            string[] standard={"started","cores","credits","checkpoint","boss","kills","score","bike","jump","capacity","armor","storyCores","storyCheckpoint","storyBoss","questStage","questFlags","residencePoints","upperCity","courseBestMs","factoryBestMs","cityFloor","cityCleared","secretaryCleared","retryActive","retryFloor","retryX","retryY","routeCaches","caseStarted","caseComplete","caseRelay","caseRecord","finalePhase","finaleZone","finaleCountdown","firstRunCleared","campaignVersion","campaignLegacy","campaignComplete","campaignSeen","campaignBeforeSeen","campaignAfterSeen","campaignActive","campaignTaskMission","campaignTasks","campaignCheckpoint","campaignRestMission","campaignRestSlot","campaignDefeated","campaignChapterStarted","productionRound","productionVersion","livingGuardsCleared","livingThrowTaught","orbitalMidWon","storySocketSkills"};
             var all=new string[standard.Length+AncientCampaign.ProgressKeys.Length+AncientLowerRoute.ProgressKeys.Length+AncientPlaytime.ProgressKeys.Length];standard.CopyTo(all,0);AncientCampaign.ProgressKeys.CopyTo(all,standard.Length);AncientLowerRoute.ProgressKeys.CopyTo(all,standard.Length+AncientCampaign.ProgressKeys.Length);AncientPlaytime.ProgressKeys.CopyTo(all,standard.Length+AncientCampaign.ProgressKeys.Length+AncientLowerRoute.ProgressKeys.Length);return all;
         }
         public static bool IsQAProfile {get{return SaveKey!=SaveRoot;}}
@@ -76,12 +78,14 @@ namespace Plugin.AncientCivilization
         readonly SpriteRenderer[] patrolArenaSeals=new SpriteRenderer[2];readonly BoxCollider2D[] patrolArenaSolids=new BoxCollider2D[2];bool patrolArenaClosed;
         GUIStyle small, title, centered;
         readonly AncientHudText hud=new AncientHudText();
+        readonly Plugin.PlayerCore.FilamentLoadoutGauge equipmentGauge = new Plugin.PlayerCore.FilamentLoadoutGauge();
         readonly GUIContent objectiveMeasure=new GUIContent();float objectiveHeight=55;string measuredObjective;
         string message; float messageUntil, shake, runTime;
         int checkpointStage;
         Material lineMaterial; AncientAudio audioCues;
         public AncientFeedbackProfile Feedback { get; private set; }
         bool reducedFeedback;
+        public bool ReducedFeedback => reducedFeedback;
         float zoomPulseUntil;
         public float HealthWarning => LowHealth && !Paused ? (reducedFeedback ? .35f : 1f) : 0f;
         public bool LowHealth => hero && !hero.bike && hero.hp > 0 && hero.hp <= hero.MaxHP * Feedback.lowHealthRatio;
@@ -107,7 +111,7 @@ namespace Plugin.AncientCivilization
         static void Boot()
         {
             string scene=SceneManager.GetActiveScene().name;
-            if(scene=="PlayerMovementPractice"||scene=="TraversalRhythmPractice"||scene=="PatrolExpedition")return;
+            if(AncientStorySocketPassage.Active||scene=="PlayerMovementPractice"||scene=="TraversalRhythmPractice"||scene=="PatrolExpedition")return;
             if(!Object.FindAnyObjectByType<AncientGame>())new GameObject("Ancient Civilization").AddComponent<AncientGame>();
         }
         public static int Saved(string key,int fallback=0)
@@ -180,6 +184,7 @@ namespace Plugin.AncientCivilization
             WorldBatch=gameObject.AddComponent<AncientWorldBatch>();WorldBatch.Initialize(this,square);
             BuildWorld();WorldBatch.Complete();
             Projectiles=gameObject.AddComponent<AncientProjectilePool>();Projectiles.Initialize(this);
+            AncientBossCue.Prewarm(this);
             hero=new GameObject("백 경위 / 하층 치안경찰").AddComponent<AncientHero>();hero.transform.position=checkpoint;
             DeveloperMenu=gameObject.AddComponent<AncientDeveloperMenu>();
             gameObject.AddComponent<AncientPatrolGate>().Initialize(this);
@@ -335,6 +340,7 @@ namespace Plugin.AncientCivilization
         {
             SetSaved("storyCores",coreMask);SetSaved("credits",credits);SetSaved("storyCheckpoint",checkpointStage);
             SetSaved("storyBoss",bossDefeated?1:0);SetSaved("kills",kills);SetSaved("score",score);
+            AncientStorySocketPassage.SaveField(this);
             if(hero)hero.SaveUpgrades();if(Finale)Finale.WriteSave();if(Campaign)Campaign.WriteSave();if(Production)Production.WriteSave();if(Playtime)Playtime.WriteSave();PlayerPrefs.Save();
         }
         public void Checkpoint(int stage)
@@ -363,6 +369,8 @@ namespace Plugin.AncientCivilization
         }
         public void HeroDied()
         {
+            AncientBossCue.ClearAll(this);
+            AncientStorySocketPassage.ForgetField();
             PlayScoreEvent("death");
             if(Playtime)Playtime.Retry();
             if(Orbital)Orbital.StopBattle();
@@ -407,6 +415,19 @@ namespace Plugin.AncientCivilization
         {
             if(HasSession)Save();skills=false;MainMenu=true;Time.timeScale=0;hitPauseUntil=0;shake=0;
         }
+        public static string ToggleFeedback()
+        {
+            bool reduced = Saved("reducedFeedback") == 0;
+            SetSaved("reducedFeedback", reduced ? 1 : 0);
+            PlayerPrefs.Save();
+            if (Instance)
+            {
+                Instance.reducedFeedback = reduced;
+                if (reduced) { Instance.shake = 0; Instance.damageFlash = 0; }
+            }
+            return reduced ? "화면 흔들림·피격 섬광 줄임" : "화면 흔들림·피격 섬광 기본";
+        }
+
         void ToggleSkills(){if(MainMenu)return;skills=!skills;Time.timeScale=Paused?0:1;}
         void Update()
         {
@@ -416,14 +437,7 @@ namespace Plugin.AncientCivilization
             if(guardian!=patrolArenaClosed)
             {patrolArenaClosed=guardian;for(int side=0;side<2;side++)if(patrolArenaSeals[side])patrolArenaSeals[side].enabled=patrolArenaSolids[side].enabled=guardian;}
             if(productionCordon&&Story&&productionCordon.activeSelf!=(Story.Stage>=8))productionCordon.SetActive(Story.Stage>=8);
-            if (Input.GetKeyDown(KeyCode.F5))
-            {
-                reducedFeedback = !reducedFeedback;
-                SetSaved("reducedFeedback", reducedFeedback ? 1 : 0);
-                PlayerPrefs.Save();
-                if (reducedFeedback) { shake = 0; damageFlash = 0; }
-                Notice(reducedFeedback ? "화면 흔들림·피격 섬광 줄임" : "화면 흔들림·피격 섬광 기본");
-            }
+            if (Input.GetKeyDown(KeyCode.F5)) Notice(ToggleFeedback());
             if(MainMenu){Time.timeScale=0;return;}
             if(Story&&Story.Stage<5)checkpoint=new Vector2(AncientProductionLayout.TutorialCheckpointX(Story.Stage),AncientProductionLayout.TutorialCheckpointY(Story.Stage));
             if(Production&&Production.Cinematic&&GameplayInputReady&&!(Story&&Story.DialogueOpen)&&(Input.GetKeyDown(KeyCode.K)||Input.GetKeyDown(KeyCode.Escape))){ToggleSkills();BlockGameplayInput();}
@@ -506,8 +520,8 @@ namespace Plugin.AncientCivilization
         }
         void CaptureBar(Rect r)
         {
-            Bar(r,hero.CaptureEnergy/100f,hero.CaptureEnergy>=100?new Color(.65f,.95f,1):Cyan);
-            for(int stage=1;stage<=2;stage++)Panel(new Rect(r.x+2+(r.width-4)*stage*.4f,r.y+1,1,r.height-2),new Color(.8f,.96f,1,.8f));
+            Bar(r,hero.CaptureEnergy/100f,hero.CaptureEnergy>=100?new Color(1,.97f,.80f):AncientMoteVisuals.ChargeColor);
+            for(int stage=1;stage<=2;stage++)Panel(new Rect(r.x+2+(r.width-4)*stage*.4f,r.y+1,1,r.height-2),new Color(1,.92f,.72f,.8f));
         }
         public void NewRun()
         {
@@ -552,28 +566,27 @@ namespace Plugin.AncientCivilization
                 GUI.Label(new Rect(w-286,24,260,objectiveHeight),hud.Objective,small);
                 GUI.Label(new Rect(28,128,300,30),hud.Movement,small);
                 float statusY=37+objectiveHeight;
-                GUI.Label(new Rect(w-300,statusY,284,23),hud.Performance,small);
-                GUI.Label(new Rect(w-300,statusY+25,284,23),hud.Mode,small);
-                GUI.Label(new Rect(w-300,statusY+49,284,24),hud.Capture,small);
-                CaptureBar(new Rect(w-300,statusY+76,284,7));
+                equipmentGauge.Draw(new Rect(w-300,statusY,284,72),hero.Loadout,
+                    hero.SummonParticles,hud.Mode,small);
+                GUI.Label(new Rect(w-300,statusY+74,285,24),hud.Performance,small);
                 if(hero.AttackMode&&!hero.bike&&hero.Combat&&!hero.Combat.Charging)
-                {GUI.color=new Color(1,.88f,.3f);GUI.Label(new Rect(w-300,statusY+87,284,24),hud.Blade,small);GUI.color=Color.white;}
+                {GUI.color=new Color(1,.88f,.3f);GUI.Label(new Rect(w-300,statusY+98,284,24),hud.Blade,small);GUI.color=Color.white;}
                 foreach(var enemy in enemies)
                 {
                     if(!enemy)continue;
                     if(enemy.IsTelegraphing)
                     {
-                        Vector3 tell=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
+                        Vector3 tell=view.WorldToScreenPoint(enemy.ActionLabelPoint);
                         if(tell.z>0&&tell.x>0&&tell.x<Screen.width)
                         {
-                            Color tellColor=enemy.AttackIsPhysical?Orange:Cyan;
+                            Color tellColor=enemy.AttackIsPhysical?Orange:new Color(.91f,.46f,.89f);
                             Bar(new Rect(tell.x/scale-28,(Screen.height-tell.y)/scale,56,5),enemy.WindupProgress,tellColor);
                             GUI.color=tellColor;GUI.Label(new Rect(tell.x/scale-45,(Screen.height-tell.y)/scale-21,170,22),enemy.TelegraphHint,small);GUI.color=Color.white;
                         }
                     }
                     if(enemy.Recovering)
                     {
-                        Vector3 opening=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
+                        Vector3 opening=view.WorldToScreenPoint(enemy.ActionLabelPoint);
                         if(opening.z>0&&opening.x>0&&opening.x<Screen.width)
                         {
                             GUI.color=new Color(1,.85f,.2f);GUI.Label(new Rect(opening.x/scale-35,(Screen.height-opening.y)/scale-22,110,24),"빈틈 · 공격",small);GUI.color=Color.white;
@@ -582,7 +595,7 @@ namespace Plugin.AncientCivilization
                     }
                     if(enemy.Staggered)
                     {
-                        Vector3 stagger=view.WorldToScreenPoint(enemy.AimPoint+Vector2.up*1.8f);
+                        Vector3 stagger=view.WorldToScreenPoint(enemy.ActionLabelPoint);
                         if(stagger.z>0&&stagger.x>0&&stagger.x<Screen.width)
                         {GUI.color=Cyan;GUI.Label(new Rect(stagger.x/scale-45,(Screen.height-stagger.y)/scale-20,120,24),"경직 · 공격",small);GUI.color=Color.white;}
                     }
@@ -604,7 +617,7 @@ namespace Plugin.AncientCivilization
                 if(showHelp&&!skills&&!boss&&!won)
                 {
                     Panel(new Rect(16,h-93,w-32,77),new Color(.025f,.045f,.065f,.88f));
-                    GUI.Label(new Rect(28,h-87,w-56,70),"A/D 이동 · Ctrl 달리기 · Space 점프 · E 상호작용 · Tab 순찰 기록 · H 안내 닫기\n휠 위 공격 / 아래 와이어 · 좌클릭 베기/견인 · 길게 조준 후 놓아 레이저 · 우클릭 입자 수집 · 가운데 클릭 스윙",small);
+                    GUI.Label(new Rect(28,h-87,w-56,70),"A/D 이동 · Ctrl 달리기 · Space 점프 · E 상호작용 · Tab 순찰 기록 · H 안내 닫기\n좌클릭 회전·놓아 플러그 투척 · G 회수 · 연결 후 C 견인 / V 스윙 · 우클릭 입자 수집\nQ 소환 ▶ 손잡이 명중으로 장착 · 좌클릭 베기 · F 홀드/릴리즈 레이저 · E 설치 · R 과부하",small);
                 }
                 if(skills)
                 {
@@ -624,7 +637,7 @@ namespace Plugin.AncientCivilization
                 }
                 if(!skills&&!won)
                 {
-                    Bar(new Rect(28,156,74,4),(hero.Combat?hero.Combat.ChargeProgress:0),Cyan);
+                    Bar(new Rect(28,156,74,4),(hero.Combat?hero.Combat.ChargeProgress:0),AncientMoteVisuals.ChargeColor);
                     GUI.Label(new Rect(28,162,90,22),"좌클릭 / 조준",small);
                     Bar(new Rect(120,156,74,4),hero.CaptureEnergy/100f,Orange);
                     GUI.Label(new Rect(120,162,100,22),"입자",small);
@@ -657,7 +670,7 @@ namespace Plugin.AncientCivilization
         }
     }
 
-    public sealed class AncientHero : MonoBehaviour
+    public sealed partial class AncientHero : MonoBehaviour
     {
         public float hp=100,particles=70,bikeHP;
         public bool running,bike,doubleJump,reservoir,armor;
@@ -667,7 +680,7 @@ namespace Plugin.AncientCivilization
         public bool Braced {get{return wired&&wireBrace&&!wireEnemy;}}
         public int WireChain {get{return wireChain;}}
         public float Facing {get{return direction;}}
-        public Vector2 WireOrigin {get{if(swingMotion!=null&&swingMotion.Presenting&&wired&&!wireZip&&!wireBrace&&!bike)return swingMotion.EmitterWorld;return (Vector2)transform.position+new Vector2(direction*(bike?.4f:.14f),bike?.45f:.78f);}}
+        public Vector2 WireOrigin => (Vector2)transform.position + new Vector2(direction * (bike ? .4f : .14f), bike ? .45f : .78f);
         public float HorizontalSpeed {get{return body?body.linearVelocity.x:0;}}
         public float VerticalSpeed {get{return body?body.linearVelocity.y:0;}}
         public bool BikeGrounded {get;private set;}
@@ -675,8 +688,8 @@ namespace Plugin.AncientCivilization
         public bool HasWireTarget {get;private set;}
         public Vector2 WireTarget {get;private set;}
         public bool ZipMode {get;private set;}
-        public string WireModeName {get{return AttackMode?"ATTACK":"WIRE";}}
-        public bool AttackMode {get;private set;}
+        public string WireModeName {get{return AttackMode?"BLADE":"PLUG";}}
+        public bool AttackMode => Loadout && Loadout.Equipped;
         public float CaptureEnergy {get;private set;}
         public int CaptureStage {get{return CaptureEnergy<=0?0:CaptureEnergy<40?1:CaptureEnergy<80?2:3;}}
         public bool Capturing {get{return Input.GetMouseButton(1);}}
@@ -685,17 +698,15 @@ namespace Plugin.AncientCivilization
         public AncientCombat Combat {get;private set;}
         LineRenderer chargeRing;
                 Rigidbody2D body;SpriteRenderer art;AncientMotorcycle motorcycle;AncientSwingMotion swingMotion;AncientLocomotionMotion locomotion;
-        CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer wire,wireGlow,wireTarget,absorb;TrailRenderer trail;
-        DistanceJoint2D wireJoint;SpriteRenderer hook;AncientWireParticleBatch wireParticles;
-        LineRenderer wireCuff,wireLatch;
-        readonly LineRenderer[] wireHelices=new LineRenderer[2];
+        AncientFootDust footDust;
+        CapsuleCollider2D heroCollider;BoxCollider2D bikeCollider;LineRenderer absorb;TrailRenderer trail;
+        DistanceJoint2D wireJoint;
         MaterialPropertyBlock armProperties;
         static readonly int ArmCharge=Shader.PropertyToID("_ArmCharge"),ArmPulse=Shader.PropertyToID("_ArmPulse");
         Camera aimCamera;
-        readonly Vector3[] cablePoints=new Vector3[2];
-        readonly Vector2[] reservoirShape=UnitCircle(32),cuffShape=UnitCircle(12),latchShape=UnitCircle(6),zipShape=UnitCircle(4),swingShape=UnitCircle(8);
-        readonly Vector3[] reservoirPoints=new Vector3[32],cuffPoints=new Vector3[12],latchPoints=new Vector3[6],zipPoints=new Vector3[4],swingPoints=new Vector3[8];
-        bool cableVisible,reservoirVisible,targetVisible,enemyReticle,lastArmBike;int lastHelixCount=192,lastReticleCount=8;
+        readonly Vector2[] reservoirShape=UnitCircle(32);
+        readonly Vector3[] reservoirPoints=new Vector3[32];
+        bool reservoirVisible,lastArmBike;
         float lastArmCharge=-1,lastArmPulse=-1,lastReservoirEnergy=-1;
         static Vector2[] UnitCircle(int count)
         {
@@ -709,15 +720,6 @@ namespace Plugin.AncientCivilization
             {Vector2 p=shape[i];points[i]=centre+new Vector2(p.x*cs-p.y*sn,p.x*sn+p.y*cs)*radius;}
             line.SetPositions(points);
         }
-        void ShowCable(bool visible)
-        {
-            if(cableVisible==visible)return;cableVisible=visible;
-            wire.enabled=wireGlow.enabled=hook.enabled=wireCuff.enabled=wireLatch.enabled=visible;
-            foreach(var helix in wireHelices)helix.enabled=visible;
-            if(!visible)wireParticles.Hide();
-        }
-        readonly Vector3[][] helixSmall={new Vector3[24],new Vector3[48],new Vector3[96],new Vector3[192]};
-        readonly float[] helixNormal=new float[192],helixDepth=new float[192];
         AncientParkedBike mountedBike;
         float direction=1,invulnerableUntil,wireReady,lastGrounded=-100;
         float jumpBufferedUntil=-10,conveyorUntil,conveyorDirection,airborneSurface;
@@ -739,6 +741,8 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;aimCamera=g.View;
             ZipMode=true;
+            Plugin.PlayerCore.FilamentBatteryLamp.Attach(transform, () => Mathf.CeilToInt(CaptureEnergy),
+                () => Facing, () => hp > 0 && !bike && !g.MainMenu);
             body=gameObject.AddComponent<Rigidbody2D>();body.freezeRotation=true;body.collisionDetectionMode=CollisionDetectionMode2D.Continuous;body.interpolation=RigidbodyInterpolation2D.Interpolate;
             wireJoint=gameObject.AddComponent<DistanceJoint2D>();wireJoint.autoConfigureDistance=false;
             wireJoint.autoConfigureConnectedAnchor=false;wireJoint.maxDistanceOnly=true;wireJoint.enabled=false;
@@ -749,39 +753,28 @@ namespace Plugin.AncientCivilization
             frames=new Sprite[8];for(int i=0;i<frames.Length;i++)frames[i]=AncientArt.Hero(i);
             bladeFrames=new Sprite[AncientBladeRules.StepCount*AncientBladeRules.FramesPerStep];
             for(int step=1;step<=AncientBladeRules.StepCount;step++)for(int frame=0;frame<AncientBladeRules.FramesPerStep;frame++)
+            {
                 bladeFrames[(step-1)*AncientBladeRules.FramesPerStep+frame]=AncientArt.Blade(step,frame);
+                AncientArt.FieldBlade(step,frame);
+            }
             art=AncientArt.Display("Animated hero",frames[0],new Vector2(0,-1.05f),10,transform);
             swingMotion=new AncientSwingMotion(art);
             locomotion=new AncientLocomotionMotion();
+            footDust=gameObject.AddComponent<AncientFootDust>();
+            footDust.Initialize(g);
             if(AncientVisuals.Instance)AncientVisuals.Instance.Rim(art);
             motorcycle=gameObject.AddComponent<AncientMotorcycle>();motorcycle.Initialize(this);
             armProperties=new MaterialPropertyBlock();
-            wire=g.Line("Particle wire core",new Color(.8f,1,1,.95f),.022f,17);
-            wireGlow=g.Line("Particle wire glow",new Color(.15f,.6f,1,.17f),.085f,16);
-            wireTarget=g.Line("Wire targeting reticle",AncientGame.Cyan,.035f,18);wireTarget.loop=true;wireTarget.positionCount=8;
-            wire.positionCount=wireGlow.positionCount=2;
-            for(int strand=0;strand<2;strand++)
-            {
-                var helix=g.Line("Particle wire / double helix "+strand,new Color(.15f,.8f,1,.9f),.028f,18);
-                helix.positionCount=192;helix.numCapVertices=0;helix.enabled=false;wireHelices[strand]=helix;
-            }
-            foreach(var cable in new[]{wire,wireGlow})
-            {
-                cable.numCapVertices=3;cable.numCornerVertices=2;
-                cable.widthCurve=new AnimationCurve(new Keyframe(0,.35f),new Keyframe(.08f,1),new Keyframe(.9f,1),new Keyframe(1,.3f));
-            }
-            wireCuff=g.Line("Wire emitter cuff",AncientGame.Cyan,.035f,19);wireCuff.loop=true;wireCuff.positionCount=12;
-            wireLatch=g.Line("Wire hexagonal latch",new Color(.7f,1,1),.035f,19);wireLatch.loop=true;wireLatch.positionCount=6;
-            wireCuff.enabled=wireLatch.enabled=false;
-            chargeRing=g.Line("Captured particle reservoir",AncientGame.Cyan,.04f,18);
+            InitializeCampaignPlug(g);
+            if (!g.InSniperFinalPhase)
+                art.sprite = Plugin.PlayerCore.BluePlugOfficerArt.FieldFrame(0, 0);
+            AncientStorySocketPassage.RestoreField(g);
+            chargeRing=g.Line("Captured particle reservoir",AncientMoteVisuals.ChargeColor,.04f,18);
             chargeRing.loop=true;chargeRing.positionCount=32;chargeRing.enabled=false;
             absorb=g.Line("Absorption stream",AncientGame.Cyan,.04f);
-            wire.enabled=wireGlow.enabled=wireTarget.enabled=absorb.enabled=false;
-            hook=AncientArt.Display("Particle wire latch",AncientArt.WireParticle(),Vector2.zero,18);hook.transform.localScale=Vector3.one*.18f;hook.enabled=false;
-            var dots=new GameObject("Batched flowing wire particles");dots.transform.SetParent(transform,false);
-            wireParticles=dots.AddComponent<AncientWireParticleBatch>();wireParticles.Initialize(AncientArt.WireParticle());
+            absorb.enabled=false;
             Combat=gameObject.AddComponent<AncientCombat>();Combat.Initialize(this);
-            trail=gameObject.AddComponent<TrailRenderer>();trail.material=wire.sharedMaterial;
+            trail=gameObject.AddComponent<TrailRenderer>();trail.sharedMaterial=chargeRing.sharedMaterial;
             trail.startColor=new Color(.2f,.9f,1,.55f);trail.endColor=new Color(.2f,.9f,1,0);
             trail.startWidth=.22f;trail.endWidth=0;trail.time=.12f;trail.sortingOrder=8;trail.emitting=false;
         }
@@ -792,7 +785,7 @@ namespace Plugin.AncientCivilization
         }
         public bool IsOnGround {get{return Grounded();}}
         public bool StandingOn(Rigidbody2D surface){return surface&&Grounded()&&groundBody==surface;}
-        float groundSampleTick=-1;Vector2 groundSamplePosition,groundNormal=Vector2.up;bool groundSample;Rigidbody2D groundBody;
+        float groundSampleTick=-1;Vector2 groundSamplePosition,groundPoint,groundNormal=Vector2.up;bool groundSample;Rigidbody2D groundBody;
         bool Grounded()
         {
             Vector2 point=body?body.position:(Vector2)transform.position;
@@ -801,7 +794,18 @@ namespace Plugin.AncientCivilization
             // Begin above the feet so an initial overlap does not replace a ramp's normal with Vector2.up.
             // The lower end of this cast matches the original foot probe's reach.
             var hit=Physics2D.BoxCast(point+Vector2.down*(bike?.63f:.85f),new Vector2(bike?2.5f:.58f,.12f),0,Vector2.down,.27f,1<<8);
-            groundSample=hit.collider!=null;groundBody=hit.collider?hit.collider.attachedRigidbody:null;groundNormal=hit.collider?hit.normal:Vector2.up;return groundSample;
+            groundSample=hit.collider!=null;groundBody=hit.collider?hit.collider.attachedRigidbody:null;groundNormal=hit.collider?hit.normal:Vector2.up;
+            if (groundSample)
+            {
+                groundPoint = hit.point;
+                // 박스 가장자리에서 감지한 경사면을 두 발 사이까지 연장한다.
+                if (groundNormal.y > .25f)
+                {
+                    float dx = point.x - hit.point.x;
+                    groundPoint += new Vector2(dx, -dx * groundNormal.x / groundNormal.y);
+                }
+            }
+            return groundSample;
         }
         bool StableGrounded(Vector2 velocity)
         {
@@ -812,13 +816,19 @@ namespace Plugin.AncientCivilization
         void Update()
         {
             var g=AncientGame.Instance;if(!body)return;
-            if(g.won){StopWire(false);body.linearVelocity=Vector2.zero;body.gravityScale=0;absorb.enabled=false;trail.emitting=false;return;}
-            if(g.Paused||!g.GameplayInputReady||(g.Sniper&&g.Sniper.InputLocked)||(g.Living&&g.Living.InputLocked)){axis=0;ClearJumpInput();absorb.enabled=false;if(Combat)Combat.CancelInput();return;}
+            if(g.won){if(Loadout && Loadout.State!=Plugin.PlayerCore.SummonedBladeState.None)ResetSummonedEquipment();ResetCampaignPlugAndProp();body.linearVelocity=Vector2.zero;body.gravityScale=0;absorb.enabled=false;trail.emitting=false;return;}
+            if(g.Paused||!g.GameplayInputReady||(g.Sniper&&g.Sniper.InputLocked)||(g.Living&&g.Living.InputLocked)){CancelCampaignPlug();plugCharacterMotion?.Clear();axis=0;ClearJumpInput();absorb.enabled=false;if(Combat)Combat.CancelInput();return;}
             if(transform.position.y<(g.Finale&&g.Finale.Active?AncientFinaleRules.Road(transform.position.x)-7:-9)){Respawn();return;}
             bool onGround=StableGrounded(body.linearVelocity);BikeGrounded=onGround;
             if(onGround)
             {
-                if(!wasGrounded&&fallSpeed<-7){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.4f,.57f,.65f),10);g.Sound(7);g.Shake(.025f);}
+                if (!wasGrounded && fallSpeed < -7)
+                {
+                    if (bike || g.InSniperFinalPhase)
+                        g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.4f,.57f,.65f),10);
+                    else footDust.Land(groundPoint, groundNormal, groundBody, -fallSpeed);
+                    g.Sound(7);g.Shake(.025f);
+                }
                 fallSpeed=0;lastGrounded=Time.time;airJumpUsed=false;if(!wired&&Time.time>momentumUntil)wireChain=0;
             }
             else fallSpeed=Mathf.Min(fallSpeed,body.linearVelocity.y);
@@ -826,14 +836,17 @@ namespace Plugin.AncientCivilization
             bool productionDriving=bike&&g.Production&&g.Production.AutoDrive;
             axis=productionDriving?1:Input.GetAxisRaw("Horizontal");if(axis!=0)direction=Mathf.Sign(axis);
             jumpHeld=Input.GetKey(KeyCode.Space);
-            if(Input.GetKeyDown(KeyCode.Space))jumpBufferedUntil=Time.time+AncientMovementRules.BufferSeconds;
+            if(Input.GetKeyDown(KeyCode.Space)&&!(Input.GetKey(KeyCode.S)&&TryDropThinPlatform()))jumpBufferedUntil=Time.time+AncientMovementRules.BufferSeconds;
+            if(campaignMovement&&Input.GetKeyDown(KeyCode.LeftShift)&&!bike&&!wired&&!MeleeInterrupted)
+                dashBufferedUntil=Time.time+campaignMovement.inputBuffer;
             if(Input.GetKeyUp(KeyCode.Space))cutJump=true;
             if(Input.GetKeyDown(KeyCode.LeftControl)||Input.GetKeyDown(KeyCode.RightControl))running=!running;
-            if(Input.GetKeyDown(KeyCode.E)&&!(g.Production&&g.Production.Active))
+            Loadout.Tick(Time.deltaTime);
+            plugElectricity.Tick(Time.deltaTime);
+            bool equipmentChanged = TickSummonedInput(g);
+            if(Input.GetKeyDown(KeyCode.E)&&!equipmentChanged&&!AttackMode&&!wired&&!(g.Production&&g.Production.Active))
             {
-                bool arenaInput = g.Orbital && g.Orbital.Arena != null;
-                if (arenaInput) g.Orbital.Arena.ThrowBlade();
-                bool used=arenaInput || g.Story.TryProductionStock()||(g.ProductionResidents&&g.ProductionResidents.TryInteract())||(g.Sniper&&g.Sniper.TryInteract())||(g.LowerRoute&&g.LowerRoute.TryInteract())||(g.Living&&g.Living.TryInteract())||(g.Campaign&&g.Campaign.TryInteract())||g.Story.TryUseLift()||(g.Finale&&g.Finale.TryInteract())||(g.Cases&&g.Cases.TryInteract())||
+                bool used=g.Story.TryProductionStock()||(g.ProductionResidents&&g.ProductionResidents.TryInteract())||(g.Sniper&&g.Sniper.TryInteract())||(g.LowerRoute&&g.LowerRoute.TryInteract())||(g.Living&&g.Living.TryInteract())||(g.Campaign&&g.Campaign.TryInteract())||g.Story.TryUseLift()||(g.Finale&&g.Finale.TryInteract())||(g.Cases&&g.Cases.TryInteract())||
                     (g.City&&g.City.TryInteract())||(g.Traversal&&g.Traversal.TryInteract());
                 if(!used)
                 {
@@ -841,19 +854,14 @@ namespace Plugin.AncientCivilization
                     else if(bike||g.Finale&&g.Finale.Active)InteractBike();
                     else g.Notice("주민·단말·엘리베이터 앞에서 E / 순찰 기록은 Tab",1.5f);
                 }
-                if(g.Paused||!g.GameplayInputReady){axis=0;ClearJumpInput();return;}
+                if(g.Paused||!g.GameplayInputReady){CancelCampaignPlug();plugCharacterMotion?.Clear();axis=0;ClearJumpInput();return;}
             }
             if(Input.GetKeyDown(KeyCode.X)&&bike&&!(g.Production&&g.Production.Active))ExplodeBike();
             if(!wired)ZipMode=true;
             bool productionCombatLocked=g.Production&&g.Production.Active&&!g.Production.DeckCombat;
-            if(productionCombatLocked){AttackMode=false;if(Combat)Combat.CancelAttacks();}
-            // Directional wheel selection never toggles back repeatedly during a long scroll gesture.
-            float wheel=Input.mouseScrollDelta.y;
-            if(!productionCombatLocked&&Mathf.Abs(wheel)>.001f&&(wheel>0)!=AttackMode)
-            {StopWire(false);AttackMode=wheel>0;}
-            if(!AttackMode&&(Input.GetMouseButtonDown(0)||Input.GetMouseButtonDown(2)))
-            {ZipMode=Input.GetMouseButtonDown(0);FireWire();}
-            if(!productionCombatLocked)Combat.HandleInput();
+            if(productionCombatLocked&&Combat)Combat.CancelAttacks();
+            TickCampaignPlugInput(g,productionCombatLocked,equipmentChanged);
+            if(!productionCombatLocked&&!equipmentChanged&&Combat)Combat.HandleInput();
             absorb.enabled=false;
             if(Capturing)
             {
@@ -867,40 +875,53 @@ namespace Plugin.AncientCivilization
             if(locomotion!=null)locomotion.Step(onGround,relativeSpeed,body.linearVelocity.y,direction,Time.deltaTime);
             art.flipX=(Time.time<actionUntil&&!wired?strikeFacing:direction)<0;
             int frame=bike?7:wired?5:(Capturing||(Combat&&(Combat.Charging||Combat.Firing)))?6:locomotion!=null?locomotion.Frame:0;
-            art.sprite=frames[frame];
+            bool detailedOfficer = !bike && !wired && plugVisuals && !g.InSniperFinalPhase;
+            // 일반 순찰에서만 새 보행 시트를 사용한다. 플러그와 전투 연출은 아래에서 실제 상태로 자세를 받는다.
+            if (detailedOfficer && frame < 5 && locomotion != null)
+                art.sprite = Plugin.PlayerCore.BluePlugOfficerArt.FieldFrame(locomotion.FieldFrame, frame);
+            else
+                art.sprite=detailedOfficer ? Plugin.PlayerCore.BluePlugOfficerArt.Frame(frame) : frames[frame];
             if(!bike&&!wired)
             {
-                if(Time.time<hurtUntil)art.sprite=frames[0];
+                if(Time.time<hurtUntil)art.sprite=detailedOfficer
+                    ? Plugin.PlayerCore.BluePlugOfficerArt.FieldFrame(onGround ? 34 : 27, 0) : frames[0];
                 else if(Time.time<actionUntil)art.sprite=bladeFrames[(combo-1)*AncientBladeRules.FramesPerStep+AncientBladeRules.AnimationFrame(combo,Time.time-actionStarted)];
-                else if(Combat&&(Combat.Charging||Combat.Firing))art.sprite=frames[6];
             }
             art.transform.localScale=Vector3.one;art.transform.localRotation=Quaternion.identity;
-            if(onGround&&Mathf.Abs(relativeSpeed)>7&&Time.time>=dustAt){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.35f,.48f,.55f),2);dustAt=Time.time+.18f;}
+            if((bike||g.InSniperFinalPhase)&&onGround&&Mathf.Abs(relativeSpeed)>7&&Time.time>=dustAt){g.Burst((Vector2)transform.position+Vector2.down*.8f,new Color(.35f,.48f,.55f),2);dustAt=Time.time+.18f;}
             art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);
-            bool recoverSwing=!bike&&!wired&&!onGround&&Time.time>=hurtUntil&&Time.time>=actionUntil&&!Capturing&&!(Combat&&(Combat.Charging||Combat.Firing));
-            bool swingPose=swingMotion!=null&&swingMotion.Apply(wired&&!wireZip&&!wireBrace&&!bike,recoverSwing,anchor-(Vector2)transform.position,body.linearVelocity,
-                Time.time-wireAttachedAt,arcTravel,swingDirection,Time.time,Time.deltaTime);
-            bool ordinaryPose=!bike&&!wired&&!swingPose&&Time.time>=hurtUntil&&Time.time>=actionUntil&&!Capturing&&!(Combat&&(Combat.Charging||Combat.Firing));
+            bool canPresentPlug=!bike&&Time.time>=hurtUntil&&(wired||
+                Time.time>=actionUntil&&(!Capturing||IsCampaignPlugThrowing)&&!(Combat&&(Combat.Charging||Combat.Firing)));
+            bool equipmentPose=ApplyCampaignPlugPose(canPresentPlug,onGround);
+            bool ordinaryPose=canPresentPlug&&!wired&&!equipmentPose;
+            if (!bike && !g.InSniperFinalPhase)
+            {
+                bool planted = onGround && detailedOfficer && ordinaryPose && locomotion != null &&
+                    !Capturing && !(Combat && Combat.BladeAnimating);
+                footDust.TrackBoot(planted ? locomotion.FieldFrame : -1, relativeSpeed, groundPoint, groundNormal, groundBody);
+            }
             if(ordinaryPose&&locomotion!=null)
             {
                 art.transform.localPosition+=Vector3.up*locomotion.OffsetY;
                 art.transform.localScale=new Vector3(locomotion.ScaleX,locomotion.ScaleY,1);
                 art.transform.localRotation=Quaternion.Euler(0,0,locomotion.Angle);
             }
-            if(wired&&Time.time>=ghostAt){g.Afterimage(art);ghostAt=Time.time+.065f;}
+            // 플러그 이동은 양팔을 포함한 실제 자세와 전용 케이블을 쓴다. 통짜 구형 잔상을 겹쳐 그리지 않는다.
+            bool scriptedWire=wired&&plugSession.Phase==Plugin.PlayerCore.BluePlugPhase.Ready;
+            if(scriptedWire&&Time.time>=ghostAt){g.Afterimage(art);ghostAt=Time.time+.065f;}
             art.color=Time.time<invulnerableUntil&&(int)(Time.time*14)%2==0?new Color(1,1,1,.45f):Color.white;
             art.enabled=!bike;
-            trail.emitting=wired||bike;
+            trail.emitting=scriptedWire||bike;
         }
-        public void ReleaseWire(){StopWire(false);}
+        public void ReleaseWire(){CancelCampaignPlug();}
         public void AddEncounterImpulse(Vector2 impulse){if(body&&body.simulated)body.linearVelocity+=impulse;}
         public void HoldForEncounter(bool held)
         {
-            if(!body)return;if(held){ResetSwingPresentation();StopWire(false);airborneSurface=0;body.linearVelocity=Vector2.zero;if(Combat)Combat.CancelAttacks();}
+            if(!body)return;if(held){footDust?.Clear();ResetSwingPresentation();ResetCampaignPlugAndProp();airborneSurface=0;body.linearVelocity=Vector2.zero;if(Combat)Combat.CancelAttacks();}
             body.simulated=!held;
         }
         void ResetSwingPresentation()
-        {if(swingMotion!=null)swingMotion.Clear();if(locomotion!=null)locomotion.Clear();if(art){art.transform.localRotation=Quaternion.identity;art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);art.transform.localScale=Vector3.one;}}
+        {plugCharacterMotion?.Clear();if(swingMotion!=null)swingMotion.Clear();if(locomotion!=null)locomotion.Clear();if(art){art.transform.localRotation=Quaternion.identity;art.transform.localPosition=new Vector3(0,bike?-.25f:-1.05f,0);art.transform.localScale=Vector3.one;}}
         public void CinematicPose(bool low,float facing)
         {
             if(!art||frames==null)return;ResetSwingPresentation();art.sprite=frames[low?4:0];art.flipX=facing<0;art.enabled=true;art.color=Color.white;
@@ -936,10 +957,16 @@ namespace Plugin.AncientCivilization
             // The authored sprites pivot at the feet; offset them so a backflip turns around the body's centre.
             art.transform.localPosition=rotation*(Vector3.down*1.05f);art.enabled=true;art.color=Color.white;
         }
-        public void SetProductionAttackMode(bool attack)
-        {StopWire(false);AttackMode=attack;ZipMode=true;if(Combat)Combat.CancelAttacks();}
+        public void PrepareProductionEquipment(bool onDeck)
+        {
+            StopWire(false);ZipMode=true;
+            ResetSummonedEquipment();
+            if(onDeck && Loadout) particles=Mathf.Max(particles,Loadout.Data.summonCost);
+            if(Combat)Combat.CancelAttacks();
+        }
         public void CinematicMove(Vector2 point)
         {
+            plugCharacterMotion?.Clear();
             body.position=point;transform.position=point;body.linearVelocity=Vector2.zero;
             if(art&&frames!=null)art.sprite=frames[3];
         }
@@ -987,13 +1014,14 @@ namespace Plugin.AncientCivilization
         }
         public void TravelTo(Vector2 point)
         {
-            HoldForEncounter(false);ResetSwingPresentation();
+            AncientBossCue.ClearAll(AncientGame.Instance);
+            footDust?.Clear();HoldForEncounter(false);ResetSwingPresentation();
             if(bike)
             {
                 if(mountedBike)mountedBike.Park(body.position,direction,bikeHP);
                 mountedBike=null;motorcycle.Park();SetBike(false);BikeSkid=0;
             }
-            StopWire(false);body.position=point;transform.position=point;body.linearVelocity=Vector2.zero;
+            ResetCampaignPlugAndProp();ResetSummonedEquipment();body.position=point;transform.position=point;body.linearVelocity=Vector2.zero;
             momentumUntil=0;conveyorUntil=0;airborneSurface=0;ClearJumpInput();lastGrounded=-100;groundSampleTick=-1;
             fallSpeed=0;wasGrounded=false;airJumpUsed=false;hurtUntil=actionUntil=0;
             if(trail){trail.emitting=false;trail.Clear();}if(Combat)Combat.ResetCombat();
@@ -1001,7 +1029,14 @@ namespace Plugin.AncientCivilization
         Vector2 anchor;
         void FixedUpdate()
         {
-            var g=AncientGame.Instance;if(g.won||g.Paused||(g.Sniper&&g.Sniper.InputLocked)||(g.Living&&g.Living.GrabbingPlayer))return;
+            var g=AncientGame.Instance;
+            if (body && g && plugPorts) plugPorts.StepDevices(Time.fixedDeltaTime);
+            if(!body||!g||g.won||g.Paused||
+                (g.Sniper&&g.Sniper.InputLocked)||(g.Living&&g.Living.GrabbingPlayer))return;
+            if(ignoredPlatform && Time.time>=dropUntil && !heroCollider.bounds.Intersects(ignoredPlatform.bounds))
+                RestoreThinPlatform();
+            if(g.GameplayInputReady)StepCampaignPlug(Time.fixedDeltaTime);
+            ValidateMovingCampaignPlug();
             Vector2 velocity=body.linearVelocity;
             bool grounded=StableGrounded(velocity);
             // Physics landings consume a queued press immediately, even between render frames.
@@ -1038,11 +1073,12 @@ namespace Plugin.AncientCivilization
                 // Check the destination of the completed physics step, not the moving
                 // latch's newer position. A carrier otherwise stays one step ahead forever.
                 Vector2 arrived=wireFinishGoal-body.position;
-                if(AncientZipRules.Arrived(arrived.x,arrived.y))
+                if(AncientZipRules.Arrived(arrived.x,arrived.y) && (!plugPort.IsBlade || Vector2.Distance(body.position,anchor)<.55f))
                 {
                     float carrier=wireMovingAnchor?wireCarrierVelocity.x:0;
                     if(wireJokerRing && g.Sniper)g.Sniper.OnWireImpact();
-                    StopWire(false);airborneSurface=carrier;velocity=new Vector2(carrier,0);zipCompleted=true;
+                    Vector2 carry = FinishCampaignTow(carrier);
+                    StopWire(false);airborneSurface=carrier;velocity=carry;zipCompleted=true;
                 }
             }
             if(wired)
@@ -1053,8 +1089,10 @@ namespace Plugin.AncientCivilization
                 {
                     Vector2 goal=ZipGoal();Vector2 remaining=goal-body.position;
                     AncientZipRules.Velocity(remaining.x,remaining.y,Time.fixedDeltaTime,out velocity.x,out velocity.y);
+                    if(remaining.sqrMagnitude > .00001f) plugTowDirection=remaining.normalized;
                     bool blocked;velocity=ClipZipStep(velocity,out blocked);
                     Vector2 travel=velocity*Time.fixedDeltaTime;
+                    float breakDistance=Mathf.Max(36,plugLaunchRange+1);
                     bool enemyImpact=wireEnemy&&AncientRules.WireImpactOnStep(delta.x,delta.y,travel.x,travel.y,blocked);
                     if(enemyImpact)
                     {
@@ -1062,10 +1100,12 @@ namespace Plugin.AncientCivilization
                         enemy.WireImpact(radial.x<0?-1:1);StopWire(false);
                         velocity=new Vector2(-radial.x*2,Mathf.Max(3,velocity.y*.15f));body.linearVelocity=velocity;
                     }
-                    else if(blocked||AncientZipRules.Arrived(remaining.x,remaining.y)||age>AncientZipRules.MaximumSeconds||delta.sqrMagnitude>36*36)
+                    else if(blocked||AncientZipRules.Arrived(remaining.x,remaining.y)||age>AncientZipRules.MaximumSeconds||delta.sqrMagnitude>breakDistance*breakDistance)
                     {
                         if(!blocked && wireJokerRing && g.Sniper && AncientZipRules.Arrived(remaining.x,remaining.y))g.Sniper.OnWireImpact();
-                        StopWire(false);if(!blocked)velocity=Vector2.zero;
+                        Vector2 carry = !blocked && AncientZipRules.Arrived(remaining.x,remaining.y) ?
+                            FinishCampaignTow(wireMovingAnchor ? wireCarrierVelocity.x : 0) : Vector2.zero;
+                        StopWire(false);if(!blocked)velocity=carry;
                     }
                     else if(!wireEnemy&&AncientZipRules.ReachesThisStep(remaining.x,remaining.y,travel.x,travel.y))
                     {wireFinishPending=true;wireFinishGoal=goal;}
@@ -1078,9 +1118,11 @@ namespace Plugin.AncientCivilization
                     {StopWire(false);velocity=Vector2.zero;}
                     else velocity=wireMovingAnchor?wireCarrierVelocity:Vector2.zero;
                 }
+                else if(IsCampaignPlugSwing)
+                    velocity=StepCampaignSwing(Time.fixedDeltaTime);
                 else
                 {
-                    // A one-sided distance constraint produces an arc, rather than teleporting to the anchor.
+                    // 구형 검사 씬의 직접 호출도 기존 운동을 재현한다.
                     wireLength=Mathf.MoveTowards(wireLength,wireMinLength,8*Time.fixedDeltaTime);
                     wireJoint.distance=wireLength;
                     Vector2 tangent=new Vector2(radial.y,-radial.x)*swingDirection;
@@ -1125,7 +1167,9 @@ namespace Plugin.AncientCivilization
             AncientJumpKind jump=AncientMovementRules.ChooseJump(Time.time,jumpBufferedUntil,lastGrounded,doubleJump,airJumpUsed);
             if(jump!=AncientJumpKind.None)
             {
-                StopWire(false);velocity.y=AncientMovementRules.LaunchSpeed(jump,jumpHeld||bike);
+                StopWire(false);
+                if (!g.InSniperFinalPhase) plugCharacterMotion?.InterruptRecovery();
+                velocity.y=AncientMovementRules.LaunchSpeed(jump,jumpHeld||bike);
                 lastGrounded=-100;jumpBufferedUntil=-10;cutJump=false;
                 if(jump==AncientJumpKind.Air){airJumpUsed=true;g.Burst(transform.position,AncientGame.Cyan,10);}
             }
@@ -1136,7 +1180,8 @@ namespace Plugin.AncientCivilization
                 velocity.x=Mathf.MoveTowards(velocity.x,Mathf.Sign(pull.x)*8,120*Time.fixedDeltaTime);
                 velocity.y+=Mathf.Clamp(pull.y*.4f,0,1)*38*Time.fixedDeltaTime;
             }
-            cutJump=false;body.gravityScale=wired?(wireZip||wireBrace?0:1):(velocity.y<0?1.2f:1);
+            bool shortDash=!zipCompleted&&g.GameplayInputReady&&StepShortDash(grounded,ref velocity);
+            cutJump=false;body.gravityScale=shortDash?0:wired?(wireZip||wireBrace||IsCampaignPlugSwing?0:1):(velocity.y<0?1.2f:1);
             if(!wired||!wireZip)velocity.y=Mathf.Max(velocity.y,-25);body.linearVelocity=velocity;
             if(g.ArenaActive)
             {
@@ -1145,7 +1190,7 @@ namespace Plugin.AncientCivilization
         }
         Vector2 ZipGoal()
         {
-            if(wireEnemy)return anchor;
+            if(wireEnemy || plugPort.IsDevice || plugPort.IsBlade)return anchor;
             Vector2 normal=wireSurfaceNormal;
             if(normal.sqrMagnitude<.1f)normal=(body.position-anchor).normalized;
             return anchor+normal*AncientZipRules.Support(normal.x,normal.y,bike);
@@ -1154,6 +1199,12 @@ namespace Plugin.AncientCivilization
         {
             blocked=false;float length=velocity.magnitude*Time.fixedDeltaTime;if(length<.00001f)return velocity;
             Vector2 radial=velocity.normalized;float safe=length;
+            if(IsCampaignPlugTow)
+            {
+                safe=CampaignBodyTravel(radial,length,false);
+                blocked=safe<length-.0001f;
+                return radial*(safe/Time.fixedDeltaTime);
+            }
             int count=body.Cast(radial,zipCastFilter,zipCastHits,length+AncientZipRules.Skin);
             for(int i=0;i<count;i++)
             {
@@ -1175,98 +1226,6 @@ namespace Plugin.AncientCivilization
             RaycastHit2D hit=Physics2D.Linecast(hand,point,1<<8);
             return !hit || Vector2.Distance(hit.point,point)<.15f;
         }
-        bool PickAnchor(out Vector2 selected)
-        {
-            selected=Vector2.zero;var camera=aimCamera;if(!camera)return false;
-            Vector2 pixel=Input.mousePosition;
-            if(pixel.x<0||pixel.y<0||pixel.x>=Screen.width||pixel.y>=Screen.height)return false;
-            Vector2 hand=(Vector2)transform.position+Vector2.up*.35f;
-            Vector2 mouse=camera.ScreenToWorldPoint(Input.mousePosition);
-            Vector2 aim=(mouse-hand).normalized;
-            float snapPixels=58*Mathf.Clamp(Screen.height/900f,.8f,1.4f);
-            float best=snapPixels;bool found=false;
-            foreach(var point in AncientGame.Instance.anchors)
-            {
-                float distance=(hand-point).sqrMagnitude;
-                if(distance<2.2f*2.2f||distance>22*22||(!ZipMode&&point.y<transform.position.y+1))continue;
-                Vector3 screen=camera.WorldToScreenPoint(point);if(screen.z<=0)continue;
-                float score=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));if(score>=best||!VisibleAnchor(point))continue;
-                best=score;selected=point;found=true;
-            }
-            // Surface picking is limited to the cursor neighbourhood, rather than a remote point on its ray.
-            float tolerance=snapPixels/(Screen.height/(camera.orthographicSize*2));
-            if(aim.sqrMagnitude>.1f)
-            {
-                float reach=Mathf.Min(22,Vector2.Distance(hand,mouse)+tolerance);
-                RaycastHit2D hit=Physics2D.Raycast(hand,aim,reach,1<<8);
-                if(hit && (ZipMode||hit.point.y>transform.position.y+2.3f) && Vector2.Distance(hit.point,hand)>2.5f)
-                {
-                    Vector3 screen=camera.WorldToScreenPoint(hit.point);
-                    float score=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
-                    if(score<best){selected=hit.point;found=true;}
-                }
-            }
-            return found;
-        }
-        bool PickZipTarget(out Vector2 selected,out AncientEnemy enemy,out Vector2 normal)
-        {
-            selected=normal=Vector2.zero;enemy=null;var camera=aimCamera;if(!camera)return false;
-            Vector2 pixel=Input.mousePosition;
-            if(pixel.x<0||pixel.y<0||pixel.x>=Screen.width||pixel.y>=Screen.height)return false;
-            Vector2 hand=(Vector2)transform.position+Vector2.up*.35f,mouse=camera.ScreenToWorldPoint(Input.mousePosition),aim=(mouse-hand).normalized;
-            if(aim.sqrMagnitude<.1f)return false;
-            bool found=false;float score=float.MaxValue;
-            // The clicked ray chooses the actual first solid surface. A nearby decorative hook
-            // no longer steals a ceiling/wall click via the old wide 58-pixel snap radius.
-            var hit=Physics2D.Raycast(hand,aim,AncientZipRules.Range,1<<8);
-            if(hit&&Vector2.Distance(hand,hit.point)>.8f)
-            {
-                selected=hit.point;normal=hit.normal;found=true;
-                Vector3 screen=camera.WorldToScreenPoint(selected);score=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
-            }
-            float snap=24*Mathf.Clamp(Screen.height/900f,.8f,1.4f);
-            foreach(var point in AncientGame.Instance.anchors)
-            {
-                float distance=(point-hand).sqrMagnitude;if(distance<1||distance>AncientZipRules.Range*AncientZipRules.Range)continue;
-                Vector3 screen=camera.WorldToScreenPoint(point);if(screen.z<=0)continue;
-                float candidate=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
-                float pointSnap=snap;var production=AncientGame.Instance.Production;
-                if(production&&production.CanBoardWire(point))pointSnap=Mathf.Max(pointSnap,AncientProductionLayout.BoardingPickPixels(Screen.height,camera.orthographicSize));
-                if(candidate>=pointSnap||candidate>=score||!VisibleAnchor(point))continue;
-                score=candidate;selected=point;normal=Vector2.zero;found=true;
-            }
-            foreach(var candidateEnemy in AncientGame.Instance.enemies)
-            {
-                if(!candidateEnemy||!candidateEnemy.IsAlive||!candidateEnemy.CanWireTarget)continue;Vector2 point=candidateEnemy.AimPoint;
-                if((point-hand).sqrMagnitude>AncientZipRules.Range*AncientZipRules.Range)continue;
-                Vector3 screen=camera.WorldToScreenPoint(point);if(screen.z<=0)continue;
-                float candidate=Vector2.Distance(pixel,new Vector2(screen.x,screen.y));
-                if(candidate>=snap||candidate>=score||!VisibleAnchor(point))continue;
-                score=candidate;selected=point;enemy=candidateEnemy;normal=Vector2.zero;found=true;
-            }
-            return found;
-        }
-        void FireWire()
-        {
-            if(Time.time<wireReady)return;
-            Vector2 selected,normal=Vector2.zero;var g=AncientGame.Instance;AncientEnemy target=null;
-            bool productionBoarding=g.Production&&g.Production.Active&&!g.Production.DeckCombat;
-            if (!productionBoarding && ZipMode && g.Enforcer && g.View &&
-                g.Enforcer.TryThrow(g.View.ScreenToWorldPoint(Input.mousePosition), body.position))
-                return;
-            if(!productionBoarding&&ZipMode&&g.Living&&g.Living.TryThrow(g.View.ScreenToWorldPoint(Input.mousePosition)))return;
-            if(productionBoarding&&(!bike||!ZipMode))return;
-            bool picked=ZipMode?PickZipTarget(out selected,out target,out normal):PickAnchor(out selected);
-            if(!picked)
-            {g.Notice(productionBoarding?"Space로 장애물을 피하세요. 트럭이 가까워지면 위쪽 연결점을 좌클릭하세요.":"적 또는 지형을 겨냥해 좌클릭으로 견인 / 가운데 클릭으로 지형 스윙 / 우클릭은 입자 수집");return;}
-            if(productionBoarding)
-            {
-                if(!TryProductionBoard(selected))g.Notice("트럭이 공격을 멈추고 가까워지면 상단 연결점을 겨냥하세요.",1.5f);
-                return;
-            }
-            if(g.Living&&g.Living.Sucking&&!target)ZipMode=false;
-            AttachWire(selected,target,normal);
-        }
         public bool TryProductionBoard(Vector2 selected)
         {
             var g=AncientGame.Instance;Vector2 boardingHook;
@@ -1283,18 +1242,21 @@ namespace Plugin.AncientCivilization
             if(wired)StopWire(false);
             wireFinishPending=false;wireMovingBody=null;wireCarrierVelocity=Vector2.zero;
             wireChain=chain?Mathf.Min(wireChain+1,5):1;
-            if(g.Traversal)g.Traversal.TryMovingAnchor(selected,out wireMovingAnchor);
-            if(!wireMovingAnchor&&g.Campaign)g.Campaign.TryMovingAnchor(selected,out wireMovingAnchor);
-            if(!wireMovingAnchor&&g.Production)g.Production.TryMovingAnchor(selected,out wireMovingAnchor);
-            if (!target && g.Orbital && g.Orbital.Arena != null && g.Orbital.Arena.TryAttach(selected, out var orbitalAnchor))
+            wireMovingAnchor=null;
+            if(!plugPort.IsBlade && g.Traversal)g.Traversal.TryMovingAnchor(selected,out wireMovingAnchor);
+            if(!plugPort.IsBlade && !wireMovingAnchor&&g.Campaign)g.Campaign.TryMovingAnchor(selected,out wireMovingAnchor);
+            if(!plugPort.IsBlade && !wireMovingAnchor&&g.Production)g.Production.TryMovingAnchor(selected,out wireMovingAnchor);
+            if(!plugPort.IsBlade && !wireMovingAnchor&&g.Finale&&g.Finale.TryPlugAnchor(out Vector2 finalePoint,out Transform finaleCarrier)&&
+                (selected-finalePoint).sqrMagnitude<.25f)wireMovingAnchor=finaleCarrier;
+            if(!plugPort.IsBlade && !target && g.Orbital && g.Orbital.Arena != null && g.Orbital.Arena.TryAttach(selected, out var orbitalAnchor))
                 wireMovingAnchor = orbitalAnchor;
             wireJokerRing = false;
-            if (!target && ZipMode && g.Sniper && g.Sniper.Arena != null && g.Sniper.Arena.TryAttach(selected, out var jokerRing))
+            if(!plugPort.IsBlade && !target && ZipMode && g.Sniper && g.Sniper.Arena != null && g.Sniper.Arena.TryAttach(selected, out var jokerRing))
             {
                 wireMovingAnchor = jokerRing;
                 wireJokerRing = true;
             }
-            if(!wireMovingAnchor)
+            if(!plugPort.IsBlade && !wireMovingAnchor && !plugPort.IsDevice)
             {
                 var moving=Physics2D.OverlapCircle(selected,.06f,1<<8);
                 if(moving&&moving.attachedRigidbody&&moving.attachedRigidbody.bodyType==RigidbodyType2D.Kinematic)
@@ -1313,7 +1275,7 @@ namespace Plugin.AncientCivilization
             swingDirection=Mathf.Abs(body.linearVelocity.x)>2?Mathf.Sign(body.linearVelocity.x):direction;
             previousRadial=-radial;arcTravel=0;
             wireLength=delta.magnitude;wireMinLength=brace?wireLength:Mathf.Min(wireLength,Mathf.Clamp(wireLength*.68f,3.2f,8));
-            wireJoint.connectedAnchor=anchor;wireJoint.distance=wireLength;wireJoint.enabled=!wireZip;
+            wireJoint.connectedAnchor=anchor;wireJoint.distance=wireLength;wireJoint.enabled=!wireZip&&!IsCampaignPlugSwing;
             Vector2 velocity;
             if(wireZip)
             {
@@ -1324,6 +1286,8 @@ namespace Plugin.AncientCivilization
             }
             else if(brace)
             {velocity=Vector2.zero;body.gravityScale=0;jumpBufferedUntil=-10;cutJump=false;}
+            else if(IsCampaignPlugSwing)
+            {velocity=body.linearVelocity;jumpBufferedUntil=-10;cutJump=false;}
             else
             {
                 velocity=body.linearVelocity+radial*11+new Vector2(radial.y,-radial.x)*swingDirection*5;
@@ -1335,20 +1299,25 @@ namespace Plugin.AncientCivilization
         }
         internal void ReleaseWireAt(Vector2 point)
         {
-            if(wired && (anchor-point).sqrMagnitude < .18f*.18f) StopWire(false);
+            bool samePort=plugPort.IsValid && (plugPort.Anchor-point).sqrMagnitude < .18f*.18f;
+            if(wired && (samePort || (anchor-point).sqrMagnitude < .18f*.18f)) StopWire(false);
+            else if(samePort) ClearCampaignPlug();
         }
 
         void StopWire(bool launch)
         {
             bool wasWired=wired,wasBrace=wireBrace;
+            bool releasePlug=launch&&wasWired&&!wasBrace&&IsCampaignPlugSwing;
+            Vector2 plugVelocity=releasePlug?CampaignSwingTangent():Vector2.zero;
             if(wireEnemy){wireContactTarget=wireEnemy;wireContactUntil=Time.time+.3f;}
             wireEnemy=null;wireMovingAnchor=null;wireMovingBody=null;wireFinishPending=wireBrace=wireJokerRing=false;wireCarrierVelocity=Vector2.zero;wired=false;if(wireJoint)wireJoint.enabled=false;
             if(!wasWired)return;
+            ClearCampaignPlug();
             lastWireRelease=Time.time;momentumUntil=Time.time+.7f;
             if(launch&&body&&!wasBrace)
             {
-                Vector2 velocity=body.linearVelocity;
-                if(!wireZip)
+                Vector2 velocity=releasePlug?plugVelocity:body.linearVelocity;
+                if(!wireZip&&!releasePlug)
                 {
                     velocity.x=swingDirection*Mathf.Max(13,velocity.x*swingDirection);
                     velocity.y=Mathf.Max(5,velocity.y);
@@ -1359,7 +1328,7 @@ namespace Plugin.AncientCivilization
         }
         void LateUpdate()
         {
-            if(!body||!wire)return;var g=AncientGame.Instance;
+            if(!body||!plugVisuals)return;var g=AncientGame.Instance;
             float armCharge=CaptureEnergy/100f;
             float armPulse=g.Sniper&&g.Sniper.Clashing?1:Capturing?1:wired?.65f:Combat?Combat.ArmActivity:0;
             if(lastArmCharge!=armCharge||lastArmPulse!=armPulse||lastArmBike!=bike)
@@ -1377,65 +1346,10 @@ namespace Plugin.AncientCivilization
                 {lastReservoirEnergy=CaptureEnergy;chargeRing.startWidth=chargeRing.endWidth=.025f+CaptureEnergy*.0007f;}
                 SetCircle(chargeRing,reservoirShape,reservoirPoints,transform.position,radius,Time.time*2);
             }
-            bool visible=wired&&!g.won;ShowCable(visible);
-            if(visible)
-            {
-                Vector2 hand=WireOrigin;
-                float age=Time.time-wireAttachedAt;float shot=Mathf.Clamp01(age/.055f);
-                Vector2 end=Vector2.Lerp(hand,anchor,shot);
-                float length=Vector2.Distance(hand,end);
-                cablePoints[0]=hand;cablePoints[1]=end;
-                wire.SetPositions(cablePoints);wireGlow.SetPositions(cablePoints);
-                int samples=AncientWireMath.Samples(length,AncientVisuals.HighQuality);
-                int buffer=samples==24?0:samples==48?1:samples==96?2:3;
-                Vector2 normal=Vector2.Perpendicular(end-hand).normalized;
-                if(lastHelixCount!=samples)
-                {lastHelixCount=samples;foreach(var helix in wireHelices)helix.positionCount=samples;}
-                for(int strand=0;strand<2;strand++)
-                {
-                    var points=helixSmall[buffer];
-                    AncientWireMath.Fill(length,age,strand,samples,helixNormal,helixDepth);
-                    for(int i=0;i<samples;i++)
-                    {
-                        Vector2 point=Vector2.Lerp(hand,end,i/(float)(samples-1))+normal*helixNormal[i];
-                        points[i]=new Vector3(point.x,point.y,helixDepth[i]);
-                    }
-                    wireHelices[strand].SetPositions(points);
-                }
-                hook.transform.position=end;hook.transform.rotation=Quaternion.Euler(0,0,age*90);
-                hook.transform.localScale=Vector3.one*(.18f+Mathf.Exp(-age*12)*.08f);
-                wireParticles.Draw(hand,end,age,AncientVisuals.HighQuality);
-                SetCircle(wireCuff,cuffShape,cuffPoints,hand,.16f,-age*3);
-                SetCircle(wireLatch,latchShape,latchPoints,end,.22f+Mathf.Exp(-age*9)*.2f,age);
-            }
-            Vector2 target=Vector2.zero;AncientEnemy enemyTarget=null;
-            bool hasTarget=false;
-            if(!AttackMode&&!g.Paused&&!g.won&&!(g.Living&&g.Living.InputLocked))
-            {
-                Vector2 normal;
-                if (ZipMode && g.Enforcer && g.View &&
-                    g.Enforcer.TryWireTarget(g.View.ScreenToWorldPoint(Input.mousePosition), body.position, out target))
-                    hasTarget = true;
-                else if(ZipMode&&g.Living&&g.Living.TryWireTarget(out target))hasTarget=true;
-                else if(ZipMode)hasTarget=PickZipTarget(out target,out enemyTarget,out normal);
-                else hasTarget=PickAnchor(out target);
-                if(g.Production&&g.Production.Active&&!g.Production.DeckCombat)
-                {
-                    hasTarget=hasTarget&&bike&&g.Production.CanBoardWire(target);
-                    if(hasTarget){target=g.Production.BoardingHook;enemyTarget=null;}
-                }
-            }
-            if(hasTarget&&enemyReticle!=(enemyTarget!=null))
-            {enemyReticle=enemyTarget!=null;wireTarget.startColor=wireTarget.endColor=enemyReticle?AncientGame.Orange:AncientGame.Cyan;}
-            HasWireTarget=hasTarget;WireTarget=target;
-            if(targetVisible!=hasTarget){targetVisible=hasTarget;wireTarget.enabled=hasTarget;}
-            if(hasTarget)
-            {
-                int count=ZipMode?4:8;
-                if(lastReticleCount!=count){lastReticleCount=count;wireTarget.positionCount=count;}
-                float radius=.43f+Mathf.Sin(Time.time*7)*.045f;
-                SetCircle(wireTarget,ZipMode?zipShape:swingShape,ZipMode?zipPoints:swingPoints,target,radius,0);
-            }
+            // 입력과 버퍼 연계 처리(Update)가 끝난 뒤 현재 베기를 렌더한다.
+            if (Combat) Combat.PresentCut(art, !g.InSniperFinalPhase && body.simulated && StableGrounded(body.linearVelocity));
+            DrawCampaignPlug(g);
+            PresentEquippedBlade();
         }
         public void HurtContact(AncientEnemy source,float damage)
         {
@@ -1456,6 +1370,7 @@ namespace Plugin.AncientCivilization
             var g=AncientGame.Instance;
             if ((!ignoresHitInvulnerability && Time.time < invulnerableUntil) || g.won ||
                 (g.Sniper && g.Sniper.Clashing) || (g.Production && g.Production.Cinematic)) return;
+            footDust?.Clear();ResetCampaignPlugAndProp();
             invulnerableUntil=Time.time+.65f;g.Shake(.14f);
             if(bike)
             {
@@ -1514,7 +1429,7 @@ namespace Plugin.AncientCivilization
         public void MountProductionBike(AncientParkedBike vehicle,Vector2 point,float speed)
         {
             if(!body||!vehicle)return;
-            TravelTo(point);SetProductionAttackMode(false);mountedBike=vehicle;vehicle.Take();SetBike(true);
+            TravelTo(point);PrepareProductionEquipment(false);mountedBike=vehicle;vehicle.Take();SetBike(true);
             body.simulated=true;body.gravityScale=1;body.position=point;transform.position=point;
             body.linearVelocity=new Vector2(speed,0);direction=1;bikeHP=80;BikeSkid=0;
             motorcycle.Mount();
@@ -1541,26 +1456,23 @@ namespace Plugin.AncientCivilization
             foreach(var e in g.enemies.ToArray())if(e&&Vector2.Distance(e.AimPoint,transform.position)<5)e.Hit(85,true);
             float launch=Mathf.Abs(body.linearVelocity.x)>1.5f?Mathf.Sign(body.linearVelocity.x):direction;
             body.linearVelocity=new Vector2(launch*Mathf.Clamp(Mathf.Abs(body.linearVelocity.x)*.85f,17,23),19);invulnerableUntil=Time.time+.7f;
-            g.Notice("폭발 도약 / 다음 와이어 지점을 연결하세요.",2);
+            g.Notice("폭발 도약 / 다음 콘센트에 플러그를 연결하세요.",2);
         }
         public void RetryFromCheckpoint(){Respawn();}
         void Respawn()
         {
-            mountedBike=null;motorcycle.Park();if(Combat)Combat.ResetCombat();
-            StopWire(false);CaptureEnergy=0;AttackMode=false;wireChain=0;momentumUntil=0;actionUntil=0;fallSpeed=0;hp=MaxHP;particles=Mathf.Max(40,particles);SetBike(false);BikeSkid=0;body.linearVelocity=Vector2.zero;
+            footDust?.Clear();mountedBike=null;motorcycle.Park();if(Combat)Combat.ResetCombat();
+            ResetCampaignPlugAndProp();ResetSummonedEquipment();CaptureEnergy=0;wireChain=0;momentumUntil=0;actionUntil=0;fallSpeed=0;hp=MaxHP;particles=Mathf.Max(40,particles);SetBike(false);BikeSkid=0;body.linearVelocity=Vector2.zero;
             invulnerableUntil=Time.time+1.5f;AncientGame.Instance.HeroDied();
         }
         void OnDestroy()
         {
-            if(wire)Destroy(wire.gameObject);if(wireGlow)Destroy(wireGlow.gameObject);
-            foreach(var helix in wireHelices)if(helix)Destroy(helix.gameObject);
-            if(wireCuff)Destroy(wireCuff.gameObject);if(wireLatch)Destroy(wireLatch.gameObject);
-            if(wireTarget)Destroy(wireTarget.gameObject);if(hook)Destroy(hook.gameObject);
+            if(ownsPlugSettings&&plugSettings)Destroy(plugSettings);
             if(absorb)Destroy(absorb.gameObject);if(chargeRing)Destroy(chargeRing.gameObject);
         }
     }
 
-    public sealed class AncientEnemy : MonoBehaviour
+    public sealed class AncientEnemy : MonoBehaviour, Plugin.PlayerCore.IShockable
     {
         public int kind;
         public int DistrictFloor {get;private set;}
@@ -1574,6 +1486,8 @@ namespace Plugin.AncientCivilization
         public void ClearProductionHitFlash()
         {if(!productionEncounter)return;flashUntil=Time.time-1;if(art)art.color=Color.white;}
         public bool IsSniperClone {get{return cloneSlot>=1;}}
+        bool OrdinarySniperVisual => (IsSniperClone || IsDistrictBoss && DistrictFloor == 4 && !IsSecretary) &&
+            (!sniperEncounter || sniperEncounter.Phase < 6);
         const float RearRailScale=.88f;
         bool OnRearRail => sniperEncounter && sniperEncounter.InRearLane(cloneSlot);
         internal bool CanWireTarget => !sniperEncounter || (IsSniperClone ? !OnRearRail : sniperEncounter.CanWireOwner);
@@ -1620,9 +1534,25 @@ namespace Plugin.AncientCivilization
         public bool AttackIsPhysical {get{return orbital?orbital.Physical:productionEncounter?productionEncounter.CommanderAttackIsPhysical:bossBrain?bossBrain.Physical:pattern==0;}}
         public float WindupProgress {get{return orbital?orbital.WindupProgress:enforcer?enforcer.WindupProgress:productionEncounter?productionEncounter.CommanderWindup:bossBrain?bossBrain.WindupProgress:resolveAt<0?0:Mathf.Clamp01((Time.time-windupStartedAt)/Mathf.Max(.01f,resolveAt-windupStartedAt));}}
         SpriteRenderer art;LineRenderer warning;AncientFinalTruck carrier;
+        AncientFieldFoeMotion fieldMotion;
+        SpriteRenderer enforcerOptics, enforcerDossierScan;
+        AncientEnforcerBodyMotion enforcerBody;
+        AncientEnforcerCostume enforcerCostume;
+        int enforcerArtPose, enforcerPoseFrame = -1;
+        float enforcerOpacity;
+        // 대화·카메라가 원화의 실제 접점을 따른다. 사격 원점과 피해 판정은 기존 AimPoint를 유지한다.
+        internal Vector2 EnforcerLensWorld => CostumeAnchor(AncientEnforcerVisuals.LensWorld(art, enforcerArtPose));
+        internal Vector2 EnforcerDossierWorld => CostumeAnchor(AncientEnforcerVisuals.DossierWorld(art, enforcerArtPose));
+        Vector2 CostumeAnchor(Vector2 original) => enforcerCostume != null ? enforcerCostume.Anchor(art, enforcerBody, original) : original;
+        internal Vector2 ActionLabelPoint => IsEnforcer && art
+            ? new Vector2(EnforcerLensWorld.x, art.bounds.max.y + .16f)
+            : AimPoint + Vector2.up * 1.8f;
+        Material sniperFieldMaterial, sniperClashMaterial;
         Vector2 home,lockedAim;float facing=1;
         public Vector2 AimPoint {get{return (Vector2)transform.position+Vector2.up*(IsLivingBoss?2.7f:productionEncounter?1.3f:IsSniperClone||IsDistrictBoss&&DistrictFloor==4&&!IsSecretary?(OnRearRail?RearRailScale:1f)*1.5f:kind==3?1.65f:kind==4?.65f:.95f);}}
         public float DialogueHeadHeight {get{return art?Mathf.Clamp(art.bounds.max.y-transform.position.y,.9f,2.5f):2.2f;}}
+        internal SpriteRenderer SniperBodyArt => art;
+        internal float SniperPresentationScale => OnRearRail ? RearRailScale : 1f;
         public Vector2 SniperMuzzle {get{return AimPoint+Vector2.right*facing*(OnRearRail?RearRailScale:1f)*1.42f;}}
         public bool IsAlive {get{return !dead;}}
         float wirePushRemaining;
@@ -1637,7 +1567,11 @@ namespace Plugin.AncientCivilization
         {
             var g=AncientGame.Instance;home=transform.position;carrier=GetComponentInParent<AncientFinalTruck>();
             if (orbital) return; // 봉쇄기는 전용 셔터와 코어를 그린다.
-            art=AncientArt.Display(Role,IsEnforcer?AncientEnforcerVisuals.PoseSprite(0):productionEncounter?AncientArt.ProductionCaptain(0):IsSniperClone?AncientArt.Boss(4,cloneSlot>=2?1:0):AncientArt.Enemy(kind),Vector2.zero,8,transform);art.flipX=facing<0;
+            art=AncientArt.Display(Role,IsEnforcer?AncientEnforcerVisuals.PoseSprite(0):productionEncounter?AncientArt.ProductionCaptain(0):
+                OrdinarySniperVisual ? AncientSniperEncounter.OrdinaryRiflePose(0) : IsSniperClone ? AncientArt.Boss(4,cloneSlot>=2?1:0) :
+                AncientArt.Enemy(kind),Vector2.zero,8,transform);art.flipX=facing<0;
+            if (!IsBoss && !IsSniperClone && (kind == 0 || kind == 4))
+                fieldMotion = new AncientFieldFoeMotion(art, kind == 4);
             if (IsDistrictBoss && DistrictFloor == 3) AncientOrbitalRig.AttachRematchIris(transform);
             if(IsEnforcer)
             {
@@ -1648,7 +1582,17 @@ namespace Plugin.AncientCivilization
             if(IsSniperClone){art.sharedMaterial=sniperEncounter.CloneMaterial;art.color=AncientGame.Cyan;}
             if(AncientVisuals.Instance)
             {
-                if(!IsSniperClone)AncientVisuals.Instance.Rim(art);
+                if(!IsSniperClone)
+                {
+                    if (OrdinarySniperVisual) sniperFieldMaterial = art.sharedMaterial;
+                    AncientVisuals.Instance.Rim(art);
+                    if (sniperFieldMaterial)
+                    {
+                        // 일반 소총은 방향 전환을 지원하는 기본 스프라이트 재질로, 마지막 충돌은 원래 림 재질로 그린다.
+                        sniperClashMaterial = art.sharedMaterial;
+                        art.sharedMaterial = sniperFieldMaterial;
+                    }
+                }
                 AncientVisuals.Instance.Glow(new Vector2(0,kind==4?.6f:1.1f),kind==3||kind==5?AncientGame.Cyan:AncientGame.Orange,kind==3?2.5f:1.1f,9,transform);
             }
             warning=g.Line("Attack telegraph",AncientGame.Orange,.045f,6);warning.enabled=false;
@@ -1696,8 +1640,11 @@ namespace Plugin.AncientCivilization
             {enragedAnnounced=true;g.Sound(8);g.Notice("화물 수호 장치 / 과부하",2);g.Impact(AimPoint,AncientGame.Orange,true);g.Shake(.12f);}
             float anticipation=IsTelegraphing?WindupProgress:0;
             float recoil=Mathf.Clamp01((attackPoseUntil-Time.time)/.18f);
-            art.transform.localScale=new Vector3(1-anticipation*.035f,1+anticipation*.035f,1);
-            art.transform.localRotation=Quaternion.Euler(0,0,IsTelegraphing?-facing*anticipation*4:facing*recoil*4);
+            if (fieldMotion == null)
+            {
+                art.transform.localScale=new Vector3(1-anticipation*.035f,1+anticipation*.035f,1);
+                art.transform.localRotation=Quaternion.Euler(0,0,IsTelegraphing?-facing*anticipation*4:facing*recoil*4);
+            }
             if(kind==4)transform.position=home+new Vector2(Mathf.Sin(Time.time*.75f+home.x)*2.2f,Mathf.Sin(Time.time*1.8f)*.55f);
             if(volleyRemaining>0&&Time.time>=volleyAt)
             {FireProjectile(lockedAim,volleySpeed,false,0);volleyRemaining--;volleyAt=Time.time+volleyInterval;}
@@ -1733,7 +1680,7 @@ namespace Plugin.AncientCivilization
                 {
                     float speed=kind==3?(Enraged?3.6f:2.7f):kind==5?1.7f:2.4f;
                     Step(Mathf.Sign(delta.x)*speed*Time.deltaTime);walkPhase+=Time.deltaTime;
-                    art.transform.localPosition=new Vector2(0,Mathf.Sin(walkPhase*14)*.025f);
+                    if (fieldMotion == null) art.transform.localPosition=new Vector2(0,Mathf.Sin(walkPhase*14)*.025f);
                 }
             }
             if(Time.time<nextAttack)return;
@@ -1762,6 +1709,22 @@ namespace Plugin.AncientCivilization
             pattern=type;windupStartedAt=Time.time;resolveAt=Time.time+delay;lockedAim=AncientGame.Instance.hero.transform.position;
             faceLockUntil=resolveAt+(kind==5?1.15f:.25f);
         }
+
+        void LateUpdate()
+        {
+            if (fieldMotion == null || dead) return;
+            var game = AncientGame.Instance;
+            if (!game || !game.hero || game.Paused || game.won ||
+                DistrictFloor > 0 && game.Story.CurrentFloor != DistrictFloor) return;
+            fieldMotion.Present(transform.localPosition.x, facing, IsTelegraphing, WindupProgress, Staggered);
+        }
+
+        void OnDisable()
+        {
+            if (fieldMotion == null) return;
+            fieldMotion.Reset();
+            if (warning) warning.enabled = false;
+        }
         void DrawTelegraph()
         {
             warning.enabled=true;warning.startColor=warning.endColor=pattern==0?AncientGame.Orange:AncientGame.Cyan;
@@ -1783,7 +1746,8 @@ namespace Plugin.AncientCivilization
             if(g.shots.Count>=48)return;
             Vector2 origin=AimPoint+aim*.65f;
             Vector2 velocity=gravity>0?(target-origin)/.95f+Vector2.up*(gravity*.95f*.5f):aim*speed;
-            g.Projectiles.Spawn(origin,velocity,kind==3?20:scrap?25:kind==4?12:15,scrap,kind==4?1:kind==3?2:0,gravity);
+            var projectile = g.Projectiles.Spawn(origin,velocity,kind==3?20:scrap?25:kind==4?12:15,scrap,kind==4?1:kind==3?2:0,gravity);
+            if (kind == 4 && projectile) fieldMotion?.Strike();
         }
         void ResolveAttack()
         {
@@ -1791,7 +1755,7 @@ namespace Plugin.AncientCivilization
             var g=AncientGame.Instance;
             if(pattern==0)
             {
-                if(kind==0)Step(facing*.9f);
+                if(kind==0){Step(facing*.9f);fieldMotion?.Strike();}
                 Vector2 delta=(Vector2)g.hero.transform.position-AimPoint;
                 if(Mathf.Abs(delta.x)<(kind==3?4.8f:2.8f)&&Mathf.Abs(delta.y)<1.7f&&delta.x*facing>-.6f&&!Physics2D.Linecast(AimPoint,g.hero.transform.position,1<<8))g.hero.Hurt(kind==3?32:kind==5?26:22);
                 g.Slash(AimPoint,facing,kind==3);g.Burst(AimPoint+Vector2.right*facing*2,AncientGame.Orange,kind==3?25:8);
@@ -1824,12 +1788,26 @@ namespace Plugin.AncientCivilization
             if(AncientThreatRules.BodyContactAllowed(IsBoss,Recovering,Time.time<staggerUntil)&&Mathf.Abs(contact.x)<(kind==3?1.1f:.65f)&&Mathf.Abs(contact.y)<1)
                 AncientGame.Instance.hero.HurtContact(this,kind==3?14:8);
         }
+        internal void PresentClockGesture(Sprite pose)
+        {
+            // 장갑·코트만 움직인다. 림 셰이더의 flip 지원 여부와 무관하게 그림만 좌우로 뒤집는다.
+            if (!art) return;
+            art.sprite = pose;
+            art.flipX = false;
+            art.transform.localScale = new Vector3(facing, 1, 1);
+            art.transform.localRotation = Quaternion.identity;
+            art.color = Time.time < flashUntil ? AncientGame.Cyan : Color.white;
+        }
         internal void BossVisual(int pose,float direction,float anticipation,bool telegraph,bool recovery)
         {
             if(!art)return;if(IsLivingBoss){art.enabled=false;return;}
             facing=direction;art.flipX=facing<0;
-            int duelFrame=sniperEncounter && !IsSniperClone ? sniperEncounter.ClubDuelFrame : -1;
+            bool ordinarySniper = OrdinarySniperVisual;
+            if (sniperClashMaterial && !ordinarySniper && art.sharedMaterial != sniperClashMaterial)
+                art.sharedMaterial = sniperClashMaterial;
+            int duelFrame=ordinarySniper && sniperEncounter && !IsSniperClone ? sniperEncounter.ClubDuelFrame : -1;
             art.sprite=duelFrame>=0 ? AncientJokerDuelArt.Frame(duelFrame) :
+                ordinarySniper ? AncientSniperEncounter.OrdinaryRiflePose(pose) :
                 productionEncounter ? AncientArt.ProductionCaptain(pose) : AncientArt.Boss(IsSecretary?5:IsSniperClone?4:IsDistrictBoss?DistrictFloor:0,pose);
             bool rear=OnRearRail;
             if(sniperEncounter)art.sortingOrder=rear ? 5 : 8;
@@ -1838,6 +1816,25 @@ namespace Plugin.AncientCivilization
             art.transform.localRotation=Quaternion.identity;
             art.color=Time.time<flashUntil?AncientGame.Cyan:recovery?new Color(1,.87f,.5f):telegraph?Color.Lerp(Color.white,AttackIsPhysical?AncientGame.Orange:AncientGame.Cyan,(.5f+Mathf.Sin(Time.time*20)*.5f)*.45f):Color.white;
         }
+        public void TakeElectricHit(float damage, float stagger, float push)
+        {
+            if (!IsAlive || !CanWireTarget || damage <= 0) return;
+            // 회장단·보스의 체력 문턱과 실드는 원래 Hit 경로에서 판정한다.
+            float before = hp;
+            Hit(damage);
+            if (dead || IsBoss || hp >= before) return;
+            if (push != 0)
+            {
+                wirePushRemaining = push;
+                fieldMotion?.SetHitDirection(push);
+            }
+            if (stagger <= 0) return;
+            resolveAt = -1;
+            volleyRemaining = 0;
+            staggerUntil = Mathf.Max(staggerUntil, Time.time + stagger);
+            nextAttack = Mathf.Max(nextAttack, staggerUntil);
+        }
+
         public void WireImpact(float direction)
         {
             if(dead)return;
@@ -1846,6 +1843,7 @@ namespace Plugin.AncientCivilization
             wirePushRemaining=direction*AncientRules.WirePushDistance(IsBoss);
             // Boss windups continue; a wire cannot repeatedly stun-lock a boss.
             Hit(AncientRules.WireImpactDamage(IsBoss),!IsBoss&&kind!=5);
+            if (!dead) fieldMotion?.SetHitDirection(direction);
         }
         public void Hit(float damage,bool breakGuard=false)
         {
@@ -1864,6 +1862,7 @@ namespace Plugin.AncientCivilization
             if(orbital)damage=orbital.FilterDamage(damage,hp,maxHP);
             if(damage<=0)return;
             hp-=damage;flashUntil=Time.time+.1f;if(livingBoss)livingBoss.DamageFlash();if(g.Feel)g.Feel.Damage(AimPoint,damage,punish);
+            if (hp > 0 && fieldMotion != null && g.hero) fieldMotion.Hit(transform.position.x - g.hero.transform.position.x);
             g.Sound(breakGuard ? AncientEquipmentCue.Shatter : AncientEquipmentCue.Contact);g.HitEmphasis(breakGuard);g.Impact(AimPoint,breakGuard?AncientGame.Orange:AncientGame.Cyan,breakGuard);
             g.Burst(AimPoint,AncientGame.Cyan,7);g.Shake(.045f);g.score+=Mathf.RoundToInt(damage);
             if (orbital)
@@ -1914,15 +1913,46 @@ namespace Plugin.AncientCivilization
             else if(kind==3){g.bossDefeated=true;g.boss=null;g.ClearBattleProjectiles();g.Save();g.Notice("화물 수호 장치 제압\n동쪽 통로가 열렸습니다.",7);}
             Destroy(gameObject);
         }
-        internal void SetEnforcerPose(int pose,float direction,float scale,float opacity)
+        internal void SetEnforcerPose(int pose, float direction, float scale, float opacity,
+            bool planted = true, float anticipation = 0, float dt = 0)
         {
-            if(!art)return;
-            facing=direction;
-            art.flipX=direction<0;
-            art.sprite=AncientEnforcerVisuals.PoseSprite(pose);
-            art.transform.localScale=Vector3.one*scale;
-            art.sortingOrder=scale<.8f?4:8;
-            art.color=Time.time<flashUntil?new Color(.67f,.93f,1f,opacity):new Color(1,1,1,opacity);
+            if (!art) return;
+            if (enforcerBody == null)
+            {
+                enforcerBody = new AncientEnforcerBodyMotion();
+                enforcerCostume = new AncientEnforcerCostume();
+            }
+            facing = direction;
+            enforcerOpacity = opacity;
+            enforcerBody.Step(enforcerPoseFrame == Time.frameCount ? 0 : dt, pose, direction < 0 ? -1 : 1,
+                scale, planted, anticipation);
+            enforcerPoseFrame = Time.frameCount;
+            DrawEnforcerBody();
+        }
+
+        internal void ReleaseEnforcerGesture(float strength, bool aimed)
+        {
+            if (enforcerBody == null || !art) return;
+            enforcerBody.Release(facing < 0 ? -1 : 1, strength, aimed);
+            DrawEnforcerBody();
+        }
+
+        void DrawEnforcerBody()
+        {
+            enforcerArtPose = AncientEnforcerVisuals.DisplayedPose(enforcerBody.From, enforcerBody.To, enforcerBody.Blend);
+            art.flipX = enforcerBody.Facing < 0;
+            var gesture = AncientEnforcerVisuals.TransitionSprite(enforcerBody.From, enforcerBody.To, enforcerBody.Blend);
+            art.sprite = gesture ? gesture : AncientEnforcerVisuals.PoseSprite(enforcerArtPose);
+            art.transform.localPosition = new Vector3(enforcerBody.OffsetX, enforcerBody.OffsetY, 0);
+            art.transform.localRotation = Quaternion.Euler(0, 0, enforcerBody.Angle);
+            art.transform.localScale = new Vector3(enforcerBody.ScaleX, enforcerBody.ScaleY, 1);
+            art.sortingOrder = enforcerBody.Depth < .8f ? 4 : 8;
+            float depthOpacity = Mathf.Lerp(.64f, 1, Mathf.InverseLerp(.7f, 1, enforcerBody.Depth));
+            float alpha = enforcerOpacity * depthOpacity;
+            art.color = Time.time < flashUntil ? new Color(.67f, .93f, 1f, alpha) : new Color(1, 1, 1, alpha);
+            AncientEnforcerVisuals.PresentOptics(art, ref enforcerOptics, ref enforcerDossierScan, enforcerArtPose);
+            enforcerCostume.Apply(art, enforcerOptics, enforcerDossierScan,
+                AncientEnforcerVisuals.LensWorld(art, enforcerArtPose), enforcerBody);
         }
         public void CompleteSniperDuel()
         {
@@ -1935,17 +1965,32 @@ namespace Plugin.AncientCivilization
             // Both top-floor opponents leave alive after their dialogue, without death rewards.
             if(!IsDistrictBoss||DistrictFloor!=4)return;AncientGame.Instance.Burst(AimPoint,AncientGame.Cyan,16);Destroy(gameObject);
         }
-        void OnDestroy(){if(warning)Destroy(warning.gameObject);}
+        internal void LowerSniperRifle()
+        {
+            if (!dead || !IsDistrictBoss || DistrictFloor != 4 || IsSecretary || !art) return;
+            art.sprite = AncientSniperEncounter.OrdinaryRiflePose(0);
+            if (sniperFieldMaterial) art.sharedMaterial = sniperFieldMaterial;
+            art.color = Color.white;
+        }
+        void OnDestroy(){fieldMotion?.Dispose();enforcerCostume?.Dispose();if(warning)Destroy(warning.gameObject);}
     }
     public sealed class AncientProjectile : MonoBehaviour
     {
         public bool scrap,TrainingObject;public bool Breakable {get;private set;}=true;public int metalKind;public Vector2 velocity;public float damage=15,gravity;
         float age;int ricochets;bool removed=true;SpriteRenderer art;AncientGame game;
+        AncientBossCue.Style? impactStyle;
+        internal void MarkBossProjectile(AncientBossCue.Style style) => impactStyle = style;
+        void MarkContact(Vector2 point, Vector2 axis)
+        {
+            if (impactStyle.HasValue)
+                AncientBossCue.Play(game, impactStyle.Value, AncientBossCue.Beat.Contact, point, axis, .92f);
+        }
         public bool Available {get{return removed;}}
         public void Initialize(AncientProjectilePool pool)
         {game=pool.Game;art=AncientArt.Display("Reusable metal object",AncientArt.MetalProjectile(0),Vector2.zero,12,transform);}
         public void Play(Vector2 position,Vector2 speed,float amount,bool isScrap,int kind,float acceleration,int bounces=0)
         {
+            impactStyle = null;
             scrap=isScrap;TrainingObject=false;Breakable=true;metalKind=Mathf.Clamp(kind,0,2);velocity=speed;damage=amount;gravity=acceleration;ricochets=Mathf.Clamp(bounces,0,1);age=0;removed=false;
             transform.position=position;transform.rotation=Quaternion.identity;transform.localScale=Vector3.one;
             art.sprite=scrap?AncientArt.Scrap():AncientArt.MetalProjectile(metalKind);
@@ -1986,11 +2031,20 @@ namespace Plugin.AncientCivilization
                 {
                     // Practice objects still use real flight/cutting, but a missed lesson cannot kill the officer.
                     if(TrainingObject){game.Burst(transform.position,AncientGame.Cyan,4);Remove();return;}
-                    game.hero.Hurt(damage);Remove();return;
+                    if (!impactStyle.HasValue) { game.hero.Hurt(damage); Remove(); return; }
+                    float before = game.hero.bike ? game.hero.bikeHP : game.hero.hp;
+                    bool onBike = game.hero.bike;
+                    game.hero.Hurt(damage);
+                    float after = onBike ? game.hero.bikeHP : game.hero.hp;
+                    // 재시도 과정에서 회수된 탄환, 무적 중인 몸에는 명중 광점을 남기지 않는다.
+                    if (!removed && after < before)
+                        MarkContact(previous + segment*entry, -travel);
+                    Remove();return;
                 }
             }
             if(terrain&&terrain.distance<=length)
             {
+                MarkContact(terrain.point, terrain.normal);
                 if(ricochets>0&&Mathf.Abs(terrain.normal.x)>.5f)
                 {ricochets--;velocity=Vector2.Reflect(velocity,terrain.normal);transform.position=terrain.point+terrain.normal*.06f;game.Burst(terrain.point,AncientGame.Cyan,5);return;}
                 game.Burst(previous,new Color(.65f,.48f,.3f),8);Remove();return;

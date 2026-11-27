@@ -5,15 +5,16 @@ namespace Plugin.PlayerCore
     {
         public PlayerStateMachine target;public PlayerInputReader input;public SpriteRenderer bulb;
         [SerializeField] bool visible=true;
+        PlayerSummonLoadout loadout; ElectricPlugCombat electricity;
         GUIStyle style;PlayerModeController mode;Camera view;
-        void Awake(){mode=GetComponent<PlayerModeController>();view=Camera.main;}
+        void Awake(){mode=GetComponent<PlayerModeController>();view=Camera.main;loadout=GetComponent<PlayerSummonLoadout>();electricity=GetComponent<ElectricPlugCombat>();}
         void LateUpdate(){if(bulb&&mode)bulb.color=mode.ModeColor;}
         void OnGUI()
         {
             if(!visible||!target||!input)return;
             if(style==null)style=new GUIStyle(GUI.skin.label){font=Resources.Load<Font>("Fonts/NeoDunggeunmo"),fontSize=17,wordWrap=true};
             GUI.Box(new Rect(10,10,470,132),"");
-            GUI.Label(new Rect(20,18,450,120),"상태: "+target.State+" / 모드: "+target.Mode+"\n속도: "+target.Velocity.ToString("F2")+" / 지면: "+target.Grounded+"\n남은 대시: "+target.RemainingDashes+" / 수집 홀드: "+input.CollectHeld+"\n입력: "+(input.Ready?"Input System":"설정 필요")+" / 일시정지: "+input.Paused,style);
+            GUI.Label(new Rect(20,18,450,120),"상태: "+target.State+" / 장비: "+(loadout && loadout.Equipped ? "블레이드" : "플러그")+" / 입자 "+(loadout ? loadout.Particles : 0)+"\n속도: "+target.Velocity.ToString("F2")+" / 지면: "+target.Grounded+"\n남은 대시: "+target.RemainingDashes+" / 수집 홀드: "+input.CollectHeld+"\n입력: "+(input.Ready?"Input System":"설정 필요")+" / 일시정지: "+input.Paused+"\n"+(electricity ? electricity.DebugStatus : ""),style);
             if(view)
             {
                 Color old=GUI.color;GUI.color=mode.ModeColor;Vector2 p=input.Pointer;p.y=Screen.height-p.y;

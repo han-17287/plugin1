@@ -56,7 +56,7 @@ internal static class OrbitalChecks
 
     static void SpatialFilters()
     {
-        var middle = new OrbitalArenaState(0, 24, 12, true, true, true);
+        var middle = new OrbitalArenaState(0, 24, 12, true, true, true, installedBlade:true);
         for (int phase = 1; phase <= 6; phase++)
         {
             var moves = Candidates(phase, middle);
@@ -68,7 +68,17 @@ internal static class OrbitalChecks
         var safeOnly = Candidates(6, stranded);
         Check(!safeOnly.Contains(OrbitalMove.AnchorLock) && !safeOnly.Contains(OrbitalMove.ClosingSweep) &&
               !safeOnly.Contains(OrbitalMove.CrossBeam) && !safeOnly.Contains(OrbitalMove.CoreTrap), "wall + no anchor + no air dash");
-        Check(safeOnly.Contains(OrbitalMove.BladeFerry), "player who holds their blade can still fight");
+        Check(!safeOnly.Contains(OrbitalMove.BladeHunt), "an uninstalled blade cannot be hunted");
+        Check(!Candidates(6,new OrbitalArenaState(0,24,12,true,true,true)).Contains(OrbitalMove.BladeHunt),
+            "open ground does not arm the hunt without an installed target");
+        int hunts=0, traps=0;
+        for(int i=0;i<1900;i++)
+        {
+            AncientOrbitalRules.TryPick(4,middle,null,null,(i+.5f)/1900f,out var pick);
+            if(pick==OrbitalMove.BladeHunt)hunts++;
+            if(pick==OrbitalMove.CoreTrap)traps++;
+        }
+        Check(hunts==traps*3, "installed blade has triple the weight of its phase peers");
         foreach (bool left in new[] {true, false})
         {
             var nearX = left ? .25f : 23.75f;

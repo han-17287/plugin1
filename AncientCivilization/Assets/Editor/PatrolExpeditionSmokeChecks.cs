@@ -21,9 +21,9 @@ namespace Plugin.AncientCivilization.EditorChecks
         {
             if (!EditorApplication.isPlaying || running) return;
             patrol = UnityEngine.Object.FindAnyObjectByType<PatrolExpedition>();
-            if (!patrol || !PatrolEntry.Preview)
+            if (!patrol || patrol.SocketRoute || !PatrolEntry.Preview)
             {
-                Debug.LogWarning("Play에서 개발자 이동으로 순찰로에 들어간 뒤 실행하세요.");
+                Debug.LogWarning("도시 자유 순찰에서 개발자 지도로 방을 선택한 뒤 실행하세요.");
                 patrol = null;
                 return;
             }
@@ -111,6 +111,17 @@ namespace Plugin.AncientCivilization.EditorChecks
             {
                 if (!AncientDeveloperTravel.IsVisiting || !AncientGame.Instance.Story ||
                     AncientGame.Instance.Story.CurrentFloor != 4) return;
+                var encounter = AncientGame.Instance.Sniper;
+                if (!encounter || !encounter.Owner) return;
+                Transform actor = encounter.Owner.transform.Find(encounter.Owner.Role);
+                if (!actor) return;
+                var body = actor.GetComponent<SpriteRenderer>();
+                var atlas = Resources.Load<Texture2D>("Art/JokerRifleMotion");
+                var transitions = Resources.Load<Texture2D>("Art/JokerRifleTransitions");
+                var articulated = Resources.Load<Texture2D>("Art/JokerRifleArticulation");
+                Require(encounter.Phase == 1 && atlas && transitions && articulated && body && body.enabled && body.sprite &&
+                    (body.sprite.texture == atlas || body.sprite.texture == transitions || body.sprite.texture == articulated),
+                    "순찰에서 보스 바로가기로 진입한 Main의 실제 조커 원화");
                 Require(AncientDeveloperTravel.Return(AncientGame.Instance), "조커 임시 세션에서 복귀");
                 phase = 7;
                 return;

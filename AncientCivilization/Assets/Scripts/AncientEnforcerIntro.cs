@@ -77,7 +77,14 @@ namespace Plugin.AncientCivilization
                 Destroy(gameObject);
                 return;
             }
-            if (game.Paused) return;
+            if (game.Paused)
+            {
+                // 퇴장 대사 첫 화면에서도 팔을 내려놓는 동작을 끝낸다. 실제 퇴장 시계는 멈춘다.
+                if (game.Story.DialogueOpen && !game.MainMenu && !game.DeveloperMenuOpen && Application.isFocused)
+                    owner.SetEnforcerPose(0, game.hero.transform.position.x < retreatStart.x ? -1 : 1,
+                        1, 1, true, 0, Time.unscaledDeltaTime);
+                return;
+            }
 
             // 마지막 대사를 듣고 나면 추진기를 켜고 출구 너머까지 직접 비행한다.
             const float turnSeconds = .23f;
@@ -91,7 +98,7 @@ namespace Plugin.AncientCivilization
             float rise = Ease(flight / .7f);
             transform.position = new Vector2(retreatStart.x + distance,
                 Mathf.Lerp(retreatStart.y, 3.45f, rise));
-            owner.SetEnforcerPose(flight > .1f ? 4 : 5, 1, 1, 1);
+            owner.SetEnforcerPose(flight > .1f ? 4 : 5, 1, 1, 1, flight <= .1f, 0, Time.deltaTime);
 
             // 울트라와이드나 빠르게 따라온 플레이어에게도 퇴장 중인 인물이 끊겨 보이지 않게 한다.
             Camera view = game.View;
@@ -174,9 +181,9 @@ namespace Plugin.AncientCivilization
             float settle = Ease((introTime - 4.65f) / .8f);
             transform.position = introReveal + new Vector2((1 - settle) * .95f, (1 - settle) * .57f);
             int posture = introTime < 4.83f ? 4 : introTime < CameraToLens + .03f || introTime > CameraToArena + .15f ? 0 : 1;
-            owner.SetEnforcerPose(posture, -1, 1f, appear);
+            owner.SetEnforcerPose(posture, -1, 1f, appear, settle >= .99f, 0, Time.unscaledDeltaTime);
             float light = appear * (1 - Ease((introTime - CameraToArena) / 1.05f));
-            introFx.Reveal((Vector2)transform.position + new Vector2(-.08f, 1.67f), introTime, light);
+            introFx.Reveal(Vector2.Lerp(owner.EnforcerDossierWorld, owner.EnforcerLensWorld, .48f), introTime, light);
             if (!revealSound && introTime >= CameraToLens)
             {
                 revealSound = true;
@@ -230,15 +237,17 @@ namespace Plugin.AncientCivilization
             if (introTime < CameraToLens)
             {
                 float approach = Ease((introTime - CameraToOfficer) / (CameraToLens - CameraToOfficer));
-                focus = (Vector2)transform.position + new Vector2(Mathf.Lerp(-.55f, -.24f, approach), 1.71f);
-                zoom = Mathf.Lerp(2.52f, 2.20f, approach);
+                // 서류철과 단안 렌즈를 함께 보여준 뒤 눈 클로즈업으로 자른다.
+                focus = Vector2.Lerp(owner.EnforcerDossierWorld, owner.EnforcerLensWorld, .43f)
+                    + new Vector2(Mathf.Lerp(-.32f, -.12f, approach), -.18f);
+                zoom = Mathf.Lerp(2.10f, 1.83f, approach);
                 return true;
             }
             float wide = Ease((introTime - CameraToArena) / (IntroDuration - CameraToArena));
             float stare = Ease((introTime - CameraToLens) / (CameraToArena - CameraToLens));
-            Vector2 close = introReveal + new Vector2(Mathf.Lerp(-.20f, -.38f, stare), 2.33f + .12f * stare);
+            Vector2 close = owner.EnforcerLensWorld + new Vector2(Mathf.Lerp(-.08f, -.16f, stare), .03f);
             focus = Vector2.Lerp(close, new Vector2(middle, 4.6f), wide);
-            zoom = Mathf.Lerp(Mathf.Lerp(1.42f, 1.30f, stare), ArenaZoom(), wide);
+            zoom = Mathf.Lerp(Mathf.Lerp(1.20f, 1.08f, stare), ArenaZoom(), wide);
             return true;
         }
 

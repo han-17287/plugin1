@@ -22,7 +22,7 @@ namespace Plugin.PlayerCore
             var recovery=Box(precision?"설비 아래 위험 구역":"정비 배수로 안전 바닥",new Vector2((District.gapLeft+District.gapRight)*.5f,-3),new Vector2(District.gapRight-District.gapLeft,2),precision?new Color(.45f,.14f,.11f):Steel,precision?10:8);
             var catchShape=recovery.AddComponent<BoxCollider2D>();catchShape.isTrigger=precision;if(precision)recovery.AddComponent<TraversalPracticeHazard>();
             if(precision)for(float x=District.gapLeft;x<District.gapRight;x+=1.5f)Trim("위험 설비 표시",x,-1.95f,1,.1f,new Color(1,.48f,.18f),3);
-            var roof=Box("와이어 가능한 연속 천장",new Vector2(Width*.5f,District.ceiling+.5f),new Vector2(Width,1),Ink,8);roof.AddComponent<BoxCollider2D>();
+            var roof=Box("연속 천장",new Vector2(Width*.5f,District.ceiling+.5f),new Vector2(Width,1),Ink,8);roof.AddComponent<BoxCollider2D>();
             Trim("천장 구조선",Width*.5f,District.ceiling,Width,.14f,Edge,1);
             Box("폐쇄된 출입 벽",new Vector2(-.5f,District.ceiling*.5f),new Vector2(1,District.ceiling+8),Ink,8).AddComponent<BoxCollider2D>();
             Box("출구 외벽",new Vector2(Width+.5f,District.ceiling*.5f),new Vector2(1,District.ceiling+8),Ink,8).AddComponent<BoxCollider2D>();
@@ -30,13 +30,13 @@ namespace Plugin.PlayerCore
             {
                 var h=District.hooks[i];Spawn(h.kind==2?"MovingAnchor":h.kind==1?"OneUseAnchor":"FixedAnchor",new Vector2(h.x,h.y));
                 // 실제 지지물에 연결한다. 이동 장치는 충돌 없는 레일 위를 오간다.
-                Trim("앵커 지지 케이블",h.x,(h.y+District.ceiling)*.5f,.06f,District.ceiling-h.y,Steel,-8);
-                Trim("앵커 고정 브래킷",h.x,h.y+.65f,1.1f,.18f,Edge,-2);
+                Trim("콘센트 지지 케이블",h.x,(h.y+District.ceiling)*.5f,.06f,District.ceiling-h.y,Steel,-8);
+                Trim("콘센트 고정 브래킷",h.x,h.y+.65f,1.1f,.18f,Edge,-2);
                 if(h.kind==2)Trim("이동 장치 레일",h.x,h.y+.95f,3.5f,.18f,Steel,-3);
             }
             BuildDistrictMechanism();
             var recoveryHook=District.Recovery;Spawn("FixedAnchor",new Vector2(recoveryHook.x,recoveryHook.y));
-            Trim("배수로 비상 정비 앵커 받침",recoveryHook.x,recoveryHook.y+.65f,1.1f,.18f,Edge,-2);
+            Trim("배수로 비상 정비 콘센트 받침",recoveryHook.x,recoveryHook.y+.65f,1.1f,.18f,Edge,-2);
             for(int i=0;i<District.stops.Length;i++)
             {
                 var stop=District.stops[i];var pad=Trim("재시작 발판 "+stop.name,stop.x,stop.y-.94f,2.4f,.12f,new Color(.25f,.55f,.47f),4);
@@ -104,7 +104,7 @@ namespace Plugin.PlayerCore
             }
             Sign(District.title,1,7);Sign(District.description,2,5.5f);
             Sign("상부 정비로 / 위쪽",District.gapLeft-6,4);
-            Sign(precision?"주의 / 아래 고압 설비":"안전 배수로 / 복구 앵커 사용",District.gapLeft-4,2.6f);
+            Sign(precision?"주의 / 아래 고압 설비":"안전 배수로 / 복구 콘센트 사용",District.gapLeft-4,2.6f);
         }
         GameObject Trim(string title,float x,float y,float width,float height,Color color,int order)
         {var go=Box(title,new Vector2(x,y),new Vector2(width,height),color,0);go.GetComponent<SpriteRenderer>().sortingOrder=order;return go;}

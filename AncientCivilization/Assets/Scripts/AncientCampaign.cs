@@ -594,7 +594,7 @@ namespace Plugin.AncientCivilization
             var m=AncientCampaignData.Missions[active];float left=AncientCampaignRules.Left(active);Vector2 hero=game.hero.transform.position;
             RecordDefeats();
             for(int sector=0;sector<=checkpoint;sector++)if(Mathf.Abs(hero.x-left-AncientFieldExpansion.EntranceOf(active,sector))<2.5f&&Mathf.Abs(hero.y-1.3f)<1.5f)
-            {Persist();game.PlayScoreEvent("checkpoint");game.Notice("안전 거점 / 확보한 기록과 수사 진행을 저장했습니다.",2);return true;}
+            {bool supplied=game.Story.TryBladeReserve();Persist();game.PlayScoreEvent("checkpoint");if(!supplied)game.Notice("안전 거점 / 확보한 기록과 수사 진행을 저장했습니다.",2);return true;}
             if(m.Floor==1)return false;
             if(hero.x>left+AncientChapterLayout.Width(active)-10)
             {
@@ -603,6 +603,8 @@ namespace Plugin.AncientCivilization
             }
             for(int i=0;i<3;i++)
             {
+                if(AncientFieldExpansion.ObjectiveAvailable(tasks,i) && (UsesBlade(m.Kind,i)||m.Kind==3&&i==2) &&
+                    (hero-NodePoint(active,i)).sqrMagnitude<=12.25f && game.Story.TryBladeReserve())return true;
                 if((tasks&(1<<i))!=0||!AncientFieldExpansion.ObjectiveAvailable(tasks,i)||UsesBlade(m.Kind,i)||m.Kind==3&&i==2||m.Kind==2&&i==2)continue;
                 if((hero-NodePoint(active,i)).sqrMagnitude>2*2)continue;
                 if(m.Kind==2&&i==1&&(tasks&1)==0){game.Notice("봉인 장치를 먼저 베어 통로를 여세요.");return true;}
@@ -766,11 +768,11 @@ namespace Plugin.AncientCivilization
             if(uiMission!=active)for(int i=0;i<3;i++)
                 fieldNodeLabels[i]=(mission.Floor==1?"경로 · ":UsesBlade(mission.Kind,i)?"베기 · ":mission.Kind==3&&i==2?"레이저 · ":mission.Kind==2&&i==2?"보호 · ":"E · ")+mission.Tasks[i];
             uiMission=active;uiSector=sector;uiNext=next;uiGuideKind=kind;uiGuideId=id;uiFollowing=following;edgeMetres=-1;
-            fieldTitle=ChapterTitle(mission.Floor)+" · "+(active%4+1)+"/4 · "+(sector+1)+"/3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 와이어":"");
+            fieldTitle=ChapterTitle(mission.Floor)+" · "+(active%4+1)+"/4 · "+(sector+1)+"/3 · "+AncientFieldExpansion.Names[active][sector]+(AncientFieldExpansion.IsJumpSector(active,sector)?" · 플러그":"");
             guideCaption=kind==6?guideCaption:kind==1?"보호 대상과 동행":kind==2?"현장 위협 제압":kind==3?"다음 구간 위협 제압":kind==4?"동쪽 통로로 계속 이동":kind==5?"베기 · 입자 재채취":
                 mission.Kind==2&&next==2?"보호 대상과 출구로":fieldNodeLabels[next];
             fieldNext="다음 / "+guideCaption;
-            fieldHint=kind==6?"짧은 구간마다 진행 저장 · 해결한 사건은 유지됩니다.":kind==5?"패널을 베고 우클릭으로 수집 · 길게 눌러 레이저":kind==1?"위협이 없는 통로에서는 주민이 뒤따라옵니다.":mission.Kind==2&&following?"주민을 보호하며 동쪽 출구로 이동":
+            fieldHint=kind==6?"짧은 구간마다 진행 저장 · 해결한 사건은 유지됩니다.":kind==5?"패널을 베고 우클릭으로 수집 · F를 누르고 놓아 레이저":kind==1?"위협이 없는 통로에서는 주민이 뒤따라옵니다.":mission.Kind==2&&following?"주민을 보호하며 동쪽 출구로 이동":
                 kind==2||kind==3?"위협을 제압하세요 · 안전 거점 자동 저장":"기록은 무전으로 전송 · 계속 동쪽으로 이동";
         }
         static bool InView(Vector3 point)

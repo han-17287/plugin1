@@ -14,7 +14,7 @@ namespace Plugin.AncientCivilization.EditorChecks
     [InitializeOnLoad]
     public static class AncientBladeSmokeChecks
     {
-        const string Menu="PLUGIN/검사/블레이드 3연격과 파란 입자";
+        const string Menu="PLUGIN/검사/소환 장착·블레이드 3연격과 충전 입자";
         const string Root="PLUGIN.QA.BladeSmoke.",ProfileKey="PLUGIN.QA.ActiveProfile",NormalPrefix="PLUGIN.Ancient.v2.",QAPrefix="PLUGIN.Ancient.QA.";
         const BindingFlags PrivateInstance=BindingFlags.Instance|BindingFlags.NonPublic;
         static readonly string[] optionKeys=AncientGame.OptionSaveKeys;
@@ -55,8 +55,131 @@ namespace Plugin.AncientCivilization.EditorChecks
         {if(!condition)throw new InvalidOperationException(detail);Append("PASS: "+detail);}
         static FieldInfo Field(Type type,string name)
         {var result=type.GetField(name,PrivateInstance);if(result==null)throw new MissingFieldException(type.FullName,name);return result;}
-        static void SetAttackMode(AncientHero hero)
-        {Field(typeof(AncientHero),"<AttackMode>k__BackingField").SetValue(hero,true);}
+        static void EquipForCombatProbe(AncientHero hero)
+        {
+            // 전투 단위 검사는 지면이 없는 격리 위치에서도 장착 상태를 직접 준비한다.
+            // 소환 지면 및 손잡이까지의 실제 이동은 별도 플러그 통합 검사에서 검증한다.
+            if(hero.AttackMode)return;
+            var blade=hero.Loadout;
+            blade.ResetEncounter();
+            blade.EnterRoom(new Plugin.PlayerCore.SummonedBladeCarry {equipped=true});
+        }
+
+        static void CheckMainSocketVisibility(AncientGame game, AncientBluePlugPorts ports, Vector2 at, GameObject shutter)
+        {
+            Vector2 origin = game.hero.WireOrigin;
+            Vector2 behind = at + new Vector2(3.5f, 2);
+            Vector2 inFront = at + new Vector2(2.45f, 2);
+            int first = game.anchors.Count;
+            try
+            {
+                shutter.SetActive(true);
+                Physics2D.SyncTransforms();
+                Assert(!ports.TryPick(behind, origin, false, out _), "Main never promotes ordinary wall geometry to a socket");
+                game.anchors.Add(behind);
+                Assert(!ports.TryPick(behind, origin, false, out _), "Main excludes a socket occluded by the shutter");
+                game.anchors.Add(inFront);
+                Assert(ports.TryPick(behind, origin, false, out var clear) && Vector2.Distance(clear.Point, inFront) < .01f,
+                    "Main prefers a visible socket within the same cursor radius over a closer occluded one");
+                Assert(!ports.TryPick(inFront, origin, false, out _, 1f), "Main excludes the same visible socket beyond throw range");
+                shutter.SetActive(false);
+                Physics2D.SyncTransforms();
+                Assert(ports.TryPick(behind, origin, false, out var reopened) && Vector2.Distance(reopened.Point, behind) < .01f,
+                    "Main reacquires the socket as soon as the shutter opens");
+                // 같은 본편 플레이어의 실제 비행 마지막 틱을 실행한다. 입력 에지를 흉내 내거나 캐릭터를 옮기지 않는다.
+                var hero = game.hero;
+                var body = hero.GetComponent<Rigidbody2D>();
+                var session = (Plugin.PlayerCore.BluePlugSession)Field(typeof(AncientHero), "plugSession").GetValue(hero);
+                Vector2 beforePosition = body.position, beforeVelocity = body.linearVelocity;
+                Assert(hero.GetComponents<Plugin.PlayerCore.BluePlugVisuals>().Length == 1 &&
+                    Field(typeof(AncientHero), "plugCharacterMotion").GetValue(hero) != null, "Main hero owns one plug renderer and its pose driver");
+                Assert(session.BeginWindup() && session.Launch(), "Main ordinary socket probe enters flight");
+                Field(typeof(AncientHero), "plugPort").SetValue(hero, reopened);
+                Field(typeof(AncientHero), "plugHead").SetValue(hero, behind + Vector2.left * .2f);
+                Field(typeof(AncientHero), "plugFlightBudget").SetValue(hero, 16f);
+                Field(typeof(AncientHero), "plugLaunchRange").SetValue(hero, 16f);
+                typeof(AncientHero).GetMethod("StepCampaignPlugFlight", PrivateInstance).Invoke(hero, new object[] { .02f });
+                Assert(session.Phase == Plugin.PlayerCore.BluePlugPhase.Connected && !hero.Wired &&
+                    body.position == beforePosition && body.linearVelocity == beforeVelocity,
+                    "A real Main flight docks at the ordinary socket without moving or attaching the hero");
+                typeof(AncientHero).GetMethod("TryMoveCampaignPlug", PrivateInstance).Invoke(hero, new object[] { game, Plugin.PlayerCore.BluePlugSkill.Tow });
+                Assert(session.Phase == Plugin.PlayerCore.BluePlugPhase.Connected && !hero.Wired,
+                    "Main discards a travel command issued in the docking frame");
+            }
+            finally
+            {
+                game.hero.ReleaseWire();
+                game.anchors.RemoveRange(first, game.anchors.Count - first);
+                shutter.SetActive(false);
+                Physics2D.SyncTransforms();
+            }
+        }
+
+        static void CheckMainBladeHandle(AncientGame game)
+        {
+            var hero=game.hero;
+            var blade=hero.Loadout;
+            var ports=game.GetComponent<AncientBluePlugPorts>();
+            var body=hero.GetComponent<Rigidbody2D>();
+            var session=(Plugin.PlayerCore.BluePlugSession)Field(typeof(AncientHero),"plugSession").GetValue(hero);
+            Vector2 start=hero.transform.position;
+            Vector3 camera=game.View.transform.position;
+            float stock=hero.particles,charge=hero.CaptureEnergy,zoom=game.View.orthographicSize;
+            var floor=new GameObject("QA · 플러그 장착 전용 바닥");
+            var wall=new GameObject("QA · 견인 차단 셔터");
+            floor.layer=wall.layer=8;
+            Vector2 at=start+Vector2.up*70;
+            try
+            {
+                floor.transform.position=at+Vector2.down*.5f;
+                floor.AddComponent<BoxCollider2D>().size=new Vector2(28,1);
+                wall.transform.position=at+new Vector2(3,2);
+                wall.AddComponent<BoxCollider2D>().size=new Vector2(.4f,4);
+                wall.SetActive(false);
+                hero.TravelTo(at+Vector2.up*1.1f);
+                game.View.transform.position=new Vector3(at.x+2,at.y+3,camera.z);
+                game.View.orthographicSize=7;
+                Physics2D.SyncTransforms();
+                CheckMainSocketVisibility(game, ports, at, wall);
+                int available=hero.SummonParticles;
+                blade.FixedLandingForDebug=at+Vector2.right*6;
+                Assert(blade.TrySummon() && hero.SummonParticles==available-blade.Data.summonCost,"Main Q pays real summon cost");
+                for(int i=0;i<220 && !blade.Catchable;i++)blade.Tick(.02f);
+                for(int i=0;i<220 && blade.State==Plugin.PlayerCore.SummonedBladeState.Falling;i++)blade.Tick(.02f);
+                Assert(blade.Handle && ports.TryPick(blade.Handle.Point,hero.WireOrigin,false,out _),"Main aim resolves handle");
+                ports.TryPick(blade.Handle.Point,hero.WireOrigin,false,out var handle);
+                Assert(Vector2.Distance(handle.Anchor,blade.Handle.TowPoint)<.01f && !hero.AttackMode,"Planting never equips");
+                session.BeginWindup();session.Launch();session.Dock(Time.frameCount-1);
+                Field(typeof(AncientHero),"plugPort").SetValue(hero,handle);
+                Field(typeof(AncientHero),"plugLaunchRange").SetValue(hero,16f);
+                var request=typeof(AncientHero).GetMethod("TryMoveCampaignPlug",PrivateInstance);
+                var arrival=typeof(AncientHero).GetMethod("FinishCampaignTow",PrivateInstance);
+                object[] args={game,Plugin.PlayerCore.BluePlugSkill.Tow};
+                wall.SetActive(true);Physics2D.SyncTransforms();request.Invoke(hero,args);
+                Assert(!hero.Wired && !hero.AttackMode,"Closed shutter denies travel and equip");
+                wall.SetActive(false);Physics2D.SyncTransforms();request.Invoke(hero,args);
+                Assert(hero.Wired && !hero.AttackMode,"Unblocked handle starts physical tow before equipping");
+                arrival.Invoke(hero,new object[]{0f});
+                Assert(!hero.AttackMode,"Arrival callback away from the handle cannot equip");
+                MoveProbeHero(hero,handle.Anchor);
+                arrival.Invoke(hero,new object[]{0f});
+                Assert(hero.AttackMode && blade.Equipped,"Actual arrival equips and switches primary action");
+                hero.ReleaseWire();body.linearVelocity=Vector2.zero;
+                Assert(blade.TryDetach() && !hero.AttackMode && blade.Supplies(handle.Anchor),"Main E installs the same powered handle");
+                hero.TravelTo(start);
+                Assert(!hero.Wired && !blade.Handle && !hero.AttackMode,"Travel removes the installed handle and old connection");
+            }
+            finally
+            {
+                blade.FixedLandingForDebug=null;
+                hero.TravelTo(start);hero.particles=stock;
+                Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,charge);
+                game.View.transform.position=camera;game.View.orthographicSize=zoom;
+                floor.SetActive(false);wall.SetActive(false);
+                UnityEngine.Object.Destroy(floor);UnityEngine.Object.Destroy(wall);
+                Physics2D.SyncTransforms();
+            }
+        }
         static void TickCombat(AncientCombat combat)
         {
             var method=typeof(AncientCombat).GetMethod("Update",PrivateInstance);
@@ -98,19 +221,38 @@ namespace Plugin.AncientCivilization.EditorChecks
             var start=typeof(AncientCombat).GetMethod("StartBlade",PrivateInstance);
             try
             {
-                combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;SetAttackMode(hero);
+                combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;EquipForCombatProbe(hero);
                 hero.AimWeaponAt((Vector2)hero.transform.position+Vector2.left*10);cameraField.SetValue(game,null);
                 int cursor=(int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel);combat.StrikeBlade();
                 Assert(hero.Facing==-1&&(float)Field(typeof(AncientCombat),"bladeFacing").GetValue(combat)==-1,"A real left-aimed cut keeps the body's facing aligned with its authored blade pose");
                 Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ImpactTime(1)-.005f);TickCombat(combat);
                 Assert((int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel)==cursor&&NoHitNumbers(feel),"A real whiff resolves its scheduled contact without a false accepted-hit marker");
-                combat.ResetCombat();start.Invoke(combat,new object[]{Vector2.up});
+                var art=(SpriteRenderer)Field(typeof(AncientHero),"art").GetValue(hero);
+                var before=body.position;
+                typeof(AncientCombat).GetMethod("PresentCut",PrivateInstance).Invoke(combat,new object[]{art,false});
+                var sweep=hero.transform.Find("필라멘트 전투 효과/실제 칼끝의 이동선").GetComponent<LineRenderer>();
+                int drawn=AncientBladeRules.AnimationFrame(1,Time.time-(float)Field(typeof(AncientCombat),"bladeStarted").GetValue(combat));
+                Vector2 mirrored=AncientBladeAtlas.TipLocal(1,drawn);mirrored.x=-mirrored.x;
+                Assert(art.flipX && art.sprite==AncientArt.FieldBlade(1,drawn) && sweep.enabled &&
+                    Vector2.Distance(sweep.GetPosition(sweep.positionCount-1),art.transform.TransformPoint(mirrored))<.001f &&
+                    body.position==before, "Main left-facing airborne sweep ends on the displayed blade without moving the capsule");
+                var cutRoot=hero.transform.Find("필라멘트 전투 효과");
+                var ribbon=cutRoot.Find("칼날의 유리 잔광").GetComponent<MeshRenderer>();
+                var contactMark=cutRoot.Find("필라멘트 절단면").GetComponent<SpriteRenderer>();
+                Assert(!contactMark.enabled && ribbon.enabled==AncientVisuals.HighQuality,
+                    "An airborne whiff leaves only the blade sweep, with the translucent face following the quality setting");
+                combat.ResetCombat();
+                Assert(!sweep.enabled && !ribbon.enabled && !contactMark.enabled,"Cancel clears the blade edge, glass face and contact ink");
+                start.Invoke(combat,new object[]{Vector2.up});
                 Assert(hero.Facing==-1&&(float)Field(typeof(AncientCombat),"bladeFacing").GetValue(combat)==-1,"A vertical cut preserves the previous persistent body facing");
                 combat.ResetCombat();enemy=LaserProbeEnemy(game,(Vector2)hero.transform.position+new Vector2(1.84f,.55f));start.Invoke(combat,new object[]{Vector2.right});
                 Assert(hero.Facing==1,"A cut toward the opposite side turns the persistent body before the next movement frame");
                 Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-AncientBladeRules.ImpactTime(1)-.005f);TickCombat(combat);TickCombat(combat);
                 Assert(Mathf.Abs(enemy.HealthRatio-.972f)<.00001f&&(int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel)==cursor+1,"Actual accepted blade damage creates exactly one hit confirmation, even across repeated recovery updates");
                 var numbers=(Array)Field(typeof(AncientGameFeel),"numbers").GetValue(feel);var number=numbers.GetValue(cursor%numbers.Length);
+                Assert(contactMark.enabled && contactMark.sprite && contactMark.sprite.rect.y==112f &&
+                    ((Vector2)contactMark.transform.position-enemy.AimPoint).sqrMagnitude<.00001f,
+                    "Real accepted damage paints the enemy contact strip at its actual impact point");
                 Vector2 impact=(Vector2)number.GetType().GetField("impact").GetValue(number);
                 Assert((impact-enemy.AimPoint).sqrMagnitude<.00001f,"The hit marker stays at the actual struck actor rather than the drifting damage number or an arbitrary blade endpoint");
                 feel.Damage(enemy.AimPoint,0,false);Assert((int)Field(typeof(AncientGameFeel),"numberCursor").GetValue(feel)==cursor+1,"Zero accepted damage cannot produce another hit confirmation");
@@ -125,7 +267,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             {
                 game.skills=skills;game.won=won;cameraField.SetValue(game,camera);combat.ResetCombat();
                 if(enemy){game.enemies.Remove(enemy);UnityEngine.Object.Destroy(enemy.gameObject);}
-                body.constraints=constraints;body.gravityScale=gravity;MoveProbeHero(hero,original);hero.AimWeaponAt(original+Vector2.right*facing*10);SetAttackMode(hero);
+                body.constraints=constraints;body.gravityScale=gravity;MoveProbeHero(hero,original);hero.AimWeaponAt(original+Vector2.right*facing*10);EquipForCombatProbe(hero);
             }
         }
         static void CheckScheduledBladeHitches(AncientGame game)
@@ -134,7 +276,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             AncientEnemy enemy=null;var constraints=body.constraints;float gravity=body.gravityScale;
             try
             {
-                combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;SetAttackMode(hero);
+                combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;EquipForCombatProbe(hero);
                 enemy=LaserProbeEnemy(game,(Vector2)hero.transform.position+new Vector2(1.84f,.55f));
                 combat.StrikeBlade();Field(typeof(AncientCombat),"bladeDirection").SetValue(combat,Vector2.right);
                 Field(typeof(AncientCombat),"bladeStarted").SetValue(combat,Time.time-.13f);TickCombat(combat);
@@ -163,7 +305,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             finally
             {
                 game.skills=false;combat.ResetCombat();if(enemy){game.enemies.Remove(enemy);UnityEngine.Object.Destroy(enemy.gameObject);}
-                body.constraints=constraints;body.gravityScale=gravity;MoveProbeHero(hero,original);SetAttackMode(hero);
+                body.constraints=constraints;body.gravityScale=gravity;MoveProbeHero(hero,original);EquipForCombatProbe(hero);
             }
         }
         static void CheckLaserPulse(AncientGame game)
@@ -172,7 +314,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             AncientEnemy late=null,replacement=null;var wall=new GameObject("QA moving laser obstruction");
             try
             {
-                combat.ResetCombat();hero.SpendCapturedEnergy();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;SetAttackMode(hero);
+                combat.ResetCombat();hero.SpendCapturedEnergy();MoveProbeHero(hero,new Vector2(2,80));body.constraints=RigidbodyConstraints2D.FreezeAll;EquipForCombatProbe(hero);
                 Vector2 initialOrigin=(Vector2)hero.transform.position+new Vector2(.14f,.55f);
                 wall.layer=8;var solid=wall.AddComponent<BoxCollider2D>();solid.size=new Vector2(1,8);wall.transform.position=initialOrigin+Vector2.right*9;Physics2D.SyncTransforms();
                 late=LaserProbeEnemy(game,initialOrigin+new Vector2(5,8));hero.AddCapturedEnergy(50);FireRight(game);
@@ -192,9 +334,9 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Field(typeof(AncientEnemy),"dead").SetValue(late,true);game.enemies.Remove(late);
                 replacement=LaserProbeEnemy(game,movedOrigin+Vector2.right*2);Invoke(combat,"LateUpdate");
                 Assert(Mathf.Abs(replacement.HealthRatio-.89f)<.0001f,"Removing a dead actor does not suppress a new object's hit within the same pulse");
-                Field(typeof(AncientHero),"<AttackMode>k__BackingField").SetValue(hero,false);TickCombat(combat);
+                hero.Loadout.ResetEncounter();TickCombat(combat);
                 Assert(!combat.Firing&&!((LineRenderer)Field(typeof(AncientCombat),"beam").GetValue(combat)).enabled,"Switching to wire mode immediately cancels the player pulse");
-                SetAttackMode(hero);hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);
+                EquipForCombatProbe(hero);hero.SpendCapturedEnergy();hero.AddCapturedEnergy(50);FireRight(game);
                 Assert(Mathf.Abs(replacement.HealthRatio-.78f)<.0001f,"A surviving target can be hit again by the next pulse");
                 game.skills=true;Invoke(combat,"LateUpdate");Assert(combat.Firing,"An ordinary pause menu preserves the current pulse");game.skills=false;
                 var focus=typeof(AncientCombat).GetMethod("OnApplicationFocus",PrivateInstance);focus.Invoke(combat,new object[]{false});
@@ -208,7 +350,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             finally
             {
                 game.skills=false;combat.ResetCombat();if(late){game.enemies.Remove(late);UnityEngine.Object.Destroy(late.gameObject);}if(replacement){game.enemies.Remove(replacement);UnityEngine.Object.Destroy(replacement.gameObject);}
-                wall.SetActive(false);UnityEngine.Object.Destroy(wall);MoveProbeHero(hero,original);SetAttackMode(hero);
+                wall.SetActive(false);UnityEngine.Object.Destroy(wall);MoveProbeHero(hero,original);EquipForCombatProbe(hero);
             }
         }
         static void CheckCaptureEnergy(AncientGame game)
@@ -310,7 +452,7 @@ namespace Plugin.AncientCivilization.EditorChecks
             var dialogue=(System.Collections.IList)Field(typeof(AncientStory),"lines").GetValue(story);
             try
             {
-                stage.SetValue(story,3);flags.SetValue(story,224);combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));SetAttackMode(hero);
+                stage.SetValue(story,3);flags.SetValue(story,224);combat.ResetCombat();MoveProbeHero(hero,new Vector2(2,80));EquipForCombatProbe(hero);
                 combat.StrikeBlade();Assert(combat.BladeAnimating,"The handoff probe starts a real active blade cut");Invoke(story,"Update");
                 Assert(story.Stage==3&&!story.DialogueOpen,"Completed training cannot interrupt an active blade cut");combat.CancelBlade();
                 Field(typeof(AncientCombat),"heldAt").SetValue(combat,Time.time-.4f);Assert(combat.Charging,"The handoff probe enters the existing held laser charge state");Invoke(story,"Update");
@@ -333,7 +475,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Field(typeof(AncientGame),"inputReadyFrame").SetValue(game,savedInput);Field(typeof(AncientHero),"<CaptureEnergy>k__BackingField").SetValue(hero,savedEnergy);MoveProbeHero(hero,original);Invoke(story,"Persist");
             }
         }
-        static bool HasBluePixels(Texture2D texture)
+        static bool HasChargePixels(Texture2D texture)
         {
             // Runtime mote textures discard their CPU copy; read the displayed texture back explicitly.
             RenderTexture previous=RenderTexture.active;
@@ -344,7 +486,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 Graphics.Blit(texture,target);RenderTexture.active=target;
                 readable=new Texture2D(texture.width,texture.height,TextureFormat.RGBA32,false);
                 readable.ReadPixels(new Rect(0,0,texture.width,texture.height),0,0);readable.Apply();
-                foreach(var color in readable.GetPixels32())if(color.a>80&&color.b>color.r+30&&color.g>color.r+20)return true;
+                foreach(var color in readable.GetPixels32())if(color.a>80&&color.r>color.b+30&&color.g>color.b+20)return true;
                 return false;
             }
             finally
@@ -378,10 +520,10 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==0)
                 {
                     if(!game.GameplayInputReady||StageAge<.4)return;
-                    Assert(!game.MainMenu&&!game.Paused,"The temporary profile starts in an interactive scene");CheckAtlas();
+                    Assert(!game.MainMenu&&!game.Paused,"The temporary profile starts in an interactive scene");CheckAtlas();CheckMainBladeHandle(game);
                     hero.TravelTo(new Vector2(2,1.4f));hero.hp=10000;
                     var body=hero.GetComponent<Rigidbody2D>();body.constraints=RigidbodyConstraints2D.FreezeAll;
-                    SetAttackMode(hero);combat.StrikeBlade();
+                    EquipForCombatProbe(hero);combat.StrikeBlade();
                     Assert(combat.BladeAnimating&&combat.BladeStep==1&&combat.BladeUses==1,"First tap starts the vertical cut");SetStage(1);return;
                 }
                 if(stage==1)
@@ -444,13 +586,13 @@ namespace Plugin.AncientCivilization.EditorChecks
                     foreach(var mote in Motes(combat))if(mote.gameObject.activeSelf)
                     {
                         active++;var renderer=mote.GetComponent<SpriteRenderer>();var color=renderer.color;
-                        if(!sharedMoteTexture){sharedMoteTexture=renderer.sprite.texture;Assert(HasBluePixels(sharedMoteTexture),"The displayed collectible texture contains blue/cyan crystal pixels");}
-                        Assert(renderer.sprite.texture==sharedMoteTexture&&color.b>=color.r&&color.g>=color.r,"A live collectible reuses the blue texture without a yellow tint");
+                        if(!sharedMoteTexture){sharedMoteTexture=renderer.sprite.texture;Assert(HasChargePixels(sharedMoteTexture),"The displayed collectible texture contains gold charge crystal pixels");}
+                        Assert(renderer.sprite.texture==sharedMoteTexture&&color.r>=color.g&&color.g>=color.b,"A live collectible reuses its warm charge palette");
                         energy+=(float)Field(typeof(AncientEnergyMote),"energy").GetValue(mote);
                     }
                     Assert(active==3&&Mathf.Abs(energy-18)<.001f,"Particle recoloring preserves the three-mote energy total");
                     combat.ResetCombat();foreach(var mote in Motes(combat))Assert(!mote.gameObject.activeSelf,"Reset returns every energy mote to the pool");
-                    SetAttackMode(hero);hero.AddCapturedEnergy(50);combat.StrikeBlade();int shots=combat.LaserShots;combat.FireLaser();
+                    EquipForCombatProbe(hero);hero.AddCapturedEnergy(50);combat.StrikeBlade();int shots=combat.LaserShots;combat.FireLaser();
                     Assert(!combat.BladeAnimating&&combat.Firing&&combat.LaserShots==shots+1&&hero.CaptureEnergy==0,"Laser release cancels melee, consumes stored energy and starts its continuous beam");
                     SetStage(10);return;
                 }
@@ -458,7 +600,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     // Probe the scene at known animation instants without synthesizing mouse input.
                     // Actual pooled projectiles, removal and Rigidbody2D rebound still run normally.
-                    hero.TravelTo(new Vector2(2,6));SetAttackMode(hero);
+                    hero.TravelTo(new Vector2(2,6));EquipForCombatProbe(hero);
                     var body=hero.GetComponent<Rigidbody2D>();body.constraints=RigidbodyConstraints2D.FreezeRotation;body.gravityScale=0;
                     Physics2D.SyncTransforms();Assert(!hero.IsOnGround,"The object-break probes run in open air");
                     combat.StrikeBlade();Assert(combat.BladeAnimating&&combat.BladeStep==1,"The airborne probe starts a fresh vertical cut");
@@ -496,7 +638,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     game.Story.Conversation(null,0,new[]{"QA 통신관"},new[]{"레이저 중단 확인."});Assert(game.Story.DialogueOpen&&!combat.Firing,"Opening a real conversation cancels the arm's active pulse");
                     game.Feel.Damage(hero.transform.position,10,false);game.Feel.Signal("QA 대화 확인",AncientGame.Cyan);Invoke(game.Feel,"Update");
                     Assert(NoHitNumbers(game.Feel)&&(string)Field(typeof(AncientGameFeel),"signal").GetValue(game.Feel)==null,"An actual Korean conversation clears transient combat feedback while keeping its in-world speech bubble");
-                    Finish(true,"Structural blade, active moving laser, once-per-pulse actor/truck/turret damage, interruption and actual blue-energy checks completed. Physical hold/release, wheel switching, airborne wire transitions, frame pacing and visual alignment still need manual playtesting.");
+                    Finish(true,"Structural blade, active moving laser, once-per-pulse actor/truck/turret damage, interruption and actual charge particle checks completed. Physical F charge/release, Q summon timing, airborne plug transitions, frame pacing and visual alignment still need manual playtesting.");
                 }
             }
             catch(Exception error){Finish(false,error.ToString());}

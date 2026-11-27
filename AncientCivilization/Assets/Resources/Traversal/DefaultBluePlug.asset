@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b31d0767fd6a46ee951e03cb7cef26e9, type: 3}
+  m_Name: DefaultBluePlug
+  range: 16
+  throwSpeed: 36
+  aimRadius: 1.05
+  tipRadius: 0.1
+  retractSpeed: 52
+  recastDelay: 0.12
+  handHeight: 0.34
+  solids: {serializedVersion: 2, m_Bits: 256}
+  spinDamage: 10
+  spinHitInterval: 0.4
+  spinPush: 0.24
+  spinContactRadius: 0.32
+  throwDamage: 30
+  throwStagger: 0.3
+  shockSeconds: 2
+  shockDamagePerSecond: 8
+  shockTick: 0.5
+  chainHops: 2
+  chainDamage: 15
+  chainRange: 2.7
+  chainCooldown: 0.6
+  dischargeRadius: 1.5
+  dischargeDamage: 20
+  dischargeStagger: 0.25
+  windRadius: 0.84
+  windTurnsPerSecond: 4
+  fullWindSeconds: 0.65
+  fullRadiusMultiplier: 1.4
+  fullWindRateMultiplier: 1.65
+  fullRangeMultiplier: 1.25
+  fullThrowSpeedMultiplier: 1.6
+  windGripRadius: 0.43
+  reelScale: 0.82
+  reelPayoutSpeed: 1200
+  reelReturnSpeed: 920
+  wallContactProbe: 0.075
+  wallGripHeight: 0.66
+  wallGripReach: 0.8
+  wallRelatchDelay: 0.22
+  wallCarrierLimit: 18
+  towSpeed: 48
+  skin: 0.035
+  arrivalTolerance: 0.065
+  towCarry: 0.22
+  minimumRope: 2
+  maximumRope: 14
+  swingGravity: 32
+  swingPump: 15
+  swingSpeedLimit: 22

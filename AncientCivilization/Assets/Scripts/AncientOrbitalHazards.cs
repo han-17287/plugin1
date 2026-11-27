@@ -23,7 +23,8 @@ namespace Plugin.AncientCivilization
         Vector2 origin, mark, previousHero, probe, previousCargo, sampledCargo;
         int side, fakeFacing;
         OrbitalMove move;
-        bool armed, paint, test, disposed;
+        bool armed, paint, test, disposed, strikeStarted, shutterTurned;
+        Vector2 contactPoint;
 
         public Vector2 CargoPosition { get; set; }
         public Vector2 ImpactPoint => new Vector2(mark.x, Floor);
@@ -48,7 +49,7 @@ namespace Plugin.AncientCivilization
                 case OrbitalMove.ChainDrop: case OrbitalMove.CargoRush: return 1.12f;
                 case OrbitalMove.PursuitStamp: case OrbitalMove.CrossBeam: return 1f;
                 case OrbitalMove.ReturnBlade: case OrbitalMove.SplitShutter: return .92f;
-                case OrbitalMove.ReverseRail: case OrbitalMove.BladeFerry: return .70f;
+                case OrbitalMove.ReverseRail: case OrbitalMove.BladeHunt: return .70f;
                 default: return .84f;
             }
         }
@@ -63,7 +64,7 @@ namespace Plugin.AncientCivilization
                 case OrbitalMove.PursuitStamp: case OrbitalMove.CargoRush: return 1.45f;
                 case OrbitalMove.ShutterFeint: case OrbitalMove.CoreTrap: return .94f;
                 case OrbitalMove.SupplyLeak: return 2.10f;
-                case OrbitalMove.BladeFerry: return 1.80f;
+                case OrbitalMove.BladeHunt: return .40f;
                 case OrbitalMove.ReverseRail: return .85f;
                 default: return 1.28f;
             }
@@ -81,6 +82,7 @@ namespace Plugin.AncientCivilization
             CargoPosition = previousCargo = sampledCargo = source;
             previousHero = game.hero ? (Vector2)game.hero.transform.position : mark;
             armed = true;
+            EmitAttackCue(AncientBossCue.Beat.Tell);
             TickTell(0);
         }
 
@@ -128,10 +130,21 @@ namespace Plugin.AncientCivilization
                     CrossBeams(Tell, false);
                     break;
                 case OrbitalMove.ShutterFeint:
+                    if (t >= .75f && !shutterTurned)
+                    {
+                        // 셔터가 실제로 열리기 전에는 반대편 발사 방향을 보여주지 않는다.
+                        shutterTurned = true;
+                        Vector2 turn = Vector2.right * -fakeFacing;
+                        Cue(AncientBossCue.Beat.Tell, origin + turn * .64f, turn, .82f);
+                    }
                     Feint(t < .55f ? fakeFacing : -fakeFacing, t < .55f ? Tell : t < .75f ? Steel : Lens,
                         t >= .75f, false, t < .55f || t >= .75f);
                     break;
-                case OrbitalMove.BladeFerry: case OrbitalMove.ReverseRail:
+                case OrbitalMove.BladeHunt:
+                    CrossMark(mark, Mathf.Lerp(.82f,.3f,t), Lens);
+                    Stroke(origin, mark, .045f, Lens);
+                    break;
+                case OrbitalMove.ReverseRail:
                     Arrow(cargo + Up(.75f), side, 2f);
                     break;
                 case OrbitalMove.CoreTrap: case OrbitalMove.SupplyLeak:
@@ -155,10 +168,19 @@ namespace Plugin.AncientCivilization
             previousHero = game.hero ? (Vector2)game.hero.transform.position : mark;
         }
 
+        public void BeginStrike()
+        {
+            if (strikeStarted || !armed || disposed || game.Paused) return;
+            strikeStarted = true;
+            if (move != OrbitalMove.ShutterFeint) EmitAttackCue(AncientBossCue.Beat.Strike);
+        }
+
         public void TickActive(float progress)
         {
             if (!armed || disposed || !game.hero || game.Paused) return;
             float t = Mathf.Clamp01(progress);
+            BeginStrike();
+            EmitCrossedContacts(previous, t);
             Vector2 hero = game.hero.transform.position;
             nextDamage = 0; nextHit = 0;
             // 낮은 프레임에도 지난 프레임과 현재 위치 사이의 회전날·낙하물 궤적을 검사한다.
@@ -179,7 +201,109 @@ namespace Plugin.AncientCivilization
             if (nextDamage > 0)
             {
                 hitMask |= nextHit;
+                // 피해 판정 도중 재시도가 발생할 수 있으므로 접촉점은 해당 물리 샘플에서 표시한다.
+                Cue(AncientBossCue.Beat.Contact, contactPoint, contactPoint-origin, .70f);
                 game.hero.Hurt(nextDamage);
+            }
+        }
+
+        void Cue(AncientBossCue.Beat beat, Vector2 point, Vector2 direction, float size = 1)
+        {
+            AncientBossCue.Play(game, AncientBossCue.Style.Orbital, beat, point, direction, size);
+        }
+
+        void EmitAttackCue(AncientBossCue.Beat beat)
+        {
+            bool tell = beat == AncientBossCue.Beat.Tell;
+            Vector2 horizontal = Vector2.right * side;
+            switch (move)
+            {
+                case OrbitalMove.GroundWave:
+                    Cue(beat, new Vector2(origin.x, .54f), Vector2.up);
+                    break;
+                case OrbitalMove.LandingStamp:
+                case OrbitalMove.PursuitStamp:
+                    Cue(beat, tell ? ImpactPoint : new Vector2(mark.x, move == OrbitalMove.LandingStamp ? 6f : Roof-.9f),
+                        Vector2.down, tell ? .83f : 1.05f);
+                    break;
+                case OrbitalMove.ReturnBlade:
+                    Cue(beat, RailEnd(side)+Up(1.05f), horizontal * -1f);
+                    break;
+                case OrbitalMove.AnchorLock:
+                    Cue(beat, mark, Vector2.down, .77f);
+                    break;
+                case OrbitalMove.CargoSweep:
+                    Cue(beat, CargoPosition + Up(-.75f), horizontal * -1f);
+                    break;
+                case OrbitalMove.DropCargo:
+                    Cue(beat, tell ? ImpactPoint : new Vector2(mark.x, 8.4f), Vector2.down);
+                    break;
+                case OrbitalMove.RisingBeam:
+                    Cue(beat, new Vector2(mark.x, .25f), Vector2.up);
+                    break;
+                case OrbitalMove.CrossBeam:
+                    float x0 = Mathf.Max(left, mark.x-5), x1 = Mathf.Min(right, mark.x+5);
+                    Cue(beat, new Vector2(x0,.24f), new Vector2(x1-x0,5.41f), .78f);
+                    Cue(beat, new Vector2(x0,5.65f), new Vector2(x1-x0,-5.41f), .78f);
+                    break;
+                case OrbitalMove.ShutterFeint:
+                    Vector2 barrel = Vector2.right * (tell ? fakeFacing : -fakeFacing);
+                    Cue(beat, origin+barrel*.64f, barrel);
+                    break;
+                case OrbitalMove.BladeHunt:
+                    Cue(beat, tell ? mark : origin, mark-origin, .74f);
+                    break;
+                case OrbitalMove.CoreTrap:
+                case OrbitalMove.SupplyLeak:
+                    Cue(beat, move == OrbitalMove.CoreTrap ? ImpactPoint : mark, Vector2.up, .83f);
+                    break;
+                case OrbitalMove.ReverseRail:
+                    Cue(beat, CargoPosition+Up(.7f), horizontal, .79f);
+                    break;
+                case OrbitalMove.ChainDrop:
+                    Cue(beat, new Vector2(DropX(0),tell ? Floor : 6.5f), Vector2.down, .88f);
+                    break;
+                case OrbitalMove.SplitShutter:
+                    Cue(beat, new Vector2((left+right)*.5f,5.15f), Vector2.down);
+                    break;
+                case OrbitalMove.ClosingSweep:
+                    Cue(beat, new Vector2(left,.65f), Vector2.right, .8f);
+                    Cue(beat, new Vector2(right,.65f), Vector2.left, .8f);
+                    break;
+                case OrbitalMove.CargoRush:
+                    Cue(beat, tell ? RushCross : origin, RushCross-origin);
+                    break;
+            }
+        }
+
+        // 착지와 반사점은 화면 프레임과 별개로, 판정에 사용한 궤적이 그 지점을 지날 때 한 번만 울린다.
+        void EmitCrossedContacts(float from, float to)
+        {
+            if (move == OrbitalMove.ChainDrop)
+            {
+                for (int i=0; i<4; i++)
+                {
+                    float landing = i*.17f + .43f*.76f;
+                    if (from < landing && to >= landing)
+                        Cue(AncientBossCue.Beat.Contact, new Vector2(DropX(i),.15f), Vector2.up, .82f);
+                }
+                return;
+            }
+            if (move == OrbitalMove.ShutterFeint && from < .12f && to >= .12f)
+                EmitAttackCue(AncientBossCue.Beat.Strike);
+            if (move == OrbitalMove.ReturnBlade && from < .47f && to >= .47f)
+                Cue(AncientBossCue.Beat.Contact, RailEnd(-side)+Up(1.05f), Vector2.right*side, .85f);
+            if (move == OrbitalMove.LandingStamp || move == OrbitalMove.PursuitStamp)
+            {
+                float landing = move == OrbitalMove.LandingStamp ? .53f : .64f;
+                if (from < landing && to >= landing)
+                    Cue(AncientBossCue.Beat.Contact, ImpactPoint+Up(.15f), Vector2.up, 1.12f);
+            }
+            if (move == OrbitalMove.CargoRush)
+            {
+                float crossing = CargoContactTime / ActiveSeconds(move);
+                if (from < crossing && to >= crossing)
+                    Cue(AncientBossCue.Beat.Contact, RushCross, RushExit-RushCross);
             }
         }
 
@@ -220,8 +344,13 @@ namespace Plugin.AncientCivilization
                 case OrbitalMove.ShutterFeint:
                     if (t < .76f) Feint(-fakeFacing, ShutterFiring(t) ? Live : Lens, true, ShutterFiring(t), true);
                     break;
-                case OrbitalMove.BladeFerry:
-                    if (paint) Arrow(sampledCargo + Up(.7f), side, 1.4f);
+                case OrbitalMove.BladeHunt:
+                    if (paint)
+                    {
+                        Vector2 tip = Vector2.Lerp(origin, mark, t);
+                        Stroke(Vector2.Lerp(origin, mark, Mathf.Max(0, t-.28f)), tip, .17f, Lens);
+                        CrossMark(mark, .3f, Lens);
+                    }
                     break;
                 case OrbitalMove.CoreTrap:
                     if (t < .79f) Ram(x, .09f, 1.22f, true, 17, 1.1f);
@@ -359,7 +488,10 @@ namespace Plugin.AncientCivilization
             if (!test || damage <= 0 || (hitMask & (1 << hit)) != 0) return;
             Vector2 axis = b - a, p = probe - a;
             if (AncientBeamRules.IntersectsBox(axis.x, axis.y, p.x, p.y, width * .5f, .29f, .83f))
-                RecordHit(hit, damage);
+            {
+                float u = axis.sqrMagnitude > .0001f ? Mathf.Clamp01(Vector2.Dot(p, axis) / axis.sqrMagnitude) : 0;
+                RecordHit(hit, damage, a + axis * u);
+            }
         }
 
         void Ball(Vector2 center, float radius, float damage, int hit)
@@ -367,13 +499,14 @@ namespace Plugin.AncientCivilization
             if (!test || (hitMask & (1 << hit)) != 0) return;
             Vector2 d = probe - center;
             float y = Mathf.Max(0, Mathf.Abs(d.y) - .58f);
-            if (d.x * d.x + y * y <= (radius + .27f) * (radius + .27f)) RecordHit(hit, damage);
+            if (d.x * d.x + y * y <= (radius + .27f) * (radius + .27f)) RecordHit(hit, damage, center);
         }
 
-        void RecordHit(int hit, float damage)
+        void RecordHit(int hit, float damage, Vector2 point)
         {
             nextHit |= 1 << hit;
-            nextDamage = Mathf.Max(nextDamage, damage);
+            // 같은 프레임의 여러 하위 샘플 중 첫 접촉점을 보존한다.
+            if (damage > nextDamage) { nextDamage = damage; contactPoint = point; }
         }
 
         void Stroke(Vector2 a, Vector2 b, float width, Color color)
@@ -442,7 +575,7 @@ namespace Plugin.AncientCivilization
 
         public void Clear()
         {
-            armed = false;
+            armed = strikeStarted = shutterTurned = false;
             previous = 0; hitMask = 0; used = 0;
             EndFrame();
         }

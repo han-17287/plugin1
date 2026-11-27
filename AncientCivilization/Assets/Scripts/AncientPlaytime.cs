@@ -40,8 +40,17 @@ namespace Plugin.AncientCivilization
             bool eligible=!suspended&&!game.MainMenu&&!game.skills&&Application.isFocused&&!(game.Journal&&game.Journal.Open)&&!game.Story.LiftBusy;
             // The first resumed frame can contain time spent suspended or in a
             // menu. Count only a delta whose previous frame was also eligible.
+            Tick(floor,eligible,game.Story.DialogueOpen,game.ArenaActive||game.Production&&game.Production.Active);
+        }
+        internal void StepStoryStreet(bool paused)
+        {
+            if(!game||!game.Story||AncientGame.IsQAProfile)return;
+            Tick(game.Story.CurrentFloor,!paused&&Application.isFocused,false,false);
+        }
+        void Tick(int floor,bool eligible,bool dialogue,bool boss)
+        {
             bool active=eligible&&previousActive;previousActive=eligible;
-            measured.Step(floor,Time.unscaledDeltaTime,active,game.Story.DialogueOpen,game.ArenaActive||game.Production&&game.Production.Active);
+            measured.Step(floor,Time.unscaledDeltaTime,active,dialogue,boss);
             if(active&&floor>=0&&floor<2&&!measured.Finished(floor))
             {sinceSave+=Time.unscaledDeltaTime;if(sinceSave>=30){sinceSave=0;WriteSave();PlayerPrefs.Save();}}
         }

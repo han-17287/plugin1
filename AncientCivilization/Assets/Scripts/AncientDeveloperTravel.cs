@@ -92,7 +92,7 @@ namespace Plugin.AncientCivilization
                         rows.Add(new AncientDeveloperDestination("case-" + mission.Id, mission.Title, f, area,
                             AncientCampaignRules.Left(mission.Id) + 6, mission.Id, f == 0 ? 8 : 9, mission.Id));
             }
-            rows.Add(new AncientDeveloperDestination("training-wire", "검수 회랑 · 와이어 훈련", 0, area, 0, 0, 2));
+            rows.Add(new AncientDeveloperDestination("training-wire", "검수 회랑 · 파란 플러그 훈련", 0, area, 0, 0, 2));
             rows.Add(new AncientDeveloperDestination("training-blade", "장비 검수 · 입자 훈련", 0, area, 0, 0, 3));
             rows.Add(new AncientDeveloperDestination("stock", "코어 재고 보고 · 격벽 돌파", 0, area, 0, 0, 4));
             rows.Add(new AncientDeveloperDestination("chase-1", "코어 수송로 · 첫 번째 오토바이 추격", 0, boss, 0, 0, 5));

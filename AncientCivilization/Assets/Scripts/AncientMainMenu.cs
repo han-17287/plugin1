@@ -176,8 +176,12 @@ namespace Plugin.AncientCivilization
                 if(MenuButton(new Rect(x,buttons+64,width,44),"새 게임")){confirmNew=true;controls=false;}
                 GUI.enabled=oldEnabled;
                 if(MenuButton(new Rect(x,buttons+116,width,44),"조작 안내")){controls=true;confirmNew=false;}
+                if(MenuButton(new Rect(x+width+18,buttons+4,270,48),"벽 콘센트 순찰 · 50개 구간"))
+                    Plugin.PlayerCore.PatrolEntry.Request(Plugin.PlayerCore.PatrolExpedition.LastRoom(true), wallSockets:true);
                 if(MenuButton(new Rect(x+width+18,buttons+64,270,44),"도시 자유 순찰 · 5개 층"))Plugin.PlayerCore.PatrolEntry.Request(Plugin.PlayerCore.PatrolExpedition.LastRoom());
                 if(MenuButton(new Rect(x+width+18,buttons+116,270,44),"이동 연습장"))UnityEngine.SceneManagement.SceneManager.LoadScene("TraversalRhythmPractice");
+                if(MenuButton(new Rect(x+width+18,buttons+168,270,44),"파란 플러그 시험 · 빨래골목"))
+                    Plugin.PlayerCore.PatrolEntry.Request(11,developer:true,wallSockets:true);
                 if(MenuButton(new Rect(x,buttons+168,width,44),"종료"))
                 {
 #if UNITY_EDITOR
@@ -187,7 +191,7 @@ namespace Plugin.AncientCivilization
 #endif
                 }
                 Label(new Rect(x+2,top+564,410,24),"F5 흔들림·섬광   F6 효과   F7 소리   F8 프레임",caption,new Color(.48f,.61f,.67f));
-                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v0.33.0",eyebrow,new Color(.38f,.50f,.57f));
+                Label(new Rect(x+2,h-39,420,20),"HWASAN GAMES  /  v"+Application.version,eyebrow,new Color(.38f,.50f,.57f));
                 Label(new Rect(w-334,h-39,280,22),backdropCaption,caption,new Color(.55f,.68f,.73f));
                 if(controls||confirmNew)DrawModal(w,h);
             }
@@ -199,7 +203,7 @@ namespace Plugin.AncientCivilization
             Fill(new Rect(px,py,680,540),new Color(.018f,.037f,.055f,.99f));Fill(new Rect(px,py,680,2),accent);
             Label(new Rect(px+30,py+25,620,42),confirmNew?"새 게임을 시작할까요?":"현장 조작 안내",modalHeading,White);
             string text=confirmNew?"스토리·시민 포인트·코어·업그레이드·체크포인트를 새로 시작합니다. 소리와 그래픽 설정은 유지합니다.":
-                    "A/D 또는 방향키 이동 · Space 점프 · Ctrl 달리기\nE 대화·현장 조사·엘리베이터\n\n휠 위 공격 / 휠 아래 와이어\n와이어 좌클릭: 직선 견인 · 가운데 클릭: 스윙\n공격 좌클릭: 짧게 베기 · 길게 조준 후 놓아 레이저\n우클릭: 파괴되어 나온 파란 입자 수집\n\n초반 추격: 자동 전진 · Space 점프 · 좌클릭 와이어 승선\n마지막 추격: E 탑승/하차 · S/▼ 제동 · X 폭발 도약\n대화 Space/Enter · 무전 Backspace로 펼치기/다음\nTab 기록 · K/Esc 정비\nF5 흔들림·섬광 감소 · F6 효과 · F7 소리 · F8 프레임 · F9 성능 표시";
+                    "A/D 이동 · Space 점프 · Ctrl 달리기 · Shift 대시\n플러그는 좌클릭 홀드로 돌리고 놓아 투척 · G 회수\n콘센트에 꽂은 뒤 C 견인 / V 스윙·이탈 · 우클릭 홀드로 입자 수집\nQ 블레이드 소환 ▶ 손잡이에 플러그를 맞혀 장착\n장착 후 좌클릭 베기 · F 홀드 후 놓아 레이저 · R 과부하\nE 설치 · 미장착 시 E 대화·조사·엘리베이터\n\n초반 추격: Space 점프 · 트럭 콘센트에 좌클릭 투척 후 C 승선\n마지막 추격: E 탑승/하차 · S/▼ 제동 · X 폭발 도약\n대화 Space/Enter · 무전 Backspace로 펼치기/다음\nTab 기록 · K/Esc 정비\nF5 흔들림·섬광 감소 · F6 효과 · F7 소리 · F8 프레임 · F9 성능 표시";
             Label(new Rect(px+30,py+85,620,365),text,body,new Color(.74f,.85f,.90f));
             if(confirmNew)
             {

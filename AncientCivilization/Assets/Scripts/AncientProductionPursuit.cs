@@ -67,7 +67,7 @@ namespace Plugin.AncientCivilization
             cut=game.Line("Cargo separation blade",new Color(1,.88f,.12f),.2f,23);cut.positionCount=9;cut.enabled=false;
             filament=game.Line("Mounted recovery blade",new Color(1,.85f,.08f),.18f,24);filament.endWidth=.09f;filament.enabled=false;
             filamentCore=game.Line("Mounted recovery blade hot core",new Color(1,1,.75f),.065f,25);filamentCore.endWidth=.03f;filamentCore.enabled=false;
-            beam=game.Line("Recovery finisher continuous laser",new Color(.4f,.88f,1),2.8f,23);core=game.Line("Recovery finisher white core",Color.white,.95f,24);glow=game.Line("Recovery finisher glow",new Color(.1f,.55f,1,.65f),4.2f,22);beamProfile=new AncientBeamVisuals(glow,true);
+            beam=game.Line("Recovery finisher continuous laser",new Color(1,.90f,.54f),2.8f,23);core=game.Line("Recovery finisher white core",Color.white,.95f,24);glow=game.Line("Recovery finisher glow",new Color(1,.58f,.21f,.65f),4.2f,22);beamProfile=new AncientBeamVisuals(glow,true);
             ShowBeam(false);
             for(int i=0;i<hazards.Length;i++)
             {
@@ -168,12 +168,19 @@ namespace Plugin.AncientCivilization
             commander.transform.SetParent(truck.transform,false);commander.transform.localPosition=new Vector2(1.4f,2.7f);commander.ResetProductionHealth(sequence.HealthRatio);game.boss=commander;
             game.hero.HoldForEncounter(false);ApplyPhase();game.SnapCameraToHero();game.BlockGameplayInput();game.Notice("추격 재도전 / 현재 승선 구간부터",2);game.Save();return true;
         }
+        internal bool IsDeckGround(Vector2 point)
+        {
+            if (!deck || !deck.enabled) return false;
+            Bounds bounds=deck.bounds;
+            return point.x>=bounds.min.x+.15f && point.x<=bounds.max.x-.15f && Mathf.Abs(point.y-bounds.max.y)<.2f;
+        }
         public bool CanBoardWire(Vector2 selected)
         {
             if(!ready||!boardingReady||!game.hero.bike||sequence.Phase!=AncientProductionPhase.Approach||truck.position.x-game.hero.transform.position.x>14)return false;
             if((selected-BoardingHook).sqrMagnitude<1)return true;
             var bounds=deck.bounds;bounds.Expand(new Vector3(1.5f,2,1));return bounds.Contains(new Vector3(selected.x,selected.y,truck.transform.position.z));
         }
+        internal bool IsBoardingPlugSlot(int slot) => slot == hookSlot;
         public bool TryMovingAnchor(Vector2 selected,out Transform moving)
         {moving=null;if(!ready||(selected-BoardingHook).sqrMagnitude>1)return false;moving=truck.transform;return true;}
         public bool TryBoardWire(Vector2 selected,out Vector2 point)
@@ -200,19 +207,47 @@ namespace Plugin.AncientCivilization
                 Vector2 target=(Vector2)truck.position+captainAim;DrawCaptainTell(enemy.AimPoint,target);
                 if(captainTimer>0)return;captainWindup=false;tell.enabled=strikeZone.enabled=false;
                 if(captainPattern%3==0)
-                {Vector2 origin=enemy.AimPoint,d=(Vector2)game.hero.transform.position-origin;game.Slash(origin,captainFacing,true);if(Mathf.Abs(d.x)<3.3f&&Mathf.Abs(d.y)<1.7f&&d.x*captainFacing>=-.5f)game.hero.Hurt(18);}
+                {
+                    Vector2 origin=enemy.AimPoint,d=(Vector2)game.hero.transform.position-origin;
+                    Vector2 sweep=Vector2.right*captainFacing;
+                    game.Slash(origin,captainFacing,true);
+                    AncientBossCue.Play(game, AncientBossCue.Style.Captain, AncientBossCue.Beat.Strike,
+                        origin+sweep*.62f, sweep, 1f, truck.transform);
+                    if(Mathf.Abs(d.x)<3.3f&&Mathf.Abs(d.y)<1.7f&&d.x*captainFacing>=-.5f)
+                    {
+                        float hp=game.hero.hp;
+                        Vector2 contact=game.hero.transform.position;
+                        game.hero.Hurt(18);
+                        if(DeckCombat&&game.hero.hp<hp)
+                            AncientBossCue.Play(game, AncientBossCue.Style.Captain, AncientBossCue.Beat.Contact,
+                                contact, sweep, .8f, truck.transform);
+                    }
+                }
                 else
                 {
                     Vector2 startPoint=captainPattern%3==2?CaptainDropOrigin(target):CaptainThrowOrigin(enemy.AimPoint);
                     Vector2 velocity=captainPattern%3==2?new Vector2(kinematicSpeed,-4):(target-startPoint)/.6f+new Vector2(kinematicSpeed,2.4f);
-                    game.Projectiles.Spawn(startPoint,velocity,16,false,1,8);
+                    // 실제 생성에 성공했을 때만 투사체의 짐칸 기준 진행 방향으로 쇳가루가 튄다.
+                    if(game.Projectiles.Spawn(startPoint,velocity,16,false,1,8))
+                        AncientBossCue.Play(game, AncientBossCue.Style.Captain, AncientBossCue.Beat.Strike,
+                            startPoint, velocity-Vector2.right*kinematicSpeed, .85f, truck.transform);
                 }
                 if(!DeckCombat)return;
                 captainLastAttack=captainPattern%3;captainTimer=captainRecoverySeconds=captainLastAttack==2?1.45f:1.25f;captainPattern++;captainActionUntil=Time.time+.2f;
                 enemy.BossVisual(captainLastAttack==0?2:4,captainFacing,0,false,true);game.Sound(6);
             }
             else if(captainTimer<=0)
-            {captainWindup=true;captainFacing=face;captainTimer=CaptainWindupSeconds;captainAim=(Vector2)game.hero.transform.position-(Vector2)truck.position;game.Sound(8);}
+            {
+                captainWindup=true;captainFacing=face;captainTimer=CaptainWindupSeconds;
+                Vector2 target=game.hero.transform.position;
+                captainAim=target-truck.position;
+                int attack=captainPattern%3;
+                Vector2 source=attack==2?CaptainDropOrigin(target):CaptainThrowOrigin(enemy.AimPoint);
+                Vector2 direction=attack==0?Vector2.right*face:attack==1?(target-source)/.6f+Vector2.up*2.4f:Vector2.down;
+                AncientBossCue.Play(game, AncientBossCue.Style.Captain, AncientBossCue.Beat.Tell,
+                    source, direction, attack==2?1.05f:.72f, truck.transform);
+                game.Sound(8);
+            }
         }
         void DrawCaptainTell(Vector2 origin,Vector2 target)
         {
@@ -221,7 +256,7 @@ namespace Plugin.AncientCivilization
             if(attack==0)
             {
                 tell.positionCount=2;tell.SetPosition(0,origin);tell.SetPosition(1,origin+Vector2.right*captainFacing*3.3f);
-                SetFootprint(strikeZone,origin.x+captainFacing*1.4f,truck.position.y+2.79f,1.9f,.1f);
+                MarkRoof(origin.x+captainFacing*1.4f, 1.9f, attack);
             }
             else if(attack==1)
             {
@@ -229,14 +264,31 @@ namespace Plugin.AncientCivilization
                 // that same frame, without the carrier's world-space travel component.
                 Vector2 start=CaptainThrowOrigin(origin),velocity=(target-start)/.6f+Vector2.up*2.4f;
                 tell.positionCount=15;for(int i=0;i<15;i++){float t=i/14f*.6f;tell.SetPosition(i,start+velocity*t+Vector2.down*4*t*t);}
-                SetFootprint(strikeZone,target.x,truck.position.y+2.79f,.75f,.1f);
+                MarkRoof(target.x, .75f, attack);
             }
             else
             {
                 tell.positionCount=2;tell.SetPosition(0,CaptainDropOrigin(target));tell.SetPosition(1,target);
-                SetFootprint(strikeZone,target.x,truck.position.y+2.79f,.75f,.1f);
+                MarkRoof(target.x, .75f, attack);
             }
         }
+        void MarkRoof(float x, float halfWidth, int attack)
+        {
+            // 공장 바닥의 방향 표시처럼 읽는다. 쓸기는 화살촉, 투척은 얕은 홈, 압축판은 아래 쐐기다.
+            float y=truck.position.y+2.79f;
+            float side=attack==0?captainFacing:1f;
+            float lip=attack==2?.38f:.29f;
+            float shoulder=attack==2?lip:.11f;
+            strikeZone.positionCount=7;
+            strikeZone.SetPosition(0,new Vector2(x-side*halfWidth,y));
+            strikeZone.SetPosition(1,new Vector2(x+side*halfWidth,y));
+            strikeZone.SetPosition(2,new Vector2(x+side*halfWidth,y+lip));
+            strikeZone.SetPosition(3,new Vector2(x+side*halfWidth*.52f,y+shoulder));
+            strikeZone.SetPosition(4,new Vector2(x,y+(attack==2?.035f:.11f)));
+            strikeZone.SetPosition(5,new Vector2(x-side*halfWidth*.52f,y+shoulder));
+            strikeZone.SetPosition(6,new Vector2(x-side*halfWidth,y+(attack==0?.11f:lip)));
+        }
+
         static void SetFootprint(LineRenderer line,float x,float y,float halfWidth,float height)
         {
             line.SetPosition(0,new Vector2(x-halfWidth,y));line.SetPosition(1,new Vector2(x+halfWidth,y));
@@ -266,7 +318,7 @@ namespace Plugin.AncientCivilization
                 TickHazards(roadStep);nextHazard-=dt;if(nextHazard<=0){SpawnHazard();nextHazard=sequence.Round==0?2.5f:2.05f;}
             }
             if(phase==AncientProductionPhase.Approach&&!boardingReady&&sequence.Elapsed>=.7f&&truck.position.x-game.hero.transform.position.x<=14)
-            {boardingReady=true;objective="공격 중지 / 점등된 트럭 고리를 좌클릭해 와이어 승선";game.Notice("승선 가능 / 청록 고리를 좌클릭",2);game.Sound(2);}
+            {boardingReady=true;objective="공격 중지 / 트럭 콘센트에 좌클릭으로 던져 꽂고 C";game.Notice("승선 가능 / 파란 콘센트에 꽂고 C를 누르세요.",2);game.Sound(2);}
             if(phase==AncientProductionPhase.Boarding)
             {
                 Vector2 h=game.hero.transform.position;
@@ -319,9 +371,9 @@ namespace Plugin.AncientCivilization
             }
             if(applied==AncientProductionPhase.Approach)
             {boardingReady=false;ClearHazards();game.ClearBattleProjectiles();objective="공격 중지 / 트럭 접근 중 · 승선 고리 점등 대기";game.Notice("적 공격 중지 · 트럭에 접근합니다.",2);}
-            if(applied==AncientProductionPhase.Boarding){ClearHazards();game.hero.SetProductionAttackMode(false);}
+            if(applied==AncientProductionPhase.Boarding){ClearHazards();game.hero.PrepareProductionEquipment(false);}
             if(applied==AncientProductionPhase.Deck)
-            {game.hero.SetProductionAttackMode(true);deckTime=deckAwayTime=0;captainPattern=captainLastAttack=0;captainTimer=captainRecoverySeconds=.7f;captainActionUntil=-1;captainWindup=false;game.Notice("트럭 지붕 전투 / 전조를 피하고 빈틈에 블레이드·입자 레이저",4);game.BlockGameplayInput();}
+            {game.hero.PrepareProductionEquipment(true);deckTime=deckAwayTime=0;captainPattern=captainLastAttack=0;captainTimer=captainRecoverySeconds=.7f;captainActionUntil=-1;captainWindup=false;game.Notice("트럭 지붕 전투 / Q 소환 후 손잡이에 플러그를 던져 장착",4);game.BlockGameplayInput();}
             if(applied==AncientProductionPhase.Knockback)
             {
                 commander.ClearProductionHitFlash();game.ClearBattleProjectiles();ClearHazards();tell.enabled=strikeZone.enabled=false;captainWindup=false;game.hero.Combat.CancelAttacks();throwOrigin=game.hero.transform.position;throwBikeX=truck.position.x-8;game.hero.HoldForEncounter(true);game.Sound(8);game.Notice("트럭 급가속 / 자동주행 오토바이로 복귀",2);
@@ -348,7 +400,7 @@ namespace Plugin.AncientCivilization
             if(!sequence.AbortBoarding())return;
             boardingFailures++;ReturnToBike(false);ApplyPhase();
             game.Notice(fellFromDeck?"지붕 이탈 / 오토바이가 받아 줍니다. 대장의 남은 체력은 유지됩니다.":
-                "승선 복귀 / 공격은 멈춰 있습니다. 청록 고리에 좌클릭해 다시 올라가세요.",3);
+                "승선 복귀 / 좌클릭을 놓아 트럭 콘센트에 꽂고 C를 누르세요.",3);
         }
         void BreachPose()
         {
@@ -404,6 +456,9 @@ namespace Plugin.AncientCivilization
         {
             if(cargoSecured||!cargo)return;cargoSecured=true;cargoReleaseOffset=(Vector2)cargo.position-truck.position;cargoReleasedAt=sequence.Elapsed;cargo.SetParent(null,true);
             if(sequence.Phase!=AncientProductionPhase.Finisher)cargo.position=new Vector2(truck.position.x-11,1);
+            if(sequence.Phase==AncientProductionPhase.Finisher)
+                AncientBossCue.Play(game, AncientBossCue.Style.Captain, AncientBossCue.Beat.Contact,
+                    (Vector2)cargo.position+Vector2.right*1.65f, Vector2.left, 1.1f, cargo);
             game.Impact(cargo.position,AncientGame.Cyan,true);game.Sound(5);
         }
         void ShowFilament(bool visible){if(filament)filament.enabled=visible;if(filamentCore)filamentCore.enabled=visible;}
@@ -436,7 +491,7 @@ namespace Plugin.AncientCivilization
         void SetBeam(Vector2 start,Vector2 end)
         {
             beam.SetPosition(0,start);beam.SetPosition(1,end);core.SetPosition(0,start);core.SetPosition(1,end);glow.SetPosition(0,start);glow.SetPosition(1,end);
-            beamProfile.ShowEndpoints(start,end,2.8f,1,true);
+            beamProfile.ShowEndpoints(start,end,2.8f,1,true,1);
         }
         void SpawnHazard()
         {
@@ -472,6 +527,9 @@ namespace Plugin.AncientCivilization
                 {
                     float hx=0,hy=0;bool sampled=blast&&AncientProductionHazardRules.BombImpactHero(roadHeroPrevious.x,roadHeroPrevious.y,current.x,current.y,after,dt,out hx,out hy);
                     bool bombHit=sampled&&AncientProductionHazardRules.BombHit(hx,hy,p.x);
+                    if(blast)
+                        AncientBossCue.Play(game, AncientBossCue.Style.Captain, AncientBossCue.Beat.Strike,
+                            p,Vector2.up,.9f);
                     if(debris||bombHit)
                     {
                         roadDodgeChain=0;roadTitle="자동주행 / Space 점프";
@@ -508,7 +566,7 @@ namespace Plugin.AncientCivilization
             {
                 case AncientProductionPhase.Breach:objective="생산장 벽 돌파 / 도난 코어 추격";break;
                 case AncientProductionPhase.Chase:objective=round+" / 자동 전진 · Space로 잔재와 폭탄 회피";break;
-                case AncientProductionPhase.Approach:objective="공격 중지 / 트럭 지붕 고리를 좌클릭해 와이어 승선";break;
+                case AncientProductionPhase.Approach:objective="공격 중지 / 트럭 콘센트에 꽂고 C로 승선";break;
                 case AncientProductionPhase.Boarding:objective="트럭 지붕으로 견인 중";break;
                 case AncientProductionPhase.Deck:objective="운송대장 전투 / 전조 회피 ▶ 블레이드·입자 레이저";break;
                 case AncientProductionPhase.Knockback:objective="급가속 / 자동주행 오토바이로 복귀";break;
@@ -587,12 +645,12 @@ namespace Plugin.AncientCivilization
                 // Keep the road, landing point and normal boss health bar unobscured.
                 // The complete objective already appears in the regular top-right HUD.
                 float left=330,span=width-646;GUI.color=Color.white;
-                string title=DeckCombat?captainWindup?"운송대장 / 공격 전조":"운송대장 / 공격 기회":sequence.Phase==AncientProductionPhase.Approach?"공격 중지 / 와이어 승선":sequence.Phase==AncientProductionPhase.Boarding?"트럭 승선 / 와이어 견인":roadTitle;
-                string cue=DeckCombat?captainWindup?(captainPattern%3==0?"근접 쓸기 / 뒤로 넘거나 거리를 벌리세요":captainPattern%3==1?"물체 투척 / 고정된 궤적을 피하거나 블레이드로 파괴":"낙하 압축판 / 바닥 표식에서 벗어나세요"):"블레이드 공격 · 우클릭 입자 수집 · 좌클릭 유지 후 놓아 레이저":sequence.Phase==AncientProductionPhase.Approach?(boardingReady?"점등된 청록 고리를 좌클릭해 트럭에 올라타세요":"트럭 접근 중 / 승선 고리가 켜질 때까지 기다리세요"):sequence.Phase==AncientProductionPhase.Boarding?"움직이는 트럭 지붕으로 견인 중":"노란 표식은 잔재 / 주황 원이 차오르면 폭탄 폭발";
+                string title=DeckCombat?captainWindup?"운송대장 / 공격 전조":"운송대장 / 공격 기회":sequence.Phase==AncientProductionPhase.Approach?"공격 중지 / 플러그 승선":sequence.Phase==AncientProductionPhase.Boarding?"트럭 승선 / 견인 중":roadTitle;
+                string cue=DeckCombat?captainWindup?(captainPattern%3==0?"근접 쓸기 / 뒤로 넘거나 거리를 벌리세요":captainPattern%3==1?"물체 투척 / 고정된 궤적을 피하거나 블레이드로 파괴":"낙하 압축판 / 바닥 표식에서 벗어나세요"):"블레이드 공격 · 우클릭 입자 수집 · 장착 중 F 유지 후 놓아 레이저":sequence.Phase==AncientProductionPhase.Approach?(boardingReady?"좌클릭으로 돌린 뒤 놓아 파란 콘센트에 꽂고 C로 승선":"트럭 접근 중 / 승선 콘센트가 켜질 때까지 기다리세요"):sequence.Phase==AncientProductionPhase.Boarding?"움직이는 트럭 지붕으로 견인 중":"노란 표식은 잔재 / 주황 원이 차오르면 폭탄 폭발";
                 if(sequence.Phase==AncientProductionPhase.Chase&&Time.time<roadCoachUntil)
                     cue=roadCoachBomb?"폭탄은 즉시 뛰지 말고 주황 원이 차오를 때 Space / 다음 표식을 보세요":"잔재에 닿기 전에 Space / 너무 일찍 뛰면 앞에서 착지합니다";
                 else if(sequence.Phase==AncientProductionPhase.Approach&&boardingReady&&boardingFailures>0)
-                    cue="몇 번이든 다시 승선 가능 / 점멸하는 청록 고리를 좌클릭하세요";
+                    cue="몇 번이든 다시 승선 가능 / 파란 콘센트에 좌클릭을 놓아 꽂고 C";
                 else if(DeckCombat&&deckAwayTime>0)
                     cue=game.hero.transform.position.x>truck.position.x?"◀ 트럭으로 복귀 / 멀리 머무르면 오토바이가 받아 줍니다":"트럭으로 복귀 ▶ / 멀리 머무르면 오토바이가 받아 줍니다";
                 GUI.Label(new Rect(left,18,span,28),title,caption);GUI.Label(new Rect(left,47,span,44),cue,hint);

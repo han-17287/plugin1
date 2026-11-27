@@ -15,9 +15,17 @@ namespace Plugin.AncientCivilization
         bool fired;
         public bool Active {get{return phase>=2&&phase<=4;}}
         public bool Cinematic {get{return phase>=3;}}
+        internal bool AdvancingCinematicCues => (phase == 3 || phase == 4) && !ExternalPaused;
         public bool Finished {get{return phase==5;}}
         public int Phase {get{return phase;}}
         public float CountdownRemaining => countdown;
+        internal bool TryPlugAnchor(out Vector2 point, out Transform carrier)
+        {
+            carrier = phase == 2 && truck ? truck.transform : null;
+            // 아래쪽에서 견인해도 플레이어 몸체가 적재함 지붕 위에 도착하도록 높이를 확보한다.
+            point = carrier ? (Vector2)carrier.position + new Vector2(-1.5f, 4.9f) : Vector2.zero;
+            return carrier;
+        }
         // The finale pauses ordinary simulation itself, so its own cinematic clock
         // must distinguish that hold from a menu, another conversation or lost focus.
         bool ExternalPaused
@@ -115,7 +123,7 @@ namespace Plugin.AncientCivilization
             var enemy=new GameObject("Truck special-operations guard").AddComponent<AncientEnemy>();enemy.Initialize(1);
             enemy.ConfigureDistrict(4,false);enemy.transform.SetParent(truck.transform,false);enemy.transform.localPosition=new Vector2(.7f,2.5f);
             game.enemies.Add(enemy);crew.Add(enemy);Persist();game.SnapCameraToHero();game.BlockGameplayInput();
-            game.Notice("최상층 ▶ 최하층 추격 / 배치된 오토바이는 E · 점프와 와이어로 트럭 지붕에 접근",5);
+            game.Notice("최상층 ▶ 최하층 추격 / 오토바이 E · 트럭 지붕 콘센트에 꽂고 C",5);
         }
         public bool Retry()
         {if(phase!=2)return false;BeginChase();return true;}
@@ -128,6 +136,8 @@ namespace Plugin.AncientCivilization
             var threat=new GameObject("Cab special-operations ambush").AddComponent<AncientEnemy>();threat.Initialize(1);threat.ConfigureDistrict(4,false);
             threat.transform.SetParent(truck.transform,false);threat.transform.localPosition=new Vector2(1.6f,2.5f);threat.FaceToward(game.hero.transform.position.x);
             game.enemies.Add(threat);crew.Add(threat);
+            AncientBossCue.Play(game, AncientBossCue.Style.Convoy, AncientBossCue.Beat.Tell,
+                (Vector2)truck.transform.position + new Vector2(1.6f, 3.45f), Vector2.left, .95f, truck.transform);
             SetCaption("움직이지 마.");Persist();game.BlockGameplayInput();
         }
         void Update()
@@ -159,12 +169,16 @@ namespace Plugin.AncientCivilization
                     fired=true;SetCaption("엎드려!");game.Sound(6);game.Shake(.18f);
                     Vector3 core=truck.transform.position+new Vector3(.5f,1.5f,0),weapon=truck.transform.position+new Vector3(1.6f,3.45f,0);
                     supportShot.enabled=true;supportShot.SetPosition(0,weapon+(weapon-core).normalized*16);supportShot.SetPosition(1,core);
+                    AncientBossCue.Play(game, AncientBossCue.Style.Convoy, AncientBossCue.Beat.Contact, core, core-weapon, 1.32f, truck.transform);
                     game.hero.CinematicPose(true,1);truck.ActivateCore();
                     foreach(var enemy in crew)if(enemy)enemy.Hit(999,true);
                 }
                 if(age>1.32f)supportShot.enabled=false;
                 if(age>1.9f)SetCaption("코어가…!");
-                if(age>2.6f){phase=4;phaseElapsed=0;SetCaption("보호부가 깨졌어!");blast.enabled=true;game.Sound(4);Persist();}
+                if(age>2.6f){
+                    AncientBossCue.Play(game, AncientBossCue.Style.Convoy, AncientBossCue.Beat.Strike,
+                        (Vector2)truck.transform.position + new Vector2(.5f,1.5f), Vector2.up, 1.9f, truck.transform);
+                    phase=4;phaseElapsed=0;SetCaption("보호부가 깨졌어!");blast.enabled=true;game.Sound(4);Persist();}
                 return;
             }
             if(phase==4)
@@ -242,7 +256,7 @@ namespace Plugin.AncientCivilization
             else if(phase==1&&!game.Story.DialogueOpen)
             {GUI.Label(new Rect(w/2-260,h-145,520,70),"회수 작전 개시까지 "+Mathf.CeilToInt(countdown)+"초\n회장실에서 E: 화물 승강로로 먼저 진입",label);}
             else if(phase==2&&!game.Paused)
-            {GUI.Label(new Rect(w/2-260,20,520,60),AncientCityLayout.Name(4-AncientFinaleRules.Zone(game.hero.transform.position.x))+" 하강 추격\n트럭 끝에서 점프 / 와이어로 지붕에 올라타세요",label);}
+            {GUI.Label(new Rect(w/2-260,20,520,60),AncientCityLayout.Name(4-AncientFinaleRules.Zone(game.hero.transform.position.x))+" 하강 추격\n좌클릭으로 지붕 콘센트에 던져 꽂고 C로 올라타세요",label);}
             if(phase==3||phase==4)
             {
                 float age=phaseElapsed;
@@ -301,7 +315,13 @@ namespace Plugin.AncientCivilization
             if(((Vector2)game.hero.transform.position-(Vector2)transform.position).sqrMagnitude>24*24)return;
             nextThrow=Time.time+1.45f;
             Vector2 origin=(Vector2)transform.position+new Vector2(-2,2.8f);
-            game.Projectiles.Spawn(origin,((Vector2)game.hero.transform.position-origin).normalized*9,12,true);
+            Vector2 direction = ((Vector2)game.hero.transform.position-origin).normalized;
+            var shot = game.Projectiles.Spawn(origin,direction*9,12,true);
+            if (shot)
+            {
+                shot.MarkBossProjectile(AncientBossCue.Style.Convoy);
+                AncientBossCue.Play(game, AncientBossCue.Style.Convoy, AncientBossCue.Beat.Strike, origin, direction, .88f, transform);
+            }
         }
         public void HitBeam(Vector2 start,Vector2 end,float damage,float bodyRadius=0,int pulseId=0)
         {

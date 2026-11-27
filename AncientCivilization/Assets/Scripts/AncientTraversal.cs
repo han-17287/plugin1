@@ -97,7 +97,7 @@ namespace Plugin.AncientCivilization
             {
                 if(game.hero.bike||game.Story.Stage<4||!((x>21&&x<26)||(lowerFinished&&x>=94&&x<=98&&game.hero.transform.position.y>3)))return false;
                 lowerRunning=lowerFinished=false;lowerElapsed=0;
-                game.Notice("옥상 기록 초기화 / 점프와 와이어로 서쪽 옥상에 올라 출발하세요.",2);return true;
+                game.Notice("옥상 기록 초기화 / 점프와 플러그 견인으로 서쪽 옥상에 올라 출발하세요.",2);return true;
             }
             return false;
         }
@@ -127,8 +127,8 @@ namespace Plugin.AncientCivilization
             var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.matrix=Matrix4x4.identity;GUI.depth=-10;
             if(!game.Story.InUpperCity)
             {
-                Sign(new Vector2(24,5.7f),"하층 공장 운송로 / 점프·와이어로 옥상 진입\nE: 기록 초기화 · 도로: 안전 경로");
-                Sign(new Vector2(33,6.5f),"운송 벨트 ▶ 가속 후 와이어 연결\n움직이는 크레인에 연결해 다음 옥상으로");
+                Sign(new Vector2(24,5.7f),"하층 공장 운송로 / 플러그 견인으로 옥상 진입\nE: 기록 초기화 · 도로: 안전 경로");
+                Sign(new Vector2(33,6.5f),"운송 벨트 ▶ 움직이는 콘센트에 꽂고 C\n견인 뒤 다음 옥상에 착지하세요");
                 Sign(new Vector2(75,6.5f),"역방향 벨트 ◀\n스윙으로 넘거나 높은 금색 발판으로 우회");
                 Sign(new Vector2(96,5.7f),"공장 운송로 끝 / E: 다시 도전");
                 if(game.hero.transform.position.y>2.5f)

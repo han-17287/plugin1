@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Plugin.PlayerCore;
 using UnityEngine;
+using Cue = Plugin.AncientCivilization.AncientBossCue;
 
 namespace Plugin.AncientCivilization
 {
@@ -31,7 +33,13 @@ namespace Plugin.AncientCivilization
             public SpriteRenderer body, halo;
             public LineRenderer warning;
             public uint activationTick;
+            public uint plugGeneration;
+            public BluePlugVisuals plugVisual;
             public SpriteRenderer[] pieces;
+            public bool fromForge;
+            public Vector2 forgeSize;
+            public float forgeAngle;
+            public Color forgeColor;
             public bool active, interrupt, container, resolved, hit, reverse, locked;
             public Motion motion;
             public AncientEnforcerShot shot;
@@ -43,6 +51,7 @@ namespace Plugin.AncientCivilization
             {
                 active = false;
                 motion = Motion.None;
+                if (plugVisual) plugVisual.Show(Vector2.zero, Vector2.zero, Vector2.zero, BluePlugPhase.Ready);
                 root.SetActive(false);
             }
         }
@@ -53,6 +62,7 @@ namespace Plugin.AncientCivilization
         readonly float left, right;
         // 한 틱에 생성된 파편은 풀의 어느 슬롯에 배정되든 다음 틱부터 움직인다.
         uint simulationTick;
+        uint plugGeneration;
         const int RingSegments = 24;
         static readonly Vector2[] RingDirections = CreateRingDirections();
         readonly Vector3[] ringPositions = new Vector3[RingSegments];
@@ -72,12 +82,13 @@ namespace Plugin.AncientCivilization
         int nextBlock;
         bool disposed;
         Material glowMaterial;
-        Sprite pixel, glow, chargeMetal;
-        readonly List<Sprite> ownedSprites = new List<Sprite>(3);
-        readonly List<Texture2D> ownedTextures = new List<Texture2D>(3);
+        Sprite pixel, glow, chargeMetal, stampedSlug;
+        readonly List<Sprite> ownedSprites = new List<Sprite>(4);
+        readonly List<Texture2D> ownedTextures = new List<Texture2D>(4);
 
         public int AllocatedSlots => pool.Count;
         public int DeniedSpawns { get; private set; }
+        internal bool PlugObjectHeld => held != null && held.active && held.motion == Motion.Orbit;
 
         public Action Interrupt;
         public Action<float> AwardEnergy;
@@ -125,7 +136,7 @@ namespace Plugin.AncientCivilization
             foreach (var texture in ownedTextures) UnityEngine.Object.Destroy(texture);
         }
 
-        public void Drop(float x, float warning, float damage, bool container = false, bool interrupt = false, float formY = 0f)
+        public void Drop(float x, float warning, float damage, bool container = false, bool interrupt = false, float formY = 0f, SpriteRenderer forge = null)
         {
             var item = Take(Motion.Forming);
             if (item == null) return;
@@ -138,8 +149,21 @@ namespace Plugin.AncientCivilization
                 Mathf.Clamp(formY > 0f ? formY : 8.6f, 2f, ArenaHeight - .12f - item.size.y * .5f));
             item.floor = FloorAt(item.position.x, item.position.y);
             item.body.sprite = interrupt ? chargeMetal : AncientEnforcerVisuals.ObjectSprite(container ? 1 : 0);
+            // 매달린 강철이 다시 투명해지지 않게 직전 조형물의 실제 자세를 인계한다.
+            item.fromForge = forge && forge.enabled && forge.sprite == item.body.sprite;
+            if (item.fromForge)
+            {
+                Vector3 scale = forge.transform.lossyScale;
+                Vector3 bounds = forge.sprite.bounds.size;
+                item.forgeSize = new Vector2(bounds.x*Mathf.Abs(scale.x), bounds.y*Mathf.Abs(scale.y));
+                item.forgeAngle = Mathf.DeltaAngle(0f, forge.transform.eulerAngles.z);
+                item.forgeColor = forge.color;
+                forge.enabled = false;
+            }
             EnsurePieces(item);
             DrawForm(item);
+            if (!interrupt)
+                Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Tell, item.position, Vector2.down, container ? 1.1f : .68f);
         }
 
         public void Blocks(float targetX, float duration, bool fast)
@@ -168,9 +192,11 @@ namespace Plugin.AncientCivilization
             item.size = new Vector2(1.7f, ArenaHeight);
             EnsurePieces(item);
             DrawWave(item);
+            Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Strike, new Vector2(item.position.x, 2.3f),
+                fromLeft ? Vector2.right : Vector2.left, .95f);
         }
 
-        public void Shot(Vector2 origin, Vector2 velocity, float damage, AncientEnforcerShot kind = AncientEnforcerShot.Bullet, float lifetime = 3f)
+        public void Shot(Vector2 origin, Vector2 velocity, float damage, AncientEnforcerShot kind = AncientEnforcerShot.Bullet, float lifetime = 3f, bool markLaunch = true)
         {
             var item = Take(Motion.Shot);
             if (item == null) return;
@@ -194,11 +220,13 @@ namespace Plugin.AncientCivilization
                     item.size = new Vector2(1.48f, .68f);
                     break;
                 default:
-                    item.body.sprite = pixel;
+                    item.body.sprite = stampedSlug;
                     item.size = new Vector2(.48f, .12f);
                     break;
             }
             DrawBody(item, VelocityAngle(item.velocity), kind == AncientEnforcerShot.Bullet ? WhiteBlue : Color.white, 1f);
+            if (markLaunch)
+                Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Strike, origin, velocity, kind == AncientEnforcerShot.Bullet ? .52f : .81f);
         }
 
         public void Beam(Vector2 start, Vector2 end, float width, float duration, float damage)
@@ -210,6 +238,7 @@ namespace Plugin.AncientCivilization
             item.duration = Mathf.Max(.06f, duration);
             item.damage = damage;
             item.value = Mathf.Max(.05f, width);
+            Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Strike, start, end - start, .93f);
             // 같은 선분의 5겹 광선은 집행관 시각 효과가 재생한다.
         }
 
@@ -224,8 +253,46 @@ namespace Plugin.AncientCivilization
         {
             if (held != null) return false;
             var item = PickWireObject(cursor, hero);
-            if (item == null) return false;
+            return item != null && BeginThrow(item, hero, bossCenter);
+        }
+
+        internal bool TryGetPlugObject(int slot, out Vector2 point, out uint generation)
+        {
+            point = Vector2.zero;
+            generation = 0;
+            if (held != null || slot < 0 || slot >= pool.Count) return false;
+            Hazard item = pool[slot];
+            if (!item.active || !IsCuttableCrate(item)) return false;
+            point = item.position;
+            generation = item.plugGeneration;
+            return true;
+        }
+
+        internal bool TryUsePlugObject(int slot, uint generation, Vector2 hero, Vector2 bossCenter)
+        {
+            if (!TryGetPlugObject(slot, out Vector2 point, out uint current) || current != generation ||
+                (point - hero).sqrMagnitude > CatchRange * CatchRange || Physics2D.Linecast(hero, point, 1 << 8))
+                return false;
+            return BeginThrow(pool[slot], hero, bossCenter);
+        }
+
+        internal void CancelPlugObject()
+        {
+            if (!PlugObjectHeld) return;
+            Hazard item = held;
+            held = null;
+            item.motion = Motion.Resting;
+            item.position = item.origin;
+            item.age = 0;
+            item.duration = item.interrupt ? 4.8f : 6f;
+            if (item.plugVisual) item.plugVisual.Show(Vector2.zero, Vector2.zero, Vector2.zero, BluePlugPhase.Ready);
+            DrawBody(item, 0, WhiteBlue, 1);
+        }
+
+        bool BeginThrow(Hazard item, Vector2 hero, Vector2 bossCenter)
+        {
             held = item;
+            if (!item.plugVisual) item.plugVisual = item.root.AddComponent<BluePlugVisuals>();
             HidePieces(item);
             item.motion = Motion.Orbit;
             item.origin = item.position;
@@ -255,6 +322,35 @@ namespace Plugin.AncientCivilization
                 best = distance;
             }
             return nearest;
+        }
+
+        internal bool UnsafeBladeGround(Vector2 point)
+        {
+            foreach(var item in pool)
+            {
+                if(!item.active)continue;
+                if(item.motion==Motion.Forming || item.motion==Motion.Falling || item.motion==Motion.Block)
+                {
+                    float width=item.motion==Motion.Block?2f:item.container?3.25f:item.size.x*.65f;
+                    if(Mathf.Abs(point.x-item.position.x)<=width && point.y<item.position.y+1f)return true;
+                }
+                if(item.motion==Motion.Wave && Mathf.Abs(point.x-item.position.x)<1.4f)return true;
+                if(item.motion==Motion.Blast && (item.position-point).sqrMagnitude<item.size.x*item.size.x)return true;
+            }
+            return false;
+        }
+
+        internal void BreakObjectsInRadius(Vector2 origin,float radius)
+        {
+            // 파괴하면서 입자 풀 항목이 늘어날 수 있으므로 기존 개수까지만 순회한다.
+            for(int index=pool.Count-1;index>=0 && !disposed;index--)
+            {
+                var item=pool[index];
+                if(!item.active || (!IsCuttableCrate(item) && !(item.motion==Motion.Shot &&
+                    (item.shot==AncientEnforcerShot.Missile || item.shot==AncientEnforcerShot.Plane))))continue;
+                if((item.position-origin).sqrMagnitude<=radius*radius && !Physics2D.Linecast(origin+Vector2.up*.08f,item.position,1<<8))
+                    Break(item,item.container?30f:14f);
+            }
         }
 
         public bool TryBlade(Vector2 origin, Vector2 direction, float reach, float width)
@@ -358,7 +454,10 @@ namespace Plugin.AncientCivilization
                             item.age = 0f;
                             item.body.enabled = true;
                             item.velocity = Vector2.down * (item.interrupt ? 2.5f : 8f);
-                            HidePieces(item);
+                            if (!item.interrupt)
+                                Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Strike, item.position, Vector2.down, item.container ? 1.04f : .65f);
+                            // 물체가 떨어지기 시작하는 프레임에도 바닥의 네 표지는 유지한다.
+                            for (int piece=0; piece<12; piece++) item.pieces[piece].enabled = false;
                         }
                         break;
                     case Motion.Falling:
@@ -427,8 +526,11 @@ namespace Plugin.AncientCivilization
             }
             DrawBody(item, 0f, Color.white, 1f);
             if (item.position.y > bottom + .01f) return;
-            game.Impact(new Vector2(item.position.x, item.floor + .13f), Sky, item.container);
+            Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Contact, new Vector2(item.position.x, item.floor + .13f),
+                Vector2.up, item.container ? 1.25f : item.interrupt ? .47f : .8f);
             HideTell(item);
+            // 착지 표지만 지워서 베거나 잡을 수 있는 물체의 모서리는 착지 프레임에도 남긴다.
+            for (int marker=12; marker<16; marker++) item.pieces[marker].enabled = false;
             if (item.interrupt || item.container)
             {
                 item.motion = Motion.Resting;
@@ -454,6 +556,7 @@ namespace Plugin.AncientCivilization
                 {
                     item.locked = true;
                     item.floor = FloorAt(item.position.x, item.position.y);
+                    Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Tell, item.position, Vector2.down, .8f);
                 }
                 else
                 {
@@ -472,7 +575,7 @@ namespace Plugin.AncientCivilization
             if (!dropped || item.resolved) return;
             item.resolved = true;
             game.Sound(4);
-            game.Impact(new Vector2(item.position.x, item.floor + .09f), Sky, true);
+            Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Contact, new Vector2(item.position.x, item.floor + .09f), Vector2.up, 1.18f);
             // 하드드랍은 그 블록이 지나간 열을 공격한다. 잠근 뒤에는 추적하지 않는다.
             Rect column = BlockColumn(item);
             TryAreaDamage(item, column.Contains(hero));
@@ -602,10 +705,15 @@ namespace Plugin.AncientCivilization
             Vector2 orbit = hero + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * .58f) * orbitRadius;
             orbit.x = Mathf.Clamp(orbit.x, left + .5f, right - .5f);
             orbit.y = Mathf.Clamp(orbit.y, .55f, ArenaHeight - .6f);
-            item.position = Vector2.Lerp(item.origin, orbit, Mathf.Clamp01(t * 4f));
+            Vector2 hand = game.hero.WireOrigin;
+            Vector2 next = Vector2.Lerp(item.origin, orbit, Mathf.Clamp01(t * 4f));
+            var wall = Physics2D.Linecast(hand, next, 1 << 8);
+            item.position = wall ? wall.point + wall.normal * .18f : next;
             DrawBody(item, t * -360f, WhiteBlue, 1f);
-            Segment(item, hero, item.position, Sky, .09f);
+            Vector2 radial = item.position - hand;
+            if (item.plugVisual) item.plugVisual.Show(hand, item.position, new Vector2(-radial.y, radial.x), BluePlugPhase.Winding);
             if (t < 1f) return;
+            if (item.plugVisual) item.plugVisual.Show(Vector2.zero, Vector2.zero, Vector2.zero, BluePlugPhase.Ready);
             item.motion = Motion.Return;
             item.age = 0f;
             item.duration = 1.55f;
@@ -761,6 +869,7 @@ namespace Plugin.AncientCivilization
             }
             item.motion = motion;
             item.activationTick = simulationTick;
+            item.plugGeneration = ++plugGeneration;
             item.active = true;
             item.interrupt = item.container = item.resolved = item.hit = item.reverse = item.locked = false;
             item.age = item.damage = item.value = item.collectionProgress = item.timeSincePull = item.angle = item.floor = 0f;
@@ -835,7 +944,11 @@ namespace Plugin.AncientCivilization
             color.a *= opacity;
             float pulse = .83f + .17f * Mathf.Sin(item.age * 24f);
             Place(item.body, item.position, item.size, degrees, color);
-            Place(item.halo, item.position, item.size + new Vector2(.78f, .65f), degrees, Tint(Sky, pulse * opacity * .46f));
+            bool smallShot = item.motion == Motion.Shot && item.shot == AncientEnforcerShot.Bullet;
+            // 탄막에서는 금속탄 하나하나가 읽히도록 본체보다 큰 원형 잔광을 줄인다.
+            Vector2 fringe = smallShot ? new Vector2(.24f, .17f) : new Vector2(.78f, .65f);
+            Place(item.halo, item.position, item.size + fringe, degrees, Tint(Sky, pulse * opacity * (smallShot ? .24f : .46f)));
+            if (item.motion == Motion.Falling) DrawLandingSeal(item, 1f);
             if (item.interrupt && IsCuttableCrate(item))
                 DrawReleaseClamps(item, opacity);
             if (item.warning && item.motion == Motion.Resting && item.container && item.age < .25f)
@@ -866,19 +979,49 @@ namespace Plugin.AncientCivilization
         void DrawForm(Hazard item)
         {
             float t = Mathf.Clamp01(item.age / item.duration);
-            float radius = Mathf.Lerp(item.container ? 2.25f : 1.55f, .06f, Mathf.SmoothStep(0f, 1f, t));
-            for (int i = 0; i < item.pieces.Length; i++)
+            float build = item.fromForge ? Mathf.Lerp(.8f,1f,t) : t;
+            float radius = Mathf.Lerp(item.container ? 2.25f : 1.55f, .06f, Mathf.SmoothStep(0f, 1f, build));
+            // 사각 파편 열두 장이 회전한 뒤 금속 표면의 4×3 격자에 물리듯 모인다.
+            float assemble = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.48f, .92f, build));
+            for (int i = 0; i < 12; i++)
             {
                 float angle = i * 2.39996f + item.age * Mathf.Lerp(6f, 20f, t);
                 float spread = radius * Mathf.Lerp(.64f, 1.15f, (i % 5) * .25f);
-                Vector2 p = item.position + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * .56f) * spread;
-                Place(item.pieces[i], p, new Vector2(.26f + i % 4 * .045f, .075f),
-                    angle * Mathf.Rad2Deg + 90f, Tint(i % 4 == 0 ? WhiteBlue : Sky, .88f));
+                Vector2 orbit = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle) * .56f) * spread;
+                Vector2 cell = new Vector2(((i % 4) - 1.5f) * item.size.x * .22f, ((i / 4) - 1) * item.size.y * .26f);
+                Vector2 p = item.position + Vector2.Lerp(orbit,cell,assemble);
+                float finalAngle = (i * 2.39996f + .92f * item.duration * Mathf.Lerp(6f,20f,.92f)) * Mathf.Rad2Deg + 90f;
+                float rotation = Mathf.Lerp(angle * Mathf.Rad2Deg + 90f, Mathf.Round(finalAngle/180f)*180f, assemble);
+                Place(item.pieces[i], p, new Vector2(.26f + i % 4 * .045f, .075f), rotation,
+                    Tint(i % 4 == 0 ? WhiteBlue : Sky, .88f - .63f*assemble));
             }
-            Place(item.body, item.position, item.size * Mathf.Lerp(.72f, 1f, t), 0f, Tint(Color.white, Mathf.SmoothStep(0f, 1f, (t - .28f) / .72f)));
-            Place(item.halo, item.position, item.size * (1.65f + radius * .32f), 0f, Tint(Sky, .6f));
-            RadiusOutline(item, new Vector2(item.position.x, item.floor + .09f), item.container ? 3.25f : item.size.x * .57f,
-                .45f, item.interrupt ? Sky : Warn, .045f + t * .04f);
+            float settle = Mathf.SmoothStep(0f,1f,t);
+            Vector2 shellSize = item.fromForge ? Vector2.Lerp(item.forgeSize,item.size,settle) : item.size * Mathf.Lerp(.72f,1f,t);
+            float shellAngle = item.fromForge ? Mathf.Lerp(item.forgeAngle,0f,settle) : 0f;
+            Color shellColor = item.fromForge ? Color.Lerp(item.forgeColor,Color.white,settle)
+                : Tint(Color.white,Mathf.SmoothStep(0f,1f,(t-.28f)/.72f));
+            Place(item.body,item.position,shellSize,shellAngle,shellColor);
+            Place(item.halo, item.position, item.size * (1.65f + radius * .32f), 0f, Tint(Sky, .47f));
+            DrawLandingSeal(item, t);
+        }
+
+        void DrawLandingSeal(Hazard item, float progress)
+        {
+            // 표지의 발은 낙하 중 접촉할 수 있는 플레이어 중심의 한계에 고정한다.
+            // 컨테이너의 외곽 파동(3.25)과 직접 낙하 열은 동시에 따로 읽힌다.
+            float reach = item.size.x*.5f + (item.damage > 0f ? .36f : 0f);
+            float radius = item.container ? 3.25f : reach;
+            Vector2 foot = new Vector2(item.position.x, item.floor + .09f);
+            Color color = item.interrupt ? Sky : Warn;
+            RadiusOutline(item, foot, radius, item.container ? .16f : .11f, Tint(color,.74f), .045f + progress*.025f);
+            float height = Mathf.Lerp(.30f,.52f,progress);
+            for (int side=0; side<2; side++)
+            {
+                float sign = side == 0 ? -1f : 1f;
+                Vector2 edge = foot + Vector2.right * (reach*sign);
+                Place(item.pieces[12+side*2], edge + Vector2.up*(height*.5f), new Vector2(.065f,height),0f,color);
+                Place(item.pieces[13+side*2], edge - Vector2.right*(sign*.13f), new Vector2(.26f,.065f),0f,color);
+            }
         }
 
         void DrawBlocks(Hazard item, bool dropped)
@@ -915,11 +1058,21 @@ namespace Plugin.AncientCivilization
             float t = Mathf.Clamp01((item.age - .72f) / Mathf.Max(.08f, item.duration - .72f));
             item.position.x = Mathf.Lerp(begin, stop, t);
             float intensity = item.age < .72f ? .25f + .16f * Mathf.Sin(item.age * 18f) : 1f;
-            Place(item.halo, item.position, new Vector2(3.6f, ArenaHeight * 1.25f), 0f, Tint(Sky, .52f * intensity));
+            float direction = item.reverse ? -1f : 1f;
+            float front = item.position.x + direction * .88f;
+            front = item.reverse ? Mathf.Max(stop,front) : Mathf.Min(stop,front);
+            Place(item.halo, item.position, new Vector2(2.55f, ArenaHeight), 0f, Tint(Sky, .32f * intensity));
+            Place(item.body, new Vector2(front,ArenaHeight*.5f), new Vector2(.06f,ArenaHeight), 0f,
+                Tint(WhiteBlue,.72f*intensity));
             for (int i = 0; i < item.pieces.Length; i++)
             {
-                Vector2 pos = new Vector2(item.position.x + Mathf.Sin(i * 2.3f + item.age * 12f) * .56f, .26f + i * .61f);
-                Place(item.pieces[i], pos, new Vector2(.6f + (i % 4) * .3f, .1f + (i % 3) * .09f), 0f,
+                // 위험 전면 뒤에 직사각형 띠가 물결처럼 붙는다. 끝의 안전 발판은 덮지 않는다.
+                float crest = .26f + .17f*Mathf.Sin(i*.68f - item.age*9f);
+                float tip = item.position.x + direction*(.88f-crest);
+                tip = item.reverse ? Mathf.Max(stop,tip) : Mathf.Min(stop,tip);
+                float tail = item.position.x - direction*(.23f + .16f*(i%4));
+                Vector2 pos = new Vector2((tip+tail)*.5f, .26f + i*.61f);
+                Place(item.pieces[i], pos, new Vector2(Mathf.Abs(tip-tail), .1f + (i%3)*.09f), 0f,
                     Tint(i % 3 == 0 ? WhiteBlue : Sky, intensity));
             }
             float edge = item.reverse ? left : right;
@@ -995,6 +1148,16 @@ namespace Plugin.AncientCivilization
                 float intensity = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
                 return Tint(Color.white, intensity * intensity);
             }, true);
+            // 후미 절개·금속 윗면·앞쪽 두 눈금이 있는 압인탄. 모든 탄이 같은 스프라이트를 공유한다.
+            stampedSlug = BuildSprite("집행관 압인탄", 24, 8, (x,y) =>
+            {
+                if (x < 2 && (y < 2 || y > 5) || x > 20 && Mathf.Abs(y - 3.5f) > (24 - x)*.75f)
+                    return Color.clear;
+                if (y == 0 || y == 7 || x == 0) return new Color(.10f,.17f,.24f);
+                if (x == 4 || x == 16) return new Color(.18f,.28f,.37f);
+                if (y == 5 || x >= 19) return WhiteBlue;
+                return y < 3 ? new Color(.28f,.43f,.53f) : Sky;
+            });
             const int width = 20;
             const int height = 18;
             chargeMetal = BuildSprite("충전 저지용 낙하물", width, height, (x, y) =>

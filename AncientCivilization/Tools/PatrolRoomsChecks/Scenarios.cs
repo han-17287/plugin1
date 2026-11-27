@@ -15,6 +15,8 @@ namespace Plugin.PlayerCore
 
         public static void Main()
         {
+            StorySocketPassageChecks.Run();
+            int socketCount=0, socketRooms=0;
             for(int id=1;id<=50;id++)
             {
                 var room=Open(id);
@@ -25,13 +27,22 @@ namespace Plugin.PlayerCore
                     "Non-finite device geometry after a full cycle in room "+id);
                 Check(room.interactions.All(i=>i.Action!=null || i.Destination>=1&&i.Destination<=50),
                     "Bad room destination in room "+id);
+                var devices=room.objects.Select(p=>p.Object).Where(go=>go.GetComponent<GrappleAnchor>()).ToArray();
+                Check(room.BluePlugSockets.Length==(id==12 ? 1 : devices.Length)+(room.machineSockets?.Length ?? 0),"Dedicated plug socket count in room "+id);
+                Check(devices.All(go=>go.GetComponent<BluePlugSocket>() &&
+                    go.GetComponent<BluePlugSocket>().BoundAnchor==go.GetComponent<GrappleAnchor>()),
+                    "Converted devices keep their room-script identity in room "+id);
+                socketCount+=room.BluePlugSockets.Length;
+                if(room.BluePlugSockets.Length>0) socketRooms++;
             }
+            CheckDistrictPlugRooms();
+            CheckSocketRoutes();
             CheckProduction();
             CheckLiving();
             CheckAdministration();
             CheckResidence();
             CheckSummit();
-            Console.WriteLine("PASS: "+checks+" authored patrol room checks (50 rooms).");
+            Console.WriteLine($"PASS: {checks} authored patrol room checks (50 rooms; {socketCount} sockets in {socketRooms} rooms).");
         }
 
         static void CheckProduction()
@@ -70,6 +81,14 @@ namespace Plugin.PlayerCore
             }
             Check(crossed,"Even from farthest hook position, the launch reaches the upper dock");
 
+            var press=Open(4);
+            var first=press.ObjectNamed("순차 고리 1").GetComponent<BluePlugSocket>();
+            var second=press.ObjectNamed("순차 고리 2").GetComponent<BluePlugSocket>();
+            Check(first.Operational && !second.Operational,"Initially only the first press socket is available");
+            press.Arrive("순차 고리 1");
+            press.Tick();
+            Check(!first.Operational && second.Operational,"Plug tow arrival advances the existing press sequence");
+
             var storage=Open(6);
             storage.Point(6,1.8f);
             storage.PrimaryHeld=true;
@@ -87,13 +106,56 @@ namespace Plugin.PlayerCore
         static void CheckLiving()
         {
             var alley=Open(12);
-            alley.Point(26,6.5f);
-            alley.Arrive("긴 빨래 리프트 고리");
-            alley.Tick();
-            Check(alley.Velocity.x>=14,"The laundry hook carries an unbraked player toward the roof");
+            var socket=alley.BluePlugSockets.Single();
+            Check(socket.Supported==(BluePlugSkill.Tow|BluePlugSkill.Swing),"Both paths share the same dedicated socket");
+            Check(socket.gameObject.GetComponent<BoxCollider2D>()==null,"The socket is not disguised as a solid surface");
+            Check(!alley.objects.Any(o=>o.Object.GetComponent<GrappleAnchor>()),"The laundry trial has no legacy hooks");
+            Check(!alley.Flag(BluePlugSkillKeys.Tow) && !alley.Flag(BluePlugSkillKeys.Swing),"The repair stations start locked");
+            alley.UseAction("진자 스윙 학습 · 교정대");
+            Check(!alley.Flag(BluePlugSkillKeys.Swing),"Swing instruction waits for the first repair station");
+            alley.UseAction("직선 견인 학습 · 첫 정비소");
+            Check(alley.Flag(BluePlugSkillKeys.Tow) && !alley.Flag(BluePlugSkillKeys.Swing),"Tow can be learned independently");
+            alley.UseAction("진자 스윙 학습 · 교정대");
+            Check(alley.Flag(BluePlugSkillKeys.Swing),"A separate station teaches swing");
+            var revisited=Open(12,alley);
+            Check(revisited.Flag(BluePlugSkillKeys.Tow) && revisited.Flag(BluePlugSkillKeys.Swing),"A room revisit restores the learned skills");
+
+            var roof=alley.ObjectNamed("견인 도착 · 세탁소 옥상").GetComponent<BoxCollider2D>();
+            var window=alley.ObjectNamed("스윙 도착 · 수선집 창턱").GetComponent<BoxCollider2D>();
+            var launch=alley.ObjectNamed("플러그 출발대").GetComponent<BoxCollider2D>();
+            float roofTop=roof.transform.position.y+roof.size.y/2;
+            float windowTop=window.transform.position.y+window.size.y/2;
+            Check(roof.usedByEffector && window.usedByEffector && roofTop-windowTop>5,
+                "The two branches end on different one-way surfaces with a clear height difference");
+            Check(socket.TowPoint.y-roofTop>.90f && Math.Abs(socket.TowPoint.x-roof.transform.position.x)<roof.size.x/2-.36f,
+                "The configured tow endpoint fits the standing capsule above the roof");
+            var departure=new Vector2(17.2f,5.18f);
+            Check(departure.x-launch.transform.position.x>launch.size.x/2+.36f,"Swing starts clear of the takeoff lip");
+            Check(socket.Point.y-Vector2.Distance(departure,socket.Point)>.90f,"The swing passes above the street");
+            Check(Vector2.Distance(new Vector2(13.5f,1.2f),socket.Point)<16,"The socket is within throw range from the street");
+            var shutter=alley.ObjectNamed("시험용 상단 셔터");
+            var barrier=shutter.GetComponent<BoxCollider2D>();
+            Check(!shutter.activeSelf && barrier && !barrier.usedByEffector,
+                "The optional obstruction starts open and is a solid shutter");
+            foreach(var destination in new[] {socket.Point,socket.TowPoint})
+            {
+                float fraction=(barrier.transform.position.x-departure.x)/(destination.x-departure.x);
+                float crossing=Vector2.Lerp(departure,destination,fraction).y;
+                Check(fraction>0 && fraction<1 && Math.Abs(crossing-barrier.transform.position.y)<barrier.size.y/2,
+                    "The shutter physically intersects the intended diagonal");
+            }
+            alley.UseAction("상단 셔터 열기·닫기 · 경로 시험");
+            Check(shutter.activeSelf,"The test switch closes the shutter");
+            Check(alley.objects.All(o=> {
+                var solid=o.Object.GetComponent<BoxCollider2D>();
+                return !solid || solid.usedByEffector || !o.Object.activeSelf || solid.transform.position.y-solid.size.y/2>2;
+            }),"Even the closed shutter leaves the walking route open");
+            alley.UseAction("상단 셔터 열기·닫기 · 경로 시험");
+            Check(!shutter.activeSelf,"The obstruction is reversible");
+            alley.Point(departure.x,departure.y,3,-2);
             alley.Axis=-1;
             alley.Tick();
-            Check(alley.Velocity.y<0 && Math.Abs(alley.Velocity.x)<1,"Countersteering over the sill converts the launch into an accurate landing");
+            Check(alley.Velocity.x==3 && alley.Velocity.y==-2,"The room itself does not auto-launch the player");
             Check(!alley.PortalOpen(11),"Laundry shortcut initially closed");
             alley.UseAction("세탁소 창을 열고 안으로 들어가기");
             alley.UseAction("세탁소 분실물 확인");
@@ -139,6 +201,18 @@ namespace Plugin.PlayerCore
             Check(!receiver.ObjectNamed("광학 유리문").activeSelf,"A beam from the correct angle strikes the receiver");
         }
 
+        static double BellBand(AudioClip clip, double frequency)
+        {
+            // 생성된 실제 샘플의 특정 주파수 성분을 측정한다.
+            double sine=0, cosine=0, step=2*Math.PI*frequency/clip.frequency;
+            for(int i=0;i<clip.Pcm.Length;i++)
+            {
+                sine+=clip.Pcm[i]*Math.Sin(i*step);
+                cosine+=clip.Pcm[i]*Math.Cos(i*step);
+            }
+            return sine*sine+cosine*cosine;
+        }
+
         static void CheckResidence()
         {
             var canal=Open(32);
@@ -156,6 +230,30 @@ namespace Plugin.PlayerCore
             canal.Point(25,5);
             canal.Tick();
             Check(!hatch.activeSelf,"A player inside the maintenance doorway can still get out");
+
+            var belfry=Open(37);
+            var birds = belfry.ObjectNamed("새 그림자 속 첫 고리");
+            belfry.Point(11,7);
+            belfry.UseAction("종 밧줄");
+            belfry.Tick();
+            var bell=belfry.roomSpeaker;
+            Check(birds.activeSelf && bell.isPlaying && bell.outputAudioMixerGroup==belfry.speakerProfile.effects,
+                "Belfry signal must open the bird window and use the effects bus");
+            Check(!belfry.WantsRoomMusic() && bell.clip.Pcm.Length<bell.clip.frequency && bell.clip.Pcm[^1]==0,
+                "Bell must leave the score running and its short decay must end silently");
+            Check(BellBand(bell.clip,329.62756)>50*BellBand(bell.clip,392),
+                "Bell fundamental must be the shared E of both residence scores");
+            belfry.TickSpeaker(true,false,true);
+            Check(!bell.isPlaying && birds.activeSelf,"Pause must also hold the bell");
+            belfry.TickSpeaker(false,false,true);
+            Check(bell.isPlaying,"Unpause failed to release the held bell");
+            belfry.TickSpeaker(false,true,true);
+            belfry.TickSpeaker(false,false,true);
+            Check(!bell.isPlaying,"Unmuting must not replay an old bird warning");
+            belfry.Tick(155);
+            Check(!birds.activeSelf,"Changing the bell altered the 3.1 second open interval");
+            belfry.Tick(201);
+            Check(birds.activeSelf && bell.isPlaying,"The next 7.1 second bird cycle must retain its signal");
         }
 
         static void CheckSummit()
@@ -196,6 +294,12 @@ namespace Plugin.PlayerCore
             Check(!station.WantsRoomMusic(),"A metal sound effect should not stop the soundtrack");
             station.TickSpeaker(false,false,false);
             Check(station.roomSpeaker.isPlaying,"A radio sound effect incorrectly required a music grant");
+            station.UseAction("무전 수신 주파수 맞추기");
+            Check(station.WantsRoomMusic(),"The archive glass four-bar cue must request the music bus");
+            station.TickSpeaker(false,false,false);
+            Check(!station.roomSpeaker.isPlaying,"A 120 BPM glass stem played against the independent summit score");
+            station.TickSpeaker(false,false,true);
+            Check(station.roomSpeaker.isPlaying,"The glass clue failed to play after the score yielded");
             station.TrialActive=true;station.Grounded=false;
             station.Point(5,4,8,9);station.Tick();
             station.Point(46,8);station.Tick();

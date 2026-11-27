@@ -83,7 +83,7 @@ namespace Plugin.AncientCivilization
                     chargeText=!hasEnergy?"입자 없음 · 우클릭 수집":ready?"준비 완료 · 놓아서 발사":"레이저 조준 "+percent+"%";
                     chargeMeasure.text=chargeText;chargeSize=cursorStyle.CalcSize(chargeMeasure);
                 }
-                Color chargeColor=!hasEnergy?AncientGame.Orange:ready?new Color(1,.85f,.2f):new Color(.55f,.9f,1);
+                Color chargeColor=!hasEnergy?AncientGame.Orange:ready?new Color(1,.85f,.2f):new Color(1f,.69f,.26f);
                 var placement=AncientCombatFeedbackRules.ChargeLabel(Screen.width,Screen.height,Input.mousePosition.x,Screen.height-Input.mousePosition.y,chargeSize.x,chargeSize.y,scale);
                 var box=new Rect(placement.X,placement.Y,placement.Width,placement.Height);
                 GUI.color=new Color(.015f,.035f,.05f,.9f);GUI.DrawTexture(box,Texture2D.whiteTexture);

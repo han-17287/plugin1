@@ -1,4 +1,5 @@
 using UnityEngine;
+using Cue = Plugin.AncientCivilization.AncientBossCue;
 using Unity.Profiling;
 
 namespace Plugin.AncientCivilization
@@ -26,6 +27,7 @@ namespace Plugin.AncientCivilization
         Vector2 retreatStart, explosionCenter;
         float left, right, middle, stageTime, nextEvent, rest, recoveryLength;
         float counterTime, counterCooldown, counterLight, absorbed, targetX, retreatTime = -1f, explosionTime = -1f;
+        float forgeGestureAge;
         int phase = 1, moveIndex, emitted;
         bool intro, activeMove, barrier, stopped, inBack;
 
@@ -56,6 +58,7 @@ namespace Plugin.AncientCivilization
             middle = (left + right) * .5f;
             // 컷신 중 처음 쓰는 자세를 만들면서 화면이 끊기지 않게 미리 준비한다.
             for (int i = 0; i < 6; i++) AncientEnforcerVisuals.PoseSprite(i);
+            AncientEnforcerVisuals.PrewarmTransitions();
             for (int i = 0; i < 5; i++) AncientEnforcerVisuals.ObjectSprite(i);
             visuals = new AncientEnforcerVisuals(game, transform);
             hazards = new AncientEnforcerHazards(game, transform, left, right);
@@ -115,7 +118,19 @@ namespace Plugin.AncientCivilization
                 return;
             }
             using (ForgeTick.Auto()) UpdateSculpture();
-            if (stageTime >= nextEvent) AdvanceMove();
+            if (stageTime >= nextEvent)
+            {
+                int previous = emitted;
+                AdvanceMove();
+                // 두 번째 파도 경고만 나간 순간에는 발사 반동을 주지 않는다.
+                if (emitted > previous && (move != AncientEnforcerMove.Waves || previous != 1))
+                {
+                    bool gun = move == AncientEnforcerMove.Gun;
+                    bool directing = ForgeGestures() > 0;
+                    if (directing) forgeGestureAge = 0;
+                    owner.ReleaseEnforcerGesture(gun && previous < AncientEnforcerRules.GunBursts ? .56f : .88f, gun || directing);
+                }
+            }
         }
 
         void MoveBoss(float dt)
@@ -131,7 +146,31 @@ namespace Plugin.AncientCivilization
             else if (activeMove && move == AncientEnforcerMove.Gun) { x = targetX; y = .78f; }
             transform.position = Vector2.MoveTowards(position, new Vector2(x, y), (rest > 0 ? 5.8f : 6.7f) * dt);
             int pose = rest > 0 ? 3 : Telegraphing ? 1 : activeMove && move == AncientEnforcerMove.Gun ? 2 : 0;
-            owner.SetEnforcerPose(pose, facing, inBack ? .7f : 1, inBack ? .64f : 1);
+            // 방아쇠가 떨어지기 전에 기록 장갑을 펼쳐 실제 발사 프레임에는 지시 자세에 도착한다.
+            bool preparingGun = activeMove && move == AncientEnforcerMove.Gun && emitted == 0 && rest <= 0;
+            if (preparingGun && nextEvent - stageTime <= AncientEnforcerBodyMotion.GestureSeconds + dt) pose = 2;
+            int forgeCount = ForgeGestures();
+            if (rest <= 0 && activeMove && forgeCount > 0)
+            {
+                forgeGestureAge += dt;
+                pose = AncientEnforcerBodyMotion.ForgePose(emitted, forgeCount, forgeGestureAge,
+                    nextEvent - stageTime, dt, move == AncientEnforcerMove.Missiles);
+            }
+            bool planted = (rest > 0 && transform.position.y <= .2f) || barrier;
+            owner.SetEnforcerPose(pose, facing, inBack ? .7f : 1, 1, planted, Telegraphing ? WindupProgress : 0, dt);
+        }
+
+        int ForgeGestures()
+        {
+            switch (move)
+            {
+                case AncientEnforcerMove.Drop: return AncientEnforcerRules.Drops;
+                case AncientEnforcerMove.Bombard: return AncientEnforcerRules.BombardVolleys;
+                case AncientEnforcerMove.Blocks: return phase == 3 ? 4 : 3;
+                case AncientEnforcerMove.Missiles: return 7;
+                case AncientEnforcerMove.Planes: return AncientEnforcerRules.PlaneCount;
+                default: return 0;
+            }
         }
 
         void BeginMove()
@@ -158,6 +197,7 @@ namespace Plugin.AncientCivilization
                     {
                         game.Sound(AncientEquipmentCue.Sweep, -.68f);
                         game.Notice("왼쪽 파도 / 오른쪽 끝으로", 2.6f);
+                        Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Tell, new Vector2(left + .45f, 2.3f), Vector2.right, .85f);
                     }
                     break;
                 case AncientEnforcerMove.Echoes:
@@ -176,6 +216,7 @@ namespace Plugin.AncientCivilization
                     transform.position = new Vector2(middle, .45f);
                     game.Notice("입자 흡수 / 15초 안에 낙하물을 베거나 집행관에게 던지세요.", 4.3f);
                     game.Sound(AncientEquipmentCue.Overload);
+                    Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Tell, owner.AimPoint, Vector2.up, 1.1f);
                     break;
             }
         }
@@ -246,7 +287,7 @@ namespace Plugin.AncientCivilization
         {
             if (emitted >= AncientEnforcerRules.Drops) { EndMove(1.85f); return; }
             bool container = emitted == AncientEnforcerRules.Drops - 1;
-            hazards.Drop(targetX, container ? .4f : .25f, container ? 26 : 16, container, false, 7.8f);
+            hazards.Drop(targetX, container ? .4f : .25f, container ? 26 : 16, container, false, 7.8f, sculpture);
             emitted++;
             targetX = ClampX(game.hero.transform.position.x, 1.6f);
             nextEvent += emitted >= AncientEnforcerRules.Drops ? .8f : emitted == 4 ? 1.55f : .99f;
@@ -262,7 +303,8 @@ namespace Plugin.AncientCivilization
                 Vector2 launch = bombard ? new Vector2(middle + (i - 2) * 2.65f, 7.7f) : owner.AimPoint + Vector2.up * .3f;
                 Vector2 velocity = AimFrom(launch) * (bombard ? 11 : 13);
                 if (!bombard) velocity = Rotate(velocity, (i - 1.5f) * 15);
-                hazards.Shot(launch, velocity, 13, AncientEnforcerShot.Missile, 3.4f);
+                // 다섯 발 폭격은 각 발사대에, 한 총구의 부채꼴은 가운데 한 발에만 섬광을 붙인다.
+                hazards.Shot(launch, velocity, 13, AncientEnforcerShot.Missile, 3.4f, bombard || i == count / 2);
             }
             emitted++;
             game.Sound(4);
@@ -277,7 +319,7 @@ namespace Plugin.AncientCivilization
                 int count = phase == 2 ? AncientEnforcerRules.EnhancedPellets : 1;
                 Vector2 aim = AimFrom(muzzle) * 15.5f;
                 for (int i = 0; i < count; i++)
-                    hazards.Shot(muzzle, Rotate(aim, (i - (count - 1) * .5f) * 13f), 9, AncientEnforcerShot.Bullet, 2.6f);
+                    hazards.Shot(muzzle, Rotate(aim, (i - (count - 1) * .5f) * 13f), 9, AncientEnforcerShot.Bullet, 2.6f, i == count / 2);
                 emitted++;
                 game.Sound(4);
                 nextEvent += emitted == AncientEnforcerRules.GunBursts ? .42f : .24f;
@@ -305,6 +347,7 @@ namespace Plugin.AncientCivilization
                 case 1:
                     game.Sound(AncientEquipmentCue.Sweep, .68f);
                     game.Notice("곧 오른쪽 파도 / 지금 왼쪽 끝으로", 4.7f);
+                    Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Tell, new Vector2(right - .45f, 2.3f), Vector2.left, .85f);
                     nextEvent += 4.7f;
                     break;
                 case 2:
@@ -328,7 +371,7 @@ namespace Plugin.AncientCivilization
                 barrier = false;
                 hazards.Clear();
                 visuals.ClearBarrier();
-                game.Impact(owner.AimPoint, Light, true);
+                Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Strike, owner.AimPoint, Vector2.up, 1.48f);
                 explosionCenter = owner.AimPoint;
                 explosionTime = 0;
                 TickExplosion(0);
@@ -355,7 +398,7 @@ namespace Plugin.AncientCivilization
             barrier = false;
             hazards.Clear();
             visuals.ClearBarrier();
-            game.Impact(owner.AimPoint, Light, true);
+            Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Contact, owner.AimPoint, Vector2.up, 1.18f);
             game.Shake(.18f);
             game.Sound(AncientEquipmentCue.ShortCircuit);
             game.Notice("흡수 중단 / 집행관 스턴", StunSeconds);
@@ -386,6 +429,7 @@ namespace Plugin.AncientCivilization
             counterTime = .53f;
             counterCooldown = 2.15f;
             counterTarget = game.hero.transform.position;
+            Cue.Play(game, Cue.Style.Enforcer, Cue.Beat.Tell, owner.AimPoint, counterTarget - owner.AimPoint, .68f);
         }
 
         // 페이즈 경계와 에디터 재현 모두 남아 있는 공격을 같은 순서로 회수한다.
@@ -534,6 +578,22 @@ namespace Plugin.AncientCivilization
             point = Vector2.zero;
             return !stopped && !intro && hazards.TryWireTarget(cursor, hero, out point);
         }
+        internal int PlugObjectSlots => stopped || intro ? 0 : hazards.AllocatedSlots;
+        internal bool PlugObjectHeld => !stopped && hazards.PlugObjectHeld;
+        internal void CancelPlugObject() { if (!stopped) hazards.CancelPlugObject(); }
+        internal bool TryGetPlugObject(int slot, out Vector2 point, out uint generation)
+        {
+            point = Vector2.zero;
+            generation = 0;
+            return !stopped && !intro && hazards.TryGetPlugObject(slot, out point, out generation);
+        }
+        internal bool TryUsePlugObject(int slot, uint generation, Vector2 origin) =>
+            !stopped && !intro && hazards.TryUsePlugObject(slot, generation, origin, owner.AimPoint);
+        internal bool UnsafeBladeGround(Vector2 point) => !stopped && !intro && hazards != null && hazards.UnsafeBladeGround(point);
+        internal void BreakObjectsInRadius(Vector2 point, float radius)
+        {
+            if (!stopped && !intro && hazards != null) hazards.BreakObjectsInRadius(point,radius);
+        }
         public bool TryBlade(Vector2 origin, Vector2 direction, float reach, float width) =>
             !stopped && !intro && hazards.TryBlade(origin, direction, reach, width);
         public void Collect(Vector2 point, float radius, float dt)
@@ -548,6 +608,7 @@ namespace Plugin.AncientCivilization
 
         void ClearPresentation()
         {
+            Cue.Clear(game, Cue.Style.Enforcer);
             HideExplosion();
             if (counterMark) counterMark.enabled = false;
             if (sculpture) sculpture.enabled = false;

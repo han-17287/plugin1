@@ -5,6 +5,47 @@ class MovementChecks
     static int count;
     static void Check(bool value,string text){if(!value)throw new Exception(text);count++;}
     static bool Near(float a,float b){return Math.Abs(a-b)<.0001f;}
+    // 빨래골목 출발대에서 기존 소켓을 견인하거나 오른쪽으로 스윙하는 60Hz 경로를 읽는다.
+    static void CheckLaundryCamera(float aspect, bool tow)
+    {
+        const float dt=1f/60, half=6.35f, socketX=23.5f, socketY=9.25f, startX=17.25f, startY=5.14f;
+        float halfWidth=half*aspect, x=startX, y=startY, lookX=1.7f, lookY=2.2f;
+        float cx=x+lookX, cy=y+lookY, angle=MathF.Atan2(startY-socketY,startX-socketX);
+        float radius=MathF.Sqrt((startX-socketX)*(startX-socketX)+(startY-socketY)*(startY-socketY));
+        float speed=8*(-MathF.Sin(angle))-MathF.Cos(angle);
+        bool exitSeen=false;
+        for(int step=0;step<120;step++)
+        {
+            float oldX=x, oldY=y;
+            if(tow)
+            {
+                float t=Math.Clamp((step+1)*dt*48/7.375f,0,1);
+                x=startX+(22.47f-startX)*t;
+                y=startY+(10.35f-startY)*t;
+            }
+            else
+            {
+                float tx=-MathF.Sin(angle), ty=MathF.Cos(angle);
+                speed=Math.Clamp(speed+(-32*ty+15*tx)*dt,-22,22);
+                angle+=speed*dt/radius;
+                x=socketX+radius*MathF.Cos(angle); y=socketY+radius*MathF.Sin(angle);
+            }
+            lookX=AncientCameraRules.EaseLook(lookX,AncientCameraRules.LaundryLeadX((x-oldX)/dt,1,tow,22.47f-x),dt);
+            lookY=AncientCameraRules.EaseLook(lookY,AncientCameraRules.LaundryLeadY((y-oldY)/dt,tow,10.35f-y),dt);
+            cx=AncientCameraRules.LaundryFrameAxis(cx,x,lookX,dt,halfWidth,1.2f,1.2f,halfWidth,48-halfWidth);
+            cy=AncientCameraRules.LaundryFrameAxis(cy,y,lookY,dt,half,1.3f,1.5f,half-2.6f,16.5f-half);
+            Check(Math.Abs(cx-x)<halfWidth-.6f && Math.Abs(cy-y)<half-1f, "Officer including boots remains inside frame");
+            bool nearing=tow ? x>=21.2f : x>=27.25f;
+            if(nearing)
+            {
+                float ledgeX=tow?23.5f:30, ledgeY=tow?9.15f:3.5f;
+                Check(Math.Abs(cx-ledgeX)<halfWidth-.3f && Math.Abs(cy-ledgeY)<half-.3f, "Next roof or window visible before exit");
+                exitSeen=true;
+            }
+            if(tow?x>=22.47f:x>=28.7f)break;
+        }
+        Check(exitSeen,"Authored laundry crossing reached the observation window");
+    }
     static void CameraChecks()
     {
         foreach(float direction in new[]{-1f,1})
@@ -26,6 +67,23 @@ class MovementChecks
                     previousZoom=zoom;previousLook=look;speed=Math.Max(0,speed-22f/hz);
                 }
             }
+        }
+        foreach (int hz in new[] { 30, 60, 120 })
+        {
+            float lead = 0;
+            for (int i = 0; i < hz; ++i)
+                lead = AncientCameraRules.EaseLook(lead, AncientCameraRules.LaundryLeadX(18, -1, false, 0), 1f / hz);
+            Check(lead > 4.3f, "Looking into an eastward swing follows momentum while the officer brakes left");
+            float turned = AncientCameraRules.EaseLook(lead, AncientCameraRules.LaundryLeadX(-18, -1, false, 0), 1f / hz);
+            Check(turned > 0 && turned < lead, "Sudden reversal cannot teleport the laundry camera behind the officer");
+            Check(AncientCameraRules.LaundryLeadX(0, -1, true, 8) > 2, "Idle connected preview gives room to the socket");
+            Check(AncientCameraRules.LaundryLeadY(-12, false, 0) < 1 &&
+                AncientCameraRules.LaundryLeadY(20, true, 5) <= 2.8001f, "Window descent opens below, roof pull retains visible feet");
+        }
+        foreach (float aspect in new[] { 4f/3, 16f/9 })
+        {
+            CheckLaundryCamera(aspect, true);
+            CheckLaundryCamera(aspect, false);
         }
         Check(Near(AncientCameraRules.TravelZoom(true,false,false,0),7.5f),"A wire always retains its authored wide view");
         Check(Near(AncientCameraRules.TravelZoom(false,true,false,30),6.8f),"A motorcycle keeps its distinct framing during a jump");

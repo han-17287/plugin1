@@ -303,7 +303,8 @@ namespace Plugin.PlayerCore
                     if(!unheard||!Flag(discoveries[channel]))break;
                 }
                 Place(needle,27.9f+1.4f*channel,6);Say(hints[channel]);
-                TuneRadio(clips[channel], channel == 0);
+                // 세 번째 채널의 유리 선율도 네 마디의 독립된 곡이다. 짧은 금속음만 구역 음악과 함께 튼다.
+                PlayRoomCue(clips[channel], channel != 1);
             },2.25f);
             Box("무착지 결승 수신선",46,8.8f,.12f,3.7f,SummitBeacon,false,2);
             bool launched=false,completed=false;

@@ -2,7 +2,7 @@ using System;
 
 namespace Plugin.AncientCivilization
 {
-    // The bright blue body defines collision; the wider additive sheath is light only.
+    // 빔의 밝은 중심 폭이 판정 폭이다. 바깥쪽 빛은 충돌 범위에 포함되지 않는다.
     public static class AncientBeamRules
     {
         public const float Range=24,Duration=.38f,FadeSeconds=.12f,CastDepth=.02f,MinimumLength=.025f;

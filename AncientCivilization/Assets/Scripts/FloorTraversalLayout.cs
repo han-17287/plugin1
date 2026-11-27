@@ -7,7 +7,7 @@ namespace Plugin.PlayerCore
     {
         public const int FloorCount=5;
         public static readonly string[] Names={"생산구","생활부","행정구","상층 거주구","최상층"};
-        public static readonly string[] Hints={"안전한 바닥에서 세 앵커를 먼저 연습하세요.","탐조등에 계속 머무르면 경보. 돌진으로 빠져나오거나 천장 위쪽을 이용하세요.","보안 셔터의 열림을 기다리거나 위쪽 천장으로 우회하세요.","보호 발판 위 환기류로 올라가세요. 돌진 경로에는 바람이 개입하지 않습니다.","흐린 앵커는 잠시 비활성입니다. 다음 열림을 기다리거나 천장으로 우회하세요."};
+        public static readonly string[] Hints={"안전한 바닥에서 세 콘센트로 먼저 연습하세요.","탐조등에 계속 머무르면 경보. 견인으로 빠져나오거나 위쪽 콘센트로 우회하세요.","보안 셔터가 열리길 기다리거나 상부 콘센트로 우회하세요.","보호 발판 위 환기류로 올라가세요. 견인 중에는 바람의 영향을 받지 않습니다.","불이 꺼진 콘센트는 잠깐 사용할 수 없습니다. 다시 켜지길 기다리거나 위쪽 길로 우회하세요."};
         public static readonly string[] Resources={"Production","Living","Administration","Residence","Top"};
         public static readonly string[,] Stages={
             {"교대 통로","운송 벨트","검수 회랑","장비 검수실","코어 재고 관리실"},

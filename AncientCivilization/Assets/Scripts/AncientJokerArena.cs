@@ -83,7 +83,7 @@ namespace Plugin.AncientCivilization
                 panels[i] = MakeDeck("옥상 가동 발판",point,i==2 || i==3 ? 2.17f : 1.70f);
             }
             shadow = Art("진짜 모자 그림자",Prop.Shadow,Vector2.zero,9);
-            ring = Art("공중 낚아채기 · 와이어 고리",Prop.Ring,Vector2.zero,14);
+            ring = Art("공중 낚아채기 · 파란 콘센트",Prop.Ring,Vector2.zero,14);
             if (ring) ring.gameObject.SetActive(false);
             shadow.enabled = false;
             SetPhase(1);

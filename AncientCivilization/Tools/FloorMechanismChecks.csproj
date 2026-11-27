@@ -6,7 +6,6 @@
     <Compile Include="../Assets/Scripts/GrappleData.cs"/><Compile Include="../Assets/Scripts/GrappleAnchorData.cs"/>
     <Compile Include="../Assets/Scripts/GrappleAnchor.cs"/><Compile Include="../Assets/Scripts/FixedGrappleAnchor.cs"/>
     <Compile Include="../Assets/Scripts/OneUseGrappleAnchor.cs"/><Compile Include="../Assets/Scripts/MovingGrappleAnchor.cs"/>
-    <Compile Include="../Assets/Scripts/PlayerGrapple.cs"/>
     <Compile Include="../Assets/Scripts/FloorTraversalLayout.cs"/><Compile Include="../Assets/Scripts/FloorTraversalProfile.cs"/><Compile Include="../Assets/Scripts/TraversalFloorMechanism.cs"/><Compile Include="../Assets/Scripts/TraversalLayout.cs"/>
   </ItemGroup>
 </Project>

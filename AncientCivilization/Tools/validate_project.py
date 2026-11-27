@@ -19,17 +19,36 @@ def check(condition, description):
 
 
 def validate_enforcer_poses(image):
+    from PIL import Image
     source = (ROOT / 'Assets/Scripts/AncientEnforcerVisuals.cs').read_text()
     def array(name):
         return re.search(r'\b' + name + r'\s*=\s*\{([^}]+)\}', source).group(1)
+
+    def check_uniform(atlas, cell, label):
+        # 몸통과 자락을 샘플링해 실제 자세가 바뀔 때 옛 검정·금색 제복이 끼는지 확인한다.
+        x, y, w, h = cell
+        sample = atlas.crop((x, y + h//5, x + w, y + 4*h//5)).resize(
+            (w//3, h//5), Image.Resampling.NEAREST)
+        pixels = sample.load()
+        colors = (pixels[col, row] for row in range(sample.height) for col in range(sample.width))
+        opaque = [rgba for rgba in colors if rgba[3] >= 224]
+        teal = sum(22 <= g <= 155 and g-r >= 24 and 0 <= b-g <= 19 for r, g, b, _ in opaque)
+        silver = sum(r >= 100 and abs(b-g) < 20 and g-r > 5 and b-r > 6 for r, g, b, _ in opaque)
+        check(opaque and teal >= .30*len(opaque) and silver >= .08*len(opaque),
+              f'{label} carries the enforcer teal cloth and pale silver lining')
 
     cells = [tuple(map(int, re.findall(r'\d+', rect))) for rect in re.findall(r'Rect\(([^)]+)\)', array('PoseCells'))]
     feet = [tuple(map(int, re.findall(r'\d+', point))) for point in re.findall(r'Vector2\(([^)]+)\)', array('PoseFeet'))]
     scales = list(map(int, re.findall(r'\d+', array('PosePixelsPerUnit'))))
     check(image.mode == 'RGBA' and len(cells) == len(feet) == len(scales) == 6, 'six RGBA enforcer poses with pivots and individual import scale')
     alpha = image.getchannel('A').point(lambda v: 255 if v >= 16 else 0)
+    # 눈금 영역과 금테를 제외한, 원화 가운데 검은 불투명 가면을 확인한다.
+    visors = [(260, 55), (772, 55), (775, 567), (261, 567), (1287, 54), (1344, 637)]
+    # 제복 바깥으로 펼쳐진 투사면 안쪽은 배경이 비치면서도 푸른빛이 남아야 한다.
+    projections = [(377, 167), (882, 40), (650, 681), (441, 549), (1097, 50), (1380, 680)]
     boxes = []
     for index, ((x, y, w, h), (px, py), scale) in enumerate(zip(cells, feet, scales)):
+        check_uniform(image, (x, y, w, h), f'enforcer pose {index}')
         check(0 <= x < px < x+w <= image.width and 0 <= y < py < y+h <= image.height, f'enforcer pose {index} source bounds and pivot')
         check(all(x+w <= a or b <= x or y+h <= c or d <= y for a, b, c, d in boxes), f'enforcer pose {index} slice independence')
         boxes.append((x, x+w, y, y+h))
@@ -39,7 +58,154 @@ def validate_enforcer_poses(image):
         check(1 < left < right < w-1 and 1 < top < bottom < h-1, f'enforcer pose {index} equipment has transparent margins')
         check(abs(y + bottom - py) <= 3, f'enforcer pose {index} boots meet the foot pivot')
         height = (bottom - top) / scale
-        check((3.30 if index == 0 else 2.20) < height < 3.5, f'enforcer pose {index} fits the in-game silhouette')
+        check(2.08 < height < 2.57, f'enforcer pose {index} fits the in-game silhouette')
+        vx, vy = visors[index]
+        face = [image.getpixel((vx + dx, vy + dy)) for dx in range(-2, 3) for dy in range(-2, 3)]
+        check(sum(a > 225 and max(r, g, b) < 100 for r, g, b, a in face) >= 18,
+              f'enforcer pose {index} covers the face with the dark visor')
+        hx, hy = projections[index]
+        panel = [image.getpixel((hx + dx, hy + dy)) for dx in range(-2, 3) for dy in range(-2, 3)]
+        check(sum(8 < a < 223 and b > r + 60 for r, g, b, a in panel) >= 16,
+              f'enforcer pose {index} shows a translucent projected record')
+
+    # 두 인물을 같은 카메라에 뒀을 때의 측정값. 파일 픽셀 수가 커져도 월드 비율은 같아야 한다.
+    from statistics import median
+    reference = (ROOT / 'Assets/Scripts/AncientBossAtlas.cs').read_text()
+    ref_cells = re.findall(r'new Rect\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', reference)
+    ref_cell = tuple(map(int, ref_cells[5 * 6]))
+    ref_ppu = float(re.search(r'\bPpu\s*=\s*\{([^}]+)', reference).group(1).split(',')[5].strip().rstrip('f'))
+
+    def standing_measurements(atlas, cell, density):
+        x, y, w, h = cell
+        alpha = atlas.crop((x, y, x + w, y + h)).getchannel('A').point(lambda a: 255 if a >= 110 else 0)
+        _, top, _, bottom = alpha.getbbox()
+        shoulders = []
+        for row in range(top + round((bottom-top) * .16), top + round((bottom-top) * .23)):
+            span = alpha.crop((0, row, w, row + 1)).getbbox()
+            if span:
+                shoulders.append((span[2] - span[0]) / density)
+        return (bottom-top) / density, median(shoulders)
+
+    height, shoulders = standing_measurements(image, cells[0], scales[0])
+    with Image.open(ROOT / 'Assets/Resources/Art/Boss5.png') as secretary:
+        ref_height, ref_shoulders = standing_measurements(secretary, ref_cell, ref_ppu)
+    check(abs(height - ref_height) <= .04 and abs(shoulders - ref_shoulders) <= .04,
+          f'enforcer and secretary share standing stature and shoulder cut ({height:.3f}/{ref_height:.3f} high, {shoulders:.3f}/{ref_shoulders:.3f} wide)')
+
+    # 전환은 통짜 본체 한 장씩이다. 두 손/팔과 코트가 다른 실제 윤곽인지 발 맞춤 후 검사한다.
+    from PIL import ImageChops
+    bridge_source = (ROOT / 'Assets/Scripts/AncientEnforcerBridgeAtlas.cs').read_text()
+    def bridge_points(name, kind):
+        block = re.search(r'\b' + name + r'\s*=\s*\{([^}]+)', bridge_source).group(1)
+        return [tuple(map(float, re.findall(r'-?\d+(?:\.\d+)?', value)))
+                for value in re.findall(r'new ' + kind + r'\(([^)]+)\)', block)]
+    rectangles = bridge_points('Cells', 'Rect')
+    boots = bridge_points('Feet', 'Vector2')
+    mask_rectangles = bridge_points('OpticCells', 'Rect')
+    check(len(rectangles) == len(boots) == len(mask_rectangles) == 8, 'four directed court gestures with two native in-between exposures each')
+    with Image.open(ROOT / 'Assets/Resources/Art/RecordEnforcerBridge.png') as bridges, \
+         Image.open(ROOT / 'Assets/Resources/Art/RecordEnforcerBridgeOptics.png') as masks:
+        previous = None
+        for index, (cell, foot, optic) in enumerate(zip(rectangles, boots, mask_rectangles)):
+            x, y, w, h = map(int, cell)
+            check_uniform(bridges, (x, y, w, h), f'enforcer bridge {index}')
+            fx, fy = map(int, foot)
+            region = bridges.crop((x, y, x + w, y + h)).getchannel('A').point(lambda a: 255 if a >= 110 else 0)
+            l, t, r, b = region.getbbox()
+            check(2 <= l and 2 <= t and r <= w-2 and b <= h-2 and abs(y+b-fy) <= 2,
+                  f'enforcer bridge {index} has grounded boots and transparent padding')
+            mx, my, mw, mh = map(int, optic)
+            check(0 <= mx < mx + mw <= masks.width and 0 <= my < my + mh <= masks.height
+                  and masks.crop((mx, my, mx + mw, my + mh)).getchannel('A').getbbox(),
+                  f'enforcer bridge {index} has registered wrist and lens lights')
+            upper_body = region.crop((fx-x-135, fy-y-420, fx-x+235, fy-y-226))
+            if index % 2:
+                changed = ImageChops.difference(previous, upper_body).histogram()[255]
+                check(changed > 130, f'enforcer transition {index//2} changes the upper-body silhouette ({changed} native pixels)')
+            previous = upper_body
+
+
+def validate_combat_pose_transitions(Image):
+    """중간 자세가 실제 프레임에서 잘리거나 발 피벗이 튀는 회귀를 검사한다."""
+    art = ROOT / 'Assets/Resources/Art'
+    sources = ROOT / 'Assets/Scripts'
+    rig = (ROOT / 'Tools/Art/render_joker_motion.py').read_text()
+    pairs = re.search(r'^TRANSITIONS\s*=\s*\[([^\]]+)\]', rig, re.M)
+    check(pairs is not None, 'Joker transition order exists in the art rig')
+    pairs = [tuple(map(int, p)) for p in re.findall(r'\((\d+),\s*(\d+)\)', pairs[1])]
+
+    def cell_bounds(image, columns, frame):
+        side = image.width // columns
+        x, y = frame % columns * side, frame // columns * side
+        return image.crop((x, y, x + side, y + side)).getbbox()
+
+    def silhouette(image):
+        return image.getchannel('A').point(lambda value: 255 if value >= 96 else 0)
+
+    with Image.open(art / 'JokerRifleMotion.png') as key, Image.open(art / 'JokerRifleTransitions.png') as middle:
+        check(len(pairs) == 25 and middle.width == middle.height == key.width // 6 * 5,
+              'Joker intermediate sheet matches the 25 live motion keys at native density')
+        key, middle = silhouette(key), silhouette(middle)
+        for i, (start, finish) in enumerate(pairs):
+            a, b, c = cell_bounds(key, 6, start), cell_bounds(middle, 5, i), cell_bounds(key, 6, finish)
+            check(all((a, b, c)) and min(b[:2]) >= 2 and max(b[2:]) <= middle.width // 5 - 2,
+                  f'Joker transition {i} silhouette fits its own cell')
+            # 달리기 사이의 양발이 공중에서 교차하는 구간에는 발 고정을 요구하지 않는다.
+            if start not in (20, 21, 22, 23):
+                check(min(a[3], c[3]) - 1 <= b[3] <= max(a[3], c[3]) + 1,
+                      f'Joker transition {i} boots follow both end poses')
+
+    layout = (sources / 'AncientEnforcerBridgeAtlas.cs').read_text()
+    def coordinates(name):
+        entry = re.search(r'\b' + name + r'\s*=\s*\{([^}]+)\}', layout)[1]
+        return [tuple(map(int, re.findall(r'\d+', row))) for row in re.findall(r'\(([^)]+)\)', entry)]
+
+    cells, feet = coordinates('Cells'), coordinates('Feet')
+    check(len(cells) == len(feet) == 8, 'Eight enforcer intermediate sprites have ground pivots')
+    with Image.open(art / 'RecordEnforcerBridge.png') as atlas:
+        alpha = silhouette(atlas)
+        for i, ((x, y, w, h), (px, py)) in enumerate(zip(cells, feet)):
+            box = alpha.crop((x, y, x + w, y + h)).getbbox()
+            check(box and 0 < box[0] and box[2] < w and 0 < box[1] and box[3] < h and
+                  x < px < x + w and abs(y + box[3] - py) <= 2, f'enforcer transition {i} keeps both boots in frame')
+
+
+def validate_joker_field_height(Image):
+    """Measure the visible standing figures at their live foreground scale."""
+    scripts = ROOT / 'Assets/Scripts'
+    art = ROOT / 'Assets/Resources/Art'
+    joker = (scripts / 'AncientSniperPresentation.cs').read_text()
+
+    def constant(text, key):
+        return float(re.search(r'\b' + key + r'\s*=\s*([\d.]+)', text).group(1))
+
+    density = constant(joker, 'ArtDensity')
+    ppu = constant(joker, 'JokerPpu') * density
+    cell_w = int(constant(joker, 'CellWidth') * density)
+    cell_h = int(constant(joker, 'CellHeight') * density)
+    with Image.open(art / 'JokerRifleMotion.png') as atlas:
+        check(atlas.width == 6 * cell_w and atlas.height >= 6 * cell_h, 'Joker normal and duel sheets fit the live sprite grid')
+        visible = atlas.getchannel('A').point(lambda a: 255 if a >= 110 else 0)
+        for index in [*range(28), *range(30, 34)]:
+            x = index % 6 * cell_w
+            y = index // 6 * cell_h
+            box = visible.crop((x, y, x + cell_w, y + cell_h)).getbbox()
+            check(box and 0 < box[0] < box[2] < cell_w and 0 < box[1] < box[3] < cell_h,
+                  f'Joker pose {index} has a complete silhouette including rifle or knife')
+            if index == 0:
+                joker_height = (box[3] - box[1]) / ppu
+    # 기립 시 두 현장 보스의 실제 발-머리 길이를 같은 월드 배율에서 비교한다.
+    visual = (scripts / 'AncientEnforcerVisuals.cs').read_text()
+    rects = re.search(r'\bPoseCells\s*=\s*\{([^}]+)', visual).group(1)
+    rect = re.search(r'new Rect\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', rects)
+    x, y, w, h = map(int, rect.groups())
+    scales = re.search(r'\bPosePixelsPerUnit\s*=\s*\{([^}]+)', visual).group(1)
+    inspector_ppu = float(scales.split(',')[0].strip().rstrip('f'))
+    with Image.open(art / 'RecordEnforcer.png') as atlas:
+        box = atlas.crop((x, y, x + w, y + h)).getchannel('A').point(lambda a: 255 if a >= 110 else 0).getbbox()
+        inspector_height = (box[3] - box[1]) / inspector_ppu
+    check(abs(joker_height - inspector_height) <= .08,
+          f'Joker and enforcer have similar foreground standing heights ({joker_height:.2f} vs {inspector_height:.2f} world units)')
 
 
 def validate_ui_font(parser):
@@ -460,6 +626,8 @@ def main():
         from PIL import Image
         with Image.open(ROOT / 'Assets/Resources/Art/RecordEnforcer.png') as enforcer:
             validate_enforcer_poses(enforcer)
+        validate_joker_field_height(Image)
+        validate_combat_pose_transitions(Image)
         validate_production_props(Image)
         validate_production_captain(Image)
         validate_production_workers(Image)

@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b7f128d9be7403da4b4968867432545, type: 3}
+  m_Name: DefaultSummonedBlade
+  summonCost: 20
+  telegraphMin: 1.2
+  telegraphMax: 2
+  minDistance: 4
+  maxDistance: 12
+  previousClearance: 3
+  deckMinDistance: 1.2
+  plugRange: 16
+  groundMargin: 0.65
+  handleHeight: 1.48
+  fallHeight: 5
+  fallSpeed: 13
+  installedLifetime: 20
+  fieldLifetime: 15
+  cooldown: 12
+  overloadExtraCooldown: 2
+  positionAttempts: 24
+  groundMask: {serializedVersion: 2, m_Bits: 256}
+  dangerMask: {serializedVersion: 2, m_Bits: 1024}
+  impactRadius: 1.2
+  impactDamage: 80
+  fieldRadius: 2
+  fieldPerSecond: 8
+  zipBase: 100
+  zipPerTile: 12
+  zipCap: 220
+  comboFirst: 35
+  comboSecond: 35
+  comboThird: 55
+  perfectCharge: 8
+  perfectInvulnerability: 0.5
+  overloadPerParticle: 6
+  overloadCap: 300
+  overloadRadius: 4

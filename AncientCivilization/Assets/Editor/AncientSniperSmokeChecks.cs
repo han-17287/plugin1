@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Plugin.AncientCivilization.EditorChecks
 {
@@ -18,6 +19,7 @@ namespace Plugin.AncientCivilization.EditorChecks
         const double TimeoutSeconds=110;
         static readonly string[] optionKeys=AncientGame.OptionSaveKeys;
         static AncientSniperEncounter retiredEncounter;
+        static Texture2D ordinaryAtlas, transitionsAtlas, articulationAtlas;
         [Serializable] sealed class PrefSnapshot {public string[] keys;public bool[] present;public int[] values;}
 
         static AncientSniperSmokeChecks()
@@ -37,6 +39,8 @@ namespace Plugin.AncientCivilization.EditorChecks
             SessionState.SetBool(Root+"Running",true);SessionState.SetBool(Root+"Finishing",false);SessionState.SetBool(Root+"Passed",false);
             SessionState.SetString(Root+"Profile",profile);SessionState.SetString(ProfileKey,profile);SessionState.SetString(Root+"Log","");
             SetTime("Started",Now);SetStage(0);SessionState.SetInt(Root+"ClubFrames",0);
+            SessionState.SetBool(Root+"SawMotionTransition",false);
+            SessionState.SetBool(Root+"SawSightBreath", false);
             Set(profile,"questStage",9);Set(profile,"cityFloor",4);Set(profile,"storyBoss",1);Set(profile,"storyCores",7);
             Set(profile,"residencePoints",5000);Set(profile,"started",1);Set(profile,"cityCleared",14);
             Set(profile,"campaignVersion",AncientCampaignRules.RouteVersion);Set(profile,"campaignComplete",(1<<19)-1);
@@ -46,6 +50,25 @@ namespace Plugin.AncientCivilization.EditorChecks
             EditorApplication.isPlaying=true;
         }
         static double Now {get{return EditorApplication.timeSinceStartup;}}
+        static SpriteRenderer ActorBody(AncientEnemy enemy)
+        {
+            Transform child = enemy.transform.Find(enemy.Role);
+            return child ? child.GetComponent<SpriteRenderer>() : null;
+        }
+        static bool HasOrdinaryJokerArt(AncientEnemy enemy)
+        {
+            if (!enemy) return false;
+            SpriteRenderer body = ActorBody(enemy);
+            if (!ordinaryAtlas) ordinaryAtlas = Resources.Load<Texture2D>("Art/JokerRifleMotion");
+            if (!transitionsAtlas) transitionsAtlas = Resources.Load<Texture2D>("Art/JokerRifleTransitions");
+            if (!articulationAtlas) articulationAtlas = Resources.Load<Texture2D>("Art/JokerRifleArticulation");
+            return ordinaryAtlas && transitionsAtlas && articulationAtlas && body && body.enabled && body.gameObject.activeInHierarchy &&
+                body.color.a > .5f && body.sprite && (body.sprite.texture == ordinaryAtlas || body.sprite.texture == transitionsAtlas ||
+                    body.sprite.texture == articulationAtlas) &&
+                body.sharedMaterial && body.sharedMaterial.shader &&
+                (enemy.IsSniperClone ? body.sharedMaterial.shader.name == "PLUGIN/AncientEnergyClone" :
+                    body.sharedMaterial.shader.name != "PLUGIN/CharacterRim");
+        }
         static void Set(string prefix,string key,int value){PlayerPrefs.SetInt(prefix+key,value);}
         static void SetTime(string key,double value){SessionState.SetString(Root+key,value.ToString("R",CultureInfo.InvariantCulture));}
         static double TimeValue(string key)
@@ -112,22 +135,29 @@ namespace Plugin.AncientCivilization.EditorChecks
                 if(stage==0)
                 {
                     if(!encounter||!encounter.Owner||StageAge<.4)return;
+                    if (!HasOrdinaryJokerArt(encounter.Owner))
+                        throw new InvalidOperationException("본체의 실제 필드 렌더러가 현재 조커 원화·재질을 표시하지 않습니다.");
+                    Sprite displayed = ActorBody(encounter.Owner).sprite;
+                    if (displayed.texture == articulationAtlas && encounter.Telegraphing &&
+                        displayed.rect.yMax == articulationAtlas.height && displayed.rect.x < displayed.rect.width * 6)
+                        SessionState.SetBool(Root+"SawSightBreath", true);
+                    if (ActorBody(encounter.Owner).sprite.texture == transitionsAtlas)
+                        SessionState.SetBool(Root+"SawMotionTransition", true);
                     int observed=SessionState.GetInt(Root+"ClubFrames",0);
                     int pose=encounter.ClubDuelFrame;
                     if(pose>=0)
                     {
                         if((observed&(1<<pose))!=0)return;
                         var expected=AncientJokerDuelArt.Frame(pose);
-                        foreach(var sprite in encounter.Owner.GetComponentsInChildren<SpriteRenderer>())
-                            if(sprite.enabled&&sprite.sprite==expected)
-                            {
-                                SessionState.SetInt(Root+"ClubFrames",observed|(1<<pose));
-                                break;
-                            }
+                        if(ActorBody(encounter.Owner).sprite==expected)
+                            SessionState.SetInt(Root+"ClubFrames",observed|(1<<pose));
                         return;
                     }
                     // 실제 결투에서 총을 멘 준비 자세와 적어도 한 번의 단검 베기가 출력되어야 한다.
                     if((observed&1)==0||(observed&10)==0)return;
+                    Assert(SessionState.GetBool(Root+"SawSightBreath", false), "조준 중 본체의 호흡 원화가 실제 전투 경로에 표시됩니다.");
+                    Assert(SessionState.GetBool(Root+"SawMotionTransition",false),
+                        "1페이즈 본체 렌더러에 견착·반동 중간 자세가 실제로 나타났습니다.");
                     Append("PASS: Club duel displayed its slung-rifle windup and knife strike on the live boss renderer.");
                     Assert(AncientGame.IsQAProfile,"Runtime uses the isolated QA profile");
                     Assert(!game.MainMenu&&encounter.Phase==1,"Phase 1 starts in the actual scene without menu interaction");
@@ -148,6 +178,7 @@ namespace Plugin.AncientCivilization.EditorChecks
                     {
                         var art=e.GetComponentInChildren<SpriteRenderer>();
                         Assert(art&&art.sharedMaterial&&art.sharedMaterial.shader.name=="PLUGIN/AncientEnergyClone","Clone uses the full-body energy shader");
+                        Assert(HasOrdinaryJokerArt(e),"포탑 운용 분신까지 조커 원화를 직접 그립니다.");
                     }
                     foreach(var e in game.enemies.ToArray())if(e&&e.IsSniperClone&&(e.name.EndsWith(" 2",StringComparison.Ordinal)||e.name.EndsWith(" 3",StringComparison.Ordinal)))e.Hit(1000,true);
                     Assert(CloneCount(game)==1,"Defeating turret operators leaves the independent clone alive");
@@ -185,6 +216,9 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     if(!encounter||encounter.Phase!=6||StageAge<.2)return;
                     Assert(CloneCount(game)==0,"Final phase removes all clones");
+                    var finalBody = ActorBody(encounter.Owner);
+                    Assert(finalBody && finalBody.sprite && finalBody.sprite.texture == AncientArt.Boss(4,3).texture,
+                        "마지막 페이즈는 기존 레이저 충돌 원화를 표시합니다.");
                     AssertTurretVisibleAt(0,firstTurret);AssertTurretVisibleAt(1,secondTurret);
                     float health=encounter.Owner.HealthRatio;encounter.Owner.Hit(100000,true);
                     Assert(Mathf.Abs(encounter.Owner.HealthRatio-health)<.00001f,"Charging sniper is immune to ordinary damage");
@@ -208,8 +242,14 @@ namespace Plugin.AncientCivilization.EditorChecks
                 {
                     if(!encounter||encounter==retiredEncounter||StageAge<.6)return;
                     Assert(encounter.Phase==1&&CloneCount(game)==0&&!encounter.InputLocked,"Combat checkpoint retry creates a fresh phase-1 encounter");
+                    Assert(HasOrdinaryJokerArt(encounter.Owner),"재시도 후 본체의 조커 원화와 재질이 복원됩니다.");
                     Assert(game.hero.GetComponent<Rigidbody2D>().simulated,"Retry restores player physics simulation");
                     Assert(game.hero.transform.position.x<firstTurret-2&&game.hero.transform.position.x>=AncientCityLayout.ArenaLeft(4),"Retry remains at the checkpoint, not the old turret seat");
+                    // 입력 연타를 대신하지 않고, 격리된 검사 세이브에서만 실제 승리 이후의 대화 진입점을 확인한다.
+                    var survivor = encounter.Owner;
+                    survivor.CompleteSniperDuel();
+                    Assert(game.Story.DialogueOpen && !survivor.IsAlive && HasOrdinaryJokerArt(survivor),
+                        "전투가 끝나면 같은 조커가 소총을 내리고 살아서 대화합니다.");
                     Finish(true,"Structural sniper smoke checks completed. Shot timing, rendering, terrain dodge and successful physical-input clash still require manual playtesting.");
                 }
             }
@@ -224,7 +264,20 @@ namespace Plugin.AncientCivilization.EditorChecks
         static void PlayModeChanged(PlayModeStateChange change)
         {
             if(!SessionState.GetBool(Root+"Running",false))return;
-            if(change==PlayModeStateChange.EnteredPlayMode)EditorApplication.ExecuteMenuItem("Window/General/Game");
+            if(change==PlayModeStateChange.EnteredPlayMode)
+            {
+                EditorApplication.ExecuteMenuItem("Window/General/Game");
+                // 어떤 연습 씬에서 검사를 눌러도 편집 중인 씬은 보존하고 Play 세션만 본편으로 연다.
+                if (SceneManager.GetActiveScene().name != "Main")
+                {
+                    if (!Application.CanStreamedLevelBeLoaded("Main"))
+                    {
+                        Finish(false,"빌드 프로필에서 Assets/Scenes/Main.unity가 비활성화되어 있습니다.");
+                        return;
+                    }
+                    SceneManager.LoadScene("Main");
+                }
+            }
             if(change==PlayModeStateChange.EnteredEditMode)
             {
                 if(!SessionState.GetBool(Root+"Finishing",false)){SessionState.SetBool(Root+"Finishing",true);SessionState.SetBool(Root+"Passed",false);Append("CANCELLED: left Play Mode before completion.");}

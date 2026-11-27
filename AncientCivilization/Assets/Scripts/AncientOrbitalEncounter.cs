@@ -1,14 +1,15 @@
 using UnityEngine;
+using Plugin.PlayerCore;
 
 namespace Plugin.AncientCivilization
 {
     // 1차전은 다음 공격을 전조 직전에 결정한다. 전조가 시작된 뒤에는 표적과 방향을 보존한다.
     public sealed class AncientOrbitalEncounter : MonoBehaviour
     {
-        enum Beat { Inactive, Arrival, Tell, Strike, LowerCore, Opening, Leaving }
+        enum Beat { Inactive, Arrival, Tell, Strike, HuntRecovery, LowerCore, Opening, Leaving }
         static readonly string[] Names = {
-            "바닥 충격파", "착지점 찍기", "왕복 회전날", "앵커 봉쇄", "화물 하단 스윕", "화물 낙하",
-            "상승 빔", "교차 빔", "반전 셔터", "칼날 회수선", "코어 옆 착지 함정", "입자 공급기 파손",
+            "바닥 충격파", "착지점 찍기", "왕복 회전날", "콘센트 봉쇄", "화물 하단 스윕", "화물 낙하",
+            "상승 빔", "교차 빔", "반전 셔터", "설치 블레이드 사냥", "코어 옆 착지 함정", "입자 공급기 파손",
             "화물 궤도 역전", "연쇄 낙하", "중앙 셔터", "퇴로 추적 찍기", "협착 스윕", "화물 관통 돌진"
         };
 
@@ -21,6 +22,7 @@ namespace Plugin.AncientCivilization
         OrbitalMove? last, previous;
         OrbitalMove move;
         Vector2 target, startPosition, restingPosition;
+        uint huntedInstallation;
         int side, facing, phase = 1, announcedPhase, chainStep, chainLength;
         float timer, duration, openingDuration, hitFlash;
         bool latch, phaseSixOpened, lensFired;
@@ -46,8 +48,9 @@ namespace Plugin.AncientCivilization
             get
             {
                 if (Recovering) return latch ? "잠금장치 파손 · 코어 장시간 개방" : "코어 개방 · 반격";
+                if (state == Beat.HuntRecovery) return "집게 회수 중 · 반격";
                 if (state == Beat.LowerCore) return "코어가 내려온다";
-                if (state == Beat.Arrival) return "궤도 봉쇄기 · 좌우 고정 앵커";
+                if (state == Beat.Arrival) return "궤도 봉쇄기 · 좌우 고정 콘센트";
                 return Names[(int)move] + (chainStep < chainLength ? " · 두 번째 점등" : "");
             }
         }
@@ -105,6 +108,17 @@ namespace Plugin.AncientCivilization
                     }
                     bool firing = move == OrbitalMove.ShutterFeint && AncientOrbitalHazards.ShutterFiring(p);
                     rig.Pose(Physical ? 2 : 4, facing, false, chainStep < chainLength, firing, hitFlash);
+                    if (p >= 1 && move == OrbitalMove.BladeHunt)
+                    {
+                        ResolveHunt();
+                        state = Beat.HuntRecovery;
+                        timer = 0;
+                        duration = .6f;
+                    }
+                    else if (p >= 1) FinishStrike();
+                    break;
+                case Beat.HuntRecovery:
+                    rig.Pose(5, facing, true, chainStep < chainLength, false, hitFlash);
                     if (p >= 1) FinishStrike();
                     break;
                 case Beat.LowerCore:
@@ -136,7 +150,7 @@ namespace Plugin.AncientCivilization
                 if (announcedPhase != 0)
                 {
                     game.Impact(CorePoint, AncientGame.Cyan, false);
-                    game.Notice(phase == 4 ? "회수 함정 / E 투척 · 직접 접근 또는 와이어 회수 · R 입자 폭발" :
+                    game.Notice(phase == 4 ? "칼날 사냥 / 붉은 조준선이 설치된 손잡이를 겨눈다. 명중 전에 장착하라." :
                         phase == 6 ? "긴급 정지 / 마지막 찍기를 주황색 화물 잠금장치로 유도" :
                         "궤도 봉쇄기 / " + phase + "페이즈", phase == 4 || phase == 6 ? 3.8f : 1.4f);
                 }
@@ -151,8 +165,11 @@ namespace Plugin.AncientCivilization
         void PrepareAttack()
         {
             Vector2 hero = game.hero.transform.position;
+            var blade = game.hero.Loadout;
+            bool installed = blade && blade.State == SummonedBladeState.Stuck && blade.Handle &&
+                blade.Handle.Point.x >= Left + 1.15f && blade.Handle.Point.x <= Right - 1.15f;
             var arenaState = new OrbitalArenaState(Left, Right, hero.x, game.hero.IsOnGround,
-                Arena.IsAnchorReachable(-1, hero), Arena.IsAnchorReachable(1, hero));
+                Arena.IsAnchorReachable(-1, hero), Arena.IsAnchorReachable(1, hero), installedBlade: installed);
             bool preferStamp = phase == 6 && chainStep == chainLength && Random.value < .45f;
             if (!AncientOrbitalRules.TryPick(phase, arenaState, last, previous, Random.value, out move, chainStep > 1, preferStamp))
             {
@@ -165,10 +182,15 @@ namespace Plugin.AncientCivilization
             side = Random.value < .5f ? -1 : 1;
             if (move == OrbitalMove.AnchorLock && Mathf.Abs(hero.x - Arena.CentreX) > 3f)
                 side = hero.x < Arena.CentreX ? 1 : -1; // 가까운 탈출 고리를 남긴다.
-            if (move == OrbitalMove.BladeFerry) side = Arena.CargoPoint.x < Arena.CentreX ? 1 : -1;
             if (move == OrbitalMove.ReverseRail) side = -Arena.RailDirection;
 
             target = hero;
+            if (move == OrbitalMove.BladeHunt)
+            {
+                // 전조 후에는 목표물의 새 위치나 재설치된 칼을 추적하지 않는다.
+                target = blade.Handle.Point;
+                huntedInstallation = blade.InstallationId;
+            }
             if (move == OrbitalMove.PursuitStamp || move == OrbitalMove.LandingStamp)
             {
                 float prediction = move == OrbitalMove.PursuitStamp ? .34f : .12f;
@@ -182,7 +204,7 @@ namespace Plugin.AncientCivilization
             Arena.PrepareMove(move, side, target);
             if (move == OrbitalMove.DropCargo || move == OrbitalMove.CargoRush) target = Arena.DropPoint;
 
-            Vector2 source = move == OrbitalMove.CargoSweep || move == OrbitalMove.BladeFerry || move == OrbitalMove.ReverseRail
+            Vector2 source = move == OrbitalMove.CargoSweep || move == OrbitalMove.ReverseRail
                 ? Arena.CargoPoint : CorePoint;
             hazards.CargoPosition = Arena.CargoPoint;
             hazards.Telegraph(move, source, target, side);
@@ -213,7 +235,19 @@ namespace Plugin.AncientCivilization
             duration = AncientOrbitalHazards.ActiveSeconds(move);
             Arena.BeginMove(move, side, target);
             if (!Active) return;
+            hazards.BeginStrike();
             game.Sound(Physical ? AncientEquipmentCue.MetalFall : AncientEquipmentCue.Sweep);
+        }
+
+        void ResolveHunt()
+        {
+            var blade = game.hero.Loadout;
+            hazards.Clear();
+            game.Impact(target, new Color(.94f,.29f,.47f), true);
+            if (blade && blade.State == SummonedBladeState.Stuck &&
+                blade.InstallationId == huntedInstallation && blade.Handle &&
+                (blade.Handle.Point - target).sqrMagnitude <= .85f * .85f && blade.TryBreakInstalled())
+                game.Notice("설치된 칼날이 파손됐다. 재소환까지 플러그로 대응한다.", 2);
         }
 
         void FinishStrike()
@@ -256,7 +290,7 @@ namespace Plugin.AncientCivilization
         public float FilterDamage(float incoming, float health, float maxHealth)
         {
             if (!Active || state == Beat.Arrival) return 0;
-            float damage = AncientOrbitalRules.LimitDamage(incoming * (Recovering ? 1f : .22f), health, maxHealth, phase);
+            float damage = AncientOrbitalRules.LimitDamage(incoming * (Recovering || state == Beat.HuntRecovery ? 1f : .22f), health, maxHealth, phase);
             return phase == 6 && !phaseSixOpened ? Mathf.Min(damage, Mathf.Max(0, health - 1f)) : damage;
         }
 
@@ -297,6 +331,7 @@ namespace Plugin.AncientCivilization
 
         void ReleaseField()
         {
+            if (game && equipment) AncientBossCue.Clear(game, AncientBossCue.Style.Orbital);
             if (game && game.Orbital == this) game.Orbital = null;
             if (hazards != null) { hazards.Dispose(); hazards = null; }
             if (Arena != null) { Arena.Dispose(); Arena = null; }

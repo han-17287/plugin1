@@ -18,10 +18,13 @@ namespace Plugin.PlayerCore
             public Func<bool> Open;
         }
 
+        readonly PlayerBluePlug bluePlug = new PlayerBluePlug();
+        readonly Rigidbody2D officer = new GameObject("officer").AddComponent<Rigidbody2D>();
         readonly PatrolTestExpedition expedition=new PatrolTestExpedition();
         readonly List<(string Label,GameObject Object)> objects=new List<(string,GameObject)>();
         readonly List<Interaction> interactions=new List<Interaction>();
         readonly List<Action<float>> callbacks=new List<Action<float>>();
+        readonly List<BluePlugSocket> bluePlugSockets=new List<BluePlugSocket>();
         readonly Dictionary<string,bool> flags=new Dictionary<string,bool>();
         GameObject arrivalTarget,beamTarget;
         string message="";
@@ -47,6 +50,8 @@ namespace Plugin.PlayerCore
                 case 4: r.BuildSummit(id); break;
                 default: throw new ArgumentOutOfRangeException(nameof(id));
             }
+            PlugDistrictArt.Surfaces.Clear();
+            r.InstallPlugWorks(id);
             return r;
         }
 
@@ -60,7 +65,12 @@ namespace Plugin.PlayerCore
             handle.Action();
         }
         bool PortalOpen(int destination) => interactions.Any(i=>i.Destination==destination && (i.Open==null || i.Open()));
-        void Arrive(string name) { arrivalTarget=ObjectNamed(name); }
+        void Arrive(string name)
+        {
+            var target=ObjectNamed(name);
+            if(!target.GetComponent<BluePlugSocket>()) throw new InvalidOperationException(name+" is not a plug socket");
+            arrivalTarget=target;
+        }
         void Shot(string name) { beamTarget=ObjectNamed(name); }
 
         void Tick(int count=1,float dt=.02f)
@@ -70,6 +80,8 @@ namespace Plugin.PlayerCore
                 Elapsed+=dt;
                 Time.unscaledDeltaTime=dt;
                 foreach(var callback in callbacks) callback(dt);
+                officer.position = Hero;
+                StepPlugWorks(dt);
                 WantsRoomMusic();
                 TickSpeaker(expedition.Paused, false, true);
                 arrivalTarget=beamTarget=null;
@@ -108,7 +120,7 @@ namespace Plugin.PlayerCore
             var renderer=obj.AddComponent<SpriteRenderer>();
             renderer.size=new Vector2(w,h);
             renderer.color=color;
-            if(solid) obj.AddComponent<BoxCollider2D>().size=renderer.size;
+            if(solid) { obj.layer=8; obj.AddComponent<BoxCollider2D>().size=renderer.size; }
             return obj;
         }
         GameObject Deck(string label,float x,float top,float width,float depth=.35f)
@@ -119,8 +131,15 @@ namespace Plugin.PlayerCore
         }
         GameObject Hook(string label,float x,float y)
         {
-            var hook=Create(label,x,y);hook.AddComponent<GrappleAnchor>();return hook;
+            var hook=Create(label,x,y);
+            var anchor=hook.AddComponent<GrappleAnchor>();
+            var socket=hook.AddComponent<BluePlugSocket>();
+            socket.BindAnchor(anchor);
+            RegisterBluePlugSocket(socket);
+            return hook;
         }
+        public BluePlugSocket[] BluePlugSockets => bluePlugSockets.ToArray();
+        void RegisterBluePlugSocket(BluePlugSocket socket) => bluePlugSockets.Add(socket);
         void Sign(string label,float x,float y) { Create(label,x,y); }
         void Use(string label,float x,float y,Action callback,float radius=1.8f) =>
             interactions.Add(new Interaction {Label=label,Position=new Vector2(x,y),Action=callback});
